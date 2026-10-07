@@ -43,26 +43,10 @@ pnpm test          # run the tests
 
 Run any script of one package from the root with `pnpm <helper|utility|devextreme|site> <script>`, e.g. `pnpm helper build` or `pnpm site dev`.
 
-## Publish a release (maintainers)
+## Maintainers
 
 > [!IMPORTANT]
 > **Maintainership is not open right now.** This project is fully managed by its owner together with an AI coding agent. Outside contributions and releases are not accepted at the moment. **Use these libraries at your own risk.**
-
-Releases are published automatically when the `deploy` branch is deployed to production on Netlify.
-
-1. Bump the package's `version` in its `package.json`.
-2. Add that version to `version.json` (the list of versions the registry should hold):
-   ```json
-   { "@mono-lit/helper": ["0.0.1", "0.0.2"] }
-   ```
-   - Remove a version from the list → the next deploy deletes it from the registry.
-   - Prefix a version with `!` (e.g. `"!0.0.2"`) → the next deploy deletes and re-publishes it with the current code.
-3. Merge into `deploy` and push:
-   ```bash
-   git switch deploy && git merge main && git push && git switch main
-   ```
-
-Check locally before pushing with `pnpm registry:check` (versions) and `pnpm registry:verify` (full local registry test). The Netlify site needs the `REGISTRY_PUBLISH_TOKEN` and `REGISTRY_DOWNLOAD_TOKEN` environment variables.
 
 ---
 
