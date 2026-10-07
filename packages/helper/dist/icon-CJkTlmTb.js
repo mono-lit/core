@@ -1,0 +1,55 @@
+import { html } from "lit";
+import { unsafeSVG } from "lit/directives/unsafe-svg.js";
+//#region src/composables/mdi-glyphs.ts
+/** `i-mdi-<name>` → the inner SVG markup of that glyph, on a 24x24 viewBox. */
+var MDI_GLYPHS = {
+	"i-mdi-cloud-upload-outline": "<path fill=\"currentColor\" d=\"M6.5 20q-2.28 0-3.89-1.57Q1 16.85 1 14.58q0-1.95 1.17-3.48q1.18-1.53 3.08-1.95q.63-2.3 2.5-3.72Q9.63 4 12 4q2.93 0 4.96 2.04Q19 8.07 19 11q1.73.2 2.86 1.5q1.14 1.28 1.14 3q0 1.88-1.31 3.19T18.5 20H13q-.82 0-1.41-.59Q11 18.83 11 18v-5.15L9.4 14.4L8 13l4-4l4 4l-1.4 1.4l-1.6-1.55V18h5.5q1.05 0 1.77-.73q.73-.72.73-1.77t-.73-1.77Q19.55 13 18.5 13H17v-2q0-2.07-1.46-3.54Q14.08 6 12 6Q9.93 6 8.46 7.46Q7 8.93 7 11h-.5q-1.45 0-2.47 1.03Q3 13.05 3 14.5T4.03 17q1.02 1 2.47 1H9v2m3-7\"/>",
+	"i-mdi-cloud-upload": "<path fill=\"currentColor\" d=\"M11 20H6.5q-2.28 0-3.89-1.57Q1 16.85 1 14.58q0-1.95 1.17-3.48q1.18-1.53 3.08-1.95q.63-2.3 2.5-3.72Q9.63 4 12 4q2.93 0 4.96 2.04Q19 8.07 19 11q1.73.2 2.86 1.5q1.14 1.28 1.14 3q0 1.88-1.31 3.19T18.5 20H13v-7.15l1.6 1.55L16 13l-4-4l-4 4l1.4 1.4l1.6-1.55Z\"/>",
+	"i-mdi-folder-upload": "<path fill=\"currentColor\" d=\"M20 6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h6l2 2zm-9.25 7H14v4h2v-4h3.25L15 8.75\"/>",
+	"i-mdi-file-image": "<path fill=\"currentColor\" d=\"M13 9h5.5L13 3.5zM6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m0 18h12v-8l-4 4l-2-2zM8 9a2 2 0 0 0-2 2a2 2 0 0 0 2 2a2 2 0 0 0 2-2a2 2 0 0 0-2-2\"/>",
+	"i-mdi-file-pdf-box": "<path fill=\"currentColor\" d=\"M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-9.5 8.5c0 .8-.7 1.5-1.5 1.5H7v2H5.5V9H8c.8 0 1.5.7 1.5 1.5zm5 2c0 .8-.7 1.5-1.5 1.5h-2.5V9H13c.8 0 1.5.7 1.5 1.5zm4-3H17v1h1.5V13H17v2h-1.5V9h3zm-6.5 0h1v3h-1zm-5 0h1v1H7z\"/>",
+	"i-mdi-file-excel": "<path fill=\"currentColor\" d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zm1.8 18H14l-2-3.4l-2 3.4H8.2l2.9-4.5L8.2 11H10l2 3.4l2-3.4h1.8l-2.9 4.5zM13 9V3.5L18.5 9z\"/>",
+	"i-mdi-file-word": "<path fill=\"currentColor\" d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zm1.2 18h-1.4L12 13.2L10.2 20H8.8l-2.2-9h1.5l1.4 6.8l1.8-6.8h1.3l1.8 6.8l1.4-6.8h1.5zM13 9V3.5L18.5 9z\"/>",
+	"i-mdi-zip-box": "<path fill=\"currentColor\" d=\"M14 17h-2v-2h-2v-2h2v2h2m0-6h-2v2h2v2h-2v-2h-2V9h2V7h-2V5h2v2h2m5-4H5c-1.11 0-2 .89-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2\"/>",
+	"i-mdi-file-video": "<path fill=\"currentColor\" d=\"M13 9h5.5L13 3.5zM6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m11 17v-6l-3 2.2V13H7v6h7v-2.2z\"/>",
+	"i-mdi-file-music": "<path fill=\"currentColor\" d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zm-1 11h-2v5a2 2 0 0 1-2 2a2 2 0 0 1-2-2a2 2 0 0 1 2-2c.4 0 .7.1 1 .3V11h3zm0-4V3.5L18.5 9z\"/>",
+	"i-mdi-file": "<path fill=\"currentColor\" d=\"M13 9V3.5L18.5 9M6 2c-1.11 0-2 .89-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z\"/>",
+	"i-mdi-close": "<path fill=\"currentColor\" d=\"M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12z\"/>",
+	"i-mdi-information-outline": "<path fill=\"currentColor\" d=\"M11 9h2V7h-2m1 13c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8m0-18A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m-1 15h2v-6h-2z\"/>",
+	"i-mdi-check-circle-outline": "<path fill=\"currentColor\" d=\"M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10s10-4.5 10-10S17.5 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8m4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4l8-8z\"/>",
+	"i-mdi-alert-outline": "<path fill=\"currentColor\" d=\"M12 2L1 21h22M12 6l7.53 13H4.47M11 10v4h2v-4m-2 6v2h2v-2\"/>",
+	"i-mdi-alert-circle-outline": "<path fill=\"currentColor\" d=\"M11 15h2v2h-2zm0-8h2v6h-2zm1-5C6.47 2 2 6.5 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m0 18a8 8 0 0 1-8-8a8 8 0 0 1 8-8a8 8 0 0 1 8 8a8 8 0 0 1-8 8\"/>",
+	"i-mdi-bell-outline": "<path fill=\"currentColor\" d=\"M10 21h4c0 1.1-.9 2-2 2s-2-.9-2-2m11-2v1H3v-1l2-2v-6c0-3.1 2-5.8 5-6.7V4c0-1.1.9-2 2-2s2 .9 2 2v.3c3 .9 5 3.6 5 6.7v6zm-4-8c0-2.8-2.2-5-5-5s-5 2.2-5 5v7h10z\"/>"
+};
+/** The artwork for an `i-mdi-*` class, or `undefined` when it is not bundled. */
+function mdiGlyphBody(icon) {
+	if (!icon) return void 0;
+	return MDI_GLYPHS[icon.trim()];
+}
+//#endregion
+//#region src/composables/icon.ts
+/**
+* Detect whether an icon string is an iconify utility class — e.g.
+* `i-mdi-close`, `i-tabler-upload`. UnoCSS's preset-icons resolves these to a
+* background/mask, so components render them as an empty `<span class="i-...">`.
+*
+* Single source of truth — components re-export this from their own
+* `*-utils.ts` so their public API stays stable.
+*/
+function isIconifyClass(icon) {
+	if (!icon || typeof icon !== "string") return false;
+	return /^i-[a-z0-9]+(?:-[a-z0-9]+)+$/i.test(icon.trim());
+}
+/**
+* Draw an `i-mdi-*` glyph as inline SVG — the SHADOW builds' counterpart to the
+* light builds' UnoCSS mask. Both come from `@iconify-json/mdi`, so one `icon`
+* value paints the same artwork in either build. Returns `undefined` when the
+* glyph is not bundled (see `scripts/mdi-glyphs.mjs`), so a caller can fall back.
+*/
+function mdiGlyph(icon) {
+	const body = mdiGlyphBody(icon);
+	if (!body) return void 0;
+	return html`<svg viewBox="0 0 24 24" aria-hidden="true">${unsafeSVG(body)}</svg>`;
+}
+//#endregion
+export { mdiGlyph as n, isIconifyClass as t };

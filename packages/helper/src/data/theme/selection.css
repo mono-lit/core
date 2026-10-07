@@ -1,0 +1,68 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   Text selection on mono's painted surfaces — ONE design, defined once.
+
+   The browser's default selection swaps in its own background (a light blue in
+   Chrome) and leaves the text `color` alone. That is fine wherever the page owns
+   the ink. It is not fine on a surface mono has repainted: a navy sidebar puts
+   white text on that pale blue and the label disappears.
+
+   Before this file there was no `::selection` rule anywhere in the repository —
+   source or built — so the UA default was unconditionally in play.
+
+   ── Why `currentColor`, and NOT the `-contrast` token ──────────────────────
+   The ink is not always light. sidebar.css:44 spells it out: it follows
+   `--theme-<color>-contrast`, and `--theme-warning-contrast` is
+   `rgba(0,0,0,.87)` — an amber sidebar has near-BLACK text. A rule that
+   hardcoded a pale wash would be wrong there in precisely the way the UA default
+   is wrong on navy, just in the other direction.
+
+   So the wash is a low-alpha mix of the surface's OWN ink — the same device the
+   shared scrollbar uses for its thumb, for the same reason. Two consequences:
+
+     · `color` is deliberately NOT set. The text keeps whatever ink its surface
+       gave it, so the pair can never disagree — which is the entire failure this
+       file exists to fix.
+     · the wash is a tint of that ink, so it comes out pale on navy and dark on
+       amber with no colour named here, no per-component override, and no
+       per-flavor rule. A new theme, flavor or `color` preset is right for free.
+
+   ── Two traps ─────────────────────────────────────────────────────────────
+   1. `::selection` accepts only a handful of properties, and the `background`
+      SHORTHAND is not one of them. It has to be `background-color`, or the rule
+      parses and then silently does nothing.
+
+   2. `currentColor` inside a highlight pseudo-element resolves to that
+      highlight's own colour which — because `color` is left unset above —
+      inherits from the originating element. That is what makes it the surface's
+      ink rather than the UA's highlight ink. The plain rgba that precedes it is
+      a deliberate fallback: an engine that refuses the mix drops only the second
+      declaration, so a neutral grey wash still lands and stays legible against a
+      light AND a dark ink, instead of the whole rule falling out and restoring
+      the bug.
+
+   ── Scope ─────────────────────────────────────────────────────────────────
+   Only the surfaces mono repaints. Cards, modals and table cells are left to the
+   UA on purpose: mono has not touched their ink, so the default is already
+   correct there, and a component library has no business restyling selection
+   across a host page it does not own.
+
+   Both the root class and the inner panel class are listed. The light build puts
+   the root class on the host element; the shadow build's host is
+   `<mono-shadow-…>` and `toShadowCss()` rewrites only the ELEMENT selector to
+   `:host`, leaving `.mono-sidebar` unmatched inside the root — the inner classes
+   are what carry the rule in that lane.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.mono-sidebar::selection,
+.mono-sidebar ::selection,
+.mono-sidebar-panel::selection,
+.mono-sidebar-panel ::selection,
+.mono-nav::selection,
+.mono-nav ::selection,
+.mono-menu::selection,
+.mono-menu ::selection,
+.mono-button::selection,
+.mono-button ::selection {
+  background-color: rgba(127, 127, 127, 0.42);
+  background-color: color-mix(in srgb, currentColor 30%, transparent);
+}

@@ -1,0 +1,927 @@
+/* =========================================================================
+   mono-rich-text-editor — a mono form field whose input is a SunEditor v3
+   instance. An EXTENSION: Basecoat has no editor, so the CHROME is the ported
+   textarea's `.field` (basecoat-css@1.0.2, vega style) — label, frame, message
+   — and the EDITOR is SunEditor's own DOM, styled by ITS stylesheet
+   (`suneditor/css/editor`, loaded by the element at runtime) and themed from
+   here by remapping its `--se-*` tokens onto the Basecoat tokens.
+
+   Styled by ATTRIBUTE, like Basecoat — and the attributes mirror the element's
+   props one for one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-rich-text-editor size="sm" color="danger" label="Body" helper-text="…">
+     <div mono-rich-text-editor mono-size="sm" mono-color="danger">
+       <label mono-rte-label>Body</label>
+       <div mono-rte-field><div mono-rte-mount>…SunEditor…</div></div>
+       <div mono-rte-footer><div mono-rte-message-wrap><div mono-rte-message="helper">…</div></div></div>
+     </div>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-color])` = primary, `:not([mono-variant])` = outlined). The element
+   renders these on its root (both builds) plus the STATES `mono-disabled` /
+   `mono-readonly` / `mono-required` / `mono-loading` / `mono-unavailable` /
+   `mono-has-value` and `mono-validation-state="valid|invalid|warning"`. The
+   old classes (`.mono-rich-text-editor.md.primary.outlined`) are still emitted
+   as inert hooks until 2.0 but no rule here reads them.
+
+   THE PARTS ARE FAMILY-UNIQUE (`mono-rte-*`): the frame holds SunEditor's whole
+   DOM, and a consumer's content may carry anything.
+
+   Selector map (ours ≡ upstream):
+     [mono-rich-text-editor]                       ≡ .field (flex w-full flex-col gap-3)
+     [mono-rich-text-editor] > [mono-rte-label]    ≡ .field > label / .label
+     [mono-rte-field]                              ≡ .textarea's box (rounded-md border-input bg-transparent shadow-xs,
+                                                     focus-within: border-ring ring-3 ring-ring/50) — the editor sits inside
+     [mono-rte-mount] .sun-editor .se-toolbar      ≡ EXTENSION (a muted band under the frame's top edge)
+     [mono-rte-footer] > [mono-rte-message-wrap] > [mono-rte-message="…"] ≡ .field > p / .field [role='alert']
+     [mono-validation-state="invalid"]             ≡ aria-invalid:border-destructive aria-invalid:ring-destructive/20
+     [mono-validation-state="valid|warning"]       ≡ EXTENSION (the same treatment in --success / --warning)
+     [mono-size="xs|sm|lg|xl|xxl"]                 ≡ EXTENSION (the textarea's font ladder; icons step with it)
+     [mono-variant="filled"]                       ≡ EXTENSION (luma / mira / rhea's textarea)
+     [mono-variant="underlined"]                   ≡ EXTENSION (sera's: the bottom edge only, no ring)
+     [mono-rte-unavailable]                        ≡ EXTENSION (the peer-missing notice)
+     .se-tooltip-text (SunEditor's)                ≡ [data-tooltip]::before (bg-foreground text-background rounded-md px-3 py-1.5 text-xs)
+
+   FLAVORS: the frame IS the textarea's box, so every metric resolves
+   `--mono-rich-text-editor-<k>` → `--mono-textarea-<k>` → the base through the
+   SAME chains textarea.css uses — a flavour that retunes the textarea retunes
+   this frame, and no flavour file carries an editor entry. SunEditor's own
+   popovers (dropdowns, the modal layer it parks on <body>) take the select
+   panel's popover chain (`--mono-select-dropdown-*`), like every other popover.
+
+   The editor DOM is LIGHT DOM in both builds (see `rich-text-editor-core.ts`),
+   so the `--se-*` remap is declared on the frame and inherited by the mount —
+   through a `<slot>` in the shadow build, which custom properties cross — and
+   DELIVERED on `.sun-editor` from the PAGE sheet (the shadow sheet cannot reach
+   a slotted descendant). Nothing below reaches into SunEditor's selectors except
+   to flatten the frame it paints around itself, which the mono frame replaces.
+   ========================================================================= */
+
+mono-rich-text-editor {
+  display: block;
+}
+
+/* The token block — on the element root AND on SunEditor's carrier (the layer it
+   parks on <body> for its dropdown lists, dialogs and alerts), which is outside
+   every frame and can inherit nothing from it. The element's own props (`color`,
+   `size`) cannot reach the carrier either: it takes the defaults. */
+[mono-rich-text-editor],
+.sun-editor.sun-editor-carrier-wrapper {
+  /* ── palette: each slot is a public knob over the textarea's, over a Basecoat token ── */
+  --_mono-rte-text: var(--mono-rich-text-editor-text, var(--mono-textarea-text, var(--foreground)));
+  --_mono-rte-placeholder: var(--mono-rich-text-editor-placeholder, var(--mono-textarea-placeholder, var(--muted-foreground)));
+  --_mono-rte-muted: var(--mono-rich-text-editor-muted, var(--mono-textarea-muted, var(--muted-foreground)));
+  --_mono-rte-primary: var(--mono-rich-text-editor-primary, var(--mono-textarea-primary, var(--ring)));
+  --_mono-rte-secondary: var(--mono-rich-text-editor-secondary, var(--mono-textarea-secondary, var(--muted-foreground)));
+  --_mono-rte-success: var(--mono-rich-text-editor-success, var(--mono-textarea-success, var(--success)));
+  --_mono-rte-danger: var(--mono-rich-text-editor-danger, var(--mono-textarea-danger, var(--destructive)));
+  --_mono-rte-warning: var(--mono-rich-text-editor-warning, var(--mono-textarea-warning, var(--warning)));
+  --_mono-rte-info: var(--mono-rich-text-editor-info, var(--mono-textarea-info, var(--info)));
+  --_mono-rte-teal: var(--mono-rich-text-editor-teal, var(--mono-textarea-teal, var(--teal)));
+  --_mono-rte-purple: var(--mono-rich-text-editor-purple, var(--mono-textarea-purple, var(--purple)));
+  --_mono-rte-neutral: var(--mono-rich-text-editor-neutral, var(--mono-textarea-neutral, var(--neutral)));
+  --_mono-rte-dark: var(--mono-rich-text-editor-dark, var(--mono-textarea-dark, var(--dark)));
+  --_mono-rte-valid: var(--mono-rich-text-editor-valid, var(--mono-textarea-valid, var(--success)));
+  --_mono-rte-invalid: var(--mono-rich-text-editor-invalid, var(--mono-textarea-invalid, var(--destructive)));
+
+  /* ── the painted result — three tiers, base = vega's .textarea ─────────── */
+  --_mono-rte-ring-color: var(--mono-rich-text-editor-ring-color, var(--mono-rich-text-editor-focus-color, var(--_mono-rte-ring-color-preset, var(--_mono-rte-primary))));
+  --_mono-rte-ring-width: var(--mono-rich-text-editor-ring-width, var(--mono-textarea-ring-width, var(--_mono-rte-ring-width-preset, var(--mono-ring-width))));
+  --_mono-rte-ring-alpha: var(--mono-rich-text-editor-ring-alpha, var(--mono-textarea-ring-alpha, var(--mono-ring-alpha)));
+  --_mono-rte-border-color: var(--mono-rich-text-editor-rest-border, var(--mono-rich-text-editor-border-color, var(--mono-rich-text-editor-border, var(--mono-textarea-rest-border, var(--mono-textarea-border-color, var(--_mono-rte-border-color-preset, var(--input)))))));
+  --_mono-rte-side-border-color: var(--_mono-rte-side-border-color-preset, var(--_mono-rte-border-color));
+  --_mono-rte-bg: var(--mono-rich-text-editor-bg, var(--mono-rich-text-editor-surface, var(--mono-textarea-bg, var(--mono-textarea-surface, var(--_mono-rte-bg-preset, var(--mono-mode-surface))))));
+  --_mono-rte-shadow: var(--mono-rich-text-editor-shadow, var(--mono-textarea-shadow, var(--_mono-rte-shadow-preset, var(--mono-shadow-xs))));
+  --_mono-rte-border-width: var(--mono-rich-text-editor-border-width, var(--mono-textarea-border-width, var(--mono-border-width)));
+  --_mono-rte-radius: var(--mono-rich-text-editor-radius, var(--mono-textarea-radius, var(--_mono-rte-radius-preset, var(--mono-radius-md))));
+
+  /* ── md metrics live on the unqualified root ON PURPOSE: hand-written
+        `<div mono-rich-text-editor>` that names no size renders like size="md" ── */
+  --_mono-rte-font-size: var(--mono-rich-text-editor-font-size, var(--mono-rich-text-editor-font-md, var(--mono-textarea-font-md, var(--mono-text-sm))));
+  --_mono-rte-icon-size: var(--mono-rich-text-editor-icon-size, var(--_mono-rte-icon-size-preset, 18px));
+  --_mono-rte-font-family: var(--mono-rich-text-editor-font-family, inherit);
+  --_mono-rte-min-height: var(--mono-rich-text-editor-min-height, 10rem);
+  /* EXTENSION — the toolbar band: a muted wash under the frame's top edge */
+  --_mono-rte-toolbar-bg: var(--mono-rich-text-editor-toolbar-bg, color-mix(in oklab, var(--muted) 60%, var(--_mono-rte-bg)));
+
+  /* ── SunEditor's popovers (dropdowns, dialogs) are the select panel's popover ── */
+  --_mono-rte-popover-bg: var(--mono-rich-text-editor-popover-bg, var(--mono-select-dropdown-bg, var(--popover)));
+  --_mono-rte-popover-color: var(--mono-rich-text-editor-popover-color, var(--mono-select-dropdown-color, var(--popover-foreground)));
+  --_mono-rte-popover-radius: var(--mono-rich-text-editor-popover-radius, var(--mono-select-dropdown-radius, var(--mono-radius-md)));
+  --_mono-rte-popover-shadow: var(--mono-rich-text-editor-popover-shadow, var(--mono-select-dropdown-shadow, var(--mono-shadow-md)));
+
+  /* basecoat@1.0.2 styles/vega.css [data-tooltip]::before — bg-foreground text-background rounded-md px-3 py-1.5 text-xs
+     SunEditor's toolbar tooltips; the corner is the style's shared tooltip token */
+  --_mono-rte-tooltip-bg: var(--mono-rich-text-editor-tooltip-bg, var(--mono-tooltip-bg, var(--foreground)));
+  --_mono-rte-tooltip-color: var(--mono-rich-text-editor-tooltip-color, var(--mono-tooltip-color, var(--background)));
+  --_mono-rte-tooltip-radius: var(--mono-rich-text-editor-tooltip-radius, var(--mono-tooltip-radius, var(--mono-radius-md)));
+
+  /* ── SunEditor's tokens, remapped onto the theme ─────────────────────────
+     Declared on the FRAME'S ancestor so the light-DOM mount inherits them in
+     both builds. `.sun-editor` re-declares every one of these on itself with
+     its defaults, so each is delivered again on `.sun-editor` below — this
+     block is what a consumer sees and overrides; that one is the delivery. */
+  --_se-main-color: var(--_mono-rte-text);
+  --_se-main-color-lighter: var(--_mono-rte-muted);
+  --_se-main-background: var(--_mono-rte-bg);
+  --_se-main-border: var(--border);
+  --_se-main-divider: var(--border);
+  --_se-main-outline: var(--_mono-rte-ring-color);
+  /* the accent: links and the focus outline */
+  --_se-active: var(--_mono-rte-ring-color);
+  --_se-active-dark: color-mix(in oklab, var(--_mono-rte-ring-color) 85%, var(--foreground));
+  /* basecoat@1.0.2 styles/vega.css .btn[data-variant='ghost'] — hover:bg-accent hover:text-accent-foreground
+     a pressed toolbar button and a checked list item are the toggle-on state:
+     the accent WASH with the foreground ink, never a primary tint */
+  --_se-active-ink: var(--mono-rich-text-editor-active-color, var(--accent-foreground, var(--_mono-rte-text)));
+  --_se-active-light: var(--mono-rich-text-editor-active-bg, var(--accent, var(--muted)));
+  --_se-active-light2: var(--mono-mode-surface-hover);
+  --_se-hover: var(--_mono-rte-text);
+  --_se-hover-light: var(--mono-mode-ghost-hover);
+  --_se-hover-light2: var(--mono-mode-surface-hover);
+  --_se-error: var(--_mono-rte-danger);
+  --_se-success: var(--_mono-rte-success);
+  --_se-placeholder: var(--_mono-rte-placeholder);
+  --_se-radius: var(--mono-radius-sm);
+  --_se-radius-lg: var(--_mono-rte-popover-radius);
+  --_se-shadow-layer: var(--_mono-rte-popover-shadow);
+  --_se-font-family: var(--_mono-rte-font-family);
+  --_se-font-size: var(--_mono-rte-font-size);
+  --_se-icon-size: var(--_mono-rte-icon-size);
+  --_se-min-height: var(--_mono-rte-min-height);
+
+}
+
+/* basecoat@1.0.2 styles/vega.css .field — flex w-full flex-col gap-3 */
+[mono-rich-text-editor] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mono-rich-text-editor-gap, var(--mono-textarea-gap, calc(var(--mono-spacing) * 3)));
+  width: 100%;
+  min-width: 0;
+  color: var(--_mono-rte-text);
+  font-family: inherit;
+}
+
+[mono-rich-text-editor],
+:where([mono-rich-text-editor]) > *,
+:where([mono-rich-text-editor]) > * > *::before,
+:where([mono-rich-text-editor]) > * > *::after {
+  box-sizing: border-box;
+}
+
+/* the shadow build renders every region and marks the empty ones; the light
+   build renders only what exists */
+[mono-rich-text-editor] :is([mono-rte-label], [mono-rte-message], [mono-rte-footer])[mono-empty] {
+  display: none;
+}
+
+[mono-rich-text-editor] > [mono-rte-message-outlet]:not(:has([mono-rte-footer]:not([mono-empty]))) {
+  display: none;
+}
+
+/* =========================================
+   Sizes — EXTENSION: the textarea's font ladder; the icons step with it
+   ========================================= */
+
+[mono-rich-text-editor][mono-size="xs"] {
+  --_mono-rte-font-size: var(--mono-rich-text-editor-font-size, var(--mono-rich-text-editor-font-xs, var(--mono-textarea-font-xs, var(--mono-text-xs))));
+  --_mono-rte-icon-size-preset: 14px;
+}
+[mono-rich-text-editor][mono-size="sm"] {
+  --_mono-rte-font-size: var(--mono-rich-text-editor-font-size, var(--mono-rich-text-editor-font-sm, var(--mono-textarea-font-sm, var(--mono-textarea-font-md, var(--mono-text-sm)))));
+  --_mono-rte-icon-size-preset: 16px;
+}
+[mono-rich-text-editor][mono-size="lg"] {
+  --_mono-rte-font-size: var(--mono-rich-text-editor-font-size, var(--mono-rich-text-editor-font-lg, var(--mono-textarea-font-lg, var(--mono-textarea-font-md, var(--mono-text-sm)))));
+  --_mono-rte-icon-size-preset: 20px;
+}
+[mono-rich-text-editor][mono-size="xl"] {
+  --_mono-rte-font-size: var(--mono-rich-text-editor-font-size, var(--mono-rich-text-editor-font-xl, var(--mono-textarea-font-xl, var(--mono-text-base))));
+  --_mono-rte-icon-size-preset: 22px;
+}
+[mono-rich-text-editor][mono-size="xxl"] {
+  --_mono-rte-font-size: var(--mono-rich-text-editor-font-size, var(--mono-rich-text-editor-font-xxl, var(--mono-textarea-font-xxl, var(--mono-text-base))));
+  --_mono-rte-icon-size-preset: 24px;
+}
+
+/* =========================================
+   Colours — EXTENSION: the `color` prop is the FOCUS colour, which is also the
+   editor's active state and links
+   ========================================= */
+
+[mono-rich-text-editor][mono-color="secondary"] {
+  --_mono-rte-ring-color-preset: var(--_mono-rte-secondary);
+}
+[mono-rich-text-editor][mono-color="success"] {
+  --_mono-rte-ring-color-preset: var(--_mono-rte-success);
+}
+[mono-rich-text-editor][mono-color="danger"] {
+  --_mono-rte-ring-color-preset: var(--_mono-rte-danger);
+}
+[mono-rich-text-editor][mono-color="warning"] {
+  --_mono-rte-ring-color-preset: var(--_mono-rte-warning);
+}
+[mono-rich-text-editor][mono-color="info"] {
+  --_mono-rte-ring-color-preset: var(--_mono-rte-info);
+}
+[mono-rich-text-editor][mono-color="teal"] {
+  --_mono-rte-ring-color-preset: var(--_mono-rte-teal);
+}
+[mono-rich-text-editor][mono-color="purple"] {
+  --_mono-rte-ring-color-preset: var(--_mono-rte-purple);
+}
+[mono-rich-text-editor][mono-color="neutral"] {
+  --_mono-rte-ring-color-preset: var(--_mono-rte-neutral);
+}
+[mono-rich-text-editor][mono-color="dark"] {
+  --_mono-rte-ring-color-preset: var(--_mono-rte-dark);
+}
+
+/* =========================================
+   Label
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .field > label, .label
+   — text-sm leading-snug font-medium */
+:where([mono-rich-text-editor]) > [mono-rte-label] {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--mono-spacing) * 1);
+  font-size: var(--mono-rich-text-editor-label-font-size, var(--mono-textarea-label-font-size, var(--mono-text-sm)));
+  line-height: var(--mono-rich-text-editor-label-line-height, var(--mono-textarea-label-line-height, var(--mono-leading-snug)));
+  font-weight: var(--mono-rich-text-editor-label-font-weight, var(--mono-textarea-label-font-weight, var(--mono-label-font-weight, var(--mono-font-weight-medium))));
+  color: var(--mono-rich-text-editor-label-color, var(--mono-textarea-label-color, var(--_mono-rte-text)));
+}
+
+[mono-rich-text-editor][mono-validation-state="invalid"] > [mono-rte-label] {
+  color: var(--mono-rich-text-editor-label-color, var(--mono-textarea-label-color, var(--_mono-rte-invalid)));
+}
+
+:where([mono-rich-text-editor]) [mono-rte-required-mark] {
+  color: var(--mono-rich-text-editor-required-color, var(--mono-textarea-required-color, var(--destructive)));
+}
+
+[mono-rich-text-editor][mono-disabled] > [mono-rte-label] {
+  opacity: 0.5;
+}
+
+/* =========================================
+   The frame — the textarea's box, holding the editor
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .field > textarea, .textarea
+   — rounded-md border border-input bg-transparent shadow-xs
+   transition-[color,box-shadow] (dark:bg-input/30 via --mono-mode-surface);
+   mono: no padding — the editor's toolbar and page fill the box edge to edge */
+:where([mono-rich-text-editor]) [mono-rte-field] {
+  --_mono-rte-ring: 0 0 #0000;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  border: var(--_mono-rte-border-width) solid var(--_mono-rte-side-border-color);
+  border-bottom-color: var(--_mono-rte-border-color);
+  border-radius: var(--_mono-rte-radius);
+  background-color: var(--_mono-rte-bg);
+  color: var(--_mono-rte-text);
+  box-shadow: var(--_mono-rte-ring), var(--_mono-rte-shadow);
+  /* the editor paints its own corners; clip so the toolbar's top corners follow
+     the frame's radius */
+  overflow: hidden;
+  transition-property: color, background-color, border-color, box-shadow, opacity;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+}
+
+/* Before the editor loads (and on the server) the frame is a quiet box the
+   size of the editing area, so the form does not jump when it lands. */
+[mono-rich-text-editor][mono-loading] [mono-rte-field] {
+  min-height: calc(var(--_mono-rte-min-height) + 2.75rem);
+}
+[mono-rich-text-editor][mono-unavailable] [mono-rte-field] {
+  display: none;
+}
+
+/* focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 —
+   the focus is on SunEditor's contenteditable inside the frame */
+:where([mono-rich-text-editor]) [mono-rte-field]:focus-within {
+  border-color: var(--_mono-rte-side-border-color);
+  border-bottom-color: var(--_mono-rte-ring-color);
+  --_mono-rte-ring: 0 0 0 var(--_mono-rte-ring-width) color-mix(in oklab, var(--_mono-rte-ring-color) var(--_mono-rte-ring-alpha), transparent);
+}
+[mono-rich-text-editor]:is(:not([mono-variant]), [mono-variant="outlined"], [mono-variant="filled"]) [mono-rte-field]:focus-within {
+  border-color: var(--_mono-rte-ring-color);
+}
+
+/* aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20
+   (dark: /50 and /40, carried by the mode tokens) */
+[mono-rich-text-editor][mono-validation-state="invalid"] [mono-rte-field] {
+  --_mono-rte-border-color: var(--mono-mode-invalid-border);
+  --_mono-rte-ring: 0 0 0 var(--_mono-rte-ring-width) var(--mono-mode-invalid-ring);
+}
+
+/* EXTENSION — the same treatment in the success / warning roles */
+[mono-rich-text-editor][mono-validation-state="valid"] [mono-rte-field] {
+  --_mono-rte-border-color: color-mix(in oklab, var(--_mono-rte-valid) var(--mono-mode-state-border-alpha), transparent);
+  --_mono-rte-ring: 0 0 0 var(--_mono-rte-ring-width) color-mix(in oklab, var(--_mono-rte-valid) var(--mono-mode-state-ring-alpha), transparent);
+}
+[mono-rich-text-editor][mono-validation-state="warning"] [mono-rte-field] {
+  --_mono-rte-border-color: color-mix(in oklab, var(--_mono-rte-warning) var(--mono-mode-state-border-alpha), transparent);
+  --_mono-rte-ring: 0 0 0 var(--_mono-rte-ring-width) color-mix(in oklab, var(--_mono-rte-warning) var(--mono-mode-state-ring-alpha), transparent);
+}
+
+/* disabled:cursor-not-allowed disabled:opacity-50 */
+[mono-rich-text-editor][mono-disabled] [mono-rte-field] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: var(--mono-rich-text-editor-disabled-bg, var(--mono-textarea-disabled-bg, var(--_mono-rte-bg)));
+}
+
+/* EXTENSION — readonly is legible, not dimmed: a muted surface */
+[mono-rich-text-editor][mono-readonly]:not([mono-disabled]) [mono-rte-field] {
+  --_se-main-background: var(--mono-rich-text-editor-readonly-bg, var(--mono-textarea-readonly-bg, var(--muted)));
+  background-color: var(--mono-rich-text-editor-readonly-bg, var(--mono-textarea-readonly-bg, var(--muted)));
+}
+
+/* =========================================
+   Variants — EXTENSION: the two other looks Basecoat's styles ship, through
+   the textarea's own knobs so a flavour that restyles the textarea restyles this
+   ========================================= */
+
+[mono-rich-text-editor]:is(:not([mono-variant]), [mono-variant="outlined"]) {
+  --_mono-rte-bg-preset: var(--mono-rich-text-editor-outline-bg, var(--mono-textarea-outline-bg));
+  --_mono-rte-border-color-preset: var(--mono-rich-text-editor-outline-border-color, var(--mono-textarea-outline-border-color));
+  --_mono-rte-side-border-color-preset: var(--mono-rich-text-editor-outline-side-border-color, var(--mono-textarea-outline-side-border-color));
+  --_mono-rte-shadow-preset: var(--mono-rich-text-editor-outline-shadow, var(--mono-textarea-outline-shadow, var(--mono-shadow-xs)));
+  --_mono-rte-radius-preset: var(--mono-rich-text-editor-outline-radius, var(--mono-textarea-outline-radius));
+  --_mono-rte-ring-width-preset: var(--mono-rich-text-editor-outline-ring-width, var(--mono-textarea-outline-ring-width));
+}
+
+/* `filled` ≡ luma / mira / rhea's textarea: a tinted surface, no border, no shadow */
+[mono-rich-text-editor][mono-variant="filled"] {
+  --_mono-rte-bg-preset: var(--mono-rich-text-editor-filled-bg, var(--mono-textarea-filled-bg, color-mix(in oklab, var(--input) 50%, transparent)));
+  --_mono-rte-border-color-preset: transparent;
+  --_mono-rte-shadow-preset: 0 0 #0000;
+}
+
+/* `underlined` ≡ sera's: square, the bottom edge only, and no ring */
+[mono-rich-text-editor][mono-variant="underlined"] {
+  --_mono-rte-radius-preset: 0;
+  --_mono-rte-bg-preset: transparent;
+  --_mono-rte-side-border-color-preset: transparent;
+  --_mono-rte-shadow-preset: 0 0 #0000;
+  --_mono-rte-ring-width-preset: 0px;
+}
+[mono-rich-text-editor][mono-variant="underlined"] [mono-rte-field] {
+  --_se-main-background: transparent;
+  --_mono-rte-toolbar-bg: transparent;
+}
+
+/* =========================================
+   Footer — the message row
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .fieldset legend + p, .field > p, .field section > p
+   — text-sm text-muted-foreground leading-normal font-normal */
+:where([mono-rich-text-editor]) [mono-rte-footer] {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: calc(var(--mono-spacing) * 2);
+}
+
+:where([mono-rich-text-editor]) [mono-rte-message-wrap] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+:where([mono-rich-text-editor]) [mono-rte-message] {
+  font-size: var(--mono-rich-text-editor-message-font-size, var(--mono-textarea-message-font-size, var(--mono-text-sm)));
+  line-height: var(--mono-rich-text-editor-message-line-height, var(--mono-textarea-message-line-height, var(--mono-leading-normal)));
+  font-weight: var(--mono-font-weight-normal);
+  color: var(--_mono-rte-muted);
+}
+
+/* basecoat@1.0.2 styles/vega.css .field [role="alert"] — text-destructive text-sm */
+:where([mono-rich-text-editor]) [mono-rte-message="invalid"] {
+  color: var(--_mono-rte-invalid);
+}
+:where([mono-rich-text-editor]) [mono-rte-message="valid"] {
+  color: var(--_mono-rte-valid);
+}
+:where([mono-rich-text-editor]) [mono-rte-message="warning"] {
+  color: var(--_mono-rte-warning);
+}
+
+/* EXTENSION — the peer-missing notice: reads like a validation message, never like a crash */
+:where([mono-rich-text-editor]) [mono-rte-unavailable] {
+  padding: calc(var(--mono-spacing) * 2.5) calc(var(--mono-spacing) * 3);
+  border: var(--mono-border-width) dashed var(--_mono-rte-danger);
+  border-radius: var(--_mono-rte-radius);
+  background: color-mix(in oklab, var(--_mono-rte-danger) var(--mono-mode-tint), transparent);
+  color: var(--_mono-rte-danger);
+  font-size: var(--mono-text-sm);
+  line-height: var(--mono-leading-normal);
+  overflow-wrap: anywhere;
+}
+
+/* =========================================
+   SunEditor inside the frame — from the PAGE sheet (the mount is light DOM)
+   ========================================= */
+
+[mono-rte-mount] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Deliver the remap. `.sun-editor` sets every `--se-*` on itself from
+   SunEditor's sheet, so the same selector (plus ours for specificity) has to
+   set them again — the values, though, come from the frame's `--_se-*` above,
+   which the mount inherits. Only the tokens a theme is made of; the rest keep
+   SunEditor's defaults. */
+[mono-rte-mount] .sun-editor,
+[mono-rte-mount] .sun-editor-editable,
+.sun-editor.sun-editor-carrier-wrapper {
+  --se-main-font-family: var(--_se-font-family);
+  --se-content-font-family: var(--_se-font-family);
+  --se-main-font-size: var(--_se-font-size);
+  --se-btn-font-size: var(--_se-font-size);
+  --se-edit-font-size: calc(var(--_se-font-size) * 1.1);
+  --se-icon-size: var(--_se-icon-size);
+  --se-min-height: var(--_se-min-height);
+  --se-border-radius: var(--_se-radius);
+  --se-border-radius-lg: var(--_se-radius-lg);
+
+  --se-main-color: var(--_se-main-color);
+  --se-main-color-lighter: var(--_se-main-color-lighter);
+  --se-main-font-color: var(--_se-main-color);
+  --se-main-background-color: var(--_se-main-background);
+  --se-main-border-color: var(--_se-main-border);
+  --se-main-divider-color: var(--_se-main-divider);
+  --se-main-outline-color: var(--_se-main-outline);
+  --se-main-shadow-color: var(--_se-main-divider);
+  --se-statusbar-font-color: var(--_se-main-color-lighter);
+  --se-dropdown-font-color: var(--_se-main-color);
+
+  --se-edit-font-color: var(--_se-main-color);
+  --se-edit-background-color: var(--_se-main-background);
+  --se-edit-anchor: var(--_se-active);
+  --se-caret-color: var(--_se-main-color);
+  --se-placeholder-color: var(--_se-placeholder);
+
+  --se-hover-color: var(--_se-hover);
+  --se-hover-dark-color: var(--_se-main-border);
+  --se-hover-light-color: var(--_se-hover-light);
+  --se-hover-light2-color: var(--_se-hover-light2);
+  --se-hover-light3-color: var(--_se-hover-light2);
+
+  /* the accent for outlines and links; the toggle-on state for buttons and
+     checked list items (ink = --se-active-dark3/4, wash = --se-active-light*) */
+  --se-active-color: var(--_se-active);
+  --se-active-hover-color: var(--_se-active-ink);
+  --se-active-dark-color: var(--_se-main-border);
+  --se-active-dark2-color: var(--_se-active-dark);
+  --se-active-dark3-color: var(--_se-active-ink);
+  --se-active-dark4-color: var(--_se-main-border);
+  --se-active-dark5-color: var(--_se-active-dark);
+  --se-active-light-color: var(--_se-active-light);
+  --se-active-light2-color: var(--_se-active-light);
+  --se-active-light3-color: var(--_se-active-light2);
+  --se-active-light4-color: var(--_se-active-light);
+  --se-active-light5-color: var(--_se-active-light2);
+  --se-active-light6-color: var(--_se-active-light2);
+
+  --se-error-color: var(--_se-error);
+  --se-success-color: var(--_se-success);
+
+  --se-select-menu-hover-bg: var(--_se-hover-light);
+  --se-select-menu-active-bg: var(--_se-active-light);
+  --se-modal-background-color: var(--_mono-rte-popover-bg);
+  --se-modal-color: var(--_mono-rte-popover-color);
+  --se-modal-border-color: var(--_se-main-border);
+  --se-modal-anchor-color: var(--_se-active);
+  --se-shadow-layer: var(--_se-shadow-layer);
+
+  /* ── the sub-surfaces SunEditor paints from its own light palette ────────
+     code view, the table picker, the floating controllers, the modal chrome,
+     the overlay, the editing area's own colours — every one a page token now */
+  --se-codeview-font-family: var(--font-mono, ui-monospace, monospace);
+  --se-markdown-font-family: var(--font-mono, ui-monospace, monospace);
+  --se-code-view-color: var(--_mono-rte-text);
+  --se-code-view-background-color: var(--_se-main-background);
+  --se-code-view-line-color: var(--_mono-rte-muted);
+  --se-code-view-line-background-color: var(--muted);
+  --se-markdown-view-color: var(--_mono-rte-text);
+  --se-markdown-view-background-color: var(--_se-main-background);
+  --se-markdown-view-line-color: var(--_mono-rte-muted);
+  --se-markdown-view-line-background-color: var(--muted);
+
+  --se-table-picker-color: var(--_mono-rte-popover-bg);
+  --se-table-picker-border-color: var(--_se-main-border);
+  --se-table-picker-highlight-color: color-mix(in oklab, var(--_se-active) var(--mono-mode-tint), var(--_mono-rte-popover-bg));
+  --se-table-picker-highlight-border-color: var(--_se-active);
+
+  --se-controller-background-color: var(--_mono-rte-popover-bg);
+  --se-controller-color: var(--_mono-rte-popover-color);
+  --se-controller-border-color: var(--_se-main-border);
+  --se-shadow-controller: var(--_se-shadow-layer);
+  --se-shadow-controller-color: transparent;
+  --se-shadow-layer-color: transparent;
+  --se-overlay-background-color: var(--mono-mode-backdrop, #000);
+
+  --se-modal-preview-color: var(--_mono-rte-muted);
+  --se-modal-file-input-background-color: var(--muted);
+  --se-modal-input-disabled-color: var(--_mono-rte-muted);
+  --se-modal-input-disabled-background-color: var(--muted);
+  --se-input-btn-border-color: var(--_se-main-border);
+  --se-input-btn-disabled-color: var(--_mono-rte-muted);
+  --se-main-out-color: var(--_se-main-border);
+  --se-hover-dark2-color: var(--_se-main-border);
+  --se-hover-dark3-color: var(--_se-main-border);
+  --se-loading-color: var(--_se-active);
+
+  --se-drag-caret-color: var(--_se-active);
+  --se-edit-active: var(--_se-active);
+  --se-edit-hover: var(--_se-active-light);
+  --se-edit-outline: var(--_se-main-border);
+  --se-edit-font-pre: var(--_mono-rte-text);
+  --se-edit-font-quote: var(--_mono-rte-muted);
+  --se-edit-background-pre: var(--muted);
+  --se-edit-border-light: var(--_se-main-border);
+  --se-edit-border-dark: var(--_se-main-border);
+  --se-edit-border-dark-n1: var(--_se-main-border);
+  --se-edit-border-dark-n2: var(--_se-main-border);
+  --se-edit-border-table: var(--_se-main-border);
+  --se-edit-hr-color: var(--_se-main-border);
+  --se-edit-hr-on-back: var(--_se-active-light);
+  --se-edit-anchor-on-back: color-mix(in oklab, var(--_se-active) var(--mono-mode-tint), transparent);
+  --se-edit-anchor-on-font: var(--_se-active);
+
+  --se-success-dark-color: var(--_se-success);
+  --se-success-dark2-color: var(--_se-success);
+  --se-success-dark3-color: var(--_se-success);
+  --se-success-light-color: color-mix(in oklab, var(--_se-success) var(--mono-mode-tint), transparent);
+  --se-success-light2-color: color-mix(in oklab, var(--_se-success) var(--mono-mode-tint), transparent);
+  --se-success-light3-color: color-mix(in oklab, var(--_se-success) var(--mono-mode-tint-hover), transparent);
+  --se-success-light4-color: var(--_se-success);
+  --se-success-light5-color: var(--_se-success);
+  --se-error-dark-color: var(--_se-error);
+  --se-error-dark2-color: var(--_se-error);
+  --se-error-dark3-color: var(--_se-error);
+  --se-error-light-color: color-mix(in oklab, var(--_se-error) var(--mono-mode-tint-hover), transparent);
+  --se-error-light2-color: color-mix(in oklab, var(--_se-error) var(--mono-mode-tint), transparent);
+  --se-error-light3-color: color-mix(in oklab, var(--_se-error) var(--mono-mode-tint), transparent);
+  --se-error-light4-color: color-mix(in oklab, var(--_se-error) var(--mono-mode-tint), transparent);
+  --se-error-light5-color: color-mix(in oklab, var(--_se-error) var(--mono-mode-tint), transparent);
+}
+
+/* In the carrier "main background" is the LAYER surface — the dropdown lists,
+   dialogs and alerts — so it is the popover surface there, not the editing
+   surface (which is transparent in light mode: an invisible list). */
+.sun-editor.sun-editor-carrier-wrapper {
+  --se-main-background-color: var(--_mono-rte-popover-bg);
+  --se-main-font-color: var(--_mono-rte-popover-color);
+  --se-dropdown-font-color: var(--_mono-rte-popover-color);
+}
+
+/* basecoat@1.0.2 styles/vega.css .select:not(select) [role='option'].active, .select:not(select) [role='option']:focus-visible — bg-muted text-foreground
+   a checked list item (the current font, size, format …) is a selected option:
+   SunEditor only re-inks it, and its ink was the primary tint */
+[mono-rte-mount] .sun-editor .se-list-inner li.se-checked > button,
+.sun-editor.sun-editor-carrier-wrapper .se-list-inner li.se-checked > button {
+  background-color: var(--_se-active-light);
+  color: var(--_se-active-ink);
+}
+
+/* basecoat@1.0.2 styles/vega.css .field > textarea, .textarea — placeholder:text-muted-foreground
+   Every placeholder the editor shows — the Size / Font inputs in the toolbar,
+   the empty editing area, a dialog's fields — is the field placeholder: the
+   muted ink, OPAQUE. Left alone, a host page's preflight (Tailwind / UnoCSS)
+   makes a placeholder 50% translucent currentColor, which over a tinted page
+   reads as a colour of its own; and SunEditor inks its empty-area placeholder
+   with its OUTLINE token, the accent. */
+[mono-rte-mount] .sun-editor input::placeholder,
+[mono-rte-mount] .sun-editor textarea::placeholder,
+.sun-editor.sun-editor-carrier-wrapper input::placeholder,
+.sun-editor.sun-editor-carrier-wrapper textarea::placeholder {
+  color: var(--_mono-rte-placeholder);
+  opacity: 1;
+}
+[mono-rte-mount] .sun-editor .se-wrapper .se-placeholder,
+[mono-rte-mount] .sun-editor .se-wrapper .se-placeholder-line:before {
+  color: var(--_mono-rte-placeholder);
+}
+
+/* The frame replaces SunEditor's own — no double border, no second radius. */
+[mono-rte-mount] .sun-editor {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  width: 100% !important;
+}
+
+/* basecoat@1.0.2 styles/vega.css [data-tooltip]::before — bg-foreground text-background inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs
+   SunEditor's toolbar tooltips, painted as Basecoat's tooltip: it drew them in
+   `--se-main-font-color` on `--se-main-background-color`, which in dark mode
+   is a translucent wash under near-white text. (0,5,0) over SunEditor's (0,4,0). */
+[mono-rte-mount] .sun-editor .se-tooltip .se-tooltip-inner .se-tooltip-text,
+.sun-editor.sun-editor-carrier-wrapper .se-tooltip .se-tooltip-inner .se-tooltip-text {
+  padding: calc(var(--mono-spacing) * 1.5) calc(var(--mono-spacing) * 3);
+  border-radius: var(--_mono-rte-tooltip-radius);
+  background-color: var(--_mono-rte-tooltip-bg);
+  color: var(--_mono-rte-tooltip-color);
+  /* the page font, handed over by the element: a tooltip inside the font list
+     would otherwise inherit the item's own face */
+  font-family: var(--_mono-rte-page-font, inherit);
+  font-size: var(--mono-text-xs);
+  line-height: var(--mono-text-xs--lh);
+  font-weight: var(--mono-font-weight-normal);
+  white-space: nowrap;
+}
+
+/* basecoat@1.0.2 styles/vega.css [data-tooltip]::before — the dropdown items (font family,
+   font size, the colour palettes …) carried native `title` tooltips, which no theme can
+   paint; the element rewrites them into `data-tooltip`, drawn here the way Basecoat
+   draws its own: a pseudo-element with the attribute as content, above the item
+   (the anchor is `position: relative`, as in Basecoat's compiled `[data-tooltip]`) */
+[mono-rte-mount] .sun-editor [data-tooltip],
+.sun-editor.sun-editor-carrier-wrapper [data-tooltip] {
+  position: relative;
+}
+
+/* basecoat@1.0.2 styles/vega.css [data-tooltip]::before — bg-foreground text-background inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs */
+[mono-rte-mount] .sun-editor [data-tooltip]::after,
+.sun-editor.sun-editor-carrier-wrapper [data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + calc(var(--mono-spacing) * 1.5));
+  z-index: 60;
+  width: max-content;
+  max-width: 20rem;
+  padding: calc(var(--mono-spacing) * 1.5) calc(var(--mono-spacing) * 3);
+  border-radius: var(--_mono-rte-tooltip-radius);
+  background-color: var(--_mono-rte-tooltip-bg);
+  color: var(--_mono-rte-tooltip-color);
+  font-family: var(--_mono-rte-page-font, inherit);
+  font-size: var(--mono-text-xs);
+  line-height: var(--mono-text-xs--lh);
+  font-weight: var(--mono-font-weight-normal);
+  font-style: normal;
+  text-indent: 0;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateX(-50%) scale(0.95);
+  transform-origin: bottom center;
+  transition-property: opacity, transform, visibility;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration-fast, 100ms);
+}
+
+[mono-rte-mount] .sun-editor [data-tooltip]:hover::after,
+[mono-rte-mount] .sun-editor [data-tooltip]:focus-visible::after,
+.sun-editor.sun-editor-carrier-wrapper [data-tooltip]:hover::after,
+.sun-editor.sun-editor-carrier-wrapper [data-tooltip]:focus-visible::after {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+/* a dropdown layer clips its own overflow, so a tooltip above the FIRST row of a
+   palette would be cut off at the layer edge: that row opens its tooltips below */
+[mono-rte-mount] .sun-editor .se-dropdown .se-color-pallet:first-child [data-tooltip]::after,
+.sun-editor.sun-editor-carrier-wrapper .se-dropdown .se-color-pallet:first-child [data-tooltip]::after {
+  bottom: auto;
+  top: calc(100% + calc(var(--mono-spacing) * 1.5));
+  transform-origin: top center;
+}
+
+/* SunEditor shrinks a hovered / active swatch with `transform: scale(.8)`. A
+   transform makes the button a stacking context, so its tooltip — a child —
+   can never rise above the swatches painted after it (the next row covers a
+   first-row tooltip) and shrinks with it. The same "pressed" read as an inset
+   ring of the layer surface instead; the hovered swatch lifts above its row. */
+[mono-rte-mount] .sun-editor .se-dropdown .se-color-pallet button:hover,
+[mono-rte-mount] .sun-editor .se-dropdown .se-color-pallet button.active,
+.sun-editor.sun-editor-carrier-wrapper .se-dropdown .se-color-pallet button:hover,
+.sun-editor.sun-editor-carrier-wrapper .se-dropdown .se-color-pallet button.active {
+  transform: none;
+  box-shadow: inset 0 0 0 3px var(--_mono-rte-popover-bg, var(--popover));
+}
+[mono-rte-mount] .sun-editor .se-dropdown .se-color-pallet button:hover,
+.sun-editor.sun-editor-carrier-wrapper .se-dropdown .se-color-pallet button:hover {
+  z-index: 1;
+}
+
+/* …and the same clip sideways: a centred tooltip on the first / last column of
+   a palette row runs past the layer's edge, so those hang from the item's own
+   outer edge instead */
+[mono-rte-mount] .sun-editor .se-dropdown .se-color-pallet li:first-child [data-tooltip]::after,
+.sun-editor.sun-editor-carrier-wrapper .se-dropdown .se-color-pallet li:first-child [data-tooltip]::after {
+  left: 0;
+  transform: scale(0.95);
+  transform-origin: left center;
+}
+[mono-rte-mount] .sun-editor .se-dropdown .se-color-pallet li:last-child [data-tooltip]::after,
+.sun-editor.sun-editor-carrier-wrapper .se-dropdown .se-color-pallet li:last-child [data-tooltip]::after {
+  left: auto;
+  right: 0;
+  transform: scale(0.95);
+  transform-origin: right center;
+}
+[mono-rte-mount] .sun-editor .se-dropdown .se-color-pallet li:is(:first-child, :last-child) [data-tooltip]:hover::after,
+[mono-rte-mount] .sun-editor .se-dropdown .se-color-pallet li:is(:first-child, :last-child) [data-tooltip]:focus-visible::after,
+.sun-editor.sun-editor-carrier-wrapper .se-dropdown .se-color-pallet li:is(:first-child, :last-child) [data-tooltip]:hover::after,
+.sun-editor.sun-editor-carrier-wrapper .se-dropdown .se-color-pallet li:is(:first-child, :last-child) [data-tooltip]:focus-visible::after {
+  transform: scale(1);
+}
+
+/* basecoat@1.0.2 styles/vega.css [data-tooltip][data-arrow]::after — bg-foreground */
+[mono-rte-mount] .sun-editor .se-tooltip .se-tooltip-inner .se-tooltip-text:after,
+.sun-editor.sun-editor-carrier-wrapper .se-tooltip .se-tooltip-inner .se-tooltip-text:after {
+  border-color: transparent transparent var(--_mono-rte-tooltip-bg) transparent;
+}
+[mono-rte-mount] .sun-editor .se-toolbar.se-toolbar-bottom .se-tooltip .se-tooltip-inner .se-tooltip-text:after {
+  border-color: var(--_mono-rte-tooltip-bg) transparent transparent transparent;
+}
+
+/* EXTENSION — the toolbar band, on a hairline */
+[mono-rte-mount] .sun-editor .se-toolbar {
+  background: var(--_mono-rte-toolbar-bg);
+  box-shadow: inset 0 calc(var(--mono-border-width) * -1) 0 0 var(--border);
+}
+
+/* The carrier — modals, alerts and the dropdown lists SunEditor parks on <body>
+   — is in the token block and the delivery rule above: it paints exactly like
+   the frame it belongs to, at the element's default `color` and `size`. */
+
+/* =========================================
+   SunEditor's dialogs — the modal SunEditor parks in its carrier: its chrome
+   is the page's dialog, its fields the ported input, its buttons the ported
+   button, its tabs the ported tabs. Selectors mirror SunEditor's own chains
+   (prefixed by the scope) so they out-weigh them by exactly the scope.
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .dialog > * — bg-popover text-popover-foreground */
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-area .se-modal-inner .se-modal-content {
+  border: var(--mono-border-width) solid var(--_se-main-border);
+  border-radius: var(--_mono-rte-popover-radius);
+  box-shadow: var(--_mono-rte-popover-shadow);
+  color: var(--_mono-rte-popover-color);
+}
+
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-area .se-modal-inner .se-modal-header .se-modal-title {
+  font-size: var(--mono-text-base);
+  font-weight: var(--mono-font-weight-semibold);
+  color: var(--_mono-rte-popover-color);
+}
+
+/* the close button: a ghost button, muted at rest */
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-area .se-modal-inner .se-modal-header .se-close-btn {
+  color: var(--_mono-rte-muted);
+  text-shadow: none;
+  border-radius: var(--mono-radius-sm);
+}
+
+/* basecoat@1.0.2 styles/vega.css .tabs > [role='tablist'] — the modal's Image / Link tabs:
+   a text tab with the accent under the active one, not a boxed strip */
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-tabs {
+  /* SunEditor floats the tab buttons inside a 25px-high strip; as a flex row the
+     strip is as tall as the tabs and stays in flow above the form */
+  display: flex;
+  align-items: stretch;
+  gap: calc(var(--mono-spacing) * 1);
+  height: auto;
+  margin-bottom: calc(var(--mono-spacing) * 3);
+  border-bottom: var(--mono-border-width) solid var(--_se-main-border);
+}
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-tabs button {
+  background-color: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: calc(var(--mono-border-width) * -1);
+  padding: calc(var(--mono-spacing) * 1.5) calc(var(--mono-spacing) * 3);
+  color: var(--_mono-rte-muted);
+  font-size: var(--mono-text-sm);
+  font-weight: var(--mono-font-weight-medium);
+  transition-property: color, border-color;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+}
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-tabs button:hover {
+  background-color: transparent;
+  color: var(--_mono-rte-text);
+}
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-tabs button.active {
+  background-color: transparent;
+  border-bottom-color: var(--_se-active);
+  color: var(--_mono-rte-text);
+}
+
+/* basecoat@1.0.2 styles/vega.css .input-group — rounded-md border border-input
+   the modal's text fields and selects are the ported input: its surface, edge,
+   corner and ring, through the input's own public knobs */
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-area .se-modal-inner .se-modal-form .se-input-form,
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-area .se-modal-inner .se-modal-form .se-input-select,
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-area .se-modal-inner .se-modal-form select,
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-controller input[type='text'],
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-controller select {
+  background-color: var(--mono-input-bg, var(--mono-input-surface, var(--mono-input-outline-bg, var(--mono-mode-surface))));
+  border: var(--mono-border-width) solid var(--mono-input-rest-border, var(--mono-input-border-color, var(--mono-input-outline-border-color, var(--input))));
+  border-radius: var(--mono-input-radius-sm, var(--mono-input-outline-radius, var(--mono-input-radius, var(--mono-radius-md))));
+  color: var(--_mono-rte-text);
+  box-shadow: var(--mono-input-outline-shadow, var(--mono-shadow-xs));
+  font-size: var(--mono-text-sm);
+  outline: none;
+  transition-property: border-color, box-shadow;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+}
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-area .se-modal-inner .se-modal-form .se-input-form:focus,
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-area .se-modal-inner .se-modal-form select:focus {
+  border-color: var(--_se-active);
+  box-shadow: 0 0 0 var(--mono-ring-width) color-mix(in oklab, var(--_se-active) var(--mono-ring-alpha), transparent);
+}
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-area .se-modal-inner input:disabled {
+  opacity: 0.5;
+}
+
+/* the file drop area: a dashed muted panel */
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-area .se-modal-inner .se-modal-form .se-flex-input-wrapper > .se-input-form-abs {
+  border-radius: var(--mono-input-radius-sm, var(--mono-input-outline-radius, var(--mono-input-radius, var(--mono-radius-md))));
+}
+
+/* basecoat@1.0.2 styles/vega.css .btn — Submit is the primary button */
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-btn-primary,
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-area .se-modal-inner .se-modal-content .se-btn-primary {
+  background-color: var(--mono-button-bg, var(--primary));
+  border: var(--mono-border-width) solid transparent;
+  border-radius: var(--mono-button-sm-radius, var(--mono-button-radius, var(--mono-radius-md)));
+  color: var(--mono-button-color, var(--primary-foreground));
+  font-size: var(--mono-text-sm);
+  font-weight: var(--mono-font-weight-medium);
+  box-shadow: var(--mono-shadow-xs);
+}
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-btn-primary:hover,
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-btn-primary:focus {
+  background-color: color-mix(in oklab, var(--mono-button-bg, var(--primary)) 90%, transparent);
+  border-color: transparent;
+  color: var(--mono-button-color, var(--primary-foreground));
+}
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-btn-primary:disabled {
+  opacity: 0.5;
+}
+
+/* basecoat@1.0.2 styles/vega.css .btn[data-variant='outline'] — the modal's secondary buttons */
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-area .se-modal-inner .se-modal-btn-revert,
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-area .se-modal-inner .se-modal-form .se-modal-form-files .se-modal-files-edge-button,
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-modal-area .se-modal-inner .se-modal-form .se-modal-flex-form .se-btn {
+  border: var(--mono-border-width) solid var(--input);
+  border-radius: var(--mono-button-sm-radius, var(--mono-button-radius, var(--mono-radius-md)));
+  background-color: var(--background);
+  color: var(--_mono-rte-text);
+  opacity: 1;
+}
+
+/* the native checkboxes and radios take the accent */
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) input[type='checkbox'],
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) input[type='radio'] {
+  accent-color: var(--_se-active);
+}
+
+/* the floating controllers (link / image / table) are popovers */
+:is([mono-rte-mount] .sun-editor, .sun-editor.sun-editor-carrier-wrapper) .se-controller {
+  border-radius: var(--_mono-rte-popover-radius);
+}
+
+/* Full screen — SunEditor fixes its root over the page (inline style, no class of
+   its own; the element marks the mount when SunEditor reports the toggle, and the
+   inline style is the fallback). The frame stays behind, so the editor takes the
+   PAGE surface itself: opaque, in the mode's colours, the toolbar band on top. */
+[mono-rte-mount][mono-fullscreen] .sun-editor,
+[mono-rte-mount] .sun-editor[style*="position: fixed"] {
+  --_se-main-background: var(--mono-rich-text-editor-fullscreen-bg, var(--background));
+  --_mono-rte-toolbar-bg: var(--mono-rich-text-editor-toolbar-bg, color-mix(in oklab, var(--muted) 60%, var(--mono-rich-text-editor-fullscreen-bg, var(--background))));
+  background: var(--mono-rich-text-editor-fullscreen-bg, var(--background));
+  color: var(--_mono-rte-text);
+}
+
+/* code view: the page's mono face on the editing surface, the line column muted */
+[mono-rte-mount] .sun-editor .se-wrapper .se-code-viewer,
+[mono-rte-mount] .sun-editor .se-wrapper .se-code-wrapper .se-code-view-line {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--mono-text-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([mono-rich-text-editor]) [mono-rte-field] {
+    transition: none;
+  }
+}

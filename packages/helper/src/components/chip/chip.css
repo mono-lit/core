@@ -1,0 +1,587 @@
+/* =========================================================================
+   mono-chip — a port of Basecoat's `.badge` (basecoat-css@1.0.2, vega style).
+
+   Styled by ATTRIBUTE, like Basecoat — and the attributes mirror the element's
+   props one for one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-chip size="lg" color="success" variant="solid" label="Active" dot>
+     <span mono-chip mono-size="lg" mono-color="success" mono-variant="solid" mono-has-dot>
+       <span mono-main>
+         <span mono-content>
+           <span mono-dot></span>
+           <span mono-label>Active</span>
+           <button mono-close><span mono-glyph class="i-mdi-close"></span></button>
+         </span>
+       </span>
+     </span>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-color])` = primary, `:not([mono-variant])` = soft, no
+   `mono-rounded` = the pill). The element renders these on its root (both
+   builds) plus the states `mono-has-dot` (the dot PART is `mono-dot`, so the state
+   spells itself out) / `mono-removable` / `mono-clickable` /
+   `mono-disabled` / `mono-selected` and `mono-icon-position="right"`. The old
+   classes (`.mono-chip.md.soft-primary`, `.chip-label`, `.chip-close`) are
+   still emitted as inert hooks until 2.0 but no rule here reads them — except
+   `rounded-<step>`, which is GONE: that is Tailwind/UnoCSS's own utility
+   namespace, so on a page shipping those it was never inert (it rounded the
+   chip's outer box). Use `mono-rounded` / the `rounded` prop.
+
+   Selector map (ours ≡ upstream):
+     [mono-chip]                   ≡ the layout box only — NOT painted (see below)
+     [mono-main]                   ≡ .badge (inline-flex w-fit shrink-0 items-center
+                                     justify-center overflow-hidden whitespace-nowrap,
+                                     h-5 gap-1 rounded-4xl border border-transparent
+                                     px-2 py-0.5 text-xs font-medium transition-all,
+                                     focus-visible:border-ring ring-[3px] ring-ring/50)
+     [mono-variant="solid"]        ≡ .badge[data-variant='primary'] (bg-c text-c-foreground,
+                                     [a]:hover:bg-c/80) — generalised to every hue
+     [mono-variant="soft"]         ≡ .badge[data-variant='destructive'] (bg-c/10 text-c,
+                                     [a]:hover:bg-c/20, dark bg-c/20) — generalised; the DEFAULT
+     [mono-variant="outline"]      ≡ .badge[data-variant='outline'] (border-border text-foreground,
+                                     [a]:hover:bg-muted) + the hue on the edge and the ink
+     [mono-color="secondary"]      ≡ .badge[data-variant='secondary'] (the muted surface pair)
+     [mono-size="md"]              ≡ .badge's own h-5 px-2 text-xs; the other five are EXTENSION
+                                     (Basecoat ships one badge size)
+     [mono-rounded="…"]            ≡ EXTENSION (the shared corner ladder; unset = rounded-4xl)
+     [mono-close]                  ≡ .combobox-chip-remove (opacity-50 hover:opacity-100, svg size-3.5)
+     [mono-has-dot] / [mono-dot] / [mono-selected] / [mono-clickable] ≡ EXTENSION
+     [mono-disabled]               ≡ .btn disabled:opacity-50
+     [mono-status-dot]             ≡ EXTENSION (the standalone status-dot helper)
+
+   WHY THE ROOT PAINTS NOTHING. `[mono-chip]` is also what a FIELD's internal
+   chip carries: `<mono-tag-input>` renders Basecoat combobox chips as
+   `[mono-chip] > [mono-chip-main] > …` and paints them in tag-input.css. Those
+   rules are `[mono-tag-input] [mono-chip]` = (0,2,0) and win over this sheet,
+   but only where they overlap — so this sheet keeps the root to layout plus
+   custom properties (which a field's rules simply don't read) and paints the
+   badge on `[mono-main]`, a part name a field chip does not have. The two never
+   collide, and a real `<mono-chip>` slotted INTO a field keeps its own look.
+
+   Specificity contract (same as the pre-port class sheet): a part's RESTING
+   rule is exactly one attribute strong — `:where([mono-chip]) [mono-label]` =
+   (0,1,0) — so a utility class handed in through `cssClass` wins by source
+   order, while the prop and state rules stay heavier and win over it.
+
+   Inner parts: [mono-main] > [mono-content] > [mono-dot] / [data-mono-slot=icon]
+   / [mono-label] / [mono-close] > [mono-glyph].
+
+   FLAVORS set `--mono-chip-{radius,border-width,font-weight,letter-spacing,
+   text-transform}` and the VARIANT-scoped paint knobs
+   `--mono-chip-{soft,solid,outline}-{bg,color,border-color}` (the shared
+   `--mono-chip-bg` / `-color` is the CONSUMER's blanket override and repaints
+   all three looks at once)` and the per-size `-height-<size>` /
+   `-padding-x-<size>` / `-gap-<size>` / `-font-size-<size>` /
+   `-glyph-size-<size>` (the size-agnostic twin of each of those is the
+   CONSUMER's override — a flavor writing it would flatten the whole ladder);
+   every fallback here is vega's value
+   (`node scripts/basecoat-styles.mjs --varying "^\.badge"`).
+   ========================================================================= */
+
+mono-chip {
+  display: inline-block;
+}
+
+/* =========================================
+   Root — layout and the palette. NOTHING here paints (see the header).
+   ========================================= */
+
+[mono-chip] {
+  /* ── the ten roles, each a public knob over a Basecoat token ──────────── */
+  --_mono-chip-primary: var(--mono-chip-primary, var(--primary));
+  --_mono-chip-primary-foreground: var(--mono-chip-primary-foreground, var(--primary-foreground));
+  --_mono-chip-secondary: var(--mono-chip-secondary, var(--secondary));
+  --_mono-chip-secondary-foreground: var(--mono-chip-secondary-foreground, var(--secondary-foreground));
+  --_mono-chip-success: var(--mono-chip-success, var(--success));
+  --_mono-chip-success-foreground: var(--mono-chip-success-foreground, var(--success-foreground));
+  --_mono-chip-danger: var(--mono-chip-danger, var(--destructive));
+  --_mono-chip-danger-foreground: var(--mono-chip-danger-foreground, var(--destructive-foreground));
+  --_mono-chip-warning: var(--mono-chip-warning, var(--warning));
+  --_mono-chip-warning-foreground: var(--mono-chip-warning-foreground, var(--warning-foreground));
+  --_mono-chip-info: var(--mono-chip-info, var(--info));
+  --_mono-chip-info-foreground: var(--mono-chip-info-foreground, var(--info-foreground));
+  --_mono-chip-teal: var(--mono-chip-teal, var(--teal));
+  --_mono-chip-teal-foreground: var(--mono-chip-teal-foreground, var(--teal-foreground));
+  --_mono-chip-purple: var(--mono-chip-purple, var(--purple));
+  --_mono-chip-purple-foreground: var(--mono-chip-purple-foreground, var(--purple-foreground));
+  --_mono-chip-neutral: var(--mono-chip-neutral, var(--neutral));
+  --_mono-chip-neutral-foreground: var(--mono-chip-neutral-foreground, var(--neutral-foreground));
+  --_mono-chip-dark: var(--mono-chip-dark, var(--dark));
+  --_mono-chip-dark-foreground: var(--mono-chip-dark-foreground, var(--dark-foreground));
+
+  /* the colour in play — `primary` unless a [mono-color] rule re-points it */
+  --_mono-chip-c: var(--_mono-chip-primary);
+  --_mono-chip-c-foreground: var(--_mono-chip-primary-foreground);
+
+  /* ── md metrics live on the unqualified root ON PURPOSE ────────────────────
+     basecoat@1.0.2 styles/vega.css .badge — h-5 gap-1 rounded-4xl border
+     border-transparent px-2 py-0.5 text-xs font-medium, [&>svg]:size-3 */
+  --_mono-chip-height: var(--mono-chip-height, var(--_mono-chip-height-preset, var(--mono-chip-height-md, calc(var(--mono-spacing) * 5))));
+  --_mono-chip-padding-x: var(--mono-chip-padding-x, var(--_mono-chip-padding-x-preset, var(--mono-chip-padding-x-md, calc(var(--mono-spacing) * 2))));
+  --_mono-chip-gap: var(--mono-chip-gap, var(--_mono-chip-gap-preset, var(--mono-chip-gap-md, var(--mono-spacing))));
+  --_mono-chip-font-size: var(--mono-chip-font-size, var(--_mono-chip-font-size-preset, var(--mono-chip-font-size-md, var(--mono-text-xs))));
+  --_mono-chip-glyph-size: var(--mono-chip-glyph-size, var(--_mono-chip-glyph-size-preset, var(--mono-chip-glyph-size-md, calc(var(--mono-spacing) * 3))));
+  /* `rounded-4xl` is the pill; a `rounded` step writes the preset tier, and an
+     explicit --mono-chip-radius still wins over the prop */
+  --_mono-chip-radius: var(--mono-chip-radius, var(--_mono-chip-radius-preset, var(--mono-radius-4xl)));
+  --_mono-chip-border-width: var(--mono-chip-border-width, var(--mono-border-width));
+  --_mono-chip-font-weight: var(--mono-chip-font-weight, var(--mono-font-weight-medium));
+
+  --_mono-chip-ring-color: var(--mono-chip-ring-color, var(--ring));
+  --_mono-chip-ring-width: var(--mono-chip-ring-width, var(--mono-ring-width));
+  --_mono-chip-ring-alpha: var(--mono-chip-ring-alpha, var(--mono-ring-alpha));
+
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+/* =========================================
+   The badge box — `.badge`
+   ========================================= */
+
+/* basecoat@1.0.2 components/badge.css .badge — inline-flex w-fit shrink-0
+   items-center justify-center overflow-hidden whitespace-nowrap
+   [&>svg]:pointer-events-none */
+:where([mono-chip]) [mono-main] {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  white-space: nowrap;
+  box-sizing: border-box;
+  height: var(--_mono-chip-height);
+  gap: var(--_mono-chip-gap);
+  padding-inline: var(--_mono-chip-padding-x);
+  border: var(--_mono-chip-border-width) solid transparent;
+  border-radius: var(--_mono-chip-radius);
+  font-family: inherit;
+  font-size: var(--_mono-chip-font-size);
+  font-weight: var(--_mono-chip-font-weight);
+  letter-spacing: var(--mono-chip-letter-spacing, normal);
+  text-transform: var(--mono-chip-text-transform, none);
+  line-height: 1;
+  text-decoration: none;
+  user-select: none;
+  vertical-align: middle;
+  /* `transition-all`, narrowed to what a chip actually animates */
+  transition:
+    color var(--mono-duration) var(--mono-ease),
+    background-color var(--mono-duration) var(--mono-ease),
+    border-color var(--mono-duration) var(--mono-ease),
+    box-shadow var(--mono-duration) var(--mono-ease),
+    opacity var(--mono-duration) var(--mono-ease);
+  box-shadow: var(--_mono-chip-ring, 0 0 #0000);
+}
+
+/* A LINK chip is a control, not prose. Host stylesheets routinely paint a bare
+   `a` — VitePress's own `.vp-doc a` sets a weight and an underline at (0,1,1) —
+   and that out-specifies the (0,1,0) part rule above, so the anchor form
+   restates what such a rule hijacks, one attribute heavier. Measured: the docs'
+   light link chip came out at weight 500 while the shadow one, beyond that
+   sheet's reach, kept the component's own 600. The colour needs no restatement:
+   every variant rule is already (0,2,0).
+
+   DEVIATION from the specificity contract, for this form only — a `cssClass.main`
+   utility that sets font-weight or text-decoration on a LINK chip now needs
+   `!important` (or the `--mono-chip-font-weight` knob). */
+[mono-chip] a[mono-main] {
+  font-weight: var(--_mono-chip-font-weight);
+  text-decoration: none;
+}
+
+/* basecoat@1.0.2 components/badge.css .badge — focus-visible:border-ring
+   focus-visible:ring-[3px] focus-visible:ring-ring/50 */
+:where([mono-chip]) [mono-main]:focus-visible {
+  outline: none;
+  border-color: var(--_mono-chip-ring-color);
+  --_mono-chip-ring: 0 0 0 var(--_mono-chip-ring-width)
+    color-mix(in oklab, var(--_mono-chip-ring-color) var(--_mono-chip-ring-alpha), transparent);
+}
+
+/* =========================================
+   Sizes — EXTENSION: Basecoat ships ONE badge; md is its `.badge`
+   ========================================= */
+
+/* The ladder steps the same way the control heights do: 4px of box and one type
+   step per size, with md pinned to vega's h-5 / px-2 / text-xs. */
+[mono-chip][mono-size="xs"] {
+  --_mono-chip-height-preset: var(--mono-chip-height-xs, calc(var(--mono-spacing) * 4));
+  --_mono-chip-padding-x-preset: var(--mono-chip-padding-x-xs, calc(var(--mono-spacing) * 1.5));
+  --_mono-chip-gap-preset: var(--mono-chip-gap-xs, calc(var(--mono-spacing) * 0.75));
+  --_mono-chip-font-size-preset: var(--mono-chip-font-size-xs, var(--mono-text-xs));
+  --_mono-chip-glyph-size-preset: var(--mono-chip-glyph-size-xs, calc(var(--mono-spacing) * 2.5));
+}
+
+[mono-chip][mono-size="sm"] {
+  --_mono-chip-height-preset: var(--mono-chip-height-sm, calc(var(--mono-spacing) * 4.5));
+  --_mono-chip-padding-x-preset: var(--mono-chip-padding-x-sm, calc(var(--mono-spacing) * 1.75));
+  --_mono-chip-gap-preset: var(--mono-chip-gap-sm, calc(var(--mono-spacing) * 0.875));
+  --_mono-chip-font-size-preset: var(--mono-chip-font-size-sm, var(--mono-text-xs));
+  --_mono-chip-glyph-size-preset: var(--mono-chip-glyph-size-sm, calc(var(--mono-spacing) * 2.75));
+}
+
+[mono-chip][mono-size="lg"] {
+  --_mono-chip-height-preset: var(--mono-chip-height-lg, calc(var(--mono-spacing) * 6));
+  --_mono-chip-padding-x-preset: var(--mono-chip-padding-x-lg, calc(var(--mono-spacing) * 2.5));
+  --_mono-chip-gap-preset: var(--mono-chip-gap-lg, calc(var(--mono-spacing) * 1.25));
+  --_mono-chip-font-size-preset: var(--mono-chip-font-size-lg, var(--mono-text-sm));
+  --_mono-chip-glyph-size-preset: var(--mono-chip-glyph-size-lg, calc(var(--mono-spacing) * 3.5));
+}
+
+[mono-chip][mono-size="xl"] {
+  --_mono-chip-height-preset: var(--mono-chip-height-xl, calc(var(--mono-spacing) * 7));
+  --_mono-chip-padding-x-preset: var(--mono-chip-padding-x-xl, calc(var(--mono-spacing) * 3));
+  --_mono-chip-gap-preset: var(--mono-chip-gap-xl, calc(var(--mono-spacing) * 1.5));
+  --_mono-chip-font-size-preset: var(--mono-chip-font-size-xl, var(--mono-text-sm));
+  --_mono-chip-glyph-size-preset: var(--mono-chip-glyph-size-xl, calc(var(--mono-spacing) * 4));
+}
+
+[mono-chip][mono-size="xxl"] {
+  --_mono-chip-height-preset: var(--mono-chip-height-xxl, calc(var(--mono-spacing) * 8));
+  --_mono-chip-padding-x-preset: var(--mono-chip-padding-x-xxl, calc(var(--mono-spacing) * 3.5));
+  --_mono-chip-gap-preset: var(--mono-chip-gap-xxl, calc(var(--mono-spacing) * 1.75));
+  --_mono-chip-font-size-preset: var(--mono-chip-font-size-xxl, var(--mono-text-base));
+  --_mono-chip-glyph-size-preset: var(--mono-chip-glyph-size-xxl, calc(var(--mono-spacing) * 4.5));
+}
+
+/* =========================================
+   Rounded — EXTENSION: the shared corner ladder. Unset is vega's rounded-4xl.
+   ========================================= */
+
+[mono-chip][mono-rounded="none"] { --_mono-chip-radius-preset: 0; }
+[mono-chip][mono-rounded="xs"] { --_mono-chip-radius-preset: calc(var(--mono-radius-sm) / 2); }
+[mono-chip][mono-rounded="sm"] { --_mono-chip-radius-preset: var(--mono-radius-sm); }
+[mono-chip][mono-rounded="md"] { --_mono-chip-radius-preset: var(--mono-radius-md); }
+[mono-chip][mono-rounded="lg"] { --_mono-chip-radius-preset: var(--mono-radius-lg); }
+[mono-chip][mono-rounded="xl"] { --_mono-chip-radius-preset: var(--mono-radius-xl); }
+[mono-chip][mono-rounded="xxl"] { --_mono-chip-radius-preset: var(--mono-radius-2xl); }
+[mono-chip][mono-rounded="full"] { --_mono-chip-radius-preset: var(--mono-radius-full); }
+
+/* =========================================
+   Colours — each publishes the pair the variants read
+   ========================================= */
+
+[mono-chip][mono-color="primary"] {
+  --_mono-chip-c: var(--_mono-chip-primary);
+  --_mono-chip-c-foreground: var(--_mono-chip-primary-foreground);
+}
+
+/* basecoat@1.0.2 styles/vega.css .badge[data-variant='secondary'] —
+   bg-secondary text-secondary-foreground: a SURFACE pair, not a hue, so its
+   `soft` and `solid` land on the same muted plate (shadcn's meaning). */
+[mono-chip][mono-color="secondary"] {
+  --_mono-chip-c: var(--_mono-chip-secondary);
+  --_mono-chip-c-foreground: var(--_mono-chip-secondary-foreground);
+}
+
+[mono-chip][mono-color="success"] {
+  --_mono-chip-c: var(--_mono-chip-success);
+  --_mono-chip-c-foreground: var(--_mono-chip-success-foreground);
+}
+
+[mono-chip][mono-color="danger"] {
+  --_mono-chip-c: var(--_mono-chip-danger);
+  --_mono-chip-c-foreground: var(--_mono-chip-danger-foreground);
+}
+
+[mono-chip][mono-color="warning"] {
+  --_mono-chip-c: var(--_mono-chip-warning);
+  --_mono-chip-c-foreground: var(--_mono-chip-warning-foreground);
+}
+
+[mono-chip][mono-color="info"] {
+  --_mono-chip-c: var(--_mono-chip-info);
+  --_mono-chip-c-foreground: var(--_mono-chip-info-foreground);
+}
+
+[mono-chip][mono-color="teal"] {
+  --_mono-chip-c: var(--_mono-chip-teal);
+  --_mono-chip-c-foreground: var(--_mono-chip-teal-foreground);
+}
+
+[mono-chip][mono-color="purple"] {
+  --_mono-chip-c: var(--_mono-chip-purple);
+  --_mono-chip-c-foreground: var(--_mono-chip-purple-foreground);
+}
+
+[mono-chip][mono-color="neutral"] {
+  --_mono-chip-c: var(--_mono-chip-neutral);
+  --_mono-chip-c-foreground: var(--_mono-chip-neutral-foreground);
+}
+
+[mono-chip][mono-color="dark"] {
+  --_mono-chip-c: var(--_mono-chip-dark);
+  --_mono-chip-c-foreground: var(--_mono-chip-dark-foreground);
+}
+
+/* =========================================
+   Variants
+   ========================================= */
+
+/* `soft` is the DEFAULT and is Basecoat's tonal badge.
+   basecoat@1.0.2 styles/vega.css .badge[data-variant='destructive'] —
+   bg-destructive/10 text-destructive dark:bg-destructive/20 (the alpha pair
+   travels as --mono-mode-tint, which is what makes it dark-mode correct). */
+[mono-chip]:is(:not([mono-variant]), [mono-variant="soft"]) > [mono-main] {
+  background-color: var(--mono-chip-bg, var(--mono-chip-soft-bg, color-mix(in oklab, var(--_mono-chip-c) var(--mono-mode-tint), transparent)));
+  color: var(--mono-chip-color, var(--mono-chip-soft-color, var(--_mono-chip-c)));
+  border-color: var(--mono-chip-border-color, var(--mono-chip-soft-border-color, transparent));
+}
+
+/* `secondary` is a surface, not a hue: tinting it would wash it out, so the
+   soft chip wears the plate itself (`.badge[data-variant='secondary']`). */
+[mono-chip][mono-color="secondary"]:is(:not([mono-variant]), [mono-variant="soft"]) > [mono-main] {
+  background-color: var(--mono-chip-bg, var(--mono-chip-soft-bg, var(--_mono-chip-secondary)));
+  color: var(--mono-chip-color, var(--mono-chip-soft-color, var(--_mono-chip-secondary-foreground)));
+}
+
+/* basecoat@1.0.2 styles/vega.css .badge:not([data-variant]), .badge[data-variant='primary']
+   — bg-primary text-primary-foreground */
+[mono-chip][mono-variant="solid"] > [mono-main] {
+  background-color: var(--mono-chip-bg, var(--mono-chip-solid-bg, var(--_mono-chip-c)));
+  color: var(--mono-chip-color, var(--mono-chip-solid-color, var(--_mono-chip-c-foreground)));
+  border-color: var(--mono-chip-border-color, var(--mono-chip-solid-border-color, transparent));
+}
+
+/* basecoat@1.0.2 styles/vega.css .badge[data-variant='outline'] — border-border
+   text-foreground — EXTENSION: the edge and the ink take the role's colour so
+   `outline` reads as the same family as the other two. */
+[mono-chip][mono-variant="outline"] > [mono-main] {
+  background-color: var(--mono-chip-bg, var(--mono-chip-outline-bg, transparent));
+  color: var(--mono-chip-color, var(--mono-chip-outline-color, var(--_mono-chip-c)));
+  border-color: var(--mono-chip-border-color, var(--mono-chip-outline-border-color, var(--_mono-chip-c)));
+}
+
+[mono-chip][mono-color="secondary"][mono-variant="outline"] > [mono-main] {
+  color: var(--mono-chip-color, var(--foreground));
+  border-color: var(--mono-chip-border-color, var(--border));
+}
+
+/* =========================================
+   Interactive — a clickable / linked chip
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .badge:not([data-variant]), .badge[data-variant='primary']
+   — [a]:hover:bg-primary/80: only a LINK badge reacts upstream; ours also
+   reacts when `clickable` made it a button (same gesture, no href). */
+[mono-chip][mono-clickable] > [mono-main] {
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  [mono-chip][mono-clickable]:not([mono-disabled])[mono-variant="solid"] > [mono-main]:hover {
+    background-color: color-mix(in oklab, var(--_mono-chip-c) 80%, transparent);
+  }
+
+  /* .badge[data-variant='destructive'] — [a]:hover:bg-destructive/20 */
+  [mono-chip][mono-clickable]:not([mono-disabled]):is(:not([mono-variant]), [mono-variant="soft"]) > [mono-main]:hover {
+    background-color: color-mix(in oklab, var(--_mono-chip-c) var(--mono-mode-tint-hover), transparent);
+  }
+
+  /* `secondary` is a plate, not a tint: darken it the way the secondary button
+     does (basecoat@1.0.2 styles/vega.css .btn[data-variant='secondary']). */
+  [mono-chip][mono-clickable]:not([mono-disabled])[mono-color="secondary"]:is(:not([mono-variant]), [mono-variant="soft"]) > [mono-main]:hover {
+    background-color: color-mix(in oklch, var(--_mono-chip-secondary), var(--foreground) 5%);
+  }
+
+  /* .badge[data-variant='outline'] — [a]:hover:bg-muted */
+  [mono-chip][mono-clickable]:not([mono-disabled])[mono-variant="outline"] > [mono-main]:hover {
+    background-color: var(--mono-mode-ghost-hover);
+  }
+}
+
+/* EXTENSION — `selected` rings the chip in its own colour, the one state
+   Basecoat's badge has no equivalent for (it is not a toggle upstream). */
+[mono-chip][mono-selected] > [mono-main] {
+  --_mono-chip-ring: 0 0 0 var(--_mono-chip-ring-width)
+    color-mix(in oklab, var(--_mono-chip-c) var(--_mono-chip-ring-alpha), transparent);
+  border-color: var(--_mono-chip-c);
+}
+
+/* basecoat@1.0.2 components/button.css .btn — disabled:pointer-events-none
+   disabled:opacity-50 */
+[mono-chip][mono-disabled] > [mono-main] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* =========================================
+   Inner content
+   ========================================= */
+
+:where([mono-chip]) [mono-content] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: inherit;
+  min-width: 0;
+  max-width: 100%;
+  height: 100%;
+  line-height: 1;
+}
+
+:where([mono-chip]) [mono-label] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1;
+}
+
+/* EXTENSION — the leading status dot. It is the role's colour at full strength,
+   which reads on both the tinted `soft` plate and the solid one (`currentColor`
+   there). */
+:where([mono-chip]) [mono-dot] {
+  flex: 0 0 auto;
+  width: var(--mono-chip-dot-size, calc(var(--mono-spacing) * 1.5));
+  height: var(--mono-chip-dot-size, calc(var(--mono-spacing) * 1.5));
+  border-radius: var(--mono-radius-full);
+  background: currentColor;
+}
+
+/* The shadow build renders the icon wrapper on every chip and marks the empty
+   one; this hides it so both builds measure the same content box. */
+[mono-chip] [data-mono-slot="icon"][mono-empty] {
+  display: none;
+}
+
+/* `[&>svg]:size-3!` — our icon is a slotted element or a mask span, sized by
+   the same token as the close glyph */
+:where([mono-chip]) [data-mono-slot="icon"],
+:where([mono-chip]) [mono-main] > svg {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-chip-glyph-size);
+  height: var(--_mono-chip-glyph-size);
+  line-height: 1;
+  pointer-events: none;
+}
+
+:where([mono-chip]) [data-mono-slot="icon"] > * {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* basecoat@1.0.2 styles/vega.css .combobox-chip-remove — -ms-1 opacity-50
+   hover:opacity-100, [&>svg]:size-3.5 — the same affordance a field chip uses */
+:where([mono-chip]) [mono-close] {
+  appearance: none;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-chip-glyph-size);
+  height: var(--_mono-chip-glyph-size);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--mono-radius-full);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.5;
+  transition:
+    opacity var(--mono-duration) var(--mono-ease),
+    box-shadow var(--mono-duration) var(--mono-ease);
+  box-shadow: var(--_mono-chip-close-ring, 0 0 #0000);
+}
+
+@media (hover: hover) {
+  :where([mono-chip]) [mono-close]:hover {
+    opacity: 1;
+  }
+}
+
+:where([mono-chip]) [mono-close]:focus-visible {
+  outline: none;
+  opacity: 1;
+  --_mono-chip-close-ring: 0 0 0 var(--_mono-chip-ring-width)
+    color-mix(in oklab, currentColor var(--_mono-chip-ring-alpha), transparent);
+}
+
+:where([mono-chip]) [mono-close] :is([mono-glyph], svg) {
+  display: block;
+  width: 100%;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+:where([mono-chip]) [mono-close] [mono-glyph] > svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* =========================================
+   Status dot — EXTENSION: `<mono-status-dot>`, a label with a state dot
+   ========================================= */
+
+mono-status-dot {
+  display: inline-block;
+}
+
+[mono-status-dot] {
+  --_mono-status-dot-c: var(--mono-status-dot-color, var(--success));
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mono-status-dot-gap, calc(var(--mono-spacing) * 1.5));
+  font-family: inherit;
+  font-size: var(--mono-status-dot-font-size, var(--mono-text-xs));
+  font-weight: var(--mono-status-dot-font-weight, var(--mono-font-weight-medium));
+  line-height: 1;
+  color: var(--_mono-status-dot-c);
+}
+
+[mono-status-dot][mono-status="offline"] { --_mono-status-dot-c: var(--mono-status-dot-color, var(--neutral)); }
+[mono-status-dot][mono-status="busy"] { --_mono-status-dot-c: var(--mono-status-dot-color, var(--destructive)); }
+[mono-status-dot][mono-status="away"] { --_mono-status-dot-c: var(--mono-status-dot-color, var(--warning)); }
+/* `custom` takes the colour from the `color` prop, which the element writes
+   inline as --mono-status-dot-color */
+[mono-status-dot][mono-status="custom"] { --_mono-status-dot-c: var(--mono-status-dot-color, var(--primary)); }
+
+:where([mono-status-dot]) [mono-dot] {
+  flex: 0 0 auto;
+  width: var(--mono-status-dot-size, calc(var(--mono-spacing) * 2));
+  height: var(--mono-status-dot-size, calc(var(--mono-spacing) * 2));
+  border-radius: var(--mono-radius-full);
+  background: currentColor;
+}
+
+[mono-status-dot][mono-pulse] [mono-dot] {
+  animation: mono-status-pulse 1.8s var(--mono-ease) infinite;
+}
+
+@keyframes mono-status-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, currentColor 40%, transparent);
+  }
+
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in oklab, currentColor 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([mono-chip]) :is([mono-main], [mono-close]) {
+    transition: none;
+  }
+
+  [mono-status-dot][mono-pulse] [mono-dot] {
+    animation: none;
+  }
+}

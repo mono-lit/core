@@ -1,0 +1,739 @@
+/* @unocss-include */
+
+/* =========================================================================
+   mono-accordion — a port of Basecoat's `.accordion`
+   (basecoat-css@1.0.2, vega style).
+
+   Styled by ATTRIBUTE, like Basecoat — and the attributes mirror the element's
+   props one for one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-accordion size="lg" color="success" model-value>
+     <div mono-accordion mono-size="lg" mono-color="success" mono-open>
+       <button mono-head type="button" aria-expanded="true">
+         <span mono-glyph>…</span>
+         <span mono-heading>
+           <span mono-title>Question</span>
+           <span mono-subtitle>Sub-text</span>
+         </span>
+         <span mono-actions>…</span>
+         <span mono-arrow><svg …></svg></span>
+       </button>
+       <div mono-body role="region"><div>…</div></div>
+     </div>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-color])` = primary). The element writes them on its root — the
+   host in the light build, an inner root `<div>` in the shadow one — plus the
+   states `mono-open` and `mono-disabled`. The old classes
+   (`.mono-accordion.md.primary.open`) are still emitted as inert hooks until
+   2.0 but no rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-accordion-group]        ≡ .accordion (flex w-full flex-col; maia /
+                                     mira / luma / rhea add the frame, which is
+                                     the `-group-*` knobs below)
+     [mono-accordion]              ≡ .accordion > details (not-last:border-b, and
+                                     `open:bg-muted/50` on four flavors)
+                                     — EXTENSION when standalone: upstream has no
+                                     accordion outside a group, so on its own it
+                                     keeps this component's frame (border, radius,
+                                     shadow-xs). Inside a group the frame moves to
+                                     the group and the item flattens to a divider.
+     [mono-head]                   ≡ > summary (relative flex w-full items-start
+                                     justify-between border border-transparent
+                                     cursor-pointer outline-none, rounded-md py-4
+                                     text-left text-sm font-medium hover:underline,
+                                     focus-visible:ring-3 ring-ring/50 border-ring)
+                                     — DEVIATION: a real <button>, so the row is a
+                                     button for a11y rather than a <summary> whose
+                                     open state the element would have to fight
+     [mono-glyph]                  ≡ EXTENSION (the leading icon chip)
+     [mono-heading] > [mono-title] ≡ the summary's own text
+     [mono-subtitle]               ≡ EXTENSION (a second line under the title;
+                                     `[mono-description]` is its old name, and the
+                                     element still renders both)
+     [mono-actions]                ≡ EXTENSION (trailing controls in the row)
+     [mono-arrow]                  ≡ summary > svg:last-child (text-muted-foreground
+                                     ms-auto size-4, rotate-180 while open)
+     [mono-body]                   ≡ details > :not(summary) (overflow-hidden,
+                                     pt-0 pb-4 text-sm) — plus the animated
+                                     collapse, which upstream's <details> gets free
+     [mono-size]/[mono-color]      ≡ EXTENSION (upstream ships one size, no colour)
+     [mono-disabled]               ≡ details[aria-disabled] > summary
+                                     (pointer-events-none opacity-50)
+
+   PART NAMES ARE PATH-SCOPED. `[mono-title]`, `[mono-body]`, `[mono-actions]`
+   and `[mono-icon]` are also card's, dropdown's and button's part names, and an
+   accordion BODY is a place consumers put cards and buttons. Every rule here is
+   therefore written as an explicit child path from the root — `:where([mono-accordion]
+   > [mono-head] > [mono-heading]) > [mono-title]` — so a nested component's parts
+   are never reached. The `:where()` keeps that path at (0,1,0), the same weight a
+   one-attribute rule would have, so a `cssClass` utility still wins by source order.
+
+   FLAVORS set `--mono-accordion-{radius,shadow,pad-x-<size>,pad-y-<size>,
+   title-font-<size>,body-font-<size>,open-bg,group-radius,group-border-width,
+   arrow-size,ring-width}`; every fallback here is vega's value
+   (`node scripts/basecoat-styles.mjs --varying "accordion"` prints the matrix).
+   ========================================================================= */
+
+mono-accordion {
+  display: block;
+}
+
+/* =========================================
+   Root — the item
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .accordion > details — not-last:border-b */
+[mono-accordion] {
+  /* ── the six roles, each a public knob over a Basecoat token ───────────── */
+  --_mono-accordion-primary: var(--mono-accordion-primary, var(--primary));
+  --_mono-accordion-secondary: var(--mono-accordion-secondary, var(--secondary-foreground));
+  --_mono-accordion-success: var(--mono-accordion-success, var(--success));
+  --_mono-accordion-danger: var(--mono-accordion-danger, var(--destructive));
+  --_mono-accordion-warning: var(--mono-accordion-warning, var(--warning));
+  --_mono-accordion-info: var(--mono-accordion-info, var(--info));
+  --_mono-accordion-teal: var(--mono-accordion-teal, var(--teal));
+  --_mono-accordion-purple: var(--mono-accordion-purple, var(--purple));
+  --_mono-accordion-neutral: var(--mono-accordion-neutral, var(--neutral));
+  --_mono-accordion-dark: var(--mono-accordion-dark, var(--dark));
+  /* the colour in play — `primary` unless a [mono-color] rule re-points it */
+  --_mono-accordion-accent: var(--mono-accordion-accent, var(--_mono-accordion-accent-preset, var(--_mono-accordion-primary)));
+
+  /* ── surfaces ──────────────────────────────────────────────────────────── */
+  --_mono-accordion-bg: var(--mono-accordion-bg, var(--mono-accordion-surface, var(--card)));
+  --_mono-accordion-text: var(--mono-accordion-text, var(--card-foreground));
+  --_mono-accordion-border: var(--mono-accordion-border, var(--border));
+  --_mono-accordion-shadow: var(--mono-accordion-shadow, var(--mono-shadow-xs));
+  /* `open:bg-muted/50` — vega does NOT tint an open item; maia, mira, luma and
+     rhea do, and set this knob. `--mono-accordion-head-bg` is the pre-port name,
+     honoured until 2.0: it tinted the open HEAD, where this tints the open item
+     (head and body alike), which is what upstream's `open:` variant does. */
+  /* An OPAQUE fill, not an overlay: it replaces the item's own surface while
+     open, so a flavor's `bg-muted/50` is written as that mix OVER `--card`.
+     Defaulting to the item's surface is what makes vega's "no tint" a no-op. */
+  --_mono-accordion-open-bg: var(--mono-accordion-open-bg, var(--mono-accordion-head-bg, var(--_mono-accordion-bg)));
+  --_mono-accordion-open-border-color: var(--mono-accordion-open-border-color,
+    color-mix(in oklab, var(--_mono-accordion-accent) 32%, var(--_mono-accordion-border)));
+  --_mono-accordion-open-shadow: var(--mono-accordion-open-shadow,
+    0 3px 14px color-mix(in oklab, var(--_mono-accordion-accent) 9%, transparent));
+
+  /* ── md metrics live on the unqualified root ON PURPOSE ────────────────────
+     basecoat@1.0.2 styles/vega.css .accordion > details > summary — py-4 text-sm
+     — DEVIATION: the inline padding is ours. Upstream's summary has none because
+     its group is edge-to-edge in the page; this item can stand alone inside its
+     own frame, where text flush against the border reads as a bug. maia / luma /
+     rhea say `p-4`, which is exactly the value used here. */
+  --_mono-accordion-pad-x: var(--mono-accordion-pad-x, var(--_mono-accordion-pad-x-preset, var(--mono-accordion-pad-x-md, calc(var(--mono-spacing) * 4))));
+  --_mono-accordion-pad-y: var(--mono-accordion-pad-y, var(--_mono-accordion-pad-y-preset, var(--mono-accordion-pad-y-md, calc(var(--mono-spacing) * 4))));
+  --_mono-accordion-radius: var(--mono-accordion-radius, var(--_mono-accordion-radius-preset, var(--mono-accordion-radius-md, var(--mono-radius-md))));
+  --_mono-accordion-gap: var(--mono-accordion-gap, var(--_mono-accordion-gap-preset, calc(var(--mono-spacing) * 3)));
+
+  /* ── type ──────────────────────────────────────────────────────────────── */
+  --_mono-accordion-title-font: var(--mono-accordion-title-font, var(--_mono-accordion-title-font-preset, var(--mono-accordion-title-font-md, var(--mono-text-sm))));
+  --_mono-accordion-title-line-height: var(--mono-accordion-title-line-height, var(--_mono-accordion-title-line-height-preset, var(--mono-text-sm--lh)));
+  --_mono-accordion-title-weight: var(--mono-accordion-title-weight, var(--mono-font-weight-medium));
+  /* `hover:underline` — the whole row is the control, so the hover cue is on its
+     label. A flavor (or a consumer) sets `none` to drop it. */
+  --_mono-accordion-title-hover-decoration: var(--mono-accordion-title-hover-decoration, underline);
+  --_mono-accordion-description-font: var(--mono-accordion-description-font, var(--_mono-accordion-description-font-preset, var(--mono-text-xs)));
+  --_mono-accordion-description-color: var(--mono-accordion-description-color, var(--muted-foreground));
+  --_mono-accordion-body-font: var(--mono-accordion-body-font, var(--_mono-accordion-body-font-preset, var(--mono-accordion-body-font-md, var(--mono-text-sm))));
+  --_mono-accordion-body-line-height: var(--mono-accordion-body-line-height, var(--_mono-accordion-body-line-height-preset, var(--mono-text-sm--lh)));
+  --_mono-accordion-body-color: var(--mono-accordion-body-color, inherit);
+
+  /* ── the chevron — `text-muted-foreground size-4` ──────────────────────── */
+  --_mono-accordion-arrow-size: var(--mono-accordion-arrow-size, var(--_mono-accordion-arrow-size-preset, calc(var(--mono-spacing) * 4)));
+  --_mono-accordion-arrow-color: var(--mono-accordion-arrow-color, var(--muted-foreground));
+  /* EXTENSION: the role reads the open state at a glance. Set it to
+     `--muted-foreground` for upstream's single-colour chevron. */
+  --_mono-accordion-arrow-open-color: var(--mono-accordion-arrow-open-color, var(--_mono-accordion-accent));
+
+  /* ── the leading chip (EXTENSION) ──────────────────────────────────────── */
+  --_mono-accordion-glyph-size: var(--mono-accordion-glyph-size, var(--_mono-accordion-glyph-size-preset, calc(var(--mono-spacing) * 7)));
+  --_mono-accordion-glyph-radius: var(--mono-accordion-glyph-radius, var(--_mono-accordion-glyph-radius-preset, var(--mono-radius-sm)));
+  --_mono-accordion-glyph-bg: var(--mono-accordion-glyph-bg, color-mix(in oklab, var(--_mono-accordion-accent) 14%, transparent));
+  --_mono-accordion-glyph-color: var(--mono-accordion-glyph-color, var(--_mono-accordion-accent));
+
+  /* ── focus — `focus-visible:ring-3 ring-ring/50 border-ring` ───────────── */
+  --_mono-accordion-ring-color: var(--mono-accordion-ring-color, var(--_mono-accordion-accent));
+
+  /* The head's hover fill. Upstream has none — it underlines the label instead —
+     so the tint is 0% on vega. A flavor sets the ALPHA (`-head-hover-tint`) and
+     the wash is built HERE: a flavor writing the colour itself would have to
+     reference `--_mono-accordion-accent`, which is declared on this element, and
+     a `:root` declaration that references it is invalid at computed-value time. */
+  --_mono-accordion-head-hover-bg: var(--mono-accordion-head-hover-bg,
+    color-mix(in oklab, var(--_mono-accordion-accent) var(--mono-accordion-head-hover-tint, 0%), transparent));
+  --_mono-accordion-ring-width: var(--mono-accordion-ring-width, var(--mono-ring-width));
+  /* A slot, so a state can neutralise the resting shadow without `box-shadow: none`. */
+  --_mono-accordion-ring: 0 0 #0000;
+
+  /* Open/close animation duration, shared by the body collapse and the chevron so
+     `--mono-accordion-duration: 0s` means a fully instant toggle.
+
+     This is THE lever for a slow open/close. `grid-template-rows: 0fr → 1fr` is the
+     only animated LAYOUT property in the library, and it re-lays-out the whole slotted
+     subtree on every frame of the transition, so its cost scales with what is inside
+     the body — and, because the panel's own height changes, with whatever follows it
+     in the document too. Measured with ~320-node bodies (Chromium, median of 3), one
+     open+close cycle: 24.8ms animated vs 3.6ms at `0s` — the animation is ~85% of the
+     toggle's cost. Set this to `0s` on accordions whose bodies (or whose pages) are
+     heavy.
+
+     THREE approaches that look like fixes and are NOT. All were built and measured
+     (Chromium, LayoutDuration + RecalcStyleDuration, min of 9 toggles, two scenarios:
+     40 panels with ~320-node bodies, and one small panel above a 2000-row sticky
+     table). Recorded so nobody spends the afternoon on them again:
+
+       1. Pin the track to a measured PIXEL height for the transition, so the `fr`
+          never has to be resolved against content. Landed inside the noise across
+          three runs (+11%, -2%, -17%) and cost two extra forced layouts per toggle to
+          measure and release. The per-frame cost is NOT the `fr` resolution — it is
+          that the row's block size changes at all, which re-lays-out the grid item
+          however the target size was expressed.
+       2. Also give the inner region a definite `height`, so its own constraint space
+          stops changing and its subtree layout can be cached. No effect either.
+       3. Don't animate a layout property at all: snap the box to its final size and
+          slide the content in on `transform`/`opacity`. A quick CSS prototype looked
+          like a 50% win, but only because it had no `content-visibility` transition
+          and so dropped the subtree instantly on close — the close animation was
+          simply invisible. Made to actually work, it measured 14.6/18.3ms vs
+          collapse's 20.0/18.4ms on heavy bodies (i.e. unreliable), and 17.4/19.6ms vs
+          12.6/12.8ms on the heavy-page scenario — reliably WORSE, because the
+          transform/opacity pass costs more than the box animation it replaced.
+
+     So `--mono-accordion-duration: 0s` really is the lever, and there is no cleverer
+     one. Measured against it: heavy bodies 7.0/10.8ms vs 20.0/18.4ms (~45-65% off);
+     heavy page 11.1/11.7ms vs 12.6/12.8ms (~10% off — on a page like that the
+     accordion is nearly irrelevant and the page's own weight is the cost). */
+  --_mono-accordion-duration: var(--mono-accordion-duration, var(--mono-duration));
+
+  display: block;
+  width: 100%;
+  font-family: inherit;
+  color: var(--_mono-accordion-text);
+
+  /* EXTENSION — the standalone frame. Inside a group this is flattened below and
+     the frame moves to the group, which is upstream's arrangement. */
+  border: var(--mono-border-width) solid var(--_mono-accordion-border);
+  border-radius: var(--_mono-accordion-radius);
+  background: var(--_mono-accordion-bg);
+  box-shadow: var(--_mono-accordion-shadow);
+  overflow: hidden;
+  transition:
+    border-color var(--mono-duration) var(--mono-ease),
+    box-shadow var(--mono-duration) var(--mono-ease),
+    background-color var(--mono-duration) var(--mono-ease);
+}
+
+[mono-accordion],
+:where([mono-accordion]) *,
+:where([mono-accordion]) *::before,
+:where([mono-accordion]) *::after {
+  box-sizing: border-box;
+}
+
+/* The shadow build renders EVERY region up front (so DSD can project into them
+   server-side) and marks the ones with nothing in them; the light build renders
+   only what exists. Hiding them here is what keeps the two builds identical.
+
+   NOT wrapped in `:where()`, unlike the other parts: a region rule is two
+   attributes strong, so a zero-weight hide would tie and lose on source order. */
+[mono-accordion] :is(
+  [mono-glyph],
+  [mono-heading],
+  [mono-title],
+  [mono-subtitle],
+  [mono-description],
+  [mono-actions]
+)[mono-empty] {
+  display: none;
+}
+
+/* =========================================
+   Group — `.accordion`
+   ========================================= */
+
+/* basecoat@1.0.2 components/accordion.css .accordion — flex w-full flex-col
+   The GROUP is consumer markup — the element renders one item, not the list — so
+   unlike every part below, its pre-port CLASS is public API and keeps working
+   beside the attribute until 2.0.
+   The frame knobs are inert on vega (0 width, no radius) and set by the four
+   flavors whose `.accordion` says `overflow-hidden rounded-2xl border`. */
+:is([mono-accordion-group], .mono-accordion-group) {
+  --_mono-accordion-group-gap: var(--mono-accordion-group-gap, 0px);
+  --_mono-accordion-group-radius: var(--mono-accordion-group-radius, 0px);
+  --_mono-accordion-group-border-width: var(--mono-accordion-group-border-width, 0px);
+  --_mono-accordion-group-border-color: var(--mono-accordion-group-border-color, var(--border));
+
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: var(--_mono-accordion-group-gap);
+  box-sizing: border-box;
+  border: var(--_mono-accordion-group-border-width) solid var(--_mono-accordion-group-border-color);
+  border-radius: var(--_mono-accordion-group-radius);
+  overflow: hidden;
+}
+
+/* basecoat@1.0.2 styles/vega.css .accordion > details — not-last:border-b
+   In a group the ITEM stops being a card: the frame is the group's, and all an
+   item carries is the hairline to the next one.
+
+   TWO selectors for one rule, because the item is not always a child of the
+   group. Hand-written markup nests `[mono-accordion]` directly, so the `>`
+   path matches; the ELEMENT puts a custom-element host in between (light) or a
+   shadow boundary (shadow), which no selector crosses — so it detects the group
+   itself and writes `mono-grouped` / `mono-last` on its root. */
+:where([mono-accordion-group], .mono-accordion-group) > [mono-accordion],
+[mono-accordion][mono-grouped] {
+  border-width: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* The divider rides the group's own CHILD, whatever that is — the item itself in
+   hand-written markup, the custom-element host when the element renders it. That
+   is what makes `:last-child` reliable: the host is a child of the group in both
+   builds, where the ITEM is one only in raw markup, and an item that asked "am I
+   last?" itself would answer from however many siblings existed when it rendered. */
+:where([mono-accordion-group], .mono-accordion-group)
+  > :is([mono-accordion], mono-accordion, mono-shadow-accordion) {
+  border-bottom: var(--mono-border-width) solid var(--mono-accordion-border, var(--border));
+}
+
+:where([mono-accordion-group], .mono-accordion-group)
+  > :is([mono-accordion], mono-accordion, mono-shadow-accordion):last-child {
+  border-bottom-width: 0;
+}
+
+/* A group with a GAP has separate boxes again, and a divider would float in the
+   space between them — so a gap is a consumer's own arrangement, not upstream's,
+   and they set `--mono-accordion-group-gap` knowing the dividers go with it. */
+
+/* =========================================
+   Sizes — EXTENSION: Basecoat ships ONE accordion size; md is its `summary`
+   ========================================= */
+
+[mono-accordion][mono-size="xs"] {
+  --_mono-accordion-pad-x-preset: var(--mono-accordion-pad-x-xs, calc(var(--mono-spacing) * 2.5));
+  --_mono-accordion-pad-y-preset: var(--mono-accordion-pad-y-xs, calc(var(--mono-spacing) * 2));
+  --_mono-accordion-radius-preset: var(--mono-accordion-radius-xs, var(--mono-radius-sm));
+  --_mono-accordion-gap-preset: calc(var(--mono-spacing) * 1.5);
+  --_mono-accordion-title-font-preset: var(--mono-accordion-title-font-xs, var(--mono-text-xs));
+  --_mono-accordion-title-line-height-preset: var(--mono-text-xs--lh);
+  --_mono-accordion-description-font-preset: var(--mono-text-xs);
+  --_mono-accordion-body-font-preset: var(--mono-accordion-body-font-xs, var(--mono-text-xs));
+  --_mono-accordion-body-line-height-preset: var(--mono-text-xs--lh);
+  --_mono-accordion-arrow-size-preset: calc(var(--mono-spacing) * 3);
+  --_mono-accordion-glyph-size-preset: calc(var(--mono-spacing) * 4.5);
+  --_mono-accordion-glyph-radius-preset: var(--mono-radius-sm);
+}
+
+[mono-accordion][mono-size="sm"] {
+  --_mono-accordion-pad-x-preset: var(--mono-accordion-pad-x-sm, calc(var(--mono-spacing) * 3));
+  --_mono-accordion-pad-y-preset: var(--mono-accordion-pad-y-sm, calc(var(--mono-spacing) * 3));
+  --_mono-accordion-radius-preset: var(--mono-accordion-radius-sm, var(--mono-radius-md));
+  --_mono-accordion-gap-preset: calc(var(--mono-spacing) * 2);
+  --_mono-accordion-title-font-preset: var(--mono-accordion-title-font-sm, var(--mono-text-xs));
+  --_mono-accordion-title-line-height-preset: var(--mono-text-xs--lh);
+  --_mono-accordion-description-font-preset: var(--mono-text-xs);
+  --_mono-accordion-body-font-preset: var(--mono-accordion-body-font-sm, var(--mono-text-xs));
+  --_mono-accordion-body-line-height-preset: var(--mono-text-xs--lh);
+  --_mono-accordion-arrow-size-preset: calc(var(--mono-spacing) * 3.5);
+  --_mono-accordion-glyph-size-preset: calc(var(--mono-spacing) * 6);
+}
+
+[mono-accordion][mono-size="lg"] {
+  --_mono-accordion-pad-x-preset: var(--mono-accordion-pad-x-lg, calc(var(--mono-spacing) * 5));
+  --_mono-accordion-pad-y-preset: var(--mono-accordion-pad-y-lg, calc(var(--mono-spacing) * 5));
+  --_mono-accordion-radius-preset: var(--mono-accordion-radius-lg, var(--mono-radius-lg));
+  --_mono-accordion-gap-preset: calc(var(--mono-spacing) * 3.5);
+  --_mono-accordion-title-font-preset: var(--mono-accordion-title-font-lg, var(--mono-text-base));
+  --_mono-accordion-title-line-height-preset: var(--mono-text-base--lh);
+  --_mono-accordion-body-font-preset: var(--mono-accordion-body-font-lg, var(--mono-text-sm));
+  --_mono-accordion-arrow-size-preset: calc(var(--mono-spacing) * 5);
+  --_mono-accordion-glyph-size-preset: calc(var(--mono-spacing) * 8);
+  --_mono-accordion-glyph-radius-preset: var(--mono-radius-md);
+}
+
+[mono-accordion][mono-size="xl"] {
+  --_mono-accordion-pad-x-preset: var(--mono-accordion-pad-x-xl, calc(var(--mono-spacing) * 6));
+  --_mono-accordion-pad-y-preset: var(--mono-accordion-pad-y-xl, calc(var(--mono-spacing) * 6));
+  --_mono-accordion-radius-preset: var(--mono-accordion-radius-xl, var(--mono-radius-xl));
+  --_mono-accordion-gap-preset: calc(var(--mono-spacing) * 4);
+  --_mono-accordion-title-font-preset: var(--mono-accordion-title-font-xl, var(--mono-text-lg));
+  --_mono-accordion-title-line-height-preset: var(--mono-text-lg--lh);
+  --_mono-accordion-description-font-preset: var(--mono-text-sm);
+  --_mono-accordion-body-font-preset: var(--mono-accordion-body-font-xl, var(--mono-text-base));
+  --_mono-accordion-body-line-height-preset: var(--mono-text-base--lh);
+  --_mono-accordion-arrow-size-preset: calc(var(--mono-spacing) * 5.5);
+  --_mono-accordion-glyph-size-preset: calc(var(--mono-spacing) * 9);
+  --_mono-accordion-glyph-radius-preset: var(--mono-radius-lg);
+}
+
+[mono-accordion][mono-size="xxl"] {
+  --_mono-accordion-pad-x-preset: var(--mono-accordion-pad-x-xxl, calc(var(--mono-spacing) * 7));
+  --_mono-accordion-pad-y-preset: var(--mono-accordion-pad-y-xxl, calc(var(--mono-spacing) * 7));
+  --_mono-accordion-radius-preset: var(--mono-accordion-radius-xxl, var(--mono-radius-xl));
+  --_mono-accordion-gap-preset: calc(var(--mono-spacing) * 4.5);
+  --_mono-accordion-title-font-preset: var(--mono-accordion-title-font-xxl, var(--mono-text-xl));
+  --_mono-accordion-title-line-height-preset: var(--mono-text-xl--lh);
+  --_mono-accordion-description-font-preset: var(--mono-text-sm);
+  --_mono-accordion-body-font-preset: var(--mono-accordion-body-font-xxl, var(--mono-text-lg));
+  --_mono-accordion-body-line-height-preset: var(--mono-text-lg--lh);
+  --_mono-accordion-arrow-size-preset: calc(var(--mono-spacing) * 6);
+  --_mono-accordion-glyph-size-preset: calc(var(--mono-spacing) * 10);
+  --_mono-accordion-glyph-radius-preset: var(--mono-radius-lg);
+}
+
+/* =========================================
+   Colours — EXTENSION: the role tints the chevron, the ring and the open edge
+   ========================================= */
+
+[mono-accordion][mono-color="primary"] { --_mono-accordion-accent-preset: var(--_mono-accordion-primary); }
+[mono-accordion][mono-color="secondary"] { --_mono-accordion-accent-preset: var(--_mono-accordion-secondary); }
+[mono-accordion][mono-color="success"] { --_mono-accordion-accent-preset: var(--_mono-accordion-success); }
+[mono-accordion][mono-color="danger"] { --_mono-accordion-accent-preset: var(--_mono-accordion-danger); }
+[mono-accordion][mono-color="warning"] { --_mono-accordion-accent-preset: var(--_mono-accordion-warning); }
+[mono-accordion][mono-color="info"] { --_mono-accordion-accent-preset: var(--_mono-accordion-info); }
+[mono-accordion][mono-color="teal"] { --_mono-accordion-accent-preset: var(--_mono-accordion-teal); }
+[mono-accordion][mono-color="purple"] { --_mono-accordion-accent-preset: var(--_mono-accordion-purple); }
+[mono-accordion][mono-color="neutral"] { --_mono-accordion-accent-preset: var(--_mono-accordion-neutral); }
+[mono-accordion][mono-color="dark"] { --_mono-accordion-accent-preset: var(--_mono-accordion-dark); }
+
+/* =========================================
+   States
+   ========================================= */
+
+[mono-accordion][mono-open] {
+  border-color: var(--_mono-accordion-open-border-color);
+  box-shadow: var(--_mono-accordion-open-shadow);
+  background: var(--_mono-accordion-open-bg);
+}
+
+/* In a group the item has no frame to tint — only the open wash survives. */
+:where([mono-accordion-group], .mono-accordion-group) > [mono-accordion][mono-open],
+[mono-accordion][mono-grouped][mono-open] {
+  border-color: var(--_mono-accordion-border);
+  box-shadow: none;
+}
+
+/* basecoat@1.0.2 components/accordion.css .accordion > details[aria-disabled='true'] > summary, .accordion > details > summary[aria-disabled='true']
+   — pointer-events-none opacity-50. DEVIATION: 0.6, this component's pre-port
+   value, and on the whole item rather than the summary alone (the body is
+   equally unusable). */
+[mono-accordion][mono-disabled] {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* =========================================
+   Head — `> summary`
+   ========================================= */
+
+/* basecoat@1.0.2 components/accordion.css .accordion > details > summary —
+   relative flex w-full flex-1 cursor-pointer list-none items-start
+   justify-between border border-transparent transition-all outline-none */
+/* basecoat@1.0.2 styles/vega.css .accordion > details > summary — rounded-md py-4
+   text-left text-sm font-medium hover:underline focus-visible:ring-3
+   focus-visible:ring-ring/50 focus-visible:border-ring
+   — DEVIATIONS: a real <button> (so it needs the UA button reset), and
+   `items-center` rather than `items-start`: this row can carry a glyph chip and
+   trailing actions, which upstream's text-only summary never does. */
+:where([mono-accordion]) > [mono-head] {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--_mono-accordion-gap);
+  padding: var(--_mono-accordion-pad-y) var(--_mono-accordion-pad-x);
+  border: var(--mono-border-width) solid transparent;
+  border-radius: var(--_mono-accordion-radius);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  appearance: none;
+  box-shadow: var(--_mono-accordion-ring);
+  transition:
+    background-color var(--mono-duration) var(--mono-ease),
+    border-color var(--mono-duration) var(--mono-ease),
+    box-shadow var(--mono-duration) var(--mono-ease);
+}
+
+[mono-accordion] > [mono-head]:focus-visible {
+  border-color: var(--_mono-accordion-ring-color);
+  --_mono-accordion-ring: 0 0 0 var(--_mono-accordion-ring-width)
+    color-mix(in oklab, var(--_mono-accordion-ring-color) var(--mono-ring-alpha), transparent);
+}
+
+/* `hover:underline` — on the label, which is the only text in upstream's summary. */
+@media (hover: hover) {
+  [mono-accordion] > [mono-head]:hover:not(:disabled) {
+    background: var(--_mono-accordion-head-hover-bg);
+  }
+
+  [mono-accordion] > [mono-head]:hover:not(:disabled) [mono-title] {
+    text-decoration-line: var(--_mono-accordion-title-hover-decoration);
+  }
+}
+
+[mono-accordion] > [mono-head]:disabled {
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* =========================================
+   Leading chip — EXTENSION
+   ========================================= */
+
+:where([mono-accordion] > [mono-head]) > [mono-glyph] {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-accordion-glyph-size);
+  height: var(--_mono-accordion-glyph-size);
+  border-radius: var(--_mono-accordion-glyph-radius);
+  background: var(--_mono-accordion-glyph-bg);
+  color: var(--_mono-accordion-glyph-color);
+  line-height: 1;
+}
+
+/* The glyph itself fills the chip at 62% — light: the `[data-mono-slot]`
+   placeholder the svg is moved into; shadow: the projected svg. */
+[mono-accordion] > [mono-head] > [mono-glyph] > [data-mono-slot="icon"],
+[mono-accordion] > [mono-head] > [mono-glyph] > svg,
+[mono-accordion] > [mono-head] > [mono-glyph] slot[name="icon"]::slotted(svg) {
+  display: block;
+  width: 62%;
+  height: 62%;
+}
+
+/* …and the light build's svg fills that placeholder. It used to lean on a global
+   `[data-mono-slot='icon'] > svg` rule in chip.css; since the Basecoat port that
+   rule is scoped to chips, and an unsized inline svg falls back to 300×150. */
+[mono-accordion] > [mono-head] > [mono-glyph] > [data-mono-slot="icon"] > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* =========================================
+   Title + description
+   ========================================= */
+
+:where([mono-accordion] > [mono-head]) > [mono-heading] {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--mono-spacing) * 0.25);
+}
+
+/* `> slot[name="header"]`: in the shadow build the title/subtitle are the
+   FALLBACK content of `<slot name="header">`, so they sit one element deeper. */
+:where(
+  [mono-accordion] > [mono-head] > [mono-heading],
+  [mono-accordion] > [mono-head] > [mono-heading] > slot[name="header"]
+) > [mono-title] {
+  font-size: var(--_mono-accordion-title-font);
+  line-height: var(--_mono-accordion-title-line-height);
+  font-weight: var(--_mono-accordion-title-weight);
+  color: var(--_mono-accordion-text);
+}
+
+:where(
+  [mono-accordion] > [mono-head] > [mono-heading],
+  [mono-accordion] > [mono-head] > [mono-heading] > slot[name="header"]
+) > :is([mono-subtitle], [mono-description]) {
+  font-size: var(--_mono-accordion-description-font);
+  line-height: var(--mono-leading-normal);
+  color: var(--_mono-accordion-description-color);
+}
+
+:where([mono-accordion] > [mono-head]) > [mono-actions] {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--mono-spacing) * 1.5);
+}
+
+/* =========================================
+   Chevron — `summary > svg:last-child`
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .accordion > details > summary > svg:last-child
+   — text-muted-foreground ms-auto size-4 */
+/* basecoat@1.0.2 components/accordion.css .accordion > details > summary > svg:last-child
+   — pointer-events-none shrink-0 transition-transform */
+:where([mono-accordion] > [mono-head]) > [mono-arrow] {
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-accordion-arrow-size);
+  height: var(--_mono-accordion-arrow-size);
+  color: var(--_mono-accordion-arrow-color);
+  pointer-events: none;
+  transition:
+    rotate var(--_mono-accordion-duration) var(--mono-ease),
+    color var(--mono-duration) var(--mono-ease);
+}
+
+[mono-accordion] > [mono-head] > [mono-arrow] > :is(svg, span) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* basecoat@1.0.2 components/accordion.css .accordion > details[open] > summary > svg:last-child
+   — rotate-180 */
+[mono-accordion][mono-open] > [mono-head] > [mono-arrow] {
+  rotate: 180deg;
+  color: var(--_mono-accordion-arrow-open-color);
+}
+
+/* =========================================
+   Body — `details > :not(summary)`
+   ========================================= */
+
+/* basecoat@1.0.2 components/accordion.css .accordion > details > :not(summary) — overflow-hidden */
+/* basecoat@1.0.2 styles/vega.css .accordion > details > :not(summary) — pt-0 pb-4 text-sm
+   A <details> collapses for free; a div has to be animated. The
+   `grid-template-rows: 0fr → 1fr` trick measures the content's natural height
+   through the grid track and interpolates the row size, with the vertical padding
+   and the top border collapsing in lockstep so the entrance feels of-a-piece.
+   `> * { min-height: 0 }` lets grid items shrink below their intrinsic height when
+   the row is 0fr — without it the body would refuse to collapse. */
+:where([mono-accordion]) > [mono-body] {
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  padding: 0 var(--_mono-accordion-pad-x);
+  font-size: var(--_mono-accordion-body-font);
+  line-height: var(--_mono-accordion-body-line-height);
+  color: var(--_mono-accordion-body-color);
+  border-top: var(--mono-border-width) solid transparent;
+
+  /* Scope this body's layout/paint work to its own box. Measured effect: neutral on
+     toggle cost, a modest win on the initial layout of a long list of accordions.
+     (It is NOT what fixes sibling cost — Chrome already does not re-lay-out sibling
+     subtrees when one accordion animates; that was measured, not assumed.)
+     `paint` adds no new clipping — `overflow: hidden` above already clips. `layout`
+     does make this a containing block + stacking context for absolutely positioned
+     descendants, which is safe here because that same `overflow: hidden` already
+     confined them, and mono's own popups are moved to a <body> portal. */
+  contain: layout paint;
+
+  transition:
+    grid-template-rows var(--_mono-accordion-duration) var(--mono-ease),
+    padding-top var(--_mono-accordion-duration) var(--mono-ease),
+    padding-bottom var(--_mono-accordion-duration) var(--mono-ease),
+    border-top-color var(--mono-duration) var(--mono-ease);
+}
+
+[mono-accordion] > [mono-body] > * {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Shadow build: the body's native <slot>s (`body` + the default one) default to
+   `display: contents` and so have no box — slotted content would become the grid
+   items directly (un-targetable by `> * { min-height: 0 }`) and keep the
+   `grid-template-rows: 0fr → 1fr` track from ever collapsing. They sit in ONE
+   `[mono-body-slots]` block, the single grid item (like the light build's
+   <span data-mono-slot="body">), so the open/close collapse works. A bare `slot`
+   child is kept for markup that still renders one. */
+[mono-accordion] > [mono-body] > :is(slot, [mono-body-slots]) {
+  display: block;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Standalone, the item IS the frame, so the open body is separated from the head
+   by a hairline the way a card's footer is — EXTENSION, and the reason the top
+   padding is not upstream's `pt-0` here. */
+[mono-accordion][mono-open] > [mono-body] {
+  grid-template-rows: 1fr;
+  padding-top: var(--_mono-accordion-pad-y);
+  padding-bottom: var(--_mono-accordion-pad-y);
+  border-top-color: var(--_mono-accordion-border);
+}
+
+/* basecoat@1.0.2 styles/vega.css .accordion > details > :not(summary) — pt-0.
+   In a group the head and its body are one run of text between two dividers,
+   exactly as upstream renders it, so the top gap and the hairline both go. */
+:where([mono-accordion-group], .mono-accordion-group) > [mono-accordion][mono-open] > [mono-body],
+[mono-accordion][mono-grouped][mono-open] > [mono-body] {
+  padding-top: 0;
+  border-top-color: transparent;
+}
+
+/* A collapsed body is still fully rendered — the `0fr` track only hides it — so
+   without this every closed accordion keeps its whole slotted subtree in the style,
+   layout and paint trees. `content-visibility: hidden` drops it entirely.
+
+   What this buys, measured with ~320-node bodies (Chromium, median of 3):
+     initial layout, 40 panels: 157ms → 18ms, and flat in the panel count
+     (5 panels: 52ms → 23ms). That is the cost of putting a long list of heavy
+     accordions on screen at all — e.g. opening a modal that builds N entry forms.
+   What it does NOT buy: a cheaper toggle. Skipping the subtree means an opening
+   panel is laid out from scratch, so one open+close costs slightly MORE
+   (23ms → 31ms at 40 panels). The toggle's real cost is the animation above —
+   see `--mono-accordion-duration`.
+
+   `allow-discrete` is what makes it safe to animate. Opening flips the property to
+   `visible` at 0%, so the grid can still measure the content it is expanding to;
+   closing holds it `visible` until 100%, so the collapse plays out before the content
+   is dropped. Get that backwards and a closing body vanishes instantly instead of
+   collapsing.
+
+   Gated behind @supports deliberately. `content-visibility … allow-discrete` inside
+   the `transition` SHORTHAND is a parse error to a browser without the feature, and a
+   single bad entry drops the WHOLE declaration — which would take every accordion
+   transition with it. Inside the guard the shorthand is known to parse, so the list is
+   restated in full rather than patched with the `transition-behavior` longhand.
+   Browsers without support keep exactly the previous behaviour.
+
+   Must stay ABOVE the reduced-motion block: @supports adds no specificity, so source
+   order is the only thing keeping `transition: none` the winner down there. */
+@supports (transition-behavior: allow-discrete) {
+  :where([mono-accordion]) > [mono-body] {
+    content-visibility: hidden;
+    /* Must stay `0`, NOT `auto 0`. `content-visibility: hidden` skips this element's
+       own contents, so its size comes from HERE — and the `auto` keyword's remembered
+       size is the panel's last OPEN height, which leaves a closed accordion holding
+       full height with nothing in it. Tried, measured, reverted: a closed body read
+       656px instead of collapsing. The scrollbar-stability that `auto` normally buys
+       does not apply to an element that is itself the skipped one. */
+    contain-intrinsic-size: 0;
+    transition:
+      grid-template-rows var(--_mono-accordion-duration) var(--mono-ease),
+      padding-top var(--_mono-accordion-duration) var(--mono-ease),
+      padding-bottom var(--_mono-accordion-duration) var(--mono-ease),
+      border-top-color var(--mono-duration) var(--mono-ease),
+      content-visibility var(--_mono-accordion-duration) allow-discrete;
+  }
+
+  [mono-accordion][mono-open] > [mono-body] {
+    content-visibility: visible;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [mono-accordion],
+  [mono-accordion] > [mono-head],
+  [mono-accordion] > [mono-head] > [mono-arrow],
+  [mono-accordion] > [mono-body] {
+    transition: none;
+  }
+}

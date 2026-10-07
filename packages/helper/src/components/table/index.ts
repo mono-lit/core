@@ -1,0 +1,152 @@
+export { monoDataGrid, controlMonoTable } from './mono-data-grid.js'
+export { setErrorMessages, resolveErrorMessages, describeError, errorStatus, normalizeError, DEFAULT_ERROR_MESSAGES } from '../../utils/normalize-error.js'
+export type { MonoErrorMessages, MonoErrorMessageKey, DescribedError } from '../../utils/normalize-error.js'
+export { monoArraySource } from './array-source.js'
+export type { MonoArraySourceOptions } from './array-source.js'
+export {
+  isPath,
+  parseFieldPath,
+  getFieldValue,
+  setFieldValue,
+  mergePatch,
+  toODataSelector,
+  toODataClause,
+} from '../../search/field-path.js'
+export type { FieldSegment, ParsedFieldPath, ODataClause } from '../../search/field-path.js'
+export { buildGroups, flattenLeaves, isGroupNode, collectGroupPaths } from './grouping.js'
+export type { MonoGroupNode } from './grouping.js'
+export {
+  expandWildcard,
+  isWildcardPattern,
+  normalizeSearchExpr,
+  plainSearchColumns,
+  resolveSearchEntries,
+} from '../../search/search-expr.js'
+export type {
+  MonoSearchCustomCtx,
+  MonoSearchCustomResult,
+  MonoSearchExpr,
+  MonoSearchExprCustom,
+  MonoSearchExprEntry,
+  ResolveSearchOptions,
+} from '../../search/search-expr.js'
+export { MonoTableSearch } from './mono-table-search.js'
+export { MonoTablePaging } from './mono-table-paging.js'
+export { MonoTablePagingGroup } from './mono-table-paging-group.js'
+export { MonoTablePageSize } from './mono-table-page-size.js'
+export { MonoTableInfo } from './mono-table-info.js'
+export { MonoTableSort } from './mono-table-sort.js'
+export { MonoTableTh } from './mono-table-th.js'
+export { MonoTableEmpty } from './mono-table-empty.js'
+export type {
+  TableEmptyEvents,
+  TableEmptyReloadEvent,
+  TableEmptyReloadEventDetail,
+} from './mono-table-empty-core.js'
+export { MonoTableError } from './mono-table-error.js'
+export type {
+  TableErrorEvents,
+  TableErrorCloseEvent,
+  TableErrorCloseEventDetail,
+  TableErrorReloadEvent,
+  TableErrorReloadEventDetail,
+} from './mono-table-error-core.js'
+export { MonoTableLoading } from './mono-table-loading.js'
+export { MonoTableSummary } from './mono-table-summary.js'
+export { MonoTableDetail } from './mono-table-detail.js'
+export type {
+  TableDetailClickEvent,
+  TableDetailClickEventDetail,
+  TableDetailEvents,
+} from './mono-table-detail-core.js'
+export { MonoTableCheckbox } from './mono-table-checkbox.js'
+export type {
+  TableCheckboxType,
+  TableCheckboxChangeEvent,
+  TableCheckboxChangeEventDetail,
+  TableCheckboxEvents,
+} from './mono-table-checkbox-core.js'
+
+export type {
+  SortOrder,
+  GroupPageInfo,
+  MonoDisplayRow,
+  MonoGroupMeta,
+  MonoServerGroupCtx,
+  MonoServerGroupSource,
+  MonoColumn,
+  MonoColumnSort,
+  MonoSetSortOptions,
+  MonoSetColumnFilterOptions,
+  MonoColumnValue,
+  MonoSearchTerm,
+  MonoEditableTrigger,
+  MonoCellChange,
+  MonoStagedChange,
+  MonoGridStore,
+  MonoFormConfig,
+  MonoFormOp,
+  MonoFormHandle,
+  MonoStorePush,
+  MonoSummaryType,
+  MonoSummarySpec,
+  MonoSummaryFieldSpec,
+  MonoSummaryConfig,
+  MonoSummaryRecalculate,
+  MonoSummaryResult,
+  MonoSummaryHandle,
+  MonoColumnDef,
+  MonoColumnHandle,
+  MonoDetailEl,
+  MonoDetailHandle,
+  MonoCheckMode,
+  MonoCheckConfig,
+  MonoCheckHandle,
+} from './mono-data-grid.js'
+
+// Report export (`table.export()`) — TYPES ONLY. The engine itself is reached
+// through a dynamic import inside the controller; a value export here would
+// pull handlebars/remark into every bundle that touches the table.
+export type {
+  MonoExportColumn,
+  MonoExportFormat,
+  MonoExportFormatOptions,
+  MonoExportOptions,
+  MonoExportResult,
+  MonoExportStyle,
+  MonoExportStyles,
+} from '../../export/types.js'
+export type {
+  MonoImportAmbiguity,
+  MonoImportChange,
+  MonoImportColumn,
+  MonoImportMatch,
+  MonoImportNumberFormat,
+  MonoImportOptions,
+  MonoImportRejection,
+  MonoImportResult,
+  MonoImportType,
+  MonoImportValueType,
+} from '../../import/types.js'
+
+export type {
+  MonoTableController,
+  MonoGridSource,
+  MonoDataGridOptions,
+  MonoDataSourceOptions,
+  MonoOdataOptions,
+  MonoDistinctValuesContext,
+  TableSearchProps,
+  TablePagingProps,
+  TablePageSizeProps,
+  TableInfoProps,
+  TableSortProps,
+  TableThProps,
+  TableThSort,
+  TableEmptyProps,
+  TableErrorProps,
+  TableLoadingProps,
+  TableSummaryProps,
+  TableDetailProps,
+  TableCheckboxProps,
+} from './table-types.js'

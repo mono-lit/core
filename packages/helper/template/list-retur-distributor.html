@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EkaJaya BMS — List Retur Distributor</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --cobalt:#2563a8;--cobalt-dark:#1a4a85;--cobalt-deep:#0f3060;--cobalt-mid:#3070b8;
+  --cobalt-lite:#dbeafe;--cobalt-soft:#eff6ff;
+  --sky:#4a9fd4;--sky-dark:#2e7db0;--sky-lite:#cde8f8;--sky-soft:#f0f8fd;
+  --teal:#3aaa8c;--teal-dark:#2a8870;--teal-lite:#c6ede3;--teal-soft:#f0faf7;
+  --silver:#8ba0b0;--silver-lite:#e8f0f5;--silver-soft:#f4f7fa;
+  --ink:#1a2d42;--ink-mid:#3a5068;--ink-soft:#6a8098;--ink-faint:#9ab0c0;
+  --bg:#f0f6fb;--border:#d0e4f0;--border-lite:#e4eff8;
+  --red:#dc2626;--red-soft:#fef2f2;--red-lite:#fecaca;
+  --orange:#ea580c;--orange-soft:#fff7ed;--orange-lite:#fed7aa;
+  --green:#16a34a;--green-soft:#f0fdf4;--green-lite:#bbf7d0;
+  --yellow:#ca8a04;--yellow-soft:#fefce8;--yellow-lite:#fef08a;
+  --purple:#7c3aed;--purple-soft:#f5f3ff;--purple-lite:#ddd6fe;
+  --sb-w:264px;
+}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;
+  background-image:radial-gradient(ellipse at 0% 0%,rgba(74,159,212,.08) 0%,transparent 45%),
+    radial-gradient(ellipse at 100% 100%,rgba(58,170,140,.06) 0%,transparent 45%);}
+#sb::-webkit-scrollbar{width:3px;}#sb::-webkit-scrollbar-thumb{background:var(--cobalt-lite);border-radius:99px;}
+
+/* ══ SIDEBAR ══ */
+#sb{width:var(--sb-w);background:#fff;border-right:1.5px solid var(--border-lite);box-shadow:3px 0 20px rgba(37,99,168,.07);position:fixed;top:0;left:0;bottom:0;z-index:50;display:flex;flex-direction:column;overflow-y:auto;transition:left .26s ease;}
+#sb-ov{display:none;}
+.sb-brand{padding:1rem 1rem .85rem;background:linear-gradient(135deg,var(--cobalt-deep) 0%,var(--cobalt) 55%,var(--sky) 100%);flex-shrink:0;position:relative;}
+.sb-brand::after{content:'';position:absolute;right:-20px;top:-20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.06);pointer-events:none;}
+.sb-brand-row{display:flex;align-items:center;gap:.8rem;position:relative;z-index:1;}
+.sb-logo{width:46px;height:46px;border-radius:10px;background:#fff;border:2px solid rgba(255,255,255,.6);box-shadow:0 2px 12px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;padding:4px;font-weight:900;color:var(--cobalt);font-size:1.1rem;flex-shrink:0;}
+.sb-name{color:#fff;font-size:1.05rem;font-weight:800;letter-spacing:.03em;line-height:1.2;}
+.sb-sub-txt{color:rgba(255,255,255,.82);font-size:.67rem;font-weight:600;letter-spacing:.13em;text-transform:uppercase;margin-top:2px;}
+.sb-user{padding:.75rem .85rem;border-bottom:1px solid var(--border-lite);}
+.sb-user-in{display:flex;align-items:center;gap:.7rem;background:var(--cobalt-soft);border-radius:11px;padding:.55rem .8rem;border:1px solid var(--cobalt-lite);}
+.sb-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--cobalt),var(--sky));display:flex;align-items:center;justify-content:center;color:#fff;font-size:.72rem;font-weight:700;flex-shrink:0;}
+.sb-un{color:var(--ink);font-size:.83rem;font-weight:700;line-height:1.2;}.sb-ur{color:var(--ink-soft);font-size:.7rem;}
+.sb-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 2px var(--teal-lite);flex-shrink:0;margin-left:auto;}
+.sb-nav{flex:1;padding:.6rem .7rem;display:flex;flex-direction:column;gap:1px;}
+.nav-grp{font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--silver);padding:0 10px;margin:12px 0 3px;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;cursor:pointer;color:var(--ink-mid);font-size:.82rem;font-weight:500;border:1px solid transparent;text-decoration:none;transition:all .14s;}
+.nav-item:hover{background:var(--cobalt-soft);color:var(--cobalt);border-color:var(--cobalt-lite);}
+.nav-item.on{background:linear-gradient(135deg,var(--cobalt),var(--sky));color:#fff;border-color:transparent;box-shadow:0 3px 12px rgba(37,99,168,.25);}
+.nav-badge{margin-left:auto;font-size:.68rem;border-radius:99px;padding:1px 7px;background:var(--silver-lite);color:var(--ink-mid);font-family:'DM Mono',monospace;}
+.nav-item.on .nav-badge{background:rgba(255,255,255,.25);color:#fff;}
+.sb-foot{padding:.75rem .7rem;border-top:1px solid var(--border-lite);}
+.sb-btn{width:100%;display:flex;align-items:center;gap:.7rem;padding:.55rem .9rem;border-radius:9px;font-size:.82rem;font-weight:500;cursor:pointer;border:none;font-family:inherit;transition:all .14s;color:var(--ink-soft);background:transparent;}
+.sb-btn:hover{background:var(--silver-soft);color:var(--ink);}
+.sb-logout{background:#fff0f0!important;color:#dc2626!important;border:1px solid #fecaca!important;font-weight:600!important;margin-top:3px;}
+.sb-ver{text-align:center;font-size:.66rem;color:var(--ink-faint);margin-top:.6rem;}
+
+/* ══ MAIN ══ */
+.main{margin-left:var(--sb-w);display:flex;flex-direction:column;min-height:100vh;}
+
+/* ══ TOPBAR ══ */
+.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:.65rem;padding:.75rem 1.5rem;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1.5px solid var(--border-lite);box-shadow:0 2px 12px rgba(37,99,168,.06);min-height:56px;}
+.tb-ham{display:none;flex-direction:column;gap:5px;padding:.35rem;border-radius:9px;background:transparent;border:none;cursor:pointer;flex-shrink:0;}
+.tb-ham span{display:block;width:22px;height:2px;background:var(--ink-mid);border-radius:2px;}
+.tb-title{min-width:0;flex:1;overflow:hidden;}
+.tb-title h1{font-size:.95rem;font-weight:800;color:var(--cobalt-deep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-title p{font-size:.72rem;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-actions{display:flex;align-items:center;gap:.35rem;flex-shrink:0;}
+.tb-icon-btn{position:relative;padding:.45rem .55rem;border-radius:10px;border:1.5px solid var(--border-lite);background:var(--cobalt-soft);cursor:pointer;font-size:1rem;line-height:1;transition:all .14s;}
+.tb-icon-btn:hover{background:var(--cobalt-lite);border-color:var(--cobalt);}
+.tb-avatar-btn{display:flex;align-items:center;gap:.55rem;padding:.38rem .7rem .38rem .38rem;border-radius:11px;border:1.5px solid var(--border-lite);background:var(--cobalt-soft);cursor:pointer;transition:all .14s;}
+.tb-avatar-btn:hover{background:var(--cobalt-lite);border-color:var(--cobalt);}
+.tb-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--cobalt),var(--sky));display:flex;align-items:center;justify-content:center;color:#fff;font-size:.68rem;font-weight:700;}
+.tb-av-nm{font-size:.78rem;font-weight:700;color:var(--ink);}.tb-av-rl{font-size:.66rem;color:var(--ink-soft);}.tb-chev{font-size:.6rem;color:var(--ink-faint);}
+
+/* ══ CONTENT ══ */
+#content{padding:1.5rem;flex:1;}
+
+/* Page header */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;}
+.ph-bc{font-size:.72rem;color:var(--ink-faint);margin-bottom:.28rem;}.ph-bc span{color:var(--cobalt);font-weight:600;}
+.ph-ttl{font-size:1.15rem;font-weight:800;color:var(--cobalt-deep);}
+.ph-sub{font-size:.78rem;color:var(--ink-soft);margin-top:2px;}
+.ph-btns{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;}
+.btn-primary{display:flex;align-items:center;gap:.4rem;padding:.55rem 1.1rem;background:linear-gradient(135deg,var(--cobalt),var(--sky));color:#fff;font-size:.82rem;font-weight:700;font-family:inherit;border:none;border-radius:10px;cursor:pointer;box-shadow:0 3px 12px rgba(37,99,168,.28);transition:all .16s;white-space:nowrap;}
+.btn-primary:hover{box-shadow:0 5px 18px rgba(37,99,168,.38);transform:translateY(-1px);}
+.btn-secondary{display:flex;align-items:center;gap:.4rem;padding:.55rem 1rem;background:#fff;color:var(--cobalt);font-size:.82rem;font-weight:600;font-family:inherit;border:1.5px solid var(--cobalt-lite);border-radius:10px;cursor:pointer;transition:all .16s;white-space:nowrap;}
+.btn-secondary:hover{background:var(--cobalt-soft);border-color:var(--cobalt);}
+.btn-teal{display:flex;align-items:center;gap:.4rem;padding:.55rem 1rem;background:var(--teal-soft);color:var(--teal-dark);font-size:.82rem;font-weight:600;font-family:inherit;border:1.5px solid var(--teal-lite);border-radius:10px;cursor:pointer;transition:all .16s;white-space:nowrap;}
+.btn-teal:hover{background:var(--teal);color:#fff;}
+
+/* ══ INFO ALERT ══ */
+.info-banner{background:linear-gradient(135deg,#fff7ed,#fef2f2);border:1px solid var(--orange-lite);border-radius:14px;padding:.95rem 1.1rem;margin-bottom:1rem;display:flex;gap:.8rem;align-items:flex-start;}
+.info-banner-ico{font-size:1.4rem;flex-shrink:0;line-height:1;}
+.info-banner-body{flex:1;font-size:.78rem;line-height:1.55;color:#854d0e;}
+.info-banner-ttl{font-weight:800;color:#b45309;margin-bottom:.25rem;font-size:.85rem;}
+.info-banner-body b{color:#9a3412;}
+
+/* ══ Sub-action tabs (3 kategori retur) ══ */
+.sub-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:.55rem;background:#fff;border:1px solid var(--border-lite);border-radius:14px;padding:.55rem;box-shadow:0 2px 8px rgba(37,99,168,.05);margin-bottom:1rem;}
+.sub-tab{padding:.75rem 1rem;border-radius:10px;font-size:.85rem;font-weight:700;cursor:pointer;border:1.5px solid transparent;font-family:inherit;color:var(--ink-mid);background:var(--silver-soft);transition:all .15s;display:flex;align-items:center;justify-content:center;gap:.5rem;}
+.sub-tab:hover{background:var(--cobalt-soft);color:var(--cobalt);border-color:var(--cobalt-lite);}
+.sub-tab.on{background:linear-gradient(135deg,var(--cobalt),var(--sky));color:#fff;border-color:transparent;box-shadow:0 4px 14px rgba(37,99,168,.28);}
+.sub-tab-cnt{font-size:.7rem;padding:1px 7px;border-radius:99px;background:rgba(255,255,255,.25);font-family:'DM Mono',monospace;}
+.sub-tab:not(.on) .sub-tab-cnt{background:var(--cobalt-lite);color:var(--cobalt-dark);}
+
+/* ══ Filter Card ══ */
+.flt-card{background:#fff;border:1px solid var(--border-lite);border-radius:14px;box-shadow:0 2px 8px rgba(37,99,168,.05);margin-bottom:1rem;overflow:hidden;}
+.flt-head{display:flex;align-items:center;gap:.6rem;padding:.7rem 1rem;background:linear-gradient(135deg,var(--cobalt-soft),var(--sky-soft));border-bottom:1px solid var(--border-lite);cursor:pointer;}
+.flt-head-ico{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--cobalt),var(--sky));color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;}
+.flt-head-ttl{flex:1;font-size:.86rem;font-weight:800;color:var(--cobalt-deep);}
+.flt-head-act{font-size:.72rem;color:var(--cobalt);font-weight:700;display:flex;align-items:center;gap:.3rem;}
+.flt-active-cnt{padding:1px 7px;border-radius:99px;background:var(--cobalt);color:#fff;font-family:'DM Mono',monospace;font-size:.66rem;display:none;}
+.flt-active-cnt.on{display:inline-flex;}
+.flt-toggle{font-size:.7rem;color:var(--ink-faint);transition:transform .2s;}
+.flt-card.collapsed .flt-toggle{transform:rotate(-90deg);}
+.flt-card.collapsed .flt-body{display:none;}
+.flt-body{padding:1rem;}
+.flt-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;}
+.flt-grid .flt-grid-2{grid-column:span 2;}
+.ff{display:flex;flex-direction:column;gap:.25rem;}
+.ff-lbl{font-size:.7rem;font-weight:700;color:var(--ink-mid);text-transform:uppercase;letter-spacing:.05em;}
+.fi,.fi-sel{width:100%;padding:.5rem .75rem;border:1.5px solid var(--border);border-radius:9px;font-size:.8rem;font-family:inherit;color:var(--ink);background:var(--cobalt-soft);outline:none;transition:all .15s;}
+.fi:focus,.fi-sel:focus{border-color:var(--sky);background:#fff;box-shadow:0 0 0 3px var(--sky-lite);}
+.fi-sel{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236a8098' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .65rem center;padding-right:2rem;cursor:pointer;appearance:none;}
+.fi-date{font-family:'DM Mono',monospace;font-size:.78rem;}
+.daterange-row{display:grid;grid-template-columns:1fr auto 1fr;gap:.4rem;align-items:end;}
+.daterange-sep{font-size:.72rem;color:var(--ink-soft);font-weight:700;padding-bottom:.6rem;text-align:center;}
+.flt-foot{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.65rem 1rem;background:var(--silver-soft);border-top:1px solid var(--border-lite);flex-wrap:wrap;}
+.flt-chk{display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--ink-mid);cursor:pointer;font-weight:600;}
+.flt-chk input{width:15px;height:15px;accent-color:var(--cobalt);cursor:pointer;}
+.flt-foot-btns{display:flex;gap:.4rem;flex-wrap:wrap;}
+.btn-sm{padding:.4rem .85rem;font-size:.75rem;border-radius:8px;font-weight:700;font-family:inherit;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--ink-mid);transition:all .14s;display:inline-flex;align-items:center;gap:.3rem;}
+.btn-sm:hover{background:var(--silver-soft);}
+.btn-sm-pri{background:var(--cobalt);color:#fff;border-color:var(--cobalt);}
+.btn-sm-pri:hover{background:var(--cobalt-dark);box-shadow:0 2px 8px rgba(37,99,168,.3);}
+.btn-sm-tl{background:var(--teal-soft);color:var(--teal-dark);border-color:var(--teal-lite);}
+.btn-sm-tl:hover{background:var(--teal);color:#fff;border-color:var(--teal);}
+
+/* ══ Toolbar (search + bulk + page-size) ══ */
+.toolbar{background:#fff;border:1px solid var(--border-lite);border-radius:14px;padding:.7rem 1rem;margin-bottom:1rem;box-shadow:0 2px 8px rgba(37,99,168,.05);display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}
+.srch-wrap{position:relative;flex:1;min-width:220px;max-width:360px;}
+.srch-ico{position:absolute;left:.75rem;top:50%;transform:translateY(-50%);font-size:.86rem;pointer-events:none;color:var(--ink-faint);}
+.srch-inp{width:100%;padding:.55rem .85rem .55rem 2.25rem;border:1.5px solid var(--border);border-radius:9px;font-size:.82rem;font-family:inherit;color:var(--ink);background:var(--cobalt-soft);outline:none;transition:all .15s;}
+.srch-inp::placeholder{color:var(--ink-faint);}
+.srch-inp:focus{border-color:var(--sky);background:#fff;box-shadow:0 0 0 3px var(--sky-lite);}
+.tb-results{font-size:.74rem;color:var(--ink-soft);font-family:'DM Mono',monospace;}
+.tb-results b{color:var(--cobalt);}
+.ml-a{margin-left:auto;}
+.psz-wrap{display:flex;align-items:center;gap:.4rem;font-size:.74rem;color:var(--ink-soft);}
+.psz-sel{padding:.42rem .55rem;border:1.5px solid var(--border);border-radius:8px;font-size:.78rem;background:var(--cobalt-soft);font-family:inherit;cursor:pointer;outline:none;}
+
+/* Bulk bar */
+.bulk-bar{display:none;align-items:center;gap:.5rem;padding:.55rem .85rem;border-radius:10px;background:var(--cobalt-soft);border:1.5px solid var(--cobalt-lite);font-size:.8rem;flex-wrap:wrap;width:100%;}
+.bulk-bar.on{display:flex;}
+.bulk-n{font-weight:700;color:var(--cobalt);font-family:'DM Mono',monospace;}
+.bksep{width:1px;height:18px;background:var(--cobalt-lite);}
+.bk{padding:.4rem .8rem;border-radius:8px;font-size:.74rem;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--ink-mid);font-family:inherit;transition:all .14s;}
+.bk:hover{background:var(--cobalt);color:#fff;border-color:var(--cobalt);}
+.bka{background:var(--green-soft);color:var(--green);border-color:var(--green-lite);}
+.bka:hover{background:var(--green);color:#fff;border-color:var(--green);}
+.bkd{background:var(--red-soft);color:var(--red);border-color:var(--red-lite);}
+.bkd:hover{background:var(--red);color:#fff;border-color:var(--red);}
+.bkc{background:#fff;color:var(--ink-soft);}
+
+/* ══ TABLE ══ */
+.t-card{background:#fff;border:1px solid var(--border-lite);border-radius:14px;box-shadow:0 2px 12px rgba(37,99,168,.06);overflow:hidden;}
+.t-card-head{padding:.65rem 1rem;background:linear-gradient(135deg,var(--cobalt-soft),var(--sky-soft));border-bottom:1.5px solid var(--cobalt-lite);display:flex;align-items:center;gap:.5rem;}
+.t-card-ttl{font-size:.85rem;font-weight:800;color:var(--cobalt-deep);}
+.t-card-cnt{margin-left:auto;font-size:.7rem;font-weight:700;padding:2px 9px;border-radius:99px;background:var(--cobalt);color:#fff;font-family:'DM Mono',monospace;}
+.t-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.t-scroll::-webkit-scrollbar{height:8px;}
+.t-scroll::-webkit-scrollbar-thumb{background:var(--cobalt-lite);border-radius:99px;}
+table.tbl{width:100%;border-collapse:collapse;min-width:1500px;}
+.tbl thead th{padding:.65rem .65rem;font-size:.66rem;font-weight:800;color:var(--cobalt-dark);text-transform:uppercase;letter-spacing:.05em;background:var(--cobalt-soft);border-bottom:2px solid var(--cobalt-lite);text-align:left;white-space:nowrap;position:sticky;top:0;z-index:1;}
+.tbl thead th.ck-h{width:36px;}
+.tbl thead th.ex-h{width:32px;}
+.tbl tbody td{padding:.55rem .65rem;border-bottom:1px solid var(--border-lite);font-size:.78rem;vertical-align:middle;}
+.tbl tbody tr.main-r:hover{background:var(--cobalt-soft);}
+.tbl tbody tr.main-r.sel-r{background:var(--sky-soft);}
+.tbl tbody tr.exp-r{display:none;background:linear-gradient(180deg,var(--silver-soft),#fff);}
+.tbl tbody tr.exp-r.on{display:table-row;}
+.tbl tbody tr.exp-r td{padding:0;border-bottom:2px solid var(--cobalt-lite);}
+
+.ck input{width:15px;height:15px;accent-color:var(--cobalt);cursor:pointer;}
+.xbtn{width:24px;height:24px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--cobalt-lite);background:#fff;border-radius:6px;cursor:pointer;color:var(--cobalt);transition:all .15s;}
+.xbtn:hover{background:var(--cobalt);color:#fff;border-color:var(--cobalt);}
+.xbtn.on{background:var(--cobalt);color:#fff;border-color:var(--cobalt);}
+.xbtn .xi{transition:transform .25s;display:inline-block;font-size:.85rem;font-weight:700;line-height:1;}
+.xbtn.on .xi{transform:rotate(90deg);}
+
+.cm{font-size:.79rem;color:var(--ink);font-weight:600;}
+.cs{font-size:.7rem;color:var(--ink-soft);margin-top:1px;}
+.cn{font-family:'DM Mono',monospace;font-weight:600;}
+
+/* No. Dok cell */
+.nodok{display:flex;flex-direction:column;gap:2px;}
+.nodok-id{font-family:'DM Mono',monospace;font-size:.76rem;font-weight:700;color:var(--cobalt-dark);}
+.nodok-warehouse{font-size:.68rem;color:var(--ink-soft);}
+.nodok-total{font-size:.68rem;font-weight:700;padding:1px 6px;border-radius:6px;background:var(--cobalt);color:#fff;font-family:'DM Mono',monospace;display:inline-block;align-self:flex-start;}
+
+/* Jenis badge */
+.jenis-bd{display:inline-flex;align-items:center;gap:.25rem;padding:3px 8px;border-radius:6px;font-size:.68rem;font-weight:700;font-family:'DM Mono',monospace;}
+.jb-ref{background:var(--cobalt-soft);color:var(--cobalt-dark);border:1px solid var(--cobalt-lite);}
+.jb-noref{background:var(--purple-soft);color:var(--purple);border:1px solid var(--purple-lite);}
+.jb-good{background:var(--teal-soft);color:var(--teal-dark);border:1px solid var(--teal-lite);}
+
+/* Area badge */
+.area-bd{display:inline-flex;align-items:center;gap:.3rem;padding:3px 9px;border-radius:99px;font-size:.7rem;font-weight:700;background:var(--silver-lite);color:var(--ink-mid);}
+.area-bd::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--cobalt);}
+
+/* Foto / File buttons */
+.dl-btn{display:inline-flex;align-items:center;gap:.3rem;padding:.32rem .6rem;background:var(--sky-soft);color:var(--sky-dark);border:1.5px solid var(--sky-lite);border-radius:7px;font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .14s;text-decoration:none;}
+.dl-btn:hover{background:var(--sky-dark);color:#fff;border-color:var(--sky-dark);}
+.dl-btn-2{background:var(--teal-soft);color:var(--teal-dark);border-color:var(--teal-lite);}
+.dl-btn-2:hover{background:var(--teal);color:#fff;border-color:var(--teal);}
+
+/* File status pill */
+.file-pill{display:inline-block;padding:3px 7px;border-radius:6px;font-size:.66rem;font-weight:700;line-height:1.3;max-width:120px;}
+.fp-warn{background:var(--yellow-soft);color:#854d0e;border:1px solid var(--yellow-lite);}
+.fp-ok{background:var(--green-soft);color:#166534;border:1px solid var(--green-lite);}
+.fp-info{background:var(--cobalt-soft);color:var(--cobalt-dark);border:1px solid var(--cobalt-lite);}
+.fp-mute{background:var(--silver-lite);color:var(--ink-soft);border:1px solid var(--border);}
+.file-pill-sub{font-size:.6rem;font-weight:500;color:var(--ink-soft);margin-top:2px;line-height:1.3;}
+
+/* Status big badge */
+.st-bd{display:inline-flex;align-items:center;gap:.3rem;padding:3px 9px;border-radius:6px;font-size:.7rem;font-weight:700;line-height:1.3;}
+.st-pending{background:var(--orange-soft);color:var(--orange);border:1px solid var(--orange-lite);}
+.st-process{background:var(--sky-soft);color:var(--sky-dark);border:1px solid var(--sky-lite);}
+.st-approve{background:var(--green-soft);color:var(--green);border:1px solid var(--green-lite);}
+.st-reject{background:var(--red-soft);color:var(--red);border:1px solid var(--red-lite);}
+.st-draft{background:var(--silver-lite);color:var(--ink-mid);border:1px solid var(--border);}
+.st-stack{display:flex;flex-direction:column;gap:3px;align-items:flex-start;}
+
+/* Action menu */
+.ag{display:flex;gap:.25rem;align-items:center;}
+.a{padding:.3rem .55rem;border-radius:7px;font-size:.7rem;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--ink-mid);transition:all .12s;font-family:inherit;display:inline-flex;align-items:center;gap:.25rem;}
+.a:hover{background:var(--cobalt-soft);color:var(--cobalt);border-color:var(--cobalt-lite);}
+.ae{background:var(--cobalt-soft);color:var(--cobalt);border-color:var(--cobalt-lite);}
+.ae:hover{background:var(--cobalt);color:#fff;}
+.aa{background:var(--green-soft);color:var(--green);border-color:var(--green-lite);}
+.aa:hover{background:var(--green);color:#fff;}
+.ar2{background:var(--red-soft);color:var(--red);border-color:var(--red-lite);}
+.ar2:hover{background:var(--red);color:#fff;}
+.am{background:var(--silver-soft);}
+.dw{position:relative;}
+.dm{display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:50;min-width:180px;background:#fff;border:1.5px solid var(--cobalt-lite);border-radius:9px;box-shadow:0 8px 24px rgba(37,99,168,.15);overflow:hidden;animation:fadeIn .14s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+.dm.on{display:block;}
+.di{display:flex;align-items:center;gap:.5rem;padding:.5rem .85rem;width:100%;font-size:.78rem;color:var(--ink-mid);background:#fff;border:none;cursor:pointer;font-family:inherit;text-align:left;border-bottom:1px solid var(--border-lite);font-weight:500;}
+.di:last-child{border-bottom:none;}
+.di:hover{background:var(--cobalt-soft);color:var(--cobalt);}
+.di.dng{color:var(--red);}
+.di.dng:hover{background:var(--red-soft);}
+.ddsep{height:1px;background:var(--border-lite);margin:0;}
+
+/* ══ EXPAND ROW ══ */
+.exp-inner{padding:1rem 1.25rem 1.25rem;}
+.exp-section{margin-bottom:1.1rem;}
+.exp-section:last-child{margin-bottom:0;}
+.exp-section-ttl{display:flex;align-items:center;gap:.5rem;font-size:.78rem;font-weight:800;color:var(--cobalt-deep);margin-bottom:.55rem;text-transform:uppercase;letter-spacing:.04em;padding-bottom:.4rem;border-bottom:2px solid var(--cobalt-lite);}
+.exp-section-ico{width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,var(--cobalt),var(--sky));color:#fff;display:flex;align-items:center;justify-content:center;font-size:.7rem;}
+
+/* Item table di expand */
+.exp-tw{overflow-x:auto;border:1px solid var(--border-lite);border-radius:10px;background:#fff;}
+.exp-t{width:100%;border-collapse:collapse;min-width:850px;font-size:.74rem;}
+.exp-t thead th{padding:.5rem .65rem;font-size:.62rem;font-weight:800;color:var(--cobalt-dark);text-transform:uppercase;letter-spacing:.05em;background:var(--cobalt-soft);border-bottom:1.5px solid var(--cobalt-lite);text-align:left;white-space:nowrap;}
+.exp-t tbody td{padding:.45rem .65rem;border-bottom:1px solid var(--border-lite);}
+.exp-t tbody tr:last-child td{border-bottom:none;}
+.exp-t tbody tr:hover{background:var(--cobalt-soft);}
+.exp-t tfoot td{padding:.5rem .65rem;font-size:.74rem;font-weight:800;background:var(--silver-soft);border-top:2px solid var(--cobalt-lite);color:var(--cobalt-deep);}
+
+/* Approval matrix */
+.appr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.4rem;}
+.appr-row{display:grid;grid-template-columns:140px 1fr;align-items:center;gap:.6rem;padding:.45rem .65rem;background:#fff;border:1px solid var(--border-lite);border-radius:8px;font-size:.74rem;}
+.appr-lbl{font-weight:700;color:var(--ink-mid);font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;}
+.appr-val{}
+.appr-val .file-pill{font-size:.66rem;}
+.appr-val.appr-approved{display:flex;align-items:center;gap:.4rem;color:var(--green);font-weight:700;font-size:.7rem;}
+.appr-val.appr-approved .appr-by{color:var(--ink-soft);font-weight:500;font-size:.66rem;font-family:'DM Mono',monospace;}
+.appr-pending-bd{display:inline-flex;align-items:center;gap:.3rem;padding:2px 7px;border-radius:5px;font-size:.65rem;font-weight:800;background:var(--yellow-soft);color:#854d0e;border:1px solid var(--yellow-lite);font-family:'DM Mono',monospace;letter-spacing:.04em;}
+.appr-done-bd{display:inline-flex;align-items:center;gap:.3rem;padding:2px 7px;border-radius:5px;font-size:.65rem;font-weight:800;background:var(--green-soft);color:#166534;border:1px solid var(--green-lite);}
+.appr-rej-bd{display:inline-flex;align-items:center;gap:.3rem;padding:2px 7px;border-radius:5px;font-size:.65rem;font-weight:800;background:var(--red-soft);color:var(--red);border:1px solid var(--red-lite);}
+
+/* Quick action di expand */
+.exp-acts{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.65rem;padding-top:.65rem;border-top:1px dashed var(--border-lite);}
+.exp-acts-lbl{font-size:.7rem;font-weight:700;color:var(--ink-soft);text-transform:uppercase;align-self:center;margin-right:.3rem;letter-spacing:.04em;}
+
+/* ══ Mobile cards ══ */
+.mob-cards{display:none;flex-direction:column;gap:.7rem;}
+.mob-card{background:#fff;border:1px solid var(--border-lite);border-radius:12px;padding:.85rem;box-shadow:0 2px 8px rgba(37,99,168,.05);}
+.mob-card-head{display:flex;align-items:center;gap:.55rem;margin-bottom:.65rem;flex-wrap:wrap;}
+.mob-card-id{font-size:.72rem;color:var(--ink-soft);font-family:'DM Mono',monospace;}
+.mob-card-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem .8rem;font-size:.78rem;margin-bottom:.65rem;}
+.mob-cell-lbl{font-size:.68rem;color:var(--ink-soft);font-weight:600;text-transform:uppercase;}
+.mob-cell-val{font-size:.78rem;color:var(--ink);font-weight:600;margin-top:1px;}
+.mob-card-acts{display:flex;flex-wrap:wrap;gap:.35rem;border-top:1px dashed var(--border-lite);padding-top:.55rem;}
+.mob-exp-body{display:none;background:var(--silver-soft);border-radius:8px;padding:.65rem;margin-bottom:.65rem;}
+.mob-exp-body.on{display:block;}
+.mob-exp-toggle{width:100%;padding:.4rem;background:var(--sky-soft);border:1px solid var(--sky-lite);border-radius:7px;font-size:.74rem;font-weight:700;color:var(--cobalt);cursor:pointer;margin-bottom:.5rem;font-family:inherit;}
+
+/* Foot pagination */
+.t-foot{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:var(--silver-soft);border-top:1px solid var(--border-lite);flex-wrap:wrap;gap:.5rem;font-size:.76rem;color:var(--ink-soft);}
+.pg-info{font-family:'DM Mono',monospace;}
+.pg-info b{color:var(--cobalt);}
+.pg-wrap{display:flex;align-items:center;gap:.25rem;}
+.pgb{min-width:30px;height:30px;padding:0 .5rem;border:1.5px solid var(--border);border-radius:7px;background:#fff;color:var(--ink-mid);font-size:.74rem;font-weight:700;font-family:inherit;cursor:pointer;transition:all .12s;}
+.pgb:hover:not(:disabled){background:var(--cobalt-soft);border-color:var(--cobalt-lite);color:var(--cobalt);}
+.pgb:disabled{opacity:.4;cursor:not-allowed;}
+.pgb.on{background:var(--cobalt);color:#fff;border-color:var(--cobalt);}
+.pg-el{padding:0 .35rem;color:var(--ink-faint);}
+
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--ink-faint);}
+.empty-ico{font-size:2.4rem;margin-bottom:.55rem;opacity:.45;}
+.empty-ttl{font-size:.92rem;font-weight:700;color:var(--ink-mid);margin-bottom:.2rem;}
+.empty-sub{font-size:.78rem;color:var(--ink-faint);}
+
+/* Toast */
+#toasts{position:fixed;bottom:1.2rem;right:1.2rem;z-index:999;display:flex;flex-direction:column;gap:.4rem;}
+.toast{display:flex;align-items:center;gap:.55rem;padding:.6rem .9rem;border-radius:10px;font-size:.78rem;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.13);min-width:220px;max-width:340px;animation:tIn .25s cubic-bezier(.34,1.56,.64,1);}
+@keyframes tIn{from{opacity:0;transform:translateX(18px);}to{opacity:1;transform:translateX(0);}}
+.t-ok{background:var(--green-soft);border:1px solid var(--green-lite);color:var(--green);}
+.t-inf{background:var(--cobalt-soft);border:1px solid var(--cobalt-lite);color:var(--cobalt-dark);}
+.t-err{background:var(--red-soft);border:1px solid var(--red-lite);color:var(--red);}
+
+/* Responsive */
+@media(max-width:1100px){
+  .flt-grid{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:1024px){
+  #sb{left:calc(-1 * var(--sb-w));} #sb.open{left:0;}
+  #sb-ov{display:block;} #sb-ov.on{position:fixed;inset:0;z-index:40;background:rgba(15,45,90,.4);backdrop-filter:blur(3px);}
+  .main{margin-left:0;}
+  .tb-ham{display:flex;}
+  .sub-tabs{grid-template-columns:1fr;}
+  .appr-grid{grid-template-columns:1fr;}
+}
+@media(max-width:768px){
+  .t-card{display:none;}
+  .mob-cards{display:flex;}
+  .flt-grid{grid-template-columns:1fr;}
+  .flt-grid .flt-grid-2{grid-column:auto;}
+  .tb-av-nm,.tb-av-rl,.tb-chev{display:none;}
+  .tb-title p{display:none;}
+  .topbar{padding:.55rem .85rem;}
+  .ph-btns{width:100%;}
+}
+@media(max-width:640px){
+  #content{padding:1rem;}
+  .ph-sub{display:none;}
+}
+</style>
+</head>
+<body>
+
+<div id="sb-ov" onclick="closeSb()"></div>
+
+<!-- ══ SIDEBAR ══ -->
+<aside id="sb">
+  <div class="sb-brand">
+    <div class="sb-brand-row">
+      <div class="sb-logo">EJ</div>
+      <div><div class="sb-name">EKA JAYA</div><div class="sb-sub-txt">Internasional</div></div>
+    </div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-user-in">
+      <div class="sb-av">AD</div>
+      <div><div class="sb-un">Administrator</div><div class="sb-ur">Super Admin</div></div>
+      <div class="sb-dot"></div>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <a class="nav-item" href="#">🏠 <span>Dashboard</span></a>
+    <div class="nav-grp">Penjualan</div>
+    <a class="nav-item" href="#">💰 <span>Sell Out</span></a>
+    <a class="nav-item" href="#">🧾 <span>Sell In</span></a>
+    <div class="nav-grp">Retur</div>
+    <a class="nav-item on" href="#">↩️ <span>Retur Distributor</span><span class="nav-badge">52</span></a>
+    <a class="nav-item" href="#">📋 <span>Form Retur Bad Stock</span></a>
+    <a class="nav-item" href="#">📋 <span>Form Retur Admin</span></a>
+    <a class="nav-item" href="#">🧾 <span>Cek Faktur Pajak</span></a>
+    <div class="nav-grp">Approval</div>
+    <a class="nav-item" href="#">📥 <span>Approval Pending</span><span class="nav-badge">12</span></a>
+    <a class="nav-item" href="#">📜 <span>Riwayat Approval</span></a>
+    <div class="nav-grp">Konfigurasi</div>
+    <a class="nav-item" href="#">⚙️ <span>Approval Setting</span></a>
+  </nav>
+  <div class="sb-foot">
+    <button class="sb-btn">❓ Bantuan</button>
+    <button class="sb-btn sb-logout">🚪 Log Out</button>
+    <p class="sb-ver">v2.5.0 · © 2025 PT EkaJaya</p>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <button class="tb-ham" onclick="openSb()"><span></span><span></span><span></span></button>
+    <div class="tb-title">
+      <h1>List Data Retur Distributor</h1>
+      <p>Dashboard › Retur › List Retur</p>
+    </div>
+    <div class="tb-actions">
+      <button class="tb-icon-btn" title="Notifikasi">🔔</button>
+      <button class="tb-icon-btn" title="Pengaturan">⚙️</button>
+      <button class="tb-avatar-btn">
+        <div class="tb-av">AD</div>
+        <div><div class="tb-av-nm">Administrator</div><div class="tb-av-rl">Super Admin</div></div>
+        <span class="tb-chev">▼</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ══ CONTENT ══ -->
+  <div id="content">
+
+    <!-- Page header -->
+    <div class="ph">
+      <div>
+        <div class="ph-bc">Dashboard › Retur › <span>List Retur Distributor</span></div>
+        <div class="ph-ttl">List Data Retur Distributor</div>
+        <div class="ph-sub">Daftar retur dari distributor dengan status approval &amp; faktur pajak</div>
+      </div>
+      <div class="ph-btns">
+        <button class="btn-secondary" onclick="toast('📖 Membuka panduan...','inf')">📖 Tata Cara</button>
+        <button class="btn-secondary" onclick="toast('⬇️ Download template...','inf')">⬇️ Template</button>
+        <button class="btn-teal" onclick="toast('📥 Export...','inf')">📥 Export</button>
+        <button class="btn-primary" onclick="toast('➕ Form retur baru...','inf')">＋ Buat Retur</button>
+      </div>
+    </div>
+
+    <!-- ══ INFO BANNER ══ -->
+    <div class="info-banner">
+      <span class="info-banner-ico">⚠️</span>
+      <div class="info-banner-body">
+        <div class="info-banner-ttl">Harga Sudah Disesuaikan dengan Faktur Pajak</div>
+        Pengisian <b>Form Retur (BadStock/GoodStock)</b> dapat dilakukan setiap tanggal <b>11 s/d 20</b> setiap bulannya.
+        Apabila draft nota retur sudah disetujui, <b>Nota Retur dan Surat Jalan</b> dapat diupload dari tanggal <b>1 s/d 5 bulan berikutnya</b>.
+        Setelah lewat tanggal tersebut masuk ke bulan berikut nya. Nota retur faktur pajak yang di upload adalah nota retur dari coretax.
+      </div>
+    </div>
+
+    <!-- ══ SUB-TABS (3 kategori retur) ══ -->
+    <div class="sub-tabs">
+      <button class="sub-tab on" onclick="switchTab('ref',this)">
+        🔢 Nomor Referensi <span class="sub-tab-cnt" id="cnt-ref">0</span>
+      </button>
+      <button class="sub-tab" onclick="switchTab('noref',this)">
+        📄 Tanpa Nomor Referensi <span class="sub-tab-cnt" id="cnt-noref">0</span>
+      </button>
+      <button class="sub-tab" onclick="switchTab('good',this)">
+        ✨ Good Stock &amp; Retur Admin <span class="sub-tab-cnt" id="cnt-good">0</span>
+      </button>
+    </div>
+
+    <!-- ══ FILTER CARD (collapsible) ══ -->
+    <div class="flt-card" id="fltCard">
+      <div class="flt-head" onclick="togFilter()">
+        <div class="flt-head-ico">🔍</div>
+        <div class="flt-head-ttl">Filter Pencarian</div>
+        <span class="flt-active-cnt" id="fltActiveCnt">0 aktif</span>
+        <div class="flt-head-act">
+          <span id="fltToggleTxt">Sembunyikan</span>
+          <span class="flt-toggle">▼</span>
+        </div>
+      </div>
+      <div class="flt-body">
+        <div class="flt-grid">
+          <div class="ff flt-grid-2">
+            <label class="ff-lbl">Tanggal (Periode)</label>
+            <div class="daterange-row">
+              <input type="date" class="fi fi-date" id="fltFrom" onchange="render()"/>
+              <span class="daterange-sep">s/d</span>
+              <input type="date" class="fi fi-date" id="fltTo" onchange="render()"/>
+            </div>
+          </div>
+          <div class="ff">
+            <label class="ff-lbl">Area</label>
+            <select class="fi-sel" id="fltArea" onchange="render()">
+              <option value="">— ALL —</option>
+              <option>JOGJA</option><option>BANDUNG</option><option>SURABAYA</option>
+              <option>SEMARANG</option><option>BELITUNG</option><option>JAKARTA</option>
+              <option>MEDAN</option><option>MAKASSAR</option>
+            </select>
+          </div>
+          <div class="ff">
+            <label class="ff-lbl">Approval Nota</label>
+            <select class="fi-sel" id="fltApprNota" onchange="render()">
+              <option value="">— ALL —</option>
+              <option value="approved">Sudah Disetujui</option>
+              <option value="pending">Menunggu Approval</option>
+              <option value="rejected">Ditolak</option>
+            </select>
+          </div>
+          <div class="ff">
+            <label class="ff-lbl">Status</label>
+            <select class="fi-sel" id="fltStatus" onchange="render()">
+              <option value="">— ALL —</option>
+              <option value="pending">🕐 Pending</option>
+              <option value="process">🔄 Diproses</option>
+              <option value="approve">✅ Disetujui</option>
+              <option value="reject">❌ Ditolak</option>
+              <option value="draft">📝 Draft</option>
+            </select>
+          </div>
+          <div class="ff">
+            <label class="ff-lbl">Nota Retur Faktur Pajak</label>
+            <select class="fi-sel" id="fltNotaFP" onchange="render()">
+              <option value="">— ALL —</option>
+              <option value="uploaded">Sudah Upload</option>
+              <option value="not_uploaded">Belum Upload</option>
+              <option value="rejected">Ditolak</option>
+            </select>
+          </div>
+          <div class="ff">
+            <label class="ff-lbl">Approval (Step)</label>
+            <select class="fi-sel" id="fltApprStep" onchange="render()">
+              <option value="">— ALL —</option>
+              <option value="asm">Menunggu ASM</option>
+              <option value="nsm">Menunggu NSM</option>
+              <option value="accounting">Menunggu Accounting</option>
+              <option value="admin-sales">Menunggu Admin Sales</option>
+              <option value="spv-admin-sales">Menunggu SPV Admin Sales</option>
+              <option value="tax">Menunggu Tax</option>
+              <option value="pic">Menunggu PIC</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="flt-foot">
+        <label class="flt-chk">
+          <input type="checkbox" id="fltBlmAppr" onchange="render()"/>
+          Tampilkan hanya yang <b style="margin-left:.2rem;color:var(--orange);">Belum Approve</b>
+        </label>
+        <div class="flt-foot-btns">
+          <button class="btn-sm" onclick="resetFilter()">🔄 Reset</button>
+          <button class="btn-sm btn-sm-tl" onclick="exportData()">📥 Export Hasil</button>
+          <button class="btn-sm btn-sm-pri" onclick="render()">🔍 Cari</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Toolbar ══ -->
+    <div class="toolbar">
+      <div class="srch-wrap">
+        <span class="srch-ico">🔍</span>
+        <input class="srch-inp" id="srch" type="text" placeholder="Cari no. dokumen, nama distributor, batch…" oninput="render()"/>
+      </div>
+      <span class="tb-results" id="tbResults">— dari — data</span>
+      <div class="ml-a psz-wrap">
+        <span>Tampil</span>
+        <select class="psz-sel" id="pgSz" onchange="setPgsz(this.value)">
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+        </select>
+        <span>baris</span>
+      </div>
+      <div class="bulk-bar" id="bbar">
+        <span>🗂️</span><span class="bulk-n" id="bnCnt">0 dipilih</span>
+        <div class="bksep"></div>
+        <button class="bk bka" onclick="bulkAction('approve')">✅ Setujui Massal</button>
+        <button class="bk" onclick="bulkAction('export')">📥 Export Pilihan</button>
+        <button class="bk bkd" onclick="bulkAction('delete')">🗑️ Hapus</button>
+        <button class="bk bkc" onclick="clearSel()">✕ Batal</button>
+      </div>
+    </div>
+
+    <!-- ══ TABLE (desktop) ══ -->
+    <div class="t-card">
+      <div class="t-card-head">
+        <div class="flt-head-ico" style="width:26px;height:26px;font-size:.75rem;">📋</div>
+        <div class="t-card-ttl" id="tabHeadTtl">Nomor Referensi</div>
+        <span class="t-card-cnt" id="tabHeadCnt">0 data</span>
+      </div>
+      <div class="t-scroll">
+        <table class="tbl" id="tbl">
+          <thead>
+            <tr>
+              <th class="ck-h"><input type="checkbox" id="ckAll" onchange="togAll(this)" style="accent-color:var(--cobalt);width:15px;height:15px;cursor:pointer;"/></th>
+              <th class="ex-h"></th>
+              <th>No</th>
+              <th>Dibuat Tanggal</th>
+              <th>No. Dokumen</th>
+              <th>Jenis</th>
+              <th>Nama Distributor</th>
+              <th>Area</th>
+              <th>Foto Retur</th>
+              <th>File BAP</th>
+              <th>Foto Pemusnahan</th>
+              <th>Draft Nota Retur</th>
+              <th>Nota Retur Faktur Pajak</th>
+              <th>Tgl Pemusnahan</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div id="empty" style="display:none">
+          <div class="empty">
+            <div class="empty-ico">📭</div>
+            <div class="empty-ttl">Tidak ada data retur</div>
+            <div class="empty-sub">Coba ubah filter atau kata kunci pencarian</div>
+          </div>
+        </div>
+      </div>
+      <div class="t-foot">
+        <div class="pg-info" id="pgInfo">— dari —</div>
+        <div class="pg-wrap" id="pg"></div>
+      </div>
+    </div>
+
+    <!-- ══ MOBILE CARDS ══ -->
+    <div class="mob-cards" id="mobCards"></div>
+    <div class="mob-cards" id="mobEmpty" style="display:none;">
+      <div class="empty">
+        <div class="empty-ico">📭</div>
+        <div class="empty-ttl">Tidak ada data retur</div>
+        <div class="empty-sub">Coba ubah filter atau kata kunci pencarian</div>
+      </div>
+    </div>
+    <div class="t-foot" id="mobFoot" style="display:none;background:#fff;border:1px solid var(--border-lite);border-radius:14px;margin-top:.7rem;">
+      <div class="pg-info" id="pgInfo2">— dari —</div>
+      <div class="pg-wrap" id="pg2"></div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+'use strict';
+
+/* ══════════════════════════════════════════════════════════════
+   MASTER DATA
+   ══════════════════════════════════════════════════════════════ */
+const DISTRIBUTORS = [
+  'Wahana Raya, CV','Duta Harmony, CV','Sukses Mandiri, PT','Bintang Timur, CV',
+  'Mitra Abadi, PT','Cahaya Sejahtera, CV','Anugerah Jaya, PT','Rizky Makmur, CV',
+  'Putra Mandiri, PT','Sumber Rejeki, CV','Berkat Usaha, PT','Pelita Hidup, CV',
+];
+const AREAS = ['JOGJA','BANDUNG','SURABAYA','SEMARANG','BELITUNG','JAKARTA','MEDAN','MAKASSAR','BALI','PALEMBANG'];
+const PRODS = [
+  {sku:'1201040459',nm:'HANASUI SERUM CUSHION WARM SAND 9 15GR X 48',price:44768.18},
+  {sku:'1201040460',nm:'HANASUI SERUM CUSHION CLASSY IVORY 10 15GR X 48',price:44768.18},
+  {sku:'1201040461',nm:'HANASUI SERUM CUSHION FAIR BEIGE 11 15GR X 48',price:44544.34},
+  {sku:'1201040462',nm:'HANASUI SERUM CUSHION NATURAL 12 15GR X 48',price:45120.50},
+  {sku:'1201040463',nm:'HANASUI BB CREAM CC PROTECTION 8GR X 96',price:38900.00},
+  {sku:'1201040464',nm:'HANASUI MASCARA VOLUME UP 7ML X 144',price:25750.00},
+  {sku:'1201040465',nm:'HANASUI LIPSTICK MATTE 3GR X 96',price:18450.00},
+  {sku:'1201040466',nm:'HANASUI EYESHADOW PALETTE 6 COLOR X 48',price:62300.00},
+  {sku:'1201040467',nm:'HANASUI MOISTURIZER NIGHT 50ML X 60',price:55800.00},
+  {sku:'1201040468',nm:'HANASUI SUNSCREEN SPF50 60ML X 72',price:48900.00},
+];
+const STATS = ['pending','process','approve','reject','draft'];
+const JENIS_TABS = {ref:'NOMOR REFERENSI',noref:'TANPA NOMOR REFERENSI',good:'GOOD STOCK & RETUR ADMIN'};
+const APPROVERS = ['ASM','NSM','ACCOUNTING','ADMIN SALES','SPV ADMIN SALES','TAX'];
+
+/* ══════════════════════════════════════════════════════════════
+   STATE
+   ══════════════════════════════════════════════════════════════ */
+let DATA = [];
+let FILT = [];
+let curTab = 'ref';
+let pg = 1, pgsz = 10;
+let sel = new Set();
+
+/* ══════════════════════════════════════════════════════════════
+   GENERATE DUMMY DATA
+   ══════════════════════════════════════════════════════════════ */
+function genData() {
+  DATA = [];
+  for (let i = 1; i <= 48; i++) {
+    const tabType = ['ref','noref','good'][Math.floor(Math.random() * 3)];
+    const dt = new Date(2026, Math.floor(Math.random() * 4), Math.floor(Math.random() * 28) + 1);
+    const status = STATS[Math.floor(Math.random() * STATS.length)];
+    const nItems = Math.floor(Math.random() * 4) + 1;
+    const items = Array.from({ length: nItems }, () => {
+      const p = PRODS[Math.floor(Math.random() * PRODS.length)];
+      const qty = Math.floor(Math.random() * 150) + 5;
+      const expDate = new Date(2025 + Math.floor(Math.random() * 2), Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1);
+      return {
+        sku: p.sku,
+        nm: p.nm,
+        qty,
+        unit: 'PCS',
+        price: p.price,
+        total: qty * p.price,
+        batch: 'A' + (20000 + Math.floor(Math.random() * 9999)) + '.' + Math.floor(Math.random() * 9 + 1),
+        expired: expDate.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' }),
+        ket: Math.random() > 0.4 ? 'Expired' : (Math.random() > 0.5 ? 'Rusak' : 'Bad Stock'),
+        tglRef: dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+        noRef: 'D10.000-' + (20 + Math.floor(Math.random() * 80)) + '.' + Math.floor(Math.random() * 99000 + 10000),
+      };
+    });
+    const total = items.reduce((s, it) => s + it.total, 0);
+    const totalQty = items.reduce((s, it) => s + it.qty, 0);
+    const docNum = '0' + (1100 + i) + '/RETUR/' + String(dt.getMonth() + 1).padStart(2, '0') + '/' + String(dt.getFullYear()).slice(-2);
+
+    // Approval state per role
+    const apprState = {};
+    let stoppedAt = null;
+    APPROVERS.forEach((role, idx) => {
+      if (status === 'reject' && idx === Math.floor(Math.random() * 3) + 1) {
+        apprState[role] = { status: 'rejected', by: '-', date: '-' };
+        stoppedAt = idx;
+      } else if (stoppedAt !== null) {
+        apprState[role] = { status: 'pending', by: '-', date: '-' };
+      } else if (status === 'approve' || (status === 'process' && idx < 3) || (status === 'pending' && idx < 1)) {
+        const apprDt = new Date(dt.getTime() + (idx + 1) * 86400000);
+        apprState[role] = {
+          status: 'approved',
+          by: ['Erika Damayanti','Raka Hidayat','Dewi Anggraini','Bagus Pratama','Sari Indah','Yudi Santoso'][idx],
+          date: apprDt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + String(8 + idx).padStart(2, '0') + ':' + String(15 + idx * 7).padStart(2, '0'),
+        };
+      } else {
+        apprState[role] = { status: 'pending', by: '-', date: '-' };
+      }
+    });
+
+    DATA.push({
+      id: 'RD-' + String(i).padStart(4, '0'),
+      docNum,
+      docType: 'BAD STOCK',
+      tanggal: dt,
+      tglStr: dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+      jenisTab: tabType,
+      jenis: tabType === 'ref' ? 'Nomor Referensi' : tabType === 'noref' ? 'Tanpa Referensi' : 'Good Stock',
+      distributor: DISTRIBUTORS[i % DISTRIBUTORS.length],
+      area: AREAS[i % AREAS.length],
+      total,
+      totalQty,
+      status,
+      items,
+      apprState,
+      fileFotoRetur: Math.random() > 0.15,
+      fileBAP: status !== 'draft' ? (Math.random() > 0.3 ? 'uploaded' : 'pending') : 'none',
+      fotoPemusnahan: status !== 'draft' ? (Math.random() > 0.4 ? 'uploaded' : 'pending') : 'none',
+      draftNota: status === 'approve' ? 'uploaded' : 'pending',
+      notaFP: status === 'approve' && Math.random() > 0.4 ? 'uploaded' : 'pending',
+      tglPemusnahan: status === 'approve' ? new Date(dt.getTime() + 7 * 86400000).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-',
+      pic: 'accounting3@eji.co.id',
+      ketRetur: ['Retur barang bad stock rusak dan expired','Pemusnahan rutin Q1','Retur expired bulan ' + (dt.getMonth() + 1),'Bad stock dari display'][i % 4],
+    });
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HELPERS
+   ══════════════════════════════════════════════════════════════ */
+const rp = n => 'Rp ' + Number(n).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const rpInt = n => 'Rp ' + Number(n).toLocaleString('id-ID');
+
+function statusBd(s) {
+  const m = {
+    pending: { c: 'st-pending', t: '🕐 Pending', sub: 'Menunggu' },
+    process: { c: 'st-process', t: '🔄 Diproses', sub: 'Sedang diproses' },
+    approve: { c: 'st-approve', t: '✅ Disetujui', sub: 'Final' },
+    reject:  { c: 'st-reject', t: '❌ Ditolak', sub: '' },
+    draft:   { c: 'st-draft', t: '📝 Draft', sub: '' },
+  }[s] || { c: 'st-draft', t: s, sub: '' };
+  return `<span class="st-bd ${m.c}">${m.t}</span>`;
+}
+
+function statusStack(r) {
+  const main = statusBd(r.status);
+  // Cari step yang sedang menunggu
+  let waitingFor = null;
+  if (r.status === 'process' || r.status === 'pending') {
+    for (const role of APPROVERS) {
+      if (r.apprState[role].status === 'pending') { waitingFor = role; break; }
+    }
+  }
+  return `<div class="st-stack">
+    ${main}
+    ${waitingFor ? `<span class="file-pill fp-warn">Menunggu ${waitingFor}</span>` : ''}
+  </div>`;
+}
+
+function jenisBd(j) {
+  if (j === 'ref') return `<span class="jenis-bd jb-ref">🔢 NO. REF</span>`;
+  if (j === 'noref') return `<span class="jenis-bd jb-noref">📄 TANPA REF</span>`;
+  return `<span class="jenis-bd jb-good">✨ GOOD STOCK</span>`;
+}
+
+function fileCell(state, type) {
+  if (state === 'uploaded') {
+    return `<button class="dl-btn" onclick="toast('⬇️ Download ${type}','inf')">⬇️ ${type === 'foto retur' ? 'Foto' : 'Download'}</button>`;
+  }
+  if (state === 'pending') {
+    return `<span class="file-pill fp-warn">Menunggu Approval</span>
+      <div class="file-pill-sub">akan aktif setelah approval ${type === 'BAP' ? 'Accounting' : 'lengkap'}</div>`;
+  }
+  if (state === 'rejected') {
+    return `<span class="file-pill fp-mute">—</span>`;
+  }
+  return `<span class="file-pill fp-mute">—</span>`;
+}
+
+function notaFPCell(state, status) {
+  if (state === 'uploaded') {
+    return `<button class="dl-btn dl-btn-2" onclick="toast('⬇️ Download Nota FP','inf')">⬇️ Nota FP</button>`;
+  }
+  if (status === 'approve') {
+    return `<span class="file-pill fp-info">Menunggu Upload Nota FP</span>`;
+  }
+  return `<span class="file-pill fp-mute">—</span>`;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RENDER ROW
+   ══════════════════════════════════════════════════════════════ */
+function mkRow(r, idx) {
+  const checked = sel.has(r.id) ? 'checked' : '';
+  const selCls = sel.has(r.id) ? 'sel-r' : '';
+  return `
+<tr class="main-r ${selCls}" id="row-${r.id}">
+  <td class="ck"><input type="checkbox" ${checked} onchange="togRow('${r.id}',this)"/></td>
+  <td><button class="xbtn" id="xb-${r.id}" onclick="togExp('${r.id}')"><span class="xi">›</span></button></td>
+  <td><span class="cn" style="color:var(--ink-soft)">${idx}</span></td>
+  <td><span style="font-size:.76rem;color:var(--ink-soft)">${r.tglStr}</span></td>
+  <td>
+    <div class="nodok">
+      <div class="nodok-id">${r.docNum}</div>
+      <div class="nodok-warehouse">${r.docType}</div>
+      <div class="nodok-total">Total: ${rpInt(r.total)}</div>
+    </div>
+  </td>
+  <td>${jenisBd(r.jenisTab)}</td>
+  <td><div class="cm">${r.distributor}</div></td>
+  <td><span class="area-bd">${r.area}</span></td>
+  <td>${r.fileFotoRetur ? `<button class="dl-btn" onclick="toast('⬇️ Download foto','inf')">⬇️ Foto</button>` : `<span class="file-pill fp-mute">—</span>`}</td>
+  <td>${fileCell(r.fileBAP, 'BAP')}</td>
+  <td>${fileCell(r.fotoPemusnahan, 'Pemusnahan')}</td>
+  <td>${r.draftNota === 'uploaded' ? `<button class="dl-btn dl-btn-2" onclick="toast('⬇️ Draft Nota','inf')">⬇️ Download</button>` : `<span class="file-pill fp-warn">Menunggu Approval Tax</span>`}</td>
+  <td>${notaFPCell(r.notaFP, r.status)}</td>
+  <td><span style="font-size:.74rem;color:var(--ink-soft);font-family:'DM Mono',monospace;">${r.tglPemusnahan}</span></td>
+  <td>${statusStack(r)}</td>
+  <td>
+    <div class="ag">
+      <button class="a ae" onclick="toast('✏️ Edit ${r.docNum}','inf')" title="Edit">✏️</button>
+      <button class="a aa" onclick="toast('✅ Approve ${r.docNum}','ok')" title="Setujui">✅</button>
+      <div class="dw">
+        <button class="a am" onclick="togDD('dd-${r.id}',event)" title="Lainnya">⋯</button>
+        <div class="dm" id="dd-${r.id}">
+          <button class="di" onclick="toast('👁️ Detail ${r.docNum}','inf');clDD()">👁️ Lihat Detail</button>
+          <button class="di" onclick="toast('✏️ Edit ${r.docNum}','inf');clDD()">✏️ Edit</button>
+          <button class="di" onclick="toast('✅ Approve ${r.docNum}','ok');clDD()">✅ Setujui</button>
+          <button class="di" onclick="toast('❌ Reject ${r.docNum}','inf');clDD()">❌ Tolak</button>
+          <div class="ddsep"></div>
+          <button class="di" onclick="toast('📤 Upload BAP','inf');clDD()">📤 Upload BAP</button>
+          <button class="di" onclick="toast('📤 Upload Foto','inf');clDD()">📤 Upload Foto Pemusnahan</button>
+          <button class="di" onclick="toast('📤 Upload Nota FP','inf');clDD()">📤 Upload Nota FP</button>
+          <div class="ddsep"></div>
+          <button class="di" onclick="toast('🖨️ Print ${r.docNum}','inf');clDD()">🖨️ Print</button>
+          <button class="di" onclick="toast('📜 Riwayat ${r.docNum}','inf');clDD()">📜 Riwayat</button>
+          <div class="ddsep"></div>
+          <button class="di dng" onclick="toast('🗑️ Hapus ${r.docNum}','inf');clDD()">🗑️ Hapus</button>
+        </div>
+      </div>
+    </div>
+  </td>
+</tr>
+<tr class="exp-r" id="exp-${r.id}"><td colspan="16">${mkExpand(r)}</td></tr>`;
+}
+
+function mkExpand(r) {
+  const itemRows = r.items.map((it, i) => `
+    <tr>
+      <td style="text-align:center;color:var(--ink-soft);font-family:'DM Mono',monospace">${i + 1}</td>
+      <td><span class="cn" style="color:var(--cobalt-dark)">${it.sku}</span></td>
+      <td>${it.nm}</td>
+      <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:700">${it.qty}</td>
+      <td style="text-align:center">${it.unit}</td>
+      <td style="text-align:right;font-family:'DM Mono',monospace">${rp(it.price)}</td>
+      <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:var(--cobalt-dark)">${rp(it.total)}</td>
+      <td><span class="cn" style="font-size:.7rem;color:var(--ink-soft)">${it.batch}</span></td>
+      <td style="font-family:'DM Mono',monospace">${it.expired}</td>
+      <td><span class="file-pill ${it.ket === 'Expired' ? 'fp-warn' : it.ket === 'Rusak' ? 'fp-mute' : 'fp-info'}" style="font-size:.62rem">${it.ket}</span></td>
+      <td style="font-family:'DM Mono',monospace;font-size:.7rem">${it.tglRef}</td>
+      <td><span class="cn" style="font-size:.66rem;color:var(--cobalt)">${it.noRef}</span></td>
+    </tr>`).join('');
+
+  const apprRows = APPROVERS.map(role => {
+    const a = r.apprState[role];
+    let html;
+    if (a.status === 'approved') {
+      html = `<div class="appr-val appr-approved">
+        <span class="appr-done-bd">✓ APPROVED</span>
+        <span class="appr-by">by ${a.by} · ${a.date}</span>
+      </div>`;
+    } else if (a.status === 'rejected') {
+      html = `<div class="appr-val">
+        <span class="appr-rej-bd">✕ REJECTED</span>
+      </div>`;
+    } else {
+      html = `<div class="appr-val">
+        <span class="appr-pending-bd">⏳ MENUNGGU APPROVAL</span>
+      </div>`;
+    }
+    return `<div class="appr-row"><div class="appr-lbl">${role}</div>${html}</div>`;
+  }).join('');
+
+  return `<div class="exp-inner">
+    <!-- ITEMS -->
+    <div class="exp-section">
+      <div class="exp-section-ttl">
+        <span class="exp-section-ico">📦</span>
+        Rincian Item Retur — ${r.items.length} produk · ${r.totalQty} pcs
+      </div>
+      <div class="exp-tw">
+        <table class="exp-t">
+          <thead>
+            <tr>
+              <th style="width:40px;text-align:center">No</th>
+              <th>Kode</th>
+              <th>Nama Barang</th>
+              <th style="text-align:right">Σ Qty</th>
+              <th style="text-align:center">Satuan</th>
+              <th style="text-align:right">Harga</th>
+              <th style="text-align:right">Total</th>
+              <th>Batch</th>
+              <th>Expired</th>
+              <th>Keterangan</th>
+              <th>Tgl Ref</th>
+              <th>No. Ref Faktur Pajak</th>
+            </tr>
+          </thead>
+          <tbody>${itemRows}</tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" style="text-align:right">TOTAL</td>
+              <td style="text-align:right;font-family:'DM Mono',monospace">${r.totalQty}</td>
+              <td colspan="2"></td>
+              <td style="text-align:right;font-family:'DM Mono',monospace;color:var(--cobalt-deep)">${rp(r.total)}</td>
+              <td colspan="5">${r.ketRetur}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- APPROVAL MATRIX -->
+    <div class="exp-section">
+      <div class="exp-section-ttl">
+        <span class="exp-section-ico">✅</span>
+        Status Approval — ${r.docNum}
+      </div>
+      <div class="appr-grid">
+        ${apprRows}
+        <div class="appr-row" style="grid-column:1/-1;background:var(--cobalt-soft);border-color:var(--cobalt-lite)">
+          <div class="appr-lbl">Keterangan Retur</div>
+          <div class="appr-val" style="font-size:.78rem;color:var(--ink)">${r.ketRetur}</div>
+        </div>
+        <div class="appr-row">
+          <div class="appr-lbl">Tgl Pemusnahan</div>
+          <div class="appr-val" style="font-family:'DM Mono',monospace;font-size:.74rem">${r.tglPemusnahan}</div>
+        </div>
+        <div class="appr-row">
+          <div class="appr-lbl">PIC</div>
+          <div class="appr-val" style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--cobalt)">${r.pic}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="exp-acts">
+      <span class="exp-acts-lbl">Quick Action:</span>
+      <button class="a ae" onclick="toast('✏️ Edit retur','inf')">✏️ Edit</button>
+      <button class="a aa" onclick="toast('✅ Approve','ok')">✅ Setujui</button>
+      <button class="a ar2" onclick="toast('❌ Reject','inf')">❌ Tolak</button>
+      <button class="a" onclick="toast('📤 Upload BAP','inf')" style="background:var(--teal-soft);color:var(--teal-dark);border-color:var(--teal-lite)">📤 Upload BAP</button>
+      <button class="a" onclick="toast('📤 Upload Foto','inf')" style="background:var(--teal-soft);color:var(--teal-dark);border-color:var(--teal-lite)">📤 Upload Foto Pemusnahan</button>
+      <button class="a" onclick="toast('📤 Upload Nota FP','inf')" style="background:var(--teal-soft);color:var(--teal-dark);border-color:var(--teal-lite)">📤 Upload Nota FP</button>
+      <button class="a" onclick="toast('🖨️ Print','inf')">🖨️ Print</button>
+    </div>
+  </div>`;
+}
+
+function mkMobCard(r) {
+  const checked = sel.has(r.id) ? 'checked' : '';
+  return `<div class="mob-card">
+    <div class="mob-card-head">
+      <input type="checkbox" ${checked} onchange="togRow('${r.id}',this)" style="accent-color:var(--cobalt);width:15px;height:15px;cursor:pointer;flex-shrink:0;"/>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:800;color:var(--ink);font-size:.85rem">${r.distributor}</div>
+        <div class="mob-card-id">${r.docNum} · ${r.tglStr}</div>
+      </div>
+      ${jenisBd(r.jenisTab)}
+    </div>
+    <div class="mob-card-grid">
+      <div><div class="mob-cell-lbl">Area</div><div class="mob-cell-val"><span class="area-bd">${r.area}</span></div></div>
+      <div><div class="mob-cell-lbl">Total</div><div class="mob-cell-val cn" style="color:var(--cobalt-dark)">${rpInt(r.total)}</div></div>
+      <div><div class="mob-cell-lbl">Item</div><div class="mob-cell-val">${r.items.length} produk · ${r.totalQty} pcs</div></div>
+      <div><div class="mob-cell-lbl">Tgl Pemusnahan</div><div class="mob-cell-val cn">${r.tglPemusnahan}</div></div>
+      <div style="grid-column:1/-1"><div class="mob-cell-lbl">Status</div><div class="mob-cell-val">${statusStack(r)}</div></div>
+    </div>
+    <button class="mob-exp-toggle" onclick="togMobExp('mexp-${r.id}',this)">▼ Lihat Detail Retur</button>
+    <div class="mob-exp-body" id="mexp-${r.id}">${mkExpand(r)}</div>
+    <div class="mob-card-acts">
+      <button class="a ae" onclick="toast('✏️ Edit','inf')">✏️ Edit</button>
+      <button class="a aa" onclick="toast('✅ Approve','ok')">✅ Setujui</button>
+      <button class="a ar2" onclick="toast('❌ Reject','inf')">❌ Tolak</button>
+      <button class="a am" onclick="toast('🖨️ Print','inf')">🖨️ Print</button>
+    </div>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RENDER
+   ══════════════════════════════════════════════════════════════ */
+function render() {
+  const q = document.getElementById('srch').value.toLowerCase().trim();
+  const fFrom = document.getElementById('fltFrom').value;
+  const fTo = document.getElementById('fltTo').value;
+  const fArea = document.getElementById('fltArea').value;
+  const fApprNota = document.getElementById('fltApprNota').value;
+  const fStatus = document.getElementById('fltStatus').value;
+  const fNotaFP = document.getElementById('fltNotaFP').value;
+  const fApprStep = document.getElementById('fltApprStep').value;
+  const fBlmAppr = document.getElementById('fltBlmAppr').checked;
+
+  const fromDt = fFrom ? new Date(fFrom) : null;
+  const toDt = fTo ? new Date(new Date(fTo).getTime() + 86399999) : null;
+
+  FILT = DATA.filter(r => {
+    if (r.jenisTab !== curTab) return false;
+    if (q) {
+      const hay = (r.docNum + ' ' + r.distributor + ' ' + r.items.map(i => i.batch + ' ' + i.nm).join(' ')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (fromDt && r.tanggal < fromDt) return false;
+    if (toDt && r.tanggal > toDt) return false;
+    if (fArea && r.area !== fArea) return false;
+    if (fStatus && r.status !== fStatus) return false;
+    if (fApprNota === 'approved' && r.draftNota !== 'uploaded') return false;
+    if (fApprNota === 'pending' && r.draftNota === 'uploaded') return false;
+    if (fNotaFP === 'uploaded' && r.notaFP !== 'uploaded') return false;
+    if (fNotaFP === 'not_uploaded' && r.notaFP === 'uploaded') return false;
+    if (fBlmAppr && (r.status === 'approve' || r.status === 'reject')) return false;
+    if (fApprStep) {
+      const roleMap = {asm:'ASM',nsm:'NSM',accounting:'ACCOUNTING','admin-sales':'ADMIN SALES','spv-admin-sales':'SPV ADMIN SALES',tax:'TAX'};
+      const role = roleMap[fApprStep];
+      if (role && r.apprState[role]?.status !== 'pending') return false;
+    }
+    return true;
+  });
+
+  // Counts per tab
+  const tabCounts = { ref: 0, noref: 0, good: 0 };
+  DATA.forEach(r => tabCounts[r.jenisTab]++);
+  document.getElementById('cnt-ref').textContent = tabCounts.ref;
+  document.getElementById('cnt-noref').textContent = tabCounts.noref;
+  document.getElementById('cnt-good').textContent = tabCounts.good;
+
+  document.getElementById('tabHeadTtl').textContent = JENIS_TABS[curTab];
+  document.getElementById('tabHeadCnt').textContent = FILT.length + ' data';
+
+  // Pagination
+  const total = FILT.length;
+  const pages = Math.max(1, Math.ceil(total / pgsz));
+  pg = Math.min(pg, pages);
+  const start = (pg - 1) * pgsz;
+  const slice = FILT.slice(start, start + pgsz);
+
+  // Desktop
+  const tb = document.getElementById('tbody');
+  tb.innerHTML = '';
+  if (slice.length === 0) {
+    document.getElementById('tbl').style.display = 'none';
+    document.getElementById('empty').style.display = '';
+  } else {
+    document.getElementById('tbl').style.display = '';
+    document.getElementById('empty').style.display = 'none';
+    slice.forEach((r, i) => tb.innerHTML += mkRow(r, start + i + 1));
+  }
+
+  // Mobile
+  const mc = document.getElementById('mobCards');
+  mc.innerHTML = '';
+  if (slice.length === 0) {
+    document.getElementById('mobEmpty').style.display = '';
+    document.getElementById('mobFoot').style.display = 'none';
+  } else {
+    document.getElementById('mobEmpty').style.display = 'none';
+    if (window.innerWidth <= 768) document.getElementById('mobFoot').style.display = '';
+    slice.forEach(r => mc.innerHTML += mkMobCard(r));
+  }
+
+  document.getElementById('tbResults').innerHTML = `<b>${start + 1}–${Math.min(start + pgsz, total)}</b> dari <b>${total}</b> data`;
+  mkPg(total, pages, 'pg', 'pgInfo');
+  mkPg(total, pages, 'pg2', 'pgInfo2');
+
+  updBulkBar();
+  updFilterCount();
+}
+
+function mkPg(total, pages, pgId, infoId) {
+  const start = (pg - 1) * pgsz + 1;
+  const end = Math.min(pg * pgsz, total);
+  document.getElementById(infoId).innerHTML = total === 0 ? '0 data' : `Menampilkan <b>${start}–${end}</b> dari <b>${total}</b> data`;
+  const pc = document.getElementById(pgId);
+  pc.innerHTML = '';
+  const mk = (lbl, p, dis, act) => {
+    const b = document.createElement('button');
+    b.className = 'pgb' + (act ? ' on' : '');
+    b.textContent = lbl;
+    b.disabled = dis;
+    b.onclick = () => { pg = p; render(); };
+    return b;
+  };
+  pc.appendChild(mk('‹', pg - 1, pg === 1, false));
+  let lo = Math.max(1, pg - 2), hi = Math.min(pages, pg + 2);
+  if (lo > 1) { pc.appendChild(mk(1, 1, false, false)); if (lo > 2) { const e = document.createElement('span'); e.className = 'pg-el'; e.textContent = '…'; pc.appendChild(e); } }
+  for (let p = lo; p <= hi; p++) pc.appendChild(mk(p, p, false, p === pg));
+  if (hi < pages) { if (hi < pages - 1) { const e = document.createElement('span'); e.className = 'pg-el'; e.textContent = '…'; pc.appendChild(e); } pc.appendChild(mk(pages, pages, false, false)); }
+  pc.appendChild(mk('›', pg + 1, pg === pages, false));
+}
+
+function setPgsz(v) { pgsz = +v; pg = 1; render(); }
+
+/* ══════════════════════════════════════════════════════════════
+   SUB-TABS
+   ══════════════════════════════════════════════════════════════ */
+function switchTab(tab, el) {
+  curTab = tab;
+  pg = 1;
+  document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('on'));
+  if (el) el.classList.add('on');
+  render();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FILTER COLLAPSE & STATE
+   ══════════════════════════════════════════════════════════════ */
+function togFilter() {
+  const c = document.getElementById('fltCard');
+  const isCol = c.classList.toggle('collapsed');
+  document.getElementById('fltToggleTxt').textContent = isCol ? 'Tampilkan' : 'Sembunyikan';
+}
+function updFilterCount() {
+  const ids = ['fltFrom','fltTo','fltArea','fltApprNota','fltStatus','fltNotaFP','fltApprStep'];
+  let n = ids.filter(id => document.getElementById(id).value).length;
+  if (document.getElementById('fltBlmAppr').checked) n++;
+  const cnt = document.getElementById('fltActiveCnt');
+  if (n > 0) {
+    cnt.classList.add('on');
+    cnt.textContent = n + ' aktif';
+  } else {
+    cnt.classList.remove('on');
+  }
+}
+function resetFilter() {
+  ['fltFrom','fltTo','fltArea','fltApprNota','fltStatus','fltNotaFP','fltApprStep'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fltBlmAppr').checked = false;
+  document.getElementById('srch').value = '';
+  pg = 1;
+  render();
+  toast('🔄 Filter direset', 'inf');
+}
+function exportData() {
+  toast(`📥 Export ${FILT.length} data ke Excel...`, 'inf');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SELECTION & BULK
+   ══════════════════════════════════════════════════════════════ */
+function togRow(id, el) {
+  if (el.checked) sel.add(id); else sel.delete(id);
+  document.getElementById('row-' + id)?.classList.toggle('sel-r', el.checked);
+  updBulkBar();
+}
+function togAll(el) {
+  const slice = FILT.slice((pg - 1) * pgsz, pg * pgsz);
+  slice.forEach(r => {
+    if (el.checked) sel.add(r.id); else sel.delete(r.id);
+  });
+  render();
+}
+function clearSel() { sel.clear(); render(); }
+function updBulkBar() {
+  const bb = document.getElementById('bbar');
+  if (sel.size > 0) {
+    bb.classList.add('on');
+    document.getElementById('bnCnt').textContent = sel.size + ' dipilih';
+  } else {
+    bb.classList.remove('on');
+  }
+}
+function bulkAction(t) {
+  if (sel.size === 0) { toast('Pilih baris terlebih dahulu', 'inf'); return; }
+  if (t === 'approve') { sel.forEach(id => { const r = DATA.find(x => x.id === id); if (r) r.status = 'approve'; }); toast(`✅ ${sel.size} retur disetujui`, 'ok'); }
+  if (t === 'export') { toast(`📥 Export ${sel.size} data...`, 'inf'); }
+  if (t === 'delete') { if (!confirm(`Hapus ${sel.size} retur?`)) return; DATA = DATA.filter(r => !sel.has(r.id)); toast(`🗑️ ${sel.size} retur dihapus`, 'inf'); }
+  sel.clear();
+  render();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   EXPAND
+   ══════════════════════════════════════════════════════════════ */
+function togExp(id) {
+  const er = document.getElementById('exp-' + id);
+  const eb = document.getElementById('xb-' + id);
+  const was = er.classList.contains('on');
+  document.querySelectorAll('.exp-r.on').forEach(r => r.classList.remove('on'));
+  document.querySelectorAll('.xbtn.on').forEach(b => b.classList.remove('on'));
+  if (!was) { er.classList.add('on'); eb.classList.add('on'); }
+}
+function togMobExp(id, btn) {
+  const b = document.getElementById(id);
+  const on = b.classList.toggle('on');
+  btn.textContent = on ? '▲ Tutup Detail' : '▼ Lihat Detail Retur';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DROPDOWN MENU
+   ══════════════════════════════════════════════════════════════ */
+function togDD(id, e) {
+  if (e) e.stopPropagation();
+  const isOpen = document.getElementById(id).classList.contains('on');
+  clDD();
+  if (!isOpen) document.getElementById(id).classList.add('on');
+}
+function clDD() {
+  document.querySelectorAll('.dm.on').forEach(d => d.classList.remove('on'));
+}
+document.addEventListener('click', e => { if (!e.target.closest('.dw')) clDD(); });
+
+/* ══════════════════════════════════════════════════════════════
+   SIDEBAR (mobile)
+   ══════════════════════════════════════════════════════════════ */
+function openSb() { document.getElementById('sb').classList.add('open'); document.getElementById('sb-ov').classList.add('on'); }
+function closeSb() { document.getElementById('sb').classList.remove('open'); document.getElementById('sb-ov').classList.remove('on'); }
+
+/* ══════════════════════════════════════════════════════════════
+   TOAST
+   ══════════════════════════════════════════════════════════════ */
+function toast(msg, type = 'inf') {
+  const t = document.createElement('div');
+  t.className = 'toast t-' + type;
+  t.innerHTML = `<span>${msg}</span>`;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INIT
+   ══════════════════════════════════════════════════════════════ */
+window.addEventListener('resize', () => {
+  if (window.innerWidth <= 768 && FILT.length > 0) document.getElementById('mobFoot').style.display = '';
+  else document.getElementById('mobFoot').style.display = 'none';
+});
+
+genData();
+render();
+</script>
+
+</body>
+</html>

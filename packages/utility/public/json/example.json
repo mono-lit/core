@@ -1,0 +1,183 @@
+{
+    "odata": {
+        "url": "/odata/DTO_WorkOrder",
+        "options": {
+            "key": "DocEntry",
+            "paginate": true,
+            "requireTotalCount": true
+        }
+    },
+    "datagrid": {
+        "config": {
+            "remoteOperations": false,
+            "allowColumnResizing": true,
+            "allowColumnReordering": true,
+            "rowAlternationEnabled": true,
+            "showBorders": true,
+            "columnAutoWidth": true,
+            "wordWrapEnabled": true,
+            "noDataText": "Belum ada dataaaaaaaaaa",
+            "columnResizingMode": "widget"
+        },
+        "cols": [
+            {
+                "caption": "Nomor",
+                "dataField": "DocEntry",
+                "dataType": "number"
+            },
+            {
+                "caption": "DocDate",
+                "dataField": "DocDate",
+                "dataType": "date"
+            },
+            {
+                "caption": "ItemCode",
+                "dataField": "ItemCode",
+                "dataType": "string"
+            },
+            {
+                "caption": "ItemName",
+                "dataField": "ItemName",
+                "dataType": "string"
+            },
+            {
+                "caption": "WhsCode",
+                "dataField": "WhsCode",
+                "dataType": "string"
+            },
+            {
+                "caption": "Qty",
+                "dataField": "Qty",
+                "dataType": "number"
+            },
+            {
+                "caption": "BagQty",
+                "dataField": "BagQty",
+                "dataType": "number"
+            },
+            {
+                "caption": "Action",
+                "cssClass": "relative",
+                "dataField": "Action",
+                "dataType": "string",
+                "allowEditing": false,
+                "cellTemplate": "ActionTemplate",
+                "allowGrouping": false,
+                "allowHeaderFiltering": false,
+                "allowReordering": false,
+                "allowFiltering": false,
+                "allowSorting": false
+            }
+        ]
+    },
+    "formkit": {
+        "schema": [
+            {
+                "$formkit": "form",
+                "onSubmit": "$submitData",
+                "children": [
+                    {
+                        "$el": "div",
+                        "attrs": {
+                            "class": "grid grid-cols-6 gap-3"
+                        },
+                        "children": [
+                            {
+                                "$formkit": "number",
+                                "type": "number",
+                                "label": "DocEntry",
+                                "name": "DocEntry",
+                                "id": "Id_DocEntry",
+                                "modelValue": "$DocEntry",
+                                "outer-class": "col-span-3",
+                                "disabled": true
+                            },
+                            {
+                                "$formkit": "date",
+                                "type": "date",
+                                "label": "DocDate",
+                                "name": "DocDate",
+                                "id": "Id_DocDate",
+                                "validation": "required|nullable:false",
+                                "modelValue": "$DocDate",
+                                "outer-class": "col-span-3",
+                                "disabled": false
+                            },
+                            {
+                                "$formkit": "text",
+                                "type": "text",
+                                "label": "ItemCode",
+                                "name": "ItemCode",
+                                "id": "Id_ItemCode",
+                                "validation": "required|string|length:1,50|nullable:false",
+                                "modelValue": "$ItemCode",
+                                "outer-class": "col-span-3",
+                                "disabled": false
+                            },
+                            {
+                                "$formkit": "text",
+                                "type": "text",
+                                "label": "ItemName",
+                                "name": "ItemName",
+                                "id": "Id_ItemName",
+                                "validation": "required|string|length:1,100|nullable:false",
+                                "modelValue": "$ItemName",
+                                "outer-class": "col-span-3",
+                                "disabled": false
+                            },
+                            {
+                                "$formkit": "text",
+                                "type": "text",
+                                "label": "WhsCode",
+                                "name": "WhsCode",
+                                "id": "Id_WhsCode",
+                                "validation": "required|string|length:1,8|nullable:false",
+                                "modelValue": "$WhsCode",
+                                "outer-class": "col-span-3",
+                                "disabled": false
+                            },
+                            {
+                                "$formkit": "number",
+                                "type": "number",
+                                "label": "Qty",
+                                "name": "Qty",
+                                "id": "Id_Qty",
+                                "validation": "required|number|min:1|nullable:false",
+                                "modelValue": "$Qty",
+                                "outer-class": "col-span-3",
+                                "disabled": false
+                            },
+                            {
+                                "$formkit": "number",
+                                "type": "number",
+                                "label": "BagQty",
+                                "name": "BagQty",
+                                "id": "Id_BagQty",
+                                "validation": "required|number|min:1|nullable:false",
+                                "modelValue": "$BagQty",
+                                "outer-class": "col-span-3",
+                                "disabled": false
+                            },
+                            {
+                                "$formkit": "tag",
+                                "type": "tag",
+                                "label": "Tag",
+                                "name": "Tag",
+                                "id": "Id_Tag",
+                                "configs": {
+                                    "displayExpr": "Name",
+                                    "valueExpr": "Code",
+                                    "dataSource": "$vars.tag"
+                                },
+                                "validation": "required",
+                                "modelValue": "$Tag",
+                                "outer-class": "col-span-3",
+                                "disabled": false
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}

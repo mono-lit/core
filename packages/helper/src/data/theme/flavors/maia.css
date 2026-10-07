@@ -1,0 +1,206 @@
+/* ============================================================
+   Basecoat "maia" style (basecoat-css@1.0.2 styles/maia.css) as a
+   @mono-lit/helper flavor.  Pill-shaped, roomy.
+
+   Basecoat is the source of truth. A style never touches tokens or fonts —
+   it is a per-component set of metrics — so everything here is a knob a
+   ported component reads, inherited through the shadow boundary. Vega is
+   the default (its values are baked into the component CSS as fallbacks);
+   this sheet is maia's DELTA against vega, read off
+   `node scripts/basecoat-styles.mjs --varying "<selector>"`.
+
+   Deltas: rounded-4xl (pill) at every size, wider padding (px-3 / px-4), the outline surface is a tinted input in both modes with no shadow.
+
+   Usage:  import "@mono-lit/helper/ui/theme/maia.css"  then add
+           class="theme-maia" on <html> (or any ancestor). Composes with a
+           .theme-color-* preset; dark mode follows html.dark as usual.
+
+   Ported components carried here: button, input, select, date, tag-input, checkbox, radio, switch, card, textarea, file-upload, chip, dropdown, button-dropdown, accordion, tabs, modal, drawer, nav, breadcrumb, menu, sidebar, table.
+   Every component is ported. dropdown-table, filter and rich-text-editor are
+   EXTENSIONS that read the ported components' public knobs (tag-input's, input's,
+   button's, textarea's, the select panel's) and carry nothing here on purpose;
+   chart reads the page tokens (--chart-1…5, --border, --foreground, --popover) directly.
+   ============================================================ */
+
+.theme-maia {
+  /* control ladder — same as vega (h-8 / h-9 / h-10) */
+
+  /* button — .btn rounded-4xl (no xs/sm clamp); default px-3 (icon side 2.5);
+     xs px-2.5 (2); sm px-3 (2); lg px-4 (3); outline: bg-input/30 hover:bg-input/50,
+     no shadow-xs, no dark: twin */
+  --mono-button-md-radius: var(--mono-radius-4xl);
+  --mono-button-xs-radius: var(--mono-radius-4xl);
+  --mono-button-sm-radius: var(--mono-radius-4xl);
+  --mono-button-md-padding-inline: calc(var(--mono-spacing) * 3);
+  --mono-button-md-icon-padding: calc(var(--mono-spacing) * 2.5);
+  --mono-button-xs-padding-inline: calc(var(--mono-spacing) * 2.5);
+  --mono-button-xs-icon-padding: calc(var(--mono-spacing) * 2);
+  --mono-button-sm-padding-inline: calc(var(--mono-spacing) * 3);
+  --mono-button-sm-icon-padding: calc(var(--mono-spacing) * 2);
+  --mono-button-lg-padding-inline: calc(var(--mono-spacing) * 4);
+  --mono-button-lg-icon-padding: calc(var(--mono-spacing) * 3);
+  --mono-button-xl-padding-inline: calc(var(--mono-spacing) * 5);
+  --mono-button-xl-icon-padding: calc(var(--mono-spacing) * 4);
+  --mono-button-xxl-padding-inline: calc(var(--mono-spacing) * 6);
+  --mono-button-xxl-icon-padding: calc(var(--mono-spacing) * 5);
+  --mono-button-outline-bg: color-mix(in oklab, var(--input) 30%, transparent);
+  --mono-button-outline-hover-bg: color-mix(in oklab, var(--input) 50%, transparent);
+  --mono-button-outline-shadow: 0 0 #0000;
+
+  /* input — .input-group rounded-4xl bg-input/30 (both modes), no shadow-xs;
+     > input px-3; affixes ps-3 / pe-3; the affix icon button rounded-4xl */
+  --mono-input-outline-radius: var(--mono-radius-4xl);
+  --mono-input-outline-bg: color-mix(in oklab, var(--input) 30%, transparent);
+  --mono-input-outline-shadow: 0 0 #0000;
+  --mono-input-outline-padding-x: calc(var(--mono-spacing) * 3);
+  --mono-input-outline-affix-padding: calc(var(--mono-spacing) * 3);
+  --mono-input-clear-radius: var(--mono-radius-4xl);
+
+  /* select — .select > button rounded-4xl bg-input/30 (both modes, no hover) px-3,
+     no shadow-xs; [data-popover] rounded-2xl shadow-2xl ring-foreground/5;
+     [role=option] gap-2.5 rounded-xl py-2 ps-3; [role=heading] px-3 py-2.5 */
+  --mono-select-outline-radius: var(--mono-radius-4xl);
+  --mono-select-outline-bg: color-mix(in oklab, var(--input) 30%, transparent);
+  --mono-select-outline-hover-bg: color-mix(in oklab, var(--input) 30%, transparent);
+  --mono-select-outline-shadow: 0 0 #0000;
+  --mono-select-outline-padding-x: calc(var(--mono-spacing) * 3);
+  --mono-select-dropdown-radius: var(--mono-radius-2xl);
+  /* basecoat@1.0.2 styles/maia.css [data-tooltip]::before — rounded-2xl (every tooltip's corner: SunEditor's, and any of mono's) */
+  --mono-tooltip-radius: var(--mono-radius-2xl);
+  --mono-select-dropdown-shadow: var(--mono-shadow-2xl);
+  --mono-select-dropdown-ring: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent);
+  --mono-select-option-radius: var(--mono-radius-xl);
+  --mono-select-option-gap: calc(var(--mono-spacing) * 2.5);
+  --mono-select-option-padding-y: calc(var(--mono-spacing) * 2);
+  --mono-select-option-padding-x: calc(var(--mono-spacing) * 3);
+  --mono-select-group-padding-x: calc(var(--mono-spacing) * 3);
+  --mono-select-group-padding-y: calc(var(--mono-spacing) * 2.5);
+  --mono-select-clear-radius: var(--mono-radius-4xl);
+
+  /* date — the input's box + [data-popover] rounded-2xl shadow-2xl ring-foreground/5 */
+  --mono-date-outline-radius: var(--mono-radius-4xl);
+  --mono-date-outline-bg: color-mix(in oklab, var(--input) 30%, transparent);
+  --mono-date-outline-shadow: 0 0 #0000;
+  --mono-date-outline-padding-x: calc(var(--mono-spacing) * 3);
+  --mono-date-outline-affix-padding: calc(var(--mono-spacing) * 3);
+  --mono-date-clear-radius: var(--mono-radius-4xl);
+  --mono-date-calendar-radius: var(--mono-radius-2xl);
+  --mono-date-calendar-shadow: var(--mono-shadow-2xl);
+  --mono-date-calendar-ring: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent);
+  --mono-date-calendar-day-radius: var(--mono-radius-xl);
+
+  /* tag-input — .combobox-chips rounded-4xl bg-input/30 (both modes), no shadow-xs;
+     .combobox-chip rounded-4xl bg-muted-foreground/10 px-2; [data-popover]
+     rounded-2xl shadow-2xl ring-foreground/5; options as the select's */
+  --mono-tag-input-outline-radius: var(--mono-radius-4xl);
+  --mono-tag-input-outline-bg: color-mix(in oklab, var(--input) 30%, transparent);
+  --mono-tag-input-outline-shadow: 0 0 #0000;
+  --mono-tag-input-chip-radius: var(--mono-radius-4xl);
+  --mono-tag-input-chip-bg: color-mix(in oklab, var(--muted-foreground) 10%, transparent);
+  --mono-tag-input-chip-padding-x: calc(var(--mono-spacing) * 2);
+  --mono-tag-input-dropdown-radius: var(--mono-radius-2xl);
+  --mono-tag-input-dropdown-shadow: var(--mono-shadow-2xl);
+  --mono-tag-input-dropdown-ring: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent);
+  --mono-tag-input-option-radius: var(--mono-radius-xl);
+  --mono-tag-input-option-gap: calc(var(--mono-spacing) * 2.5);
+  --mono-tag-input-option-padding-y: calc(var(--mono-spacing) * 2);
+  --mono-tag-input-option-padding-x: calc(var(--mono-spacing) * 3);
+  --mono-tag-input-group-padding-x: calc(var(--mono-spacing) * 3.5);
+  --mono-tag-input-group-padding-y: calc(var(--mono-spacing) * 2.5);
+  --mono-tag-input-clear-radius: var(--mono-radius-4xl);
+
+  /* checkbox — .input[type='checkbox'] rounded-[6px], no shadow-xs */
+  --mono-checkbox-radius: 6px;
+  --mono-checkbox-shadow: 0 0 #0000;
+
+  /* switch — [role='switch'] no shadow-xs, ring-[3px] */
+  --mono-switch-shadow: 0 0 #0000;
+
+  /* card — .card rounded-2xl, no shadow-xs, header gap-2 */
+  --_mono-card-radius-preset: var(--mono-radius-2xl);
+  --mono-card-shadow: 0 0 #0000;
+  --mono-card-header-gap-md: calc(var(--mono-spacing) * 2);
+
+  /* textarea — .textarea bg-input/30 rounded-xl px-3 py-3 resize-none, no shadow-xs */
+  --mono-textarea-outline-radius: var(--mono-radius-xl);
+  --mono-textarea-outline-shadow: 0 0 #0000;
+  --mono-textarea-outline-bg: color-mix(in oklab, var(--input) 30%, transparent);
+  --mono-textarea-outline-padding-x: calc(var(--mono-spacing) * 3);
+  --mono-textarea-resize: none;
+
+  /* file-upload — .empty = vega; .item rounded-2xl with gap-3.5 px-3.5 py-3 rows
+     and a rounded-lg image figure */
+  --mono-file-upload-item-radius: var(--mono-radius-2xl);
+  --mono-file-upload-item-gap: calc(var(--mono-spacing) * 3.5);
+  --mono-file-upload-item-padding-x: calc(var(--mono-spacing) * 3.5);
+  --mono-file-upload-item-padding-y: calc(var(--mono-spacing) * 3);
+  --mono-file-upload-thumb-radius: var(--mono-radius-lg);
+
+  /* card — .card rounded-2xl, no shadow-xs, header gap-2 */
+  --mono-card-radius: var(--mono-radius-2xl);
+  --mono-card-shadow: 0 0 #0000;
+  --mono-card-header-gap-md: calc(var(--mono-spacing) * 2);
+
+  /* chip — .badge = vega; .badge[data-variant='outline'] adds bg-input/30 */
+  --mono-chip-outline-bg: color-mix(in oklab, var(--input) 30%, transparent);
+
+  /* dropdown — [data-popover] ring-foreground/5 rounded-2xl shadow-2xl */
+  --mono-dropdown-radius-md: var(--mono-radius-2xl);
+  --mono-dropdown-ring-base: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --mono-dropdown-shadow: var(--mono-shadow-2xl);
+  /* button-dropdown — [data-popover] ring-foreground/5 min-w-48 rounded-2xl shadow-2xl;
+     [role='menuitem'] gap-2.5 rounded-xl px-3 py-2 */
+  --mono-button-dropdown-radius-md: var(--mono-radius-2xl);
+  --mono-button-dropdown-ring-color: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --mono-button-dropdown-shadow: var(--mono-shadow-2xl);
+  --mono-button-dropdown-min-width-md: 12rem;
+  --mono-button-dropdown-item-radius: var(--mono-radius-xl);
+  /* accordion — .accordion overflow-hidden rounded-2xl border; details open:bg-muted/50;
+     summary gap-6 p-4 (no ring, no rounded); body px-4 */
+  --mono-accordion-radius-md: var(--mono-radius-2xl);
+  --mono-accordion-gap: calc(var(--mono-spacing) * 6);
+  --mono-accordion-open-bg: color-mix(in oklab, var(--muted) 50%, var(--card));
+  --mono-accordion-group-radius: var(--mono-radius-2xl);
+  --mono-accordion-group-border-width: var(--mono-border-width);
+  /* tabs — tablist rounded-4xl (vertical rounded-2xl); tab rounded-xl */
+  --mono-tabs-radius-md: var(--mono-radius-4xl);
+  --mono-tabs-tab-radius-md: var(--mono-radius-xl);
+  /* modal — .dialog > * ring-foreground/5 rounded-4xl; backdrop bg-black/80; h2 text-base */
+  --mono-modal-radius-md: var(--mono-radius-4xl);
+  --mono-modal-ring-color: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --mono-modal-overlay-bg: color-mix(in oklab, black 80%, transparent);
+  --mono-modal-title-font-md: var(--mono-text-base);
+  /* drawer — an INSET CARD: the panel goes transparent and `::before` paints a
+     rounded-4xl bordered box 2 in from the viewport edge. backdrop bg-black/80. */
+  --mono-drawer-overlay-bg: color-mix(in oklab, black 80%, transparent);
+  --mono-drawer-inset: calc(var(--mono-spacing) * 2);
+  --mono-drawer-panel-pad: calc(var(--mono-spacing) * 4);
+  --mono-drawer-inset-radius: var(--mono-radius-4xl);
+  --mono-drawer-inset-border-width: var(--mono-border-width);
+  /* nav — EXTENSION, and the nav IS a card (see nav.css): maia's card is
+     rounded-2xl with no shadow */
+  --mono-nav-radius: var(--mono-radius-2xl);
+  --mono-nav-shadow: 0 0 #0000;
+  /* breadcrumb — .breadcrumb = vega, but maia's chrome rows are rounded-lg
+     with a roomier px-3 gutter (`.sidebar nav h3`, `.sidebar nav li > a`) */
+  --mono-breadcrumb-radius-md: var(--mono-radius-lg);
+  --mono-breadcrumb-contained-pad-x: calc(var(--mono-spacing) * 3);
+  --mono-breadcrumb-contained-pad-y: calc(var(--mono-spacing) * 1.5);
+  /* menu — .sidebar nav li > a rounded-lg px-3 py-2 h-9; h3 px-3 */
+  --mono-menu-radius-comfortable: var(--mono-radius-lg);
+  --mono-menu-pad-x-comfortable: calc(var(--mono-spacing) * 3);
+  --mono-menu-pad-y-comfortable: calc(var(--mono-spacing) * 2);
+  --mono-menu-height-comfortable: calc(var(--mono-spacing) * 9);
+  --mono-menu-subheader-pad-x: calc(var(--mono-spacing) * 3);
+  /* sidebar — nav > header/footer/section carry [--radius: var(--radius-xl)] */
+  --mono-sidebar-radius: var(--mono-radius-xl);
+  /* table — .table th h-12 px-3, .table td p-3 */
+  --mono-table-th-height: calc(var(--mono-spacing) * 12);
+  --mono-table-th-pad-x: calc(var(--mono-spacing) * 3);
+  --mono-table-cell-pad: calc(var(--mono-spacing) * 3);
+  --mono-table-radius: var(--mono-radius-xl);
+  /* [data-popover] — the portaled filter / menu / suggestion panels */
+  --mono-table-panel-radius: var(--mono-radius-2xl);
+  --mono-table-panel-shadow: var(--mono-shadow-2xl);
+  --mono-table-panel-ring: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent);
+}

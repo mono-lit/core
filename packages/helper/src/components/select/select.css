@@ -1,0 +1,874 @@
+/* =========================================================================
+   mono-select — a port of Basecoat's `.select` (the custom one, `.select:not(select)`)
+   and `.combobox` (basecoat-css@1.0.2, vega style), on the `.field` / `.label`
+   chrome mono-input already ported.
+
+   Styled by ATTRIBUTE, like Basecoat (`.select > button`, `[role='option'].active`)
+   — and the attributes mirror the element's props one for one, so hand-written
+   markup reads like the Lit / Vue tag:
+
+     <mono-select size="sm" color="danger" variant="filled" label="Fruit">
+     <div mono-select mono-size="sm" mono-color="danger" mono-variant="filled">
+       <label mono-label>Fruit</label>
+       <button mono-trigger><span mono-value mono-placeholder>Pick</span>
+         <span mono-actions><span mono-arrow>…</span></span></button>
+       <div mono-dropdown><div mono-dropdown-body><button mono-item>…</button></div></div>
+     </div>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-color])` = primary, `:not([mono-variant])` = outlined). The element
+   renders these attributes on its wrapper (both builds) plus `mono-open` while
+   the panel is open; the old classes (`.mono-select.sm.open`) are still emitted
+   as inert hooks for consumer CSS until 2.0 but no rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-select]                                 ≡ .field (gap-3, as margins — see the root rule) + .select (position: relative)
+     [mono-select] > [mono-label]                  ≡ .field > label / .label
+     [mono-select] > [mono-trigger]                ≡ .select > button          (h-9 rounded-md border-input ps-2.5 pe-2 text-sm shadow-xs)
+     [mono-select][mono-searchable] > [mono-trigger] ≡ .combobox > input[role='combobox'] (same box; the input sits inside it)
+     [mono-trigger] > [mono-value]                 ≡ .select > button > span    (flex-1 truncate text-start)
+     [mono-trigger] > [mono-native]                ≡ EXTENSION — a plain <select> may stand in for the value + panel (appearance: none)
+     [mono-actions] > [mono-arrow] > [mono-icon]   ≡ .select > button > svg     (size-4 text-muted-foreground)
+     [mono-actions] > [mono-clear]                 ≡ .combobox [data-clear]     (size-6, painted as .btn[data-variant='ghost'])
+     [mono-dropdown]                               ≡ .select [data-popover]     (bg-popover ring-1 ring-foreground/10 rounded-md shadow-md)
+     [mono-dropdown-body]                          ≡ .combobox [role='listbox'] (max-h-72 overflow-y-auto p-1 scroll-py-1)
+     [mono-item]                                   ≡ .select [role='option']    (gap-2 rounded-sm py-1.5 ps-2 pe-8 text-sm)
+     [mono-item][mono-active] / :hover             ≡ [role='option'].active     (bg-muted text-foreground)
+     [mono-item][mono-selected]                    ≡ [role='option'][aria-selected='true'] (the --check-icon at the end)
+     [mono-group]                                  ≡ .select [role='heading']   (px-2 py-1.5 text-xs text-muted-foreground)
+     [mono-empty-row]                              ≡ .select [role='listbox']::before (py-6 text-center text-sm)
+     [mono-load-more]                              ≡ EXTENSION (an option-shaped ghost button)
+     [mono-message-wrap] > [mono-message]          ≡ .field > p / .field [role='alert']
+     [mono-validation-state="invalid"]             ≡ .select > button[aria-invalid='true']
+     [mono-validation-state="valid|warning"]       ≡ EXTENSION (the invalid pattern in --success / --warning)
+     [mono-size="xs|sm|lg|xl|xxl"]                 ≡ EXTENSION (Basecoat has only data-size=sm; the ladder is --mono-control-height-*)
+     [mono-variant="filled"]                       ≡ EXTENSION (luma's .select > button: border-transparent bg-input/50)
+     [mono-variant="underlined"]                   ≡ EXTENSION (sera's: rounded-none border-b-input px-0, no ring)
+
+   Inner parts are attributes too: [mono-label] (+ [mono-required-mark]),
+   [mono-trigger], [mono-value] (+ [mono-placeholder]), [mono-search-field],
+   [mono-native], [mono-actions], [mono-clear], [mono-arrow], [mono-icon],
+   [mono-dropdown], [mono-dropdown-body], [mono-item] (+ [mono-active] /
+   [mono-selected] / [mono-disabled]), [mono-group] (+ [mono-sticky],
+   [mono-level="n"]), [mono-empty-row], [mono-load-more] (+ [mono-loading]),
+   [mono-list-slot], [mono-message-wrap] > [mono-message="helper|valid|invalid|warning"].
+   The shadow build marks an unassigned slot wrapper [mono-empty].
+
+   THE PANEL IS PORTALED. The light build moves [mono-dropdown] into a
+   `<div data-mono-popup-portal>` under <body> while open (composables/popup-
+   portal.ts), and the portal mirrors the wrapper's class AND its mono-*
+   attributes — so `[mono-select] > [mono-dropdown]` keeps matching there and
+   the `--_mono-select-*` resolvers declared on `[mono-select]` re-resolve on
+   the portal. Nothing here may rely on the panel being inside the trigger's
+   host, and every option rule is scoped under `[mono-select]`.
+
+   Values are copied from the compiled vendor sheet (vendor/basecoat/basecoat-
+   vega.cdn.css) through the token layer; `dark:` variants travel as
+   `--mono-mode-*` tokens (a selector cannot cross a shadow boundary; an
+   inherited custom property can). FLAVORS set the `--mono-select-*` knobs read
+   below — the same set as mono-input (`--mono-select-outline-*` for the outlined
+   variant alone) plus `--mono-select-dropdown-{radius,padding,shadow,ring}`,
+   `--mono-select-option-{radius,padding-x,padding-y,font-size,line-height,gap,font-weight}`,
+   `--mono-select-group-*`, `--mono-select-icon-size`. Every fallback here is vega's
+   value (`node scripts/basecoat-styles.mjs --varying "^(\.select:not\(select\)|\.combobox)"`).
+   ========================================================================= */
+
+mono-select {
+  display: block;
+}
+
+[mono-select] {
+  /* ── palette: each slot is a public knob over a Basecoat token ─────────── */
+  --_mono-select-text: var(--mono-select-color, var(--mono-select-text, var(--foreground)));
+  --_mono-select-placeholder: var(--mono-select-placeholder, var(--muted-foreground));
+  --_mono-select-muted: var(--mono-select-muted, var(--muted-foreground));
+  --_mono-select-primary: var(--mono-select-primary, var(--ring));
+  --_mono-select-secondary: var(--mono-select-secondary, var(--muted-foreground));
+  --_mono-select-success: var(--mono-select-success, var(--success));
+  --_mono-select-danger: var(--mono-select-danger, var(--destructive));
+  --_mono-select-warning: var(--mono-select-warning, var(--warning));
+  --_mono-select-info: var(--mono-select-info, var(--info));
+  --_mono-select-teal: var(--mono-select-teal, var(--teal));
+  --_mono-select-purple: var(--mono-select-purple, var(--purple));
+  --_mono-select-neutral: var(--mono-select-neutral, var(--neutral));
+  --_mono-select-dark: var(--mono-select-dark, var(--dark));
+  --_mono-select-valid: var(--mono-select-valid, var(--success));
+  --_mono-select-invalid: var(--mono-select-invalid, var(--destructive));
+
+  /* ── the painted result — three tiers, base = .select > button (vega) ─── */
+  --_mono-select-ring-color: var(--mono-select-ring-color, var(--mono-select-focus-color, var(--_mono-select-ring-color-preset, var(--_mono-select-primary))));
+  --_mono-select-ring-width: var(--mono-select-ring-width, var(--_mono-select-ring-width-preset, var(--mono-ring-width)));
+  --_mono-select-ring-alpha: var(--mono-select-ring-alpha, var(--mono-ring-alpha));
+  --_mono-select-border-color: var(--mono-select-rest-border, var(--mono-select-border-color, var(--mono-select-border, var(--_mono-select-border-color-preset, var(--input)))));
+  --_mono-select-bg: var(--mono-select-bg, var(--mono-select-surface, var(--_mono-select-bg-preset, var(--mono-mode-surface))));
+  --_mono-select-hover-bg: var(--mono-select-hover-bg, var(--_mono-select-hover-bg-preset, var(--_mono-select-bg)));
+  --_mono-select-shadow: var(--mono-select-shadow, var(--_mono-select-shadow-preset, 0 0 #0000));
+  --_mono-select-icon: var(--mono-select-icon-size, calc(var(--mono-spacing) * 4));
+
+  /* ── md metrics live on the unqualified root ON PURPOSE: hand-written
+        `<div mono-select>` that names no size renders exactly like size="md".
+        basecoat@1.0.2 styles/vega.css .select:not(select) > button — h-9 gap-1.5
+        rounded-md ps-2.5 pe-2 text-sm ── */
+  --_mono-select-height: var(--mono-select-height-md, var(--mono-control-height-md));
+  --_mono-select-radius: var(--mono-select-radius-md, var(--_mono-select-radius-preset, var(--mono-select-radius, var(--mono-radius-md))));
+  --_mono-select-padding-start: var(--mono-select-padding-x-md, var(--mono-select-padding-x, var(--_mono-select-padding-x-preset, calc(var(--mono-spacing) * 2.5))));
+  --_mono-select-padding-end: var(--mono-select-padding-end-md, var(--mono-select-padding-x, var(--_mono-select-padding-x-preset, calc(var(--mono-spacing) * 2))));
+  --_mono-select-gap: var(--mono-select-trigger-gap, calc(var(--mono-spacing) * 1.5));
+  --_mono-select-font-size: var(--mono-select-font-md, var(--mono-text-sm));
+  --_mono-select-line-height: var(--mono-select-line-height, var(--mono-select-line-height-md, var(--mono-text-sm--lh)));
+  --_mono-select-action: calc(var(--mono-spacing) * 6);
+
+  /* basecoat@1.0.2 styles/vega.css .field — flex w-full flex-col gap-3; mono: BLOCK
+     flow with the gap as margins, so a hand-written panel that no controller
+     positions lands at its static position — right under the trigger, above the
+     message — instead of a flex container's content-box top */
+  --_mono-select-gap-y: var(--mono-select-gap, calc(var(--mono-spacing) * 3));
+  position: relative;
+  display: block;
+  width: 100%;
+  font-family: inherit;
+  color: var(--_mono-select-text);
+}
+
+/* A page-level `* { box-sizing: border-box }` reset does NOT cross a shadow
+   boundary; scoped here so both builds measure the same. */
+[mono-select],
+[mono-select] *,
+[mono-select] *::before,
+[mono-select] *::after {
+  box-sizing: border-box;
+}
+
+[mono-select] :is([mono-label], [mono-message])[mono-empty] {
+  display: none;
+}
+
+/* =========================================
+   Sizes — the trigger's painted height IS the token (tests/perf/field-heights)
+   EXTENSION: Basecoat's select has only data-size=sm; the ladder is the shared
+   --mono-control-height-* scale and the text follows .btn's steps.
+   ========================================= */
+
+[mono-select][mono-size="xs"] {
+  --_mono-select-height: var(--mono-select-height-xs, var(--mono-control-height-xs));
+  --_mono-select-radius: var(--mono-select-radius-xs, var(--_mono-select-radius-preset, var(--mono-select-radius, var(--mono-radius-md))));
+  --_mono-select-padding-start: var(--mono-select-padding-x-xs, var(--mono-select-padding-x, var(--_mono-select-padding-x-preset, calc(var(--mono-spacing) * 2))));
+  --_mono-select-padding-end: var(--mono-select-padding-end-xs, var(--mono-select-padding-x, var(--_mono-select-padding-x-preset, calc(var(--mono-spacing) * 1.5))));
+  --_mono-select-gap: var(--mono-select-trigger-gap, var(--mono-spacing));
+  --_mono-select-font-size: var(--mono-select-font-xs, var(--mono-text-xs));
+  --_mono-select-line-height: var(--mono-select-line-height, var(--mono-select-line-height-xs, var(--mono-text-xs--lh)));
+  --_mono-select-icon: var(--mono-select-icon-size, calc(var(--mono-spacing) * 3.5));
+  --_mono-select-action: calc(var(--mono-spacing) * 4);
+}
+
+/* basecoat@1.0.2 styles/vega.css .select:not(select) > button — data-[size=sm]:h-8 */
+[mono-select][mono-size="sm"] {
+  --_mono-select-height: var(--mono-select-height-sm, var(--mono-control-height-sm));
+  --_mono-select-radius: var(--mono-select-radius-sm, var(--_mono-select-radius-preset, var(--mono-select-radius, var(--mono-radius-md))));
+  --_mono-select-padding-start: var(--mono-select-padding-x-sm, var(--mono-select-padding-x, var(--_mono-select-padding-x-preset, calc(var(--mono-spacing) * 2.5))));
+  --_mono-select-padding-end: var(--mono-select-padding-end-sm, var(--mono-select-padding-x, var(--_mono-select-padding-x-preset, calc(var(--mono-spacing) * 2))));
+  --_mono-select-font-size: var(--mono-select-font-sm, var(--mono-select-font-md, var(--mono-text-sm)));
+  --_mono-select-line-height: var(--mono-select-line-height, var(--mono-select-line-height-sm, var(--mono-text-sm--lh)));
+  --_mono-select-action: calc(var(--mono-spacing) * 5);
+}
+
+[mono-select][mono-size="lg"] {
+  --_mono-select-height: var(--mono-select-height-lg, var(--mono-control-height-lg));
+  --_mono-select-radius: var(--mono-select-radius-lg, var(--_mono-select-radius-preset, var(--mono-select-radius, var(--mono-radius-md))));
+  --_mono-select-padding-start: var(--mono-select-padding-x-lg, var(--mono-select-padding-x, var(--_mono-select-padding-x-preset, calc(var(--mono-spacing) * 2.5))));
+  --_mono-select-padding-end: var(--mono-select-padding-end-lg, var(--mono-select-padding-x, var(--_mono-select-padding-x-preset, calc(var(--mono-spacing) * 2))));
+  --_mono-select-font-size: var(--mono-select-font-lg, var(--mono-select-font-md, var(--mono-text-sm)));
+  --_mono-select-line-height: var(--mono-select-line-height, var(--mono-select-line-height-lg, var(--mono-text-sm--lh)));
+}
+
+[mono-select][mono-size="xl"] {
+  --_mono-select-height: var(--mono-select-height-xl, var(--mono-control-height-xl));
+  --_mono-select-radius: var(--mono-select-radius-xl, var(--_mono-select-radius-preset, var(--mono-select-radius, var(--mono-radius-md))));
+  --_mono-select-padding-start: var(--mono-select-padding-x-xl, var(--mono-select-padding-x, var(--_mono-select-padding-x-preset, calc(var(--mono-spacing) * 3))));
+  --_mono-select-padding-end: var(--mono-select-padding-end-xl, var(--mono-select-padding-x, var(--_mono-select-padding-x-preset, calc(var(--mono-spacing) * 2.5))));
+  --_mono-select-gap: var(--mono-select-trigger-gap, calc(var(--mono-spacing) * 2));
+  --_mono-select-font-size: var(--mono-select-font-xl, var(--mono-text-base));
+  --_mono-select-line-height: var(--mono-select-line-height, var(--mono-select-line-height-xl, var(--mono-text-base--lh)));
+  --_mono-select-icon: var(--mono-select-icon-size, calc(var(--mono-spacing) * 5));
+  --_mono-select-action: calc(var(--mono-spacing) * 7);
+}
+
+[mono-select][mono-size="xxl"] {
+  --_mono-select-height: var(--mono-select-height-xxl, var(--mono-control-height-xxl));
+  --_mono-select-radius: var(--mono-select-radius-xxl, var(--_mono-select-radius-preset, var(--mono-select-radius, var(--mono-radius-md))));
+  --_mono-select-padding-start: var(--mono-select-padding-x-xxl, var(--mono-select-padding-x, var(--_mono-select-padding-x-preset, calc(var(--mono-spacing) * 4))));
+  --_mono-select-padding-end: var(--mono-select-padding-end-xxl, var(--mono-select-padding-x, var(--_mono-select-padding-x-preset, calc(var(--mono-spacing) * 3))));
+  --_mono-select-gap: var(--mono-select-trigger-gap, calc(var(--mono-spacing) * 2));
+  --_mono-select-font-size: var(--mono-select-font-xxl, var(--mono-text-lg));
+  --_mono-select-line-height: var(--mono-select-line-height, var(--mono-select-line-height-xxl, var(--mono-text-lg--lh)));
+  --_mono-select-icon: var(--mono-select-icon-size, calc(var(--mono-spacing) * 5));
+  --_mono-select-action: calc(var(--mono-spacing) * 8);
+}
+
+/* =========================================
+   Variants — each writes only `*-preset` slots
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .select:not(select) > button — rounded-md border
+   border-input bg-transparent shadow-xs (dark:bg-input/30 dark:hover:bg-input/50
+   via the mode tokens). `--mono-select-outline-*` restyle THIS variant alone. */
+[mono-select]:is(:not([mono-variant]), [mono-variant="outlined"]) {
+  --_mono-select-bg-preset: var(--mono-select-outline-bg);
+  --_mono-select-hover-bg-preset: var(--mono-select-outline-hover-bg, var(--mono-mode-field-hover-bg));
+  --_mono-select-border-color-preset: var(--mono-select-outline-border-color);
+  --_mono-select-side-border-color-preset: var(--mono-select-outline-side-border-color);
+  --_mono-select-shadow-preset: var(--mono-select-outline-shadow, var(--mono-shadow-xs));
+  --_mono-select-ring-width-preset: var(--mono-select-outline-ring-width);
+  --_mono-select-radius-preset: var(--mono-select-outline-radius);
+  --_mono-select-padding-x-preset: var(--mono-select-outline-padding-x);
+}
+
+/* EXTENSION — filled ≡ basecoat@1.0.2 styles/luma.css .select:not(select) > button:
+   border-transparent bg-input/50, no shadow-xs, no hover */
+[mono-select][mono-variant="filled"] {
+  --_mono-select-bg-preset: var(--mono-select-filled-bg, color-mix(in oklab, var(--input) 50%, transparent));
+  --_mono-select-hover-bg-preset: var(--_mono-select-bg);
+  --_mono-select-border-color-preset: transparent;
+  --_mono-select-shadow-preset: 0 0 #0000;
+}
+
+/* EXTENSION — underlined ≡ basecoat@1.0.2 styles/sera.css .select:not(select) > button:
+   rounded-none border-transparent border-b-input bg-transparent px-0, no shadow,
+   no ring, focus-visible:border-b-ring */
+[mono-select][mono-variant="underlined"] {
+  --_mono-select-bg-preset: transparent;
+  --_mono-select-hover-bg-preset: transparent;
+  --_mono-select-side-border-color-preset: transparent;
+  --_mono-select-shadow-preset: 0 0 #0000;
+  --_mono-select-ring-width-preset: 0px;
+  --_mono-select-radius-preset: 0;
+  --_mono-select-padding-x-preset: 0;
+}
+
+/* =========================================
+   Colours — the `color` prop is the FOCUS colour (ring + focused border)
+   ========================================= */
+
+[mono-select]:is(:not([mono-color]), [mono-color="primary"]) {
+  --_mono-select-ring-color-preset: var(--_mono-select-primary);
+}
+[mono-select][mono-color="secondary"] {
+  --_mono-select-ring-color-preset: var(--_mono-select-secondary);
+}
+[mono-select][mono-color="success"] {
+  --_mono-select-ring-color-preset: var(--_mono-select-success);
+}
+[mono-select][mono-color="danger"] {
+  --_mono-select-ring-color-preset: var(--_mono-select-danger);
+}
+[mono-select][mono-color="warning"] {
+  --_mono-select-ring-color-preset: var(--_mono-select-warning);
+}
+[mono-select][mono-color="info"] {
+  --_mono-select-ring-color-preset: var(--_mono-select-info);
+}
+[mono-select][mono-color="teal"] {
+  --_mono-select-ring-color-preset: var(--_mono-select-teal);
+}
+[mono-select][mono-color="purple"] {
+  --_mono-select-ring-color-preset: var(--_mono-select-purple);
+}
+[mono-select][mono-color="neutral"] {
+  --_mono-select-ring-color-preset: var(--_mono-select-neutral);
+}
+[mono-select][mono-color="dark"] {
+  --_mono-select-ring-color-preset: var(--_mono-select-dark);
+}
+
+/* =========================================
+   Label
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .field > label, .label — flex items-center
+   gap-2 text-sm leading-none font-medium select-none w-fit */
+[mono-select] > [mono-label] {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  margin: 0 0 var(--_mono-select-gap-y);
+  gap: var(--mono-select-label-gap, calc(var(--mono-spacing) * 2));
+  font-size: var(--mono-select-label-font-size, var(--mono-text-sm));
+  line-height: var(--mono-select-label-line-height, 1);
+  font-weight: var(--mono-select-label-font-weight, var(--mono-label-font-weight, var(--mono-font-weight-medium)));
+  text-transform: var(--mono-select-label-text-transform, none);
+  letter-spacing: var(--mono-select-label-letter-spacing, normal);
+  color: var(--_mono-select-text);
+  user-select: none;
+}
+
+[mono-select][mono-disabled] > [mono-label] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* basecoat@1.0.2 styles/vega.css .field — data-invalid:text-destructive */
+[mono-select][mono-validation-state="invalid"] > [mono-label] {
+  color: var(--_mono-select-invalid);
+}
+
+[mono-select] [mono-required-mark] {
+  color: var(--_mono-select-danger);
+}
+
+/* =========================================
+   The trigger — the bordered box (a <button>, or a <div> holding the combobox input)
+   ========================================= */
+
+/* basecoat@1.0.2 components/select.css .select:not(select) > button */
+/* basecoat@1.0.2 styles/vega.css .select:not(select) > button — h-9 gap-1.5
+   rounded-md border border-input bg-transparent py-2 ps-2.5 pe-2 text-sm shadow-xs
+   focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50
+   aria-invalid:… dark:hover:bg-input/50; mono: `--tw-ring-*` flattened to the
+   ring + shadow slots, the height is the control token (no block padding — the
+   token owns the height), the side edges read their own slot */
+[mono-select] > [mono-trigger] {
+  --_mono-select-bc: var(--_mono-select-border-color);
+  --_mono-select-side-bc: var(--mono-select-side-border-color, var(--_mono-select-side-border-color-preset, var(--_mono-select-bc)));
+  --_mono-select-ring: 0 0 #0000;
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--_mono-select-gap);
+  width: 100%;
+  min-width: 0;
+  min-height: var(--_mono-select-height);
+  margin: 0;
+  padding-block: var(--mono-select-padding-y, 0);
+  padding-inline: var(--_mono-select-padding-start) var(--_mono-select-padding-end);
+  outline-style: none;
+  border: var(--mono-border-width) solid var(--_mono-select-bc);
+  border-top-color: var(--_mono-select-side-bc);
+  border-inline-color: var(--_mono-select-side-bc);
+  border-radius: var(--_mono-select-radius);
+  background: var(--_mono-select-bg);
+  color: var(--_mono-select-text);
+  box-shadow: var(--_mono-select-ring), var(--_mono-select-shadow);
+  font-family: inherit;
+  font-size: var(--_mono-select-font-size);
+  line-height: var(--_mono-select-line-height);
+  font-weight: var(--mono-font-weight-normal);
+  white-space: nowrap;
+  text-align: start;
+  cursor: pointer;
+  user-select: none;
+  transition-property: color, box-shadow, border-color, background-color;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+
+  &:focus,
+  &:focus-visible,
+  &:focus-within {
+    outline: none !important;
+  }
+
+  /* focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 —
+     the combobox form is a <div> whose <input> takes focus, hence :focus-within */
+  &:focus-visible,
+  &:focus-within {
+    --_mono-select-bc: var(--_mono-select-ring-color);
+    --_mono-select-ring: 0 0 0 var(--_mono-select-ring-width) color-mix(in oklab, var(--_mono-select-ring-color) var(--_mono-select-ring-alpha), transparent);
+  }
+
+  & svg,
+  & [mono-icon] {
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+}
+
+/* dark:hover:bg-input/50 (light: none) — carried by --mono-mode-field-hover-bg */
+@media (hover: hover) {
+  [mono-select]:not([mono-disabled]):not([mono-readonly]) > [mono-trigger]:hover {
+    background: var(--_mono-select-hover-bg);
+  }
+}
+
+/* basecoat@1.0.2 styles/vega.css .select:not(select) > button — aria-invalid:border-destructive
+   aria-invalid:ring-3 aria-invalid:ring-destructive/20 (dark: /50, /40 via the mode tokens) */
+[mono-select][mono-validation-state="invalid"] > [mono-trigger],
+[mono-select] > [mono-trigger][aria-invalid="true"] {
+  --_mono-select-bc: var(--mono-mode-invalid-border);
+  --_mono-select-ring: 0 0 0 var(--_mono-select-ring-width) var(--mono-mode-invalid-ring);
+}
+
+/* EXTENSION — valid / warning are the invalid pattern in the role's colour */
+[mono-select][mono-validation-state="valid"] > [mono-trigger] {
+  --_mono-select-bc: color-mix(in oklab, var(--_mono-select-valid) var(--mono-mode-state-border-alpha), transparent);
+  --_mono-select-ring: 0 0 0 var(--_mono-select-ring-width) color-mix(in oklab, var(--_mono-select-valid) var(--mono-mode-state-ring-alpha), transparent);
+}
+[mono-select][mono-validation-state="warning"] > [mono-trigger] {
+  --_mono-select-bc: color-mix(in oklab, var(--_mono-select-warning) var(--mono-mode-state-border-alpha), transparent);
+  --_mono-select-ring: 0 0 0 var(--_mono-select-ring-width) color-mix(in oklab, var(--_mono-select-warning) var(--mono-mode-state-ring-alpha), transparent);
+}
+
+/* EXTENSION — readonly: focusable, on a muted surface, no gestures */
+[mono-select][mono-readonly] > [mono-trigger] {
+  background: var(--mono-select-readonly-bg, var(--muted));
+  cursor: default;
+}
+
+/* basecoat@1.0.2 components/select.css .select:not(select) > button — disabled:
+   pointer-events-none cursor-not-allowed opacity-50 */
+[mono-select][mono-disabled] > [mono-trigger],
+[mono-select] > [mono-trigger]:disabled,
+/* a raw readonly select can only disable its native <select>; the root attribute wins */
+[mono-select]:not([mono-readonly]) > [mono-trigger]:has(> [mono-native]:disabled) {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+  background: var(--mono-select-disabled-bg, var(--_mono-select-bg));
+}
+
+/* =========================================
+   Value / search field / native <select>
+   ========================================= */
+
+/* basecoat@1.0.2 components/select.css .select:not(select) > button > span —
+   flex flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-start */
+/* basecoat@1.0.2 styles/vega.css .select:not(select) > button > span — gap-1.5 */
+[mono-select] [mono-value] {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--_mono-select-gap);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: start;
+  color: var(--_mono-select-text);
+}
+
+[mono-select] [mono-value] > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[mono-select] [mono-value][mono-placeholder] {
+  color: var(--_mono-select-placeholder);
+}
+
+/* basecoat@1.0.2 components/combobox.css .combobox > input[role='combobox'] — the
+   search input lives INSIDE our trigger box, so it is borderless like
+   .input-group > input and the box around it carries the chrome */
+[mono-select] [mono-search-field],
+[mono-select] [mono-native] {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  align-self: stretch;
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--_mono-select-text);
+  font: inherit;
+  line-height: var(--_mono-select-line-height);
+
+  &:focus,
+  &:focus-visible {
+    outline: none !important;
+  }
+
+  &::placeholder {
+    color: var(--_mono-select-placeholder);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+[mono-select] [mono-search-field] {
+  cursor: text;
+}
+
+[mono-select] [mono-native] {
+  cursor: inherit;
+}
+
+[mono-select] [mono-native] option {
+  color: var(--_mono-select-text);
+  background: var(--popover);
+}
+
+/* =========================================
+   Actions — the chevron and the clear button
+   ========================================= */
+
+[mono-select] [mono-actions] {
+  display: flex;
+  align-items: center;
+  gap: var(--mono-spacing);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* basecoat@1.0.2 styles/vega.css .select:not(select) > button > svg — size-4
+   text-muted-foreground; mono: the glyph sits in a square action box so the
+   chevron and the clear button occupy the same gutter */
+/* basecoat@1.0.2 components/combobox.css .combobox [data-clear] — size-6 border-0
+   bg-transparent p-0 text-current */
+[mono-select] [mono-arrow],
+[mono-select] [mono-clear] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--_mono-select-action);
+  height: var(--_mono-select-action);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--mono-select-clear-radius, calc(var(--radius) - 5px));
+  background: transparent;
+  color: var(--_mono-select-muted);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  transition-property: color, background-color, transform;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+}
+
+[mono-select] :is([mono-arrow], [mono-clear]) > :is(svg, .mono-icon, [mono-icon]) {
+  display: block;
+  width: var(--_mono-select-icon);
+  height: var(--_mono-select-icon);
+  pointer-events: none;
+}
+
+/* EXTENSION — the chevron turns while the panel is open */
+[mono-select][mono-open] [mono-arrow] > :is(svg, .mono-icon, [mono-icon]) {
+  transform: rotate(180deg);
+}
+
+/* basecoat@1.0.2 styles/vega.css .btn[data-variant='ghost'] — hover:bg-muted
+   hover:text-foreground (dark:hover:bg-muted/50 via --mono-mode-ghost-hover) */
+@media (hover: hover) {
+  [mono-select] :is([mono-arrow], [mono-clear]):hover {
+    background: var(--mono-mode-ghost-hover);
+    color: var(--_mono-select-text);
+  }
+}
+
+/* =========================================
+   The panel
+   ========================================= */
+
+/* basecoat@1.0.2 components/popover.css [data-popover] — absolute z-50 min-w-full
+   overflow-x-hidden; mono: `display: none` while closed (the contents are only
+   rendered while open), `--mono-popup-z` from the shared popup stack and
+   `--mono-popup-avail-h` from the portal controller cap the whole panel */
+/* basecoat@1.0.2 styles/vega.css .select:not(select) [data-popover] — bg-popover
+   text-popover-foreground rounded-md shadow-md ring-1 ring-foreground/10; the
+   `p-1` moves to the scrolling body (the combobox layout), so the scrollbar
+   never paints over the padding */
+[mono-select] > [mono-dropdown] {
+  position: absolute;
+  /* `top: auto` = the static position: the panel follows the trigger in the DOM,
+     so in block flow it lands right under it (the popup controller overrides
+     this inline for the element; hand-written markup relies on it). */
+  top: auto;
+  /* the 6px offset as a transform: the controller writes `transform: none` inline
+     with its fixed position, so only the hand-written panel is pushed down */
+  transform: translateY(calc(var(--mono-spacing) * 1.5));
+  /* Both edges pinned, so the panel matches the field by default. An inline
+     `width` from `:dropdown.prop="{ width }"` is then the over-constrained case,
+     which CSS resolves by ignoring `right` — the panel keeps this left edge and
+     takes the given width. */
+  left: 0;
+  right: 0;
+  z-index: var(--mono-popup-z, 1000);
+  display: none;
+  /* Basecoat's `min-w-[max(100%,9rem)]` is relative to the .select box; a portaled
+     panel is position: fixed, where 100% would be the viewport — the controller
+     writes the anchor's width inline instead, so only the floor stays. */
+  min-width: var(--mono-select-dropdown-min-width, 9rem);
+  max-height: var(--mono-popup-avail-h, none);
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: var(--mono-select-dropdown-radius, var(--mono-radius-md));
+  background: var(--mono-select-dropdown-bg, var(--popover));
+  color: var(--mono-select-dropdown-color, var(--popover-foreground));
+  box-shadow: var(--mono-select-dropdown-ring, 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent)), var(--mono-select-dropdown-shadow, var(--mono-shadow-md));
+  font-size: var(--mono-select-option-font-size, var(--mono-text-sm));
+  line-height: var(--mono-select-option-line-height, var(--mono-text-sm--lh));
+}
+
+[mono-select][mono-open] > [mono-dropdown] {
+  /* A flex column (not `block`) so the body can shrink past its own height when
+     the panel is clamped above. */
+  display: flex;
+  flex-direction: column;
+}
+
+/* basecoat@1.0.2 styles/vega.css .combobox [role='listbox'] — max-h-[min(18rem,
+   var(--available-height,18rem))] scroll-py-1 overflow-y-auto p-1 */
+[mono-select] [mono-dropdown-body] {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 18rem;
+  padding: var(--mono-select-dropdown-padding, var(--mono-spacing));
+  overflow: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: var(--mono-select-dropdown-padding, var(--mono-spacing));
+  outline-style: none;
+}
+
+/* =========================================
+   Options
+   -----------------------------------------
+   Each rule also lists the stamped twin of a row rendered through `slot="list"`
+   (`[data-mono-type='row']`, `[data-mono-active]`, `[data-mono-selected]`), so
+   the two can never drift: what you render in the slot IS an option. `:where()`
+   wraps only the CONTAINER, keeping the twin at attribute weight.
+   ========================================= */
+
+/* basecoat@1.0.2 components/select.css .select:not(select) [role='option'] — relative
+   flex w-full cursor-default items-center overflow-hidden text-ellipsis whitespace-
+   nowrap outline-none select-none; disabled: pointer-events-none opacity-50 */
+/* basecoat@1.0.2 styles/vega.css .select:not(select) [role='option'] — gap-2
+   rounded-sm py-1.5 ps-2 pe-8 text-sm, svg size-4 */
+[mono-select] [mono-item],
+[mono-select] :where([mono-list-slot]) [data-mono-type='row'] {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: var(--mono-select-option-gap, calc(var(--mono-spacing) * 2));
+  margin: 0;
+  padding-block: var(--mono-select-option-padding-y, calc(var(--mono-spacing) * 1.5));
+  padding-inline: var(--mono-select-option-padding-x, calc(var(--mono-spacing) * 2)) var(--mono-select-option-padding-end, calc(var(--mono-spacing) * 8));
+  min-height: var(--mono-select-option-min-height, 0);
+  border: 0;
+  border-radius: var(--mono-select-option-radius, var(--mono-radius-sm));
+  /* longhands, so the selected row's check (a background-image) survives the
+     active / hover background */
+  background-color: transparent;
+  background-image: none;
+  color: var(--_mono-select-text);
+  font-family: inherit;
+  font-size: var(--mono-select-option-font-size, var(--mono-text-sm));
+  line-height: var(--mono-select-option-line-height, var(--mono-text-sm--lh));
+  font-weight: var(--mono-select-option-font-weight, var(--mono-font-weight-normal));
+  text-align: start;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  outline-style: none;
+  user-select: none;
+  cursor: default;
+  transition-property: color, background-color;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration-fast);
+}
+
+/* EXTENSION: a hair of air between rows. Upstream stacks its options flush, so an
+   active row directly under the selected one read as ONE tall highlight; a 2px
+   seam keeps the two rounded-sm washes apart. `--mono-select-option-spacing`. */
+[mono-select] [mono-item] + [mono-item],
+[mono-select] :where([mono-list-slot]) [data-mono-type='row'] + [data-mono-type='row'] {
+  margin-top: var(--mono-select-option-spacing, 2px);
+}
+
+[mono-select] [mono-item] svg:not([class*='size-']),
+[mono-select] [mono-item] .mono-icon {
+  width: var(--_mono-select-icon);
+  height: var(--_mono-select-icon);
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+/* basecoat@1.0.2 styles/vega.css .select:not(select) [role='option'].active, .select:not(select) [role='option']:focus-visible
+   — bg-muted text-foreground. The keyboard cursor and the pointer share one look. */
+[mono-select] [mono-item][mono-active]:not([mono-disabled]):not(:disabled),
+[mono-select] [mono-item]:focus-visible,
+[mono-select] :where([mono-list-slot]) [data-mono-active] {
+  background-color: var(--mono-select-option-active-bg, var(--muted));
+  color: var(--mono-select-option-active-color, var(--_mono-select-text));
+}
+
+/* basecoat@1.0.2 components/select.css .select:not(select):not([data-select-initialized]) [role='option']:not([aria-disabled='true']):not(:disabled):hover, .select:not(select) [role='option'].active
+   — the pointer highlight is NOT behind (hover: hover) upstream */
+[mono-select] [mono-item]:hover:not([mono-disabled]):not(:disabled),
+[mono-select] :where([mono-list-slot]) [data-mono-type='row']:hover {
+  background-color: var(--mono-select-option-active-bg, var(--muted));
+  color: var(--mono-select-option-active-color, var(--_mono-select-text));
+}
+
+/* basecoat@1.0.2 components/select.css .select:not(select) [role='option'][aria-selected='true']
+   — the --check-icon at the end (bg-size .875rem, center right .5rem) */
+[mono-select] [mono-item][mono-selected],
+[mono-select] :where([mono-list-slot]) [data-mono-type='row'][data-mono-selected] {
+  background-image: var(--mono-select-check-icon, var(--check-icon));
+  background-size: var(--mono-select-check-size, 0.875rem);
+  background-position: center right calc(var(--mono-spacing) * 2);
+  background-repeat: no-repeat;
+  font-weight: var(--mono-select-option-selected-font-weight, var(--mono-select-option-font-weight, var(--mono-font-weight-normal)));
+}
+
+[mono-select] [mono-item][mono-selected]:dir(rtl),
+[mono-select] :where([mono-list-slot]) [data-mono-type='row'][data-mono-selected]:dir(rtl) {
+  background-position: center left calc(var(--mono-spacing) * 2);
+}
+
+[mono-select] [mono-item][mono-disabled],
+[mono-select] [mono-item]:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* basecoat@1.0.2 styles/vega.css .select:not(select) [role='listbox']:not(:has([data-value]:not([aria-hidden='true'])))::before
+   — py-6 text-center text-sm (the "No results found" row) */
+[mono-select] [mono-empty-row] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: calc(var(--mono-spacing) * 6);
+  padding-inline: calc(var(--mono-spacing) * 3);
+  font-size: var(--mono-select-option-font-size, var(--mono-text-sm));
+  line-height: var(--mono-select-option-line-height, var(--mono-text-sm--lh));
+  color: var(--_mono-select-muted);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+}
+
+/* basecoat@1.0.2 styles/vega.css .select:not(select) [role='heading'] — px-2 py-1.5
+   text-xs text-muted-foreground; EXTENSION: one indent step per nesting level */
+[mono-select] [mono-group],
+[mono-select] :where([mono-list-slot]) [data-mono-type='group'] {
+  --_ms-group-level: 0;
+  padding-block: var(--mono-select-group-padding-y, calc(var(--mono-spacing) * 1.5));
+  padding-inline: var(--mono-select-group-padding-x, calc(var(--mono-spacing) * 2));
+  padding-inline-start: calc(var(--mono-select-group-padding-x, calc(var(--mono-spacing) * 2)) + var(--_ms-group-level) * calc(var(--mono-spacing) * 2));
+  font-size: var(--mono-select-group-font-size, var(--mono-text-xs));
+  line-height: var(--mono-select-group-line-height, var(--mono-text-xs--lh));
+  font-weight: var(--mono-select-group-font-weight, var(--mono-font-weight-normal));
+  text-transform: var(--mono-select-group-text-transform, none);
+  letter-spacing: var(--mono-select-group-letter-spacing, normal);
+  color: var(--_mono-select-muted);
+  cursor: default;
+  user-select: none;
+}
+
+[mono-select] [mono-group][mono-level='1'],
+[mono-select] :where([mono-list-slot]) [data-mono-type='group'][data-mono-level='1'] { --_ms-group-level: 1; }
+[mono-select] [mono-group][mono-level='2'],
+[mono-select] :where([mono-list-slot]) [data-mono-type='group'][data-mono-level='2'] { --_ms-group-level: 2; }
+[mono-select] [mono-group][mono-level='3'],
+[mono-select] :where([mono-list-slot]) [data-mono-type='group'][data-mono-level='3'] { --_ms-group-level: 3; }
+
+/* group-sticky: pin headers while their rows scroll; nested levels stack on the
+   panel's own surface so options scroll cleanly underneath. */
+[mono-select] [mono-group][mono-sticky] {
+  position: sticky;
+  top: calc(var(--_ms-group-level) * 1.5rem);
+  z-index: calc(5 - var(--_ms-group-level));
+  background: var(--mono-select-dropdown-bg, var(--popover));
+}
+
+/* EXTENSION — the load-more affordance: an option-shaped ghost button */
+[mono-select] [mono-load-more] {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mono-select-option-gap, calc(var(--mono-spacing) * 2));
+  margin: 0;
+  padding-block: var(--mono-select-option-padding-y, calc(var(--mono-spacing) * 1.5));
+  padding-inline: var(--mono-select-option-padding-x, calc(var(--mono-spacing) * 2));
+  border: 0;
+  border-radius: var(--mono-select-option-radius, var(--mono-radius-sm));
+  background: transparent;
+  color: var(--_mono-select-muted);
+  font-family: inherit;
+  font-size: var(--mono-select-option-font-size, var(--mono-text-sm));
+  line-height: var(--mono-select-option-line-height, var(--mono-text-sm--lh));
+  font-weight: var(--mono-font-weight-medium);
+  cursor: pointer;
+  transition-property: color, background-color;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration-fast);
+}
+
+@media (hover: hover) {
+  [mono-select] [mono-load-more]:hover:not([mono-loading]) {
+    background-color: var(--mono-select-option-active-bg, var(--muted));
+    color: var(--_mono-select-text);
+  }
+}
+
+[mono-select] [mono-load-more][mono-loading] {
+  cursor: default;
+  opacity: 0.7;
+}
+
+/* Consumer-rendered option rows (slot="list"). `display: contents` so mono's own
+   placement wrapper generates no box: the rows the consumer writes lay out as if
+   they were direct children of the panel. */
+[mono-select] [mono-list-slot] {
+  display: contents;
+}
+
+/* =========================================
+   Message — helper / validation text under the field
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .fieldset legend + p, .field > p, .field section > p
+   — text-sm text-muted-foreground leading-normal font-normal */
+[mono-select] > [mono-message-wrap] {
+  display: block;
+  margin-top: var(--_mono-select-gap-y);
+}
+
+[mono-select] > [mono-message-wrap]:not(:has([mono-message]:not([mono-empty]))) {
+  display: none;
+}
+
+[mono-select] [mono-message] {
+  font-size: var(--mono-select-message-font-size, var(--mono-text-sm));
+  line-height: var(--mono-select-message-line-height, var(--mono-leading-normal));
+  font-weight: var(--mono-font-weight-normal);
+  text-align: start;
+  color: var(--_mono-select-muted);
+}
+
+/* basecoat@1.0.2 styles/vega.css .field [role="alert"] — text-destructive text-sm */
+[mono-select] [mono-message="invalid"] {
+  color: var(--_mono-select-invalid);
+}
+
+[mono-select] [mono-message="valid"] {
+  color: var(--_mono-select-valid);
+}
+
+[mono-select] [mono-message="warning"] {
+  color: var(--_mono-select-warning);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [mono-select] > [mono-trigger],
+  [mono-select] [mono-arrow],
+  [mono-select] [mono-clear],
+  [mono-select] [mono-item] {
+    transition: none;
+  }
+}

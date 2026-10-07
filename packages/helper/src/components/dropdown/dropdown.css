@@ -1,0 +1,415 @@
+/* =========================================================================
+   mono-dropdown — a port of Basecoat's `.popover` + `[data-popover]`
+   (basecoat-css@1.0.2, vega style).
+
+   Styled by ATTRIBUTE, like Basecoat — and the attributes mirror the element's
+   props one for one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-dropdown size="lg" color="success" placement="bottom-start">
+     <div mono-dropdown mono-size="lg" mono-color="success"
+          mono-placement="bottom-start" mono-side="bottom" mono-align="start">
+       <span mono-activator><button>Click me</button></span>
+       <div mono-panel role="dialog" aria-hidden="false">
+         <div mono-body>Any HTML goes here.</div>
+       </div>
+     </div>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-color])` = primary, no `mono-side` = bottom, no `mono-align` =
+   start). The element writes these on its ROOT — the host in the light build,
+   an inner root `<div>` in the shadow one — plus the states `mono-open`,
+   `mono-disabled` and `mono-fixed` (set once the element takes over positioning
+   and writes inline top/left). The old classes (`.mono-dropdown.md.primary.open`)
+   are still emitted as inert hooks until 2.0 but no rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-dropdown]                ≡ .popover (relative inline-flex) — DEVIATION:
+                                      inline-BLOCK, because the activator wrapper is
+                                      `display: contents` and must not become a flex item
+     [mono-activator]               ≡ EXTENSION (upstream's trigger is a sibling <button>;
+                                      ours wraps a slotted one and stays out of layout)
+     [mono-panel]                   ≡ [data-popover] (absolute z-50 min-w-full w-max
+                                      overflow-x-hidden overflow-y-auto visible opacity-100
+                                      scale-100 transition-all outline-hidden, and
+                                      bg-popover text-popover-foreground ring-1
+                                      ring-foreground/10 flex flex-col gap-4 rounded-md
+                                      p-4 text-sm shadow-md duration-100)
+     [mono-panel][aria-hidden=true] ≡ [data-popover][aria-hidden='true'] (invisible
+                                      opacity-0 scale-95 + a 2-unit translate away from
+                                      the side it opens from)
+     [mono-side="…"]                ≡ [data-popover][data-side='…'] (mt-1 top-full,
+                                      mb-1 bottom-full, me-1 end-full, ms-1 start-full)
+                                      — DEVIATION: the 1-unit margin is
+                                      `--mono-dropdown-offset`, a prop (`offset`)
+     [mono-align="…"]               ≡ [data-popover][data-align='…'] (start-0 / end-0 /
+                                      start-1/2 -translate-x-1/2, and the top/bottom pair
+                                      for the two side placements)
+     [mono-body]                    ≡ EXTENSION (the panel's width floor, see below)
+     [mono-size="…"]                ≡ EXTENSION (upstream ships one popover size)
+     [mono-color="…"]               ≡ EXTENSION (the role tints the ring)
+     [mono-disabled]                ≡ .btn disabled:opacity-50 — DEVIATION: 0.55, the
+                                      pre-port value, because the activator is a
+                                      consumer's own control and dimming it twice reads
+                                      as broken
+
+   THE PANEL IS PORTALED. While open, the light build moves [mono-panel] into a
+   body portal; `composables/popup-portal` mirrors the root's class AND its
+   `mono-*` attributes onto that portal, so `[mono-dropdown] > [mono-panel]`
+   keeps matching there. Every panel rule is written as a CHILD of the root for
+   exactly that reason — and because `>` also stops these rules reaching a
+   `[mono-body]` that belongs to a card slotted inside the panel.
+
+   `[mono-dropdown]` IS ALSO A PART NAME: select, tag-input, date and
+   dropdown-table all call their popup panel `[mono-dropdown]`, scoped
+   `[mono-<field>] > [mono-dropdown]` = (0,2,0). This root rule is (0,1,0), so it
+   loses everywhere they set a property — and it deliberately sets NO paint (no
+   colour, no background), only layout and custom properties, so nothing it does
+   set can reach a field's panel visibly. Same contract as chip's root.
+
+   Specificity contract (same as the pre-port class sheet): a part's RESTING rule
+   is exactly one attribute strong — `:where([mono-dropdown]) > [mono-panel]` =
+   (0,1,0) — so a utility class handed in through `cssClass` wins by source
+   order, while the prop and state rules stay heavier.
+
+   FLAVORS set `--mono-dropdown-{radius,ring-color,ring-width,shadow,gap,
+   padding-<size>,font-<size>,min-width-<size>,max-width-<size>,offset-<size>}`;
+   every fallback here is vega's value
+   (`node scripts/basecoat-styles.mjs --varying "popover"`).
+   ========================================================================= */
+
+mono-dropdown {
+  display: inline-block;
+}
+
+/* =========================================
+   Root — layout and the palette. NOTHING here paints (see the header).
+   ========================================= */
+
+[mono-dropdown] {
+  /* ── the six roles, each a public knob over a Basecoat token ───────────── */
+  --_mono-dropdown-primary: var(--mono-dropdown-primary, var(--primary));
+  --_mono-dropdown-secondary: var(--mono-dropdown-secondary, var(--secondary-foreground));
+  --_mono-dropdown-success: var(--mono-dropdown-success, var(--success));
+  --_mono-dropdown-danger: var(--mono-dropdown-danger, var(--destructive));
+  --_mono-dropdown-warning: var(--mono-dropdown-warning, var(--warning));
+  --_mono-dropdown-info: var(--mono-dropdown-info, var(--info));
+  --_mono-dropdown-teal: var(--mono-dropdown-teal, var(--teal));
+  --_mono-dropdown-purple: var(--mono-dropdown-purple, var(--purple));
+  --_mono-dropdown-neutral: var(--mono-dropdown-neutral, var(--neutral));
+  --_mono-dropdown-dark: var(--mono-dropdown-dark, var(--dark));
+  /* the colour in play — `primary` unless a [mono-color] rule re-points it */
+  --_mono-dropdown-accent: var(--mono-dropdown-accent, var(--_mono-dropdown-accent-preset, var(--_mono-dropdown-primary)));
+
+  --_mono-dropdown-bg: var(--mono-dropdown-bg, var(--mono-dropdown-surface, var(--popover)));
+  --_mono-dropdown-text: var(--mono-dropdown-text, var(--popover-foreground));
+  /* `ring-1 ring-foreground/10`, with the role mixed in so `color` is visible on
+     an otherwise neutral surface (EXTENSION — upstream's popover has no colour) */
+  --_mono-dropdown-ring-width: var(--mono-dropdown-ring-width, var(--mono-border-width));
+  /* the neutral half of the ring is its own knob: a flavor that wants
+     `ring-foreground/5` sets THAT, and the role stays mixed in on top */
+  --_mono-dropdown-ring-base: var(--mono-dropdown-ring-base, color-mix(in oklab, var(--foreground) 10%, transparent));
+  --_mono-dropdown-ring-color: var(--mono-dropdown-ring-color, var(--mono-dropdown-border,
+    color-mix(in oklab, var(--_mono-dropdown-accent) 18%, var(--_mono-dropdown-ring-base))));
+  --_mono-dropdown-shadow: var(--mono-dropdown-shadow, var(--mono-shadow-md));
+
+  /* ── md metrics live on the unqualified root ON PURPOSE ────────────────────
+     basecoat@1.0.2 styles/vega.css [data-popover] — gap-4 rounded-md p-4 text-sm */
+  --_mono-dropdown-radius: var(--mono-dropdown-radius, var(--_mono-dropdown-radius-preset, var(--mono-dropdown-radius-md, var(--mono-radius-md))));
+  --_mono-dropdown-pad-x: var(--mono-dropdown-pad-x, var(--_mono-dropdown-pad-x-preset, var(--mono-dropdown-pad-x-md, calc(var(--mono-spacing) * 4))));
+  --_mono-dropdown-pad-y: var(--mono-dropdown-pad-y, var(--_mono-dropdown-pad-y-preset, var(--mono-dropdown-pad-y-md, calc(var(--mono-spacing) * 4))));
+  --_mono-dropdown-gap: var(--mono-dropdown-gap, var(--_mono-dropdown-gap-preset, var(--mono-dropdown-gap-md, calc(var(--mono-spacing) * 4))));
+  --_mono-dropdown-font: var(--mono-dropdown-font, var(--_mono-dropdown-font-preset, var(--mono-dropdown-font-md, var(--mono-text-sm))));
+  --_mono-dropdown-line-height: var(--mono-dropdown-line-height, var(--_mono-dropdown-line-height-preset, var(--mono-text-sm--lh)));
+  --_mono-dropdown-min-width: var(--mono-dropdown-min-width, var(--_mono-dropdown-min-width-preset, var(--mono-dropdown-min-width-md, 200px)));
+  --_mono-dropdown-max-width: var(--mono-dropdown-max-width, var(--_mono-dropdown-max-width-preset, var(--mono-dropdown-max-width-md, 280px)));
+  /* `mt-1` and friends — a prop here (`offset`), so it is one knob per size */
+  --_mono-dropdown-offset: var(--mono-dropdown-offset, var(--_mono-dropdown-offset-preset, var(--mono-dropdown-offset-md, var(--mono-spacing))));
+
+  /* basecoat@1.0.2 components/popover.css .popover — relative inline-flex */
+  position: relative;
+  display: inline-block;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+[mono-dropdown] *,
+[mono-dropdown] *::before,
+[mono-dropdown] *::after {
+  box-sizing: border-box;
+}
+
+/* =========================================
+   Sizes — EXTENSION: Basecoat ships ONE popover; md is its `[data-popover]`
+   ========================================= */
+
+[mono-dropdown][mono-size="xs"] {
+  --_mono-dropdown-radius-preset: var(--mono-dropdown-radius-xs, var(--mono-radius-sm));
+  --_mono-dropdown-pad-x-preset: var(--mono-dropdown-pad-x-xs, calc(var(--mono-spacing) * 2));
+  --_mono-dropdown-pad-y-preset: var(--mono-dropdown-pad-y-xs, calc(var(--mono-spacing) * 2));
+  --_mono-dropdown-gap-preset: var(--mono-dropdown-gap-xs, calc(var(--mono-spacing) * 1.5));
+  --_mono-dropdown-font-preset: var(--mono-dropdown-font-xs, var(--mono-text-xs));
+  --_mono-dropdown-line-height-preset: var(--mono-text-xs--lh);
+  --_mono-dropdown-min-width-preset: var(--mono-dropdown-min-width-xs, 150px);
+  --_mono-dropdown-max-width-preset: var(--mono-dropdown-max-width-xs, 220px);
+  --_mono-dropdown-offset-preset: var(--mono-dropdown-offset-xs, calc(var(--mono-spacing) * 0.75));
+}
+
+[mono-dropdown][mono-size="sm"] {
+  --_mono-dropdown-radius-preset: var(--mono-dropdown-radius-sm, var(--mono-radius-md));
+  --_mono-dropdown-pad-x-preset: var(--mono-dropdown-pad-x-sm, calc(var(--mono-spacing) * 3));
+  --_mono-dropdown-pad-y-preset: var(--mono-dropdown-pad-y-sm, calc(var(--mono-spacing) * 3));
+  --_mono-dropdown-gap-preset: var(--mono-dropdown-gap-sm, calc(var(--mono-spacing) * 2.5));
+  --_mono-dropdown-font-preset: var(--mono-dropdown-font-sm, var(--mono-text-xs));
+  --_mono-dropdown-line-height-preset: var(--mono-text-xs--lh);
+  --_mono-dropdown-min-width-preset: var(--mono-dropdown-min-width-sm, 170px);
+  --_mono-dropdown-max-width-preset: var(--mono-dropdown-max-width-sm, 240px);
+  --_mono-dropdown-offset-preset: var(--mono-dropdown-offset-sm, var(--mono-spacing));
+}
+
+[mono-dropdown][mono-size="lg"] {
+  --_mono-dropdown-radius-preset: var(--mono-dropdown-radius-lg, var(--mono-radius-lg));
+  --_mono-dropdown-pad-x-preset: var(--mono-dropdown-pad-x-lg, calc(var(--mono-spacing) * 5));
+  --_mono-dropdown-pad-y-preset: var(--mono-dropdown-pad-y-lg, calc(var(--mono-spacing) * 5));
+  --_mono-dropdown-gap-preset: var(--mono-dropdown-gap-lg, calc(var(--mono-spacing) * 5));
+  --_mono-dropdown-font-preset: var(--mono-dropdown-font-lg, var(--mono-text-sm));
+  --_mono-dropdown-line-height-preset: var(--mono-text-sm--lh);
+  --_mono-dropdown-min-width-preset: var(--mono-dropdown-min-width-lg, 240px);
+  --_mono-dropdown-max-width-preset: var(--mono-dropdown-max-width-lg, 340px);
+  --_mono-dropdown-offset-preset: var(--mono-dropdown-offset-lg, calc(var(--mono-spacing) * 1.5));
+}
+
+[mono-dropdown][mono-size="xl"] {
+  --_mono-dropdown-radius-preset: var(--mono-dropdown-radius-xl, var(--mono-radius-xl));
+  --_mono-dropdown-pad-x-preset: var(--mono-dropdown-pad-x-xl, calc(var(--mono-spacing) * 6));
+  --_mono-dropdown-pad-y-preset: var(--mono-dropdown-pad-y-xl, calc(var(--mono-spacing) * 6));
+  --_mono-dropdown-gap-preset: var(--mono-dropdown-gap-xl, calc(var(--mono-spacing) * 5));
+  --_mono-dropdown-font-preset: var(--mono-dropdown-font-xl, var(--mono-text-base));
+  --_mono-dropdown-line-height-preset: var(--mono-text-base--lh);
+  --_mono-dropdown-min-width-preset: var(--mono-dropdown-min-width-xl, 280px);
+  --_mono-dropdown-max-width-preset: var(--mono-dropdown-max-width-xl, 420px);
+  --_mono-dropdown-offset-preset: var(--mono-dropdown-offset-xl, calc(var(--mono-spacing) * 2));
+}
+
+[mono-dropdown][mono-size="xxl"] {
+  --_mono-dropdown-radius-preset: var(--mono-dropdown-radius-xxl, var(--mono-radius-xl));
+  --_mono-dropdown-pad-x-preset: var(--mono-dropdown-pad-x-xxl, calc(var(--mono-spacing) * 7));
+  --_mono-dropdown-pad-y-preset: var(--mono-dropdown-pad-y-xxl, calc(var(--mono-spacing) * 7));
+  --_mono-dropdown-gap-preset: var(--mono-dropdown-gap-xxl, calc(var(--mono-spacing) * 6));
+  --_mono-dropdown-font-preset: var(--mono-dropdown-font-xxl, var(--mono-text-lg));
+  --_mono-dropdown-line-height-preset: var(--mono-text-lg--lh);
+  --_mono-dropdown-min-width-preset: var(--mono-dropdown-min-width-xxl, 320px);
+  --_mono-dropdown-max-width-preset: var(--mono-dropdown-max-width-xxl, 480px);
+  --_mono-dropdown-offset-preset: var(--mono-dropdown-offset-xxl, calc(var(--mono-spacing) * 2.5));
+}
+
+/* =========================================
+   Colours — EXTENSION: the role tints the panel's ring
+   ========================================= */
+
+[mono-dropdown][mono-color="primary"] { --_mono-dropdown-accent-preset: var(--_mono-dropdown-primary); }
+[mono-dropdown][mono-color="secondary"] { --_mono-dropdown-accent-preset: var(--_mono-dropdown-secondary); }
+[mono-dropdown][mono-color="success"] { --_mono-dropdown-accent-preset: var(--_mono-dropdown-success); }
+[mono-dropdown][mono-color="danger"] { --_mono-dropdown-accent-preset: var(--_mono-dropdown-danger); }
+[mono-dropdown][mono-color="warning"] { --_mono-dropdown-accent-preset: var(--_mono-dropdown-warning); }
+[mono-dropdown][mono-color="info"] { --_mono-dropdown-accent-preset: var(--_mono-dropdown-info); }
+[mono-dropdown][mono-color="teal"] { --_mono-dropdown-accent-preset: var(--_mono-dropdown-teal); }
+[mono-dropdown][mono-color="purple"] { --_mono-dropdown-accent-preset: var(--_mono-dropdown-purple); }
+[mono-dropdown][mono-color="neutral"] { --_mono-dropdown-accent-preset: var(--_mono-dropdown-neutral); }
+[mono-dropdown][mono-color="dark"] { --_mono-dropdown-accent-preset: var(--_mono-dropdown-dark); }
+
+/* =========================================
+   Activator — EXTENSION: a wrapper that stays out of layout
+   ========================================= */
+
+:where([mono-dropdown]) > [mono-activator] {
+  display: contents;
+}
+
+/* The activator is the consumer's own control, so it is dimmed once and gently:
+   0.55 is the pre-port value, kept so a disabled dropdown reads the same. */
+[mono-dropdown][mono-disabled] > [mono-activator] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* =========================================
+   Panel — `[data-popover]`
+   ========================================= */
+
+/* basecoat@1.0.2 components/popover.css [data-popover] — absolute z-50 min-w-full
+   w-max overflow-x-hidden overflow-y-auto visible opacity-100 scale-100
+   transition-all outline-hidden
+   — DEVIATIONS: `min-w-full` is the BODY's floor here (see [mono-body]) so a
+   body that cannot shrink sizes the panel instead of spilling out of it, and the
+   z-index is the shared popup stack's `--mono-popup-z` rather than a flat z-50. */
+:where([mono-dropdown]) > [mono-panel] {
+  position: absolute;
+  z-index: var(--mono-popup-z, 200);
+  width: max-content;
+  min-width: min-content;
+  max-width: var(--_mono-dropdown-max-width);
+  max-height: var(--mono-popup-avail-h, none);
+  overflow-x: hidden;
+  overflow-y: auto;
+  visibility: visible;
+  opacity: 1;
+  scale: 1;
+  outline: none;
+  transition:
+    opacity var(--mono-duration) var(--mono-ease),
+    scale var(--mono-duration) var(--mono-ease),
+    translate var(--mono-duration) var(--mono-ease),
+    visibility var(--mono-duration) var(--mono-ease);
+
+  /* basecoat@1.0.2 styles/vega.css [data-popover] — bg-popover
+     text-popover-foreground ring-foreground/10 flex flex-col gap-4 rounded-md p-4
+     text-sm shadow-md ring-1 duration-100 */
+  display: flex;
+  flex-direction: column;
+  gap: var(--_mono-dropdown-gap);
+  padding: var(--_mono-dropdown-pad-y) var(--_mono-dropdown-pad-x);
+  border-radius: var(--_mono-dropdown-radius);
+  background: var(--_mono-dropdown-bg);
+  color: var(--_mono-dropdown-text);
+  font-size: var(--_mono-dropdown-font);
+  line-height: var(--_mono-dropdown-line-height);
+  box-shadow:
+    0 0 0 var(--_mono-dropdown-ring-width) var(--_mono-dropdown-ring-color),
+    var(--_mono-dropdown-shadow);
+}
+
+/* basecoat@1.0.2 components/popover.css [data-popover] >> &[aria-hidden='true']
+   — invisible opacity-0 scale-95, and a 2-unit translate away from the side it
+   opens from. The element writes `aria-hidden` on the panel already, so the
+   closed state needs no class of its own. */
+[mono-dropdown] > [mono-panel][aria-hidden="true"] {
+  visibility: hidden;
+  opacity: 0;
+  scale: 0.95;
+  pointer-events: none;
+}
+
+[mono-dropdown][mono-side="top"] > [mono-panel][aria-hidden="true"] {
+  translate: 0 calc(var(--mono-spacing) * 2);
+}
+
+[mono-dropdown]:not([mono-side]) > [mono-panel][aria-hidden="true"],
+[mono-dropdown][mono-side="bottom"] > [mono-panel][aria-hidden="true"] {
+  translate: 0 calc(var(--mono-spacing) * -2);
+}
+
+[mono-dropdown][mono-side="left"] > [mono-panel][aria-hidden="true"] {
+  translate: calc(var(--mono-spacing) * 2) 0;
+}
+
+[mono-dropdown][mono-side="right"] > [mono-panel][aria-hidden="true"] {
+  translate: calc(var(--mono-spacing) * -2) 0;
+}
+
+/* Once the element takes over, it positions the panel in the viewport and writes
+   inline top/left — so the static placement rules below must not fight it. */
+[mono-dropdown][mono-fixed] > [mono-panel] {
+  position: fixed;
+}
+
+/* =========================================
+   Static placement — `[data-side]` / `[data-align]`, verbatim
+   -----------------------------------------------------------------------------
+   These are what hand-written markup (and SSR, before the element hydrates)
+   positions with. The element overrides them with inline top/left once it has
+   measured, which is why every rule here uses only the four edges.
+   ========================================= */
+
+/* basecoat@1.0.2 components/popover.css [data-popover] >> &:not([data-side]), &[data-side='bottom']
+   — mt-1 top-full */
+[mono-dropdown]:not([mono-side]):not([mono-fixed]) > [mono-panel],
+[mono-dropdown][mono-side="bottom"]:not([mono-fixed]) > [mono-panel] {
+  top: 100%;
+  margin-top: var(--_mono-dropdown-offset);
+}
+
+/* basecoat@1.0.2 components/popover.css [data-popover] >> &[data-side='top'] — mb-1 bottom-full */
+[mono-dropdown][mono-side="top"]:not([mono-fixed]) > [mono-panel] {
+  bottom: 100%;
+  margin-bottom: var(--_mono-dropdown-offset);
+}
+
+/* basecoat@1.0.2 components/popover.css [data-popover] >> &[data-side='left'] — me-1 end-full */
+[mono-dropdown][mono-side="left"]:not([mono-fixed]) > [mono-panel] {
+  inset-inline-end: 100%;
+  margin-inline-end: var(--_mono-dropdown-offset);
+}
+
+/* basecoat@1.0.2 components/popover.css [data-popover] >> &[data-side='right'] — ms-1 start-full */
+[mono-dropdown][mono-side="right"]:not([mono-fixed]) > [mono-panel] {
+  inset-inline-start: 100%;
+  margin-inline-start: var(--_mono-dropdown-offset);
+}
+
+/* The top/bottom pair aligns on the inline axis: start-0 / end-0 / start-1/2 -translate-x-1/2 */
+[mono-dropdown]:is(:not([mono-side]), [mono-side="top"], [mono-side="bottom"]):is(:not([mono-align]), [mono-align="start"]):not([mono-fixed]) > [mono-panel] {
+  inset-inline-start: 0;
+}
+
+[mono-dropdown]:is(:not([mono-side]), [mono-side="top"], [mono-side="bottom"])[mono-align="end"]:not([mono-fixed]) > [mono-panel] {
+  inset-inline-end: 0;
+}
+
+[mono-dropdown]:is(:not([mono-side]), [mono-side="top"], [mono-side="bottom"])[mono-align="center"]:not([mono-fixed]) > [mono-panel] {
+  inset-inline-start: 50%;
+  translate: -50% 0;
+}
+
+/* …and the left/right pair on the block axis: top-0 / bottom-0 / top-1/2 -translate-y-1/2 */
+[mono-dropdown]:is([mono-side="left"], [mono-side="right"]):is(:not([mono-align]), [mono-align="start"]):not([mono-fixed]) > [mono-panel] {
+  top: 0;
+}
+
+[mono-dropdown]:is([mono-side="left"], [mono-side="right"])[mono-align="end"]:not([mono-fixed]) > [mono-panel] {
+  bottom: 0;
+}
+
+[mono-dropdown]:is([mono-side="left"], [mono-side="right"])[mono-align="center"]:not([mono-fixed]) > [mono-panel] {
+  top: 50%;
+  translate: 0 -50%;
+}
+
+/* A centred panel keeps its centring translate while closed, and adds the
+   directional one — `translate` is a single property, so both go in one value. */
+[mono-dropdown]:is(:not([mono-side]), [mono-side="bottom"])[mono-align="center"]:not([mono-fixed]) > [mono-panel][aria-hidden="true"] {
+  translate: -50% calc(var(--mono-spacing) * -2);
+}
+
+[mono-dropdown][mono-side="top"][mono-align="center"]:not([mono-fixed]) > [mono-panel][aria-hidden="true"] {
+  translate: -50% calc(var(--mono-spacing) * 2);
+}
+
+[mono-dropdown][mono-side="left"][mono-align="center"]:not([mono-fixed]) > [mono-panel][aria-hidden="true"] {
+  translate: calc(var(--mono-spacing) * 2) -50%;
+}
+
+[mono-dropdown][mono-side="right"][mono-align="center"]:not([mono-fixed]) > [mono-panel][aria-hidden="true"] {
+  translate: calc(var(--mono-spacing) * -2) -50%;
+}
+
+/* =========================================
+   Body — EXTENSION: the panel's width floor
+   ========================================= */
+
+/* The floor lives HERE, not on the panel, so it reaches the panel as a
+   min-content contribution rather than as a competing `min-width` — which is
+   what lets slotted content that cannot shrink (a body with its own width) size
+   the panel instead of spilling out of it. Only the padding is subtracted
+   so the panel's border box lands on exactly --_mono-dropdown-min-width.
+   Only the padding is subtracted: the edge is Basecoat's `ring-1`, a
+   box-shadow, which takes no layout space (subtracting it left every panel 2px
+   under its preset). */
+:where([mono-dropdown]) > [mono-panel] > [mono-body] {
+  min-width: calc(var(--_mono-dropdown-min-width) - 2 * var(--_mono-dropdown-pad-x));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([mono-dropdown]) > [mono-panel] {
+    transition: none;
+  }
+}

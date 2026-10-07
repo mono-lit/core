@@ -1,0 +1,46 @@
+@import '../data/theme/index.css';
+
+/* The shared scrollbar design — one rail for every mono scroll surface. Base-first,
+   so a component could still override it; none does. Shadow builds get the same
+   file appended by toShadowCss(), since dist/ui/index.css never enters a shadow root. */
+@import '../data/theme/scrollbar.css';
+
+/* Text selection on the surfaces mono repaints. Same two-lane wiring as the
+   scrollbar above, and for the same reason. */
+@import '../data/theme/selection.css';
+
+@import '../vite/mono-skeleton.css';
+/* The automatic skeleton (`pending` + phantom-ui) — theme hooks of the wrapper. */
+@import '../components/skeleton/skeleton.css';
+
+@import '../components/accordion/accordion.css';
+@import '../components/chip/chip.css';
+@import '../components/breadcrumb/breadcrumb.css';
+@import '../components/button/button.css';
+@import '../components/button/button-dropdown.css';
+@import '../components/alert/alert.css';
+@import '../components/card/card.css';
+@import '../components/chart/chart.css';
+@import '../components/checkbox/checkbox.css';
+@import '../components/drawer/drawer.css';
+@import '../components/dropdown/dropdown.css';
+@import '../components/file-upload/file-upload.css';
+@import '../components/input/input.css';
+@import '../components/date/date.css';
+@import '../components/menu/menu.css';
+@import '../components/modal/modal.css';
+@import '../components/nav/nav.css';
+@import '../components/radio/radio.css';
+@import '../components/select/select.css';
+@import '../components/sidebar/sidebar.css';
+@import '../components/switch/switch.css';
+@import '../components/tabs/tabs.css';
+@import '../components/tag-input/tag-input.css';
+@import '../components/textarea/textarea.css';
+@import '../components/rich-text-editor/rich-text-editor.css';
+@import '../components/table/table.css';
+@import '../components/dropdown-table/dropdown-table.css';
+@import '../components/filter/filter.css';
+/* tooltip addon — the floating element is body-level, so this one sheet serves
+   the light and the shadow build */
+@import '../components/tooltip/tooltip.css';

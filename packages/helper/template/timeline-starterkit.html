@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EkaJaya BMS — Timeline Starterkit</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --cobalt:#2563a8;--cobalt-dark:#1a4a85;--cobalt-deep:#0f3060;
+  --cobalt-lite:#dbeafe;--cobalt-soft:#eff6ff;
+  --sky:#4a9fd4;--sky-dark:#2e7db0;--sky-lite:#cde8f8;--sky-soft:#f0f8fd;
+  --teal:#3aaa8c;--teal-dark:#2a8870;--teal-lite:#c6ede3;--teal-soft:#f0faf7;
+  --silver:#8ba0b0;--silver-lite:#e8f0f5;--silver-soft:#f4f7fa;
+  --ink:#1a2d42;--ink-mid:#3a5068;--ink-soft:#6a8098;--ink-faint:#9ab0c0;
+  --bg:#f0f6fb;--border:#d0e4f0;--border-lite:#e4eff8;
+  --red:#dc2626;--red-dark:#b91c1c;--red-soft:#fef2f2;--red-lite:#fecaca;
+  --orange:#ea580c;--orange-soft:#fff7ed;--orange-lite:#fed7aa;
+  --green:#16a34a;--green-dark:#15803d;--green-soft:#f0fdf4;--green-lite:#bbf7d0;
+  --yellow:#ca8a04;--yellow-soft:#fefce8;--yellow-lite:#fef08a;
+  --purple:#7c3aed;--purple-soft:#f5f3ff;--purple-lite:#ddd6fe;
+  --pink:#db2777;--pink-soft:#fdf2f8;
+  --sb-w:264px;
+}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+#sb::-webkit-scrollbar{width:3px;}#sb::-webkit-scrollbar-thumb{background:var(--cobalt-lite);border-radius:99px;}
+
+/* ══ SIDEBAR ══ */
+#sb{width:var(--sb-w);background:#fff;border-right:1.5px solid var(--border-lite);box-shadow:3px 0 20px rgba(37,99,168,.07);position:fixed;top:0;left:0;bottom:0;z-index:50;display:flex;flex-direction:column;overflow-y:auto;transition:left .26s ease;}
+#sb-ov{display:none;}
+.sb-brand{padding:1rem 1rem .85rem;background:linear-gradient(135deg,var(--cobalt),var(--sky));flex-shrink:0;}
+.sb-brand-row{display:flex;align-items:center;gap:.8rem;}
+.sb-logo{width:46px;height:46px;border-radius:10px;background:#fff;border:2px solid rgba(255,255,255,.6);box-shadow:0 2px 12px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;padding:4px;overflow:hidden;flex-shrink:0;}
+.sb-logo img{width:100%;height:100%;object-fit:contain;}
+.sb-name{color:#fff;font-size:1.05rem;font-weight:800;letter-spacing:.03em;line-height:1.2;}
+.sb-sub-txt{color:rgba(255,255,255,.82);font-size:.67rem;font-weight:600;letter-spacing:.13em;text-transform:uppercase;margin-top:2px;}
+.sb-user{padding:.75rem .85rem;border-bottom:1px solid var(--border-lite);}
+.sb-user-in{display:flex;align-items:center;gap:.7rem;background:var(--cobalt-soft);border-radius:11px;padding:.55rem .8rem;border:1px solid var(--cobalt-lite);}
+.sb-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--cobalt),var(--sky));display:flex;align-items:center;justify-content:center;color:#fff;font-size:.72rem;font-weight:700;flex-shrink:0;}
+.sb-un{font-size:.83rem;font-weight:700;color:var(--ink);}.sb-ur{font-size:.7rem;color:var(--ink-soft);}
+.sb-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 2px var(--teal-lite);flex-shrink:0;margin-left:auto;}
+.sb-nav{flex:1;padding:.6rem .7rem;display:flex;flex-direction:column;gap:1px;}
+.nav-grp{font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--silver);padding:0 10px;margin:12px 0 3px;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;cursor:pointer;color:var(--ink-mid);font-size:.82rem;font-weight:500;border:1px solid transparent;text-decoration:none;transition:all .14s;}
+.nav-item:hover{background:var(--cobalt-soft);color:var(--cobalt);border-color:var(--cobalt-lite);}
+.nav-item.on{background:linear-gradient(135deg,var(--cobalt),var(--sky));color:#fff;box-shadow:0 3px 12px rgba(37,99,168,.25);}
+.nav-badge{margin-left:auto;font-size:.68rem;border-radius:99px;padding:1px 7px;background:var(--silver-lite);color:var(--ink-mid);font-family:'DM Mono',monospace;}
+.nav-item.on .nav-badge{background:rgba(255,255,255,.25);color:#fff;}
+.nb-red{background:#fee2e2!important;color:#dc2626!important;}
+.sb-foot{padding:.75rem .7rem;border-top:1px solid var(--border-lite);}
+.sb-btn-nav{width:100%;display:flex;align-items:center;gap:.7rem;padding:.55rem .9rem;border-radius:9px;font-size:.82rem;font-weight:500;cursor:pointer;border:none;font-family:inherit;transition:all .14s;color:var(--ink-soft);background:transparent;}
+.sb-btn-nav:hover{background:var(--silver-soft);}
+.sb-logout{background:#fff0f0!important;color:#dc2626!important;border:1px solid #fecaca!important;margin-top:3px;}
+.sb-ver{text-align:center;font-size:.66rem;color:var(--ink-faint);margin-top:.6rem;}
+.main{margin-left:var(--sb-w);display:flex;flex-direction:column;min-height:100vh;}
+
+/* ══ TOPBAR ══ */
+.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:.65rem;padding:.75rem 1.5rem;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1.5px solid var(--border-lite);box-shadow:0 2px 12px rgba(37,99,168,.06);min-height:56px;}
+.tb-ham{display:none;flex-direction:column;gap:5px;padding:.35rem;border-radius:9px;border:none;background:transparent;cursor:pointer;flex-shrink:0;}
+.tb-ham span{display:block;width:22px;height:2px;background:var(--ink-mid);border-radius:2px;}
+.tb-ttl{min-width:0;flex:1;overflow:hidden;}
+.tb-ttl h1{font-size:.95rem;font-weight:800;color:var(--cobalt-deep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-ttl p{font-size:.72rem;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-srch{position:relative;flex-shrink:0;}
+.tb-srch input{padding:.48rem .85rem .48rem 2.1rem;border:1.5px solid var(--border);border-radius:9px;font-size:.82rem;font-family:inherit;color:var(--ink);background:var(--cobalt-soft);outline:none;width:200px;transition:all .18s;}
+.tb-srch input:focus{border-color:var(--sky);background:#fff;box-shadow:0 0 0 3px var(--sky-lite);}
+.tb-srch-ico{position:absolute;left:.65rem;top:50%;transform:translateY(-50%);font-size:.82rem;pointer-events:none;color:var(--ink-faint);}
+.tb-acts{display:flex;align-items:center;gap:.35rem;flex-shrink:0;}
+.tb-ico{position:relative;padding:.45rem .55rem;border-radius:10px;border:1.5px solid var(--border-lite);background:var(--cobalt-soft);cursor:pointer;font-size:1rem;line-height:1;transition:all .14s;}
+.tb-ico:hover{background:var(--cobalt-lite);border-color:var(--cobalt);}
+.tb-notif{position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:var(--red);color:#fff;font-size:.58rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.tb-avbtn{display:flex;align-items:center;gap:.55rem;padding:.38rem .7rem .38rem .38rem;border-radius:11px;border:1.5px solid var(--border-lite);background:var(--cobalt-soft);cursor:pointer;transition:all .14s;}
+.tb-avbtn:hover{background:var(--cobalt-lite);}
+.tb-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--cobalt),var(--sky));display:flex;align-items:center;justify-content:center;color:#fff;font-size:.68rem;font-weight:700;}
+.tb-avnm{font-size:.78rem;font-weight:700;color:var(--ink);}
+.tb-avrl{font-size:.66rem;color:var(--ink-soft);}
+.tb-chev{font-size:.6rem;color:var(--ink-faint);}
+.ddw{position:relative;}
+.ddp{display:none;position:absolute;right:0;top:calc(100% + 8px);z-index:200;background:#fff;border:1px solid var(--border-lite);border-radius:14px;box-shadow:0 12px 40px rgba(37,99,168,.15);min-width:220px;overflow:hidden;}
+.ddp.on{display:block;}
+.dd-hd{padding:.85rem 1rem .6rem;border-bottom:1px solid var(--border-lite);background:var(--cobalt-soft);}
+.dd-ht{font-size:.88rem;font-weight:800;color:var(--cobalt-deep);}
+.dd-it{display:flex;align-items:center;gap:.7rem;padding:.62rem 1rem;font-size:.82rem;font-weight:500;cursor:pointer;color:var(--ink-mid);border:none;background:none;width:100%;text-align:left;font-family:inherit;transition:background .12s;}
+.dd-it:hover{background:var(--cobalt-soft);color:var(--cobalt);}
+.dd-it.dng:hover{background:var(--red-soft);color:var(--red);}
+.dd-ico{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.82rem;background:var(--silver-lite);flex-shrink:0;}
+.dd-ic-c{background:var(--cobalt-soft);}
+.dd-lbl{font-size:.82rem;font-weight:600;color:var(--ink);}
+.dd-sep{height:1px;background:var(--border-lite);margin:.1rem 0;}
+.dd-prf{display:flex;align-items:center;gap:.75rem;padding:.85rem 1rem;border-bottom:1px solid var(--border-lite);background:var(--cobalt-soft);}
+.dd-pav{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--cobalt),var(--sky));display:flex;align-items:center;justify-content:center;color:#fff;font-size:.78rem;font-weight:700;flex-shrink:0;}
+.dd-pnm{font-size:.88rem;font-weight:700;color:var(--ink);}
+.dd-prl{font-size:.72rem;color:var(--ink-soft);}
+
+/* ══ CONTENT ══ */
+#content{padding:1.5rem;flex:1;}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1.4rem;flex-wrap:wrap;}
+.ph-bc{font-size:.72rem;color:var(--ink-faint);margin-bottom:.28rem;}.ph-bc span{color:var(--cobalt);font-weight:600;}
+.ph-ttl{font-size:1.1rem;font-weight:800;color:var(--cobalt-deep);}
+.ph-sub{font-size:.78rem;color:var(--ink-soft);margin-top:2px;}
+
+/* Tab nav */
+.tab-nav{display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:1.4rem;background:#fff;border:1px solid var(--border-lite);border-radius:14px;padding:.42rem;box-shadow:0 2px 8px rgba(37,99,168,.05);}
+.tab-btn{padding:.46rem .95rem;border-radius:9px;font-size:.8rem;font-weight:600;cursor:pointer;border:none;font-family:inherit;color:var(--ink-mid);background:transparent;transition:all .14s;white-space:nowrap;}
+.tab-btn:hover{background:var(--cobalt-soft);color:var(--cobalt);}
+.tab-btn.on{background:linear-gradient(135deg,var(--cobalt),var(--sky));color:#fff;box-shadow:0 3px 10px rgba(37,99,168,.22);}
+.sect{display:none;animation:fi .2s ease;}
+.sect.on{display:block;}
+@keyframes fi{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+/* Grid */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
+
+/* Section card */
+.sc{background:#fff;border:1px solid var(--border-lite);border-radius:16px;box-shadow:0 2px 12px rgba(37,99,168,.06);overflow:hidden;margin-bottom:1.25rem;}
+.sc-head{padding:.82rem 1.25rem;border-bottom:1px solid var(--border-lite);background:linear-gradient(135deg,var(--cobalt-soft),var(--sky-soft));display:flex;align-items:center;gap:.65rem;}
+.sc-ico{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--cobalt),var(--sky));display:flex;align-items:center;justify-content:center;font-size:.82rem;flex-shrink:0;}
+.sc-ttl{font-size:.88rem;font-weight:800;color:var(--cobalt-deep);}
+.sc-sub{font-size:.7rem;color:var(--ink-soft);margin-top:1px;}
+.sc-body{padding:1.25rem;}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.38rem;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;cursor:pointer;border:none;border-radius:9px;transition:all .15s;white-space:nowrap;font-size:.8rem;padding:.44rem .9rem;line-height:1.2;}
+.btn-primary{background:linear-gradient(135deg,var(--cobalt),var(--sky));color:#fff;box-shadow:0 2px 10px rgba(37,99,168,.25);}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(37,99,168,.35);}
+.btn-secondary{background:#fff;color:var(--cobalt);border:1.5px solid var(--cobalt-lite);}
+.btn-secondary:hover{background:var(--cobalt-soft);}
+.btn-ghost{background:var(--cobalt-soft);color:var(--cobalt);border:1.5px solid var(--cobalt-lite);}
+.btn-ghost:hover{background:var(--cobalt-lite);}
+.btn-sm{padding:.3rem .7rem;font-size:.74rem;border-radius:7px;}
+
+/* Badge */
+.badge{display:inline-flex;align-items:center;gap:.25rem;padding:.18rem .65rem;border-radius:99px;font-size:.7rem;font-weight:700;white-space:nowrap;}
+.b-blue{background:var(--cobalt-soft);color:var(--cobalt);}
+.b-green{background:var(--green-soft);color:var(--green-dark);}
+.b-red{background:var(--red-soft);color:var(--red-dark);}
+.b-orange{background:var(--orange-soft);color:var(--orange);}
+.b-teal{background:var(--teal-soft);color:var(--teal-dark);}
+.b-purple{background:var(--purple-soft);color:var(--purple);}
+.b-gray{background:var(--silver-lite);color:var(--ink-mid);}
+.b-yellow{background:var(--yellow-soft);color:var(--yellow);}
+
+/* Avatar mini */
+.av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-weight:700;color:#fff;font-size:.65rem;flex-shrink:0;}
+.av-sm{width:26px;height:26px;}
+.av-md{width:32px;height:32px;font-size:.72rem;}
+.av-lg{width:40px;height:40px;font-size:.82rem;}
+
+/* Toast */
+#toasts{position:fixed;bottom:1.4rem;right:1.4rem;z-index:9999;display:flex;flex-direction:column;gap:.4rem;}
+.toast{display:flex;align-items:center;gap:.6rem;padding:.65rem .95rem;border-radius:11px;font-size:.81rem;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.13);min-width:210px;max-width:310px;animation:tIn .28s cubic-bezier(.34,1.56,.64,1);}
+@keyframes tIn{from{opacity:0;transform:translateX(18px);}to{opacity:1;transform:translateX(0);}}
+.t-ok{background:var(--green-soft);border:1px solid var(--green-lite);color:var(--green);}
+.t-inf{background:var(--cobalt-soft);border:1px solid var(--cobalt-lite);color:var(--cobalt-dark);}
+.t-err{background:var(--red-soft);border:1px solid var(--red-lite);color:var(--red);}
+
+/* ════════════════════════════════════════
+   TIMELINE CORE STYLES
+════════════════════════════════════════ */
+
+/* ── SHARED ── */
+.tl-date-label{display:flex;align-items:center;gap:.5rem;margin:1.1rem 0 .65rem;}
+.tl-date-label::before,.tl-date-label::after{content:'';flex:1;height:1px;background:var(--border-lite);}
+.tl-date-txt{font-size:.67rem;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.12em;white-space:nowrap;background:var(--bg);padding:0 .4rem;}
+
+/* ──────────────────────────────────────
+   STYLE 1: Classic Left Timeline
+────────────────────────────────────── */
+.tl-classic{display:flex;flex-direction:column;position:relative;padding-left:2.4rem;}
+.tl-classic::before{content:'';position:absolute;left:.88rem;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--cobalt-lite),var(--border-lite));border-radius:2px;}
+
+.tlc-item{display:flex;flex-direction:column;position:relative;padding-bottom:1.4rem;}
+.tlc-item:last-child{padding-bottom:0;}
+.tlc-item:last-child::after{display:none;}
+
+.tlc-dot{position:absolute;left:-2.4rem;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.68rem;border:2.5px solid #fff;box-shadow:0 0 0 2px var(--border-lite);z-index:1;flex-shrink:0;margin-top:.15rem;}
+.tlc-dot.d-blue{background:var(--cobalt);box-shadow:0 0 0 2px var(--cobalt-lite);}
+.tlc-dot.d-green{background:var(--green);box-shadow:0 0 0 2px var(--green-lite);}
+.tlc-dot.d-red{background:var(--red);box-shadow:0 0 0 2px var(--red-lite);}
+.tlc-dot.d-orange{background:var(--orange);box-shadow:0 0 0 2px var(--orange-lite);}
+.tlc-dot.d-teal{background:var(--teal);box-shadow:0 0 0 2px var(--teal-lite);}
+.tlc-dot.d-purple{background:var(--purple);box-shadow:0 0 0 2px var(--purple-lite);}
+.tlc-dot.d-gray{background:var(--silver);box-shadow:0 0 0 2px var(--silver-lite);}
+.tlc-dot.d-pulse::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid currentColor;opacity:.4;animation:ripple 1.8s ease-in-out infinite;}
+@keyframes ripple{0%,100%{transform:scale(1);opacity:.4;}50%{transform:scale(1.4);opacity:0;}}
+
+.tlc-time{font-size:.67rem;font-family:'DM Mono',monospace;color:var(--ink-faint);margin-bottom:.22rem;}
+.tlc-ttl{font-size:.86rem;font-weight:700;color:var(--ink);margin-bottom:.2rem;line-height:1.3;}
+.tlc-sub{font-size:.78rem;color:var(--ink-soft);line-height:1.5;}
+.tlc-meta{display:flex;align-items:center;gap:.5rem;margin-top:.45rem;flex-wrap:wrap;}
+.tlc-by{display:flex;align-items:center;gap:.35rem;font-size:.73rem;color:var(--ink-soft);}
+.tlc-by-name{font-weight:600;color:var(--ink-mid);}
+
+/* Card variant inside classic */
+.tlc-card{background:#fff;border:1px solid var(--border-lite);border-radius:10px;padding:.7rem .9rem;margin-top:.42rem;box-shadow:0 1px 6px rgba(37,99,168,.05);}
+.tlc-card-row{display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;}
+.tlc-card-row+.tlc-card-row{margin-top:.35rem;padding-top:.35rem;border-top:1px solid var(--border-lite);}
+.tlc-card-lbl{font-size:.72rem;color:var(--ink-faint);}
+.tlc-card-val{font-size:.78rem;font-weight:600;color:var(--ink);font-family:'DM Mono',monospace;}
+.tlc-card-val.green{color:var(--green);}
+.tlc-card-val.red{color:var(--red);}
+.tlc-card-val.blue{color:var(--cobalt);}
+.tlc-card-actions{display:flex;gap:.3rem;margin-top:.5rem;}
+
+/* Image / attachment in timeline */
+.tlc-img-row{display:flex;gap:.4rem;margin-top:.45rem;flex-wrap:wrap;}
+.tlc-img{width:52px;height:52px;border-radius:7px;background:var(--cobalt-soft);border:1px solid var(--border-lite);display:flex;align-items:center;justify-content:center;font-size:1.2rem;cursor:pointer;transition:all .14s;overflow:hidden;}
+.tlc-img:hover{border-color:var(--cobalt);transform:scale(1.06);}
+
+/* ──────────────────────────────────────
+   STYLE 2: Right-side (two column)
+────────────────────────────────────── */
+.tl-two-col{display:flex;flex-direction:column;gap:0;position:relative;}
+.tl-two-col::before{content:'';position:absolute;left:50%;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--cobalt-lite),var(--border-lite));transform:translateX(-50%);}
+
+.ttc-row{display:grid;grid-template-columns:1fr 40px 1fr;align-items:flex-start;gap:0;margin-bottom:1.2rem;}
+.ttc-row:last-child{margin-bottom:0;}
+.ttc-left{text-align:right;padding-right:1.1rem;}
+.ttc-center{display:flex;flex-direction:column;align-items:center;padding-top:.12rem;}
+.ttc-dot{width:20px;height:20px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 0 2px var(--border-lite);flex-shrink:0;}
+.ttc-line{flex:1;width:2px;background:var(--border-lite);margin-top:3px;}
+.ttc-right{padding-left:1.1rem;}
+.ttc-empty{padding:1.1rem 0;}
+
+/* ──────────────────────────────────────
+   STYLE 3: Compact / Inline
+────────────────────────────────────── */
+.tl-compact{display:flex;flex-direction:column;gap:0;}
+.tlcp-item{display:flex;align-items:flex-start;gap:.75rem;padding:.52rem 0;border-bottom:1px solid var(--border-lite);}
+.tlcp-item:last-child{border-bottom:none;}
+.tlcp-left{display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0;width:36px;}
+.tlcp-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.tlcp-body{flex:1;min-width:0;}
+.tlcp-ttl{font-size:.82rem;font-weight:600;color:var(--ink);line-height:1.3;}
+.tlcp-sub{font-size:.75rem;color:var(--ink-soft);margin-top:2px;}
+.tlcp-time{font-size:.67rem;font-family:'DM Mono',monospace;color:var(--ink-faint);}
+.tlcp-right{flex-shrink:0;text-align:right;}
+
+/* ──────────────────────────────────────
+   STYLE 4: Activity Feed
+────────────────────────────────────── */
+.tl-feed{display:flex;flex-direction:column;gap:.55rem;}
+.tlf-item{display:flex;align-items:flex-start;gap:.75rem;padding:.75rem .9rem;border-radius:12px;border:1px solid var(--border-lite);background:#fff;transition:all .14s;}
+.tlf-item:hover{background:var(--cobalt-soft);border-color:var(--cobalt-lite);box-shadow:0 2px 8px rgba(37,99,168,.07);}
+.tlf-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;}
+.tlf-body{flex:1;min-width:0;}
+.tlf-ttl{font-size:.83rem;font-weight:700;color:var(--ink);line-height:1.3;}
+.tlf-sub{font-size:.76rem;color:var(--ink-soft);margin-top:.2rem;line-height:1.4;}
+.tlf-meta{display:flex;align-items:center;gap:.5rem;margin-top:.38rem;flex-wrap:wrap;}
+.tlf-time{font-size:.68rem;font-family:'DM Mono',monospace;color:var(--ink-faint);}
+.tlf-right{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:.35rem;}
+
+/* ──────────────────────────────────────
+   STYLE 5: Approval / Status Track
+────────────────────────────────────── */
+.tl-approval{display:flex;flex-direction:column;gap:0;position:relative;}
+.tl-approval::before{content:'';position:absolute;left:1.2rem;top:1.2rem;bottom:1.2rem;width:2px;background:var(--border-lite);}
+
+.tla-item{display:flex;align-items:flex-start;gap:.9rem;padding:.6rem 0 1rem;}
+.tla-item:last-child{padding-bottom:0;}
+.tla-left{display:flex;flex-direction:column;align-items:center;flex-shrink:0;z-index:1;}
+.tla-ico{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.88rem;border:2px solid #fff;flex-shrink:0;}
+.tla-ico.done{background:var(--green);box-shadow:0 2px 8px rgba(22,163,74,.3);}
+.tla-ico.active{background:linear-gradient(135deg,var(--cobalt),var(--sky));box-shadow:0 2px 10px rgba(37,99,168,.3);}
+.tla-ico.pending{background:var(--silver-lite);border:2px solid var(--border);}
+.tla-ico.rejected{background:var(--red);box-shadow:0 2px 8px rgba(220,38,38,.3);}
+.tla-ico.skipped{background:var(--orange-soft);border:2px solid var(--orange-lite);}
+.tla-body{flex:1;padding-top:.3rem;}
+.tla-header{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;margin-bottom:.22rem;}
+.tla-ttl{font-size:.87rem;font-weight:800;color:var(--ink);}
+.tla-sub{font-size:.76rem;color:var(--ink-soft);margin-bottom:.4rem;line-height:1.4;}
+.tla-note{background:var(--cobalt-soft);border:1px solid var(--cobalt-lite);border-radius:8px;padding:.5rem .75rem;font-size:.76rem;color:var(--ink-mid);margin-top:.38rem;line-height:1.5;}
+.tla-note.rejected-note{background:var(--red-soft);border-color:var(--red-lite);color:var(--red-dark);}
+.tla-time{font-size:.67rem;font-family:'DM Mono',monospace;color:var(--ink-faint);}
+.tla-actor{display:flex;align-items:center;gap:.38rem;font-size:.75rem;color:var(--ink-soft);}
+.tla-actor-name{font-weight:600;color:var(--ink-mid);}
+
+/* ──────────────────────────────────────
+   STYLE 6: Horizontal Timeline
+────────────────────────────────────── */
+.tl-horizontal{overflow-x:auto;padding-bottom:.5rem;}
+.tl-horizontal::-webkit-scrollbar{height:4px;}
+.tl-horizontal::-webkit-scrollbar-thumb{background:var(--cobalt-lite);border-radius:99px;}
+.tlh-inner{display:flex;align-items:flex-start;min-width:max-content;padding:.5rem 0 .75rem;position:relative;}
+.tlh-inner::before{content:'';position:absolute;top:1.25rem;left:0;right:0;height:2px;background:linear-gradient(to right,var(--cobalt-lite),var(--border-lite));z-index:0;}
+
+.tlh-item{display:flex;flex-direction:column;align-items:center;width:160px;flex-shrink:0;position:relative;z-index:1;}
+.tlh-dot{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;border:2.5px solid #fff;box-shadow:0 0 0 2px var(--border-lite);margin-bottom:.55rem;flex-shrink:0;}
+.tlh-content{text-align:center;padding:0 .5rem;}
+.tlh-time{font-size:.65rem;font-family:'DM Mono',monospace;color:var(--ink-faint);margin-bottom:.18rem;}
+.tlh-ttl{font-size:.78rem;font-weight:700;color:var(--ink);line-height:1.3;margin-bottom:.18rem;}
+.tlh-sub{font-size:.7rem;color:var(--ink-soft);}
+
+/* ──────────────────────────────────────
+   STYLE 7: Chat / Message Timeline
+────────────────────────────────────── */
+.tl-chat{display:flex;flex-direction:column;gap:.65rem;}
+.tlch-item{display:flex;gap:.6rem;align-items:flex-end;}
+.tlch-item.right{flex-direction:row-reverse;}
+.tlch-av{flex-shrink:0;}
+.tlch-bubble{max-width:72%;background:#fff;border:1px solid var(--border-lite);border-radius:12px 12px 12px 3px;padding:.62rem .85rem;box-shadow:0 1px 4px rgba(37,99,168,.06);}
+.tlch-item.right .tlch-bubble{background:linear-gradient(135deg,var(--cobalt),var(--sky));color:#fff;border:none;border-radius:12px 12px 3px 12px;box-shadow:0 2px 8px rgba(37,99,168,.2);}
+.tlch-name{font-size:.68rem;font-weight:700;color:var(--cobalt);margin-bottom:.2rem;}
+.tlch-item.right .tlch-name{color:rgba(255,255,255,.8);}
+.tlch-msg{font-size:.82rem;line-height:1.5;color:var(--ink);}
+.tlch-item.right .tlch-msg{color:#fff;}
+.tlch-time{font-size:.64rem;font-family:'DM Mono',monospace;color:var(--ink-faint);margin-top:.28rem;}
+.tlch-item.right .tlch-time{color:rgba(255,255,255,.6);text-align:right;}
+.tlch-attach{display:flex;align-items:center;gap:.4rem;margin-top:.35rem;padding:.35rem .55rem;background:var(--cobalt-soft);border-radius:7px;font-size:.74rem;color:var(--cobalt);border:1px solid var(--cobalt-lite);}
+.tlch-item.right .tlch-attach{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.25);color:#fff;}
+.tlch-sys{text-align:center;font-size:.72rem;color:var(--ink-faint);padding:.3rem;font-style:italic;}
+
+/* ──────────────────────────────────────
+   STYLE 8: Klaim History (use case)
+────────────────────────────────────── */
+.tl-klaim-header{display:flex;align-items:center;justify-content:space-between;padding:.65rem 1rem;background:var(--cobalt-soft);border-radius:10px;margin-bottom:.85rem;border:1px solid var(--cobalt-lite);}
+.tkh-ref{font-family:'DM Mono',monospace;font-size:.83rem;font-weight:700;color:var(--cobalt-deep);}
+.tkh-sub{font-size:.72rem;color:var(--ink-soft);margin-top:1px;}
+
+/* Responsive */
+@media(max-width:1024px){
+  #sb{left:calc(-1 * var(--sb-w));}#sb.open{left:0;}
+  #sb-ov{display:block;}#sb-ov.on{position:fixed;inset:0;z-index:40;background:rgba(15,45,90,.4);backdrop-filter:blur(3px);}
+  .main{margin-left:0;}.tb-ham{display:flex;}
+  .g2{grid-template-columns:1fr;}
+  .tl-two-col::before{display:none;}
+  .ttc-row{grid-template-columns:1fr;gap:.5rem;}
+  .ttc-left{text-align:left;padding:0;}
+  .ttc-right{padding:0;}
+  .ttc-center{display:none;}
+  .ttc-empty{display:none;}
+}
+@media(max-width:768px){
+  .tb-srch{display:none;}.tb-avnm,.tb-avrl,.tb-chev{display:none;}
+  .tb-ttl p{display:none;}.topbar{padding:.6rem .85rem;gap:.5rem;}
+}
+@media(max-width:640px){#content{padding:1rem;}
+  .tl-classic{padding-left:1.8rem;}
+  .tl-classic::before{left:.65rem;}
+  .tlc-dot{left:-1.8rem;}
+}
+</style>
+</head>
+<body>
+
+<div id="sb-ov" onclick="closeSb()"></div>
+
+<!-- SIDEBAR -->
+<aside id="sb">
+  <div class="sb-brand"><div class="sb-brand-row">
+    <div class="sb-logo"><img src="https://esw.eji.co.id/res/img/logo.png" alt="EJ" onerror="this.style.display='none'"/></div>
+    <div><div class="sb-name">EKA JAYA</div><div class="sb-sub-txt">Internasional</div></div>
+  </div></div>
+  <div class="sb-user"><div class="sb-user-in">
+    <div class="sb-av">AD</div>
+    <div><div class="sb-un">Administrator</div><div class="sb-ur">Super Admin</div></div>
+    <div class="sb-dot"></div>
+  </div></div>
+  <nav class="sb-nav">
+    <a class="nav-item on" href="#">🏠 <span>Dashboard</span></a>
+    <div class="nav-grp">Klaim</div>
+    <a class="nav-item" href="#">📌 <span>Manajemen Klaim</span><span class="nav-badge nb-red">4.4K</span></a>
+    <a class="nav-item" href="#">📓 <span>Logbook</span></a>
+    <div class="nav-grp">Penjualan</div>
+    <a class="nav-item" href="#">💰 <span>Sell Out</span></a>
+    <a class="nav-item" href="#">🚗 <span>Salesman &amp; BA</span></a>
+    <div class="nav-grp">Laporan</div>
+    <a class="nav-item" href="#">📊 <span>Report &amp; Analisis</span></a>
+    <div class="nav-grp">Master Data</div>
+    <a class="nav-item" href="#">🗄️ <span>Data Master</span></a>
+  </nav>
+  <div class="sb-foot">
+    <button class="sb-btn-nav">❓ Bantuan</button>
+    <button class="sb-btn-nav sb-logout">🚪 Log Out</button>
+    <p class="sb-ver">v2.5.0 · © 2025 PT EkaJaya</p>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <header class="topbar">
+    <button class="tb-ham" onclick="openSb()"><span></span><span></span><span></span></button>
+    <div class="tb-ttl"><h1>Timeline Starterkit</h1><p>Dashboard › Starterkit › Timeline</p></div>
+    <div class="tb-srch"><span class="tb-srch-ico">🔍</span><input type="text" placeholder="Cari menu…"/></div>
+    <div class="tb-acts">
+      <div class="ddw">
+        <button class="tb-ico" onclick="togDD('ddi')">📩<span class="tb-notif">3</span></button>
+        <div class="ddp" id="ddi">
+          <div class="dd-hd"><div class="dd-ht">My Inbox</div></div>
+          <div style="padding:.65rem 1rem;border-bottom:1px solid var(--border-lite);font-size:.79rem;color:var(--ink-soft)">Klaim #KLM-0891 butuh approval</div>
+          <div style="padding:.6rem 1rem;background:var(--cobalt-soft)"><a href="#" style="font-size:.77rem;color:var(--cobalt);font-weight:600;text-decoration:none">Lihat semua →</a></div>
+        </div>
+      </div>
+      <div class="ddw"><button class="tb-avbtn" onclick="togDD('ddu')">
+        <div class="tb-av">AD</div>
+        <div><div class="tb-avnm">Administrator</div><div class="tb-avrl">Super Admin</div></div>
+        <span class="tb-chev">▼</span>
+      </button>
+      <div class="ddp" id="ddu">
+        <div class="dd-prf"><div class="dd-pav">AD</div><div><div class="dd-pnm">Administrator</div><div class="dd-prl">Super Admin · EkaJaya</div></div></div>
+        <button class="dd-it"><div class="dd-ico dd-ic-c">👤</div><div><div class="dd-lbl">Profil Saya</div></div></button>
+        <div class="dd-sep"></div>
+        <button class="dd-it dng"><div class="dd-ico">🚪</div><div><div class="dd-lbl">Log Out</div></div></button>
+      </div></div>
+    </div>
+  </header>
+
+  <div id="content">
+    <div class="ph">
+      <div>
+        <div class="ph-bc">Dashboard › <span>Timeline Starterkit</span></div>
+        <div class="ph-ttl">Timeline Starterkit — EkaJaya BMS</div>
+        <div class="ph-sub">8 style timeline siap pakai — History, Approval, Activity Feed, Chat, dan lainnya</div>
+      </div>
+    </div>
+
+    <!-- TAB NAV -->
+    <div class="tab-nav">
+      <button class="tab-btn on" onclick="showTab('t1',this)">📋 Classic</button>
+      <button class="tab-btn" onclick="showTab('t2',this)">⚖️ Two Column</button>
+      <button class="tab-btn" onclick="showTab('t3',this)">⚡ Compact</button>
+      <button class="tab-btn" onclick="showTab('t4',this)">📡 Activity Feed</button>
+      <button class="tab-btn" onclick="showTab('t5',this)">✅ Approval Track</button>
+      <button class="tab-btn" onclick="showTab('t6',this)">➡️ Horizontal</button>
+      <button class="tab-btn" onclick="showTab('t7',this)">💬 Chat</button>
+      <button class="tab-btn" onclick="showTab('t8',this)">📌 Klaim History</button>
+    </div>
+
+    <!-- ═══ TAB 1: CLASSIC LEFT TIMELINE ═══ -->
+    <div class="sect on" id="t1">
+      <div class="g2">
+
+        <!-- Basic classic -->
+        <div class="sc">
+          <div class="sc-head"><div class="sc-ico">📋</div><div><div class="sc-ttl">Classic — Basic Dots</div><div class="sc-sub">Timeline vertikal kiri dengan dot berwarna</div></div></div>
+          <div class="sc-body">
+            <div class="tl-classic">
+              <div class="tl-date-label"><span class="tl-date-txt">Hari Ini</span></div>
+
+              <div class="tlc-item">
+                <div class="tlc-dot d-blue d-pulse" style="color:var(--cobalt)">●</div>
+                <div class="tlc-time">14:32 WIB</div>
+                <div class="tlc-ttl">Klaim #KLM-0053 Diajukan</div>
+                <div class="tlc-sub">Ahmad Fauzi mengajukan klaim Sell Out senilai Rp 2.500.000 untuk outlet Indomaret Sudirman.</div>
+                <div class="tlc-meta">
+                  <div class="tlc-by">
+                    <div class="av av-sm" style="background:#2563a8">AF</div>
+                    <span class="tlc-by-name">Ahmad Fauzi</span>
+                    <span>·</span><span>Modern Trade</span>
+                  </div>
+                  <span class="badge b-blue">● Pending</span>
+                </div>
+              </div>
+
+              <div class="tlc-item">
+                <div class="tlc-dot d-green">✓</div>
+                <div class="tlc-time">10:15 WIB</div>
+                <div class="tlc-ttl">Klaim #KLM-0052 Disetujui</div>
+                <div class="tlc-sub">Klaim disetujui oleh Supervisor. Nilai Rp 1.800.000 siap dicairkan.</div>
+                <div class="tlc-meta">
+                  <div class="tlc-by">
+                    <div class="av av-sm" style="background:#16a34a">DK</div>
+                    <span class="tlc-by-name">Dewi Kartika</span>
+                    <span>·</span><span>Supervisor</span>
+                  </div>
+                  <span class="badge b-green">✓ Disetujui</span>
+                </div>
+              </div>
+
+              <div class="tl-date-label"><span class="tl-date-txt">Kemarin</span></div>
+
+              <div class="tlc-item">
+                <div class="tlc-dot d-orange">!</div>
+                <div class="tlc-time">16:40 WIB</div>
+                <div class="tlc-ttl">Klaim #KLM-0051 Dikembalikan</div>
+                <div class="tlc-sub">Dokumen bukti tidak lengkap. Diminta melengkapi foto struk dan nota pembelian.</div>
+                <div class="tlc-meta">
+                  <span class="badge b-orange">⟲ Dikembalikan</span>
+                </div>
+              </div>
+
+              <div class="tlc-item">
+                <div class="tlc-dot d-teal">📤</div>
+                <div class="tlc-time">09:00 WIB</div>
+                <div class="tlc-ttl">Target Q3 Diperbarui</div>
+                <div class="tlc-sub">Admin memperbarui target sell out untuk area Jakarta Utara naik 15% dari Q2.</div>
+                <div class="tlc-meta">
+                  <span class="badge b-teal">● Update</span>
+                </div>
+              </div>
+
+              <div class="tl-date-label"><span class="tl-date-txt">9 Apr 2025</span></div>
+
+              <div class="tlc-item">
+                <div class="tlc-dot d-red">✕</div>
+                <div class="tlc-time">11:22 WIB</div>
+                <div class="tlc-ttl">Klaim #KLM-0049 Ditolak</div>
+                <div class="tlc-sub">Nilai klaim melebihi limit budget yang disetujui. Harap ajukan ulang dengan nilai sesuai.</div>
+                <div class="tlc-meta">
+                  <span class="badge b-red">✕ Ditolak</span>
+                </div>
+              </div>
+
+              <div class="tlc-item">
+                <div class="tlc-dot d-gray">◉</div>
+                <div class="tlc-time">08:05 WIB</div>
+                <div class="tlc-ttl">Login — Sesi Baru</div>
+                <div class="tlc-sub">Ahmad Fauzi masuk dari perangkat Mobile · IP 180.244.x.x</div>
+                <div class="tlc-meta"><span class="badge b-gray">◉ Login</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Classic with card content -->
+        <div class="sc">
+          <div class="sc-head"><div class="sc-ico">📋</div><div><div class="sc-ttl">Classic — With Card Content</div><div class="sc-sub">Timeline dengan card detail dan action button</div></div></div>
+          <div class="sc-body">
+            <div class="tl-classic">
+              <div class="tl-date-label"><span class="tl-date-txt">10 Apr 2025</span></div>
+
+              <div class="tlc-item">
+                <div class="tlc-dot d-blue d-pulse" style="color:var(--cobalt)">●</div>
+                <div class="tlc-time">14:32 WIB · Baru saja</div>
+                <div class="tlc-ttl">Klaim Baru Masuk</div>
+                <div class="tlc-sub">Menunggu review admin</div>
+                <div class="tlc-card">
+                  <div class="tlc-card-row">
+                    <span class="tlc-card-lbl">No. Klaim</span>
+                    <span class="tlc-card-val blue">KLM-2025-0053</span>
+                  </div>
+                  <div class="tlc-card-row">
+                    <span class="tlc-card-lbl">Nilai</span>
+                    <span class="tlc-card-val green">Rp 2.500.000</span>
+                  </div>
+                  <div class="tlc-card-row">
+                    <span class="tlc-card-lbl">Jenis</span>
+                    <span class="tlc-card-val">Sell Out</span>
+                  </div>
+                  <div class="tlc-card-actions">
+                    <button class="btn btn-primary btn-sm" onclick="toast('✅ Disetujui','ok')">✅ Setujui</button>
+                    <button class="btn btn-ghost btn-sm" onclick="toast('📋 Detail','inf')">Detail</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tlc-item">
+                <div class="tlc-dot d-green">✓</div>
+                <div class="tlc-time">10:15 WIB</div>
+                <div class="tlc-ttl">Pembayaran Klaim Selesai</div>
+                <div class="tlc-sub">Dana berhasil ditransfer ke rekening salesman</div>
+                <div class="tlc-card">
+                  <div class="tlc-card-row">
+                    <span class="tlc-card-lbl">No. Klaim</span>
+                    <span class="tlc-card-val blue">KLM-2025-0048</span>
+                  </div>
+                  <div class="tlc-card-row">
+                    <span class="tlc-card-lbl">Dicairkan</span>
+                    <span class="tlc-card-val green">Rp 4.250.000</span>
+                  </div>
+                  <div class="tlc-card-row">
+                    <span class="tlc-card-lbl">Metode</span>
+                    <span class="tlc-card-val">Transfer Bank</span>
+                  </div>
+                </div>
+                <div class="tlc-img-row">
+                  <div class="tlc-img" title="Bukti transfer">📄</div>
+                  <div class="tlc-img" title="Foto nota">🖼️</div>
+                  <div class="tlc-img" title="Dokumen">📋</div>
+                </div>
+              </div>
+
+              <div class="tl-date-label"><span class="tl-date-txt">9 Apr 2025</span></div>
+
+              <div class="tlc-item">
+                <div class="tlc-dot d-purple">🎯</div>
+                <div class="tlc-time">15:00 WIB</div>
+                <div class="tlc-ttl">Target Baru Ditetapkan</div>
+                <div class="tlc-sub">Target sell out Q3 2025 resmi ditetapkan oleh manajemen</div>
+                <div class="tlc-card">
+                  <div class="tlc-card-row">
+                    <span class="tlc-card-lbl">Periode</span>
+                    <span class="tlc-card-val">Q3 2025</span>
+                  </div>
+                  <div class="tlc-card-row">
+                    <span class="tlc-card-lbl">Target</span>
+                    <span class="tlc-card-val green">Rp 50.000.000</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB 2: TWO COLUMN ═══ -->
+    <div class="sect" id="t2">
+      <div class="sc">
+        <div class="sc-head"><div class="sc-ico">⚖️</div><div><div class="sc-ttl">Two Column Timeline</div><div class="sc-sub">Item bergantian kiri–kanan, cocok untuk perbandingan 2 entitas atau alur bolak-balik</div></div></div>
+        <div class="sc-body">
+          <div class="tl-two-col">
+
+            <!-- Row 1: kiri -->
+            <div class="ttc-row">
+              <div class="ttc-left">
+                <div style="font-size:.67rem;font-family:'DM Mono',monospace;color:var(--ink-faint);margin-bottom:.2rem">09:00 · 10 Apr</div>
+                <div style="font-size:.85rem;font-weight:700;color:var(--ink);margin-bottom:.2rem">Klaim Disubmit</div>
+                <div style="font-size:.77rem;color:var(--ink-soft);margin-bottom:.4rem">Ahmad Fauzi mengajukan klaim #KLM-0053 senilai Rp 2.500.000</div>
+                <span class="badge b-blue">● Submit</span>
+              </div>
+              <div class="ttc-center">
+                <div class="ttc-dot" style="background:var(--cobalt);box-shadow:0 0 0 3px var(--cobalt-lite)"></div>
+                <div class="ttc-line"></div>
+              </div>
+              <div class="ttc-right ttc-empty"></div>
+            </div>
+
+            <!-- Row 2: kanan -->
+            <div class="ttc-row">
+              <div class="ttc-left ttc-empty"></div>
+              <div class="ttc-center">
+                <div class="ttc-dot" style="background:var(--teal);box-shadow:0 0 0 3px var(--teal-lite)"></div>
+                <div class="ttc-line"></div>
+              </div>
+              <div class="ttc-right">
+                <div style="font-size:.67rem;font-family:'DM Mono',monospace;color:var(--ink-faint);margin-bottom:.2rem">10:15 · 10 Apr</div>
+                <div style="font-size:.85rem;font-weight:700;color:var(--ink);margin-bottom:.2rem">Review Admin</div>
+                <div style="font-size:.77rem;color:var(--ink-soft);margin-bottom:.4rem">Dewi (Admin) memeriksa kelengkapan dokumen. Data lengkap dan valid.</div>
+                <span class="badge b-teal">✓ Review Selesai</span>
+              </div>
+            </div>
+
+            <!-- Row 3: kiri -->
+            <div class="ttc-row">
+              <div class="ttc-left">
+                <div style="font-size:.67rem;font-family:'DM Mono',monospace;color:var(--ink-faint);margin-bottom:.2rem">13:30 · 10 Apr</div>
+                <div style="font-size:.85rem;font-weight:700;color:var(--ink);margin-bottom:.2rem">SPV Approval</div>
+                <div style="font-size:.77rem;color:var(--ink-soft);margin-bottom:.4rem">Budi (Supervisor) menyetujui klaim setelah verifikasi outlet.</div>
+                <span class="badge b-green">✓ Disetujui SPV</span>
+              </div>
+              <div class="ttc-center">
+                <div class="ttc-dot" style="background:var(--green);box-shadow:0 0 0 3px var(--green-lite)"></div>
+                <div class="ttc-line"></div>
+              </div>
+              <div class="ttc-right ttc-empty"></div>
+            </div>
+
+            <!-- Row 4: kanan -->
+            <div class="ttc-row">
+              <div class="ttc-left ttc-empty"></div>
+              <div class="ttc-center">
+                <div class="ttc-dot" style="background:var(--purple);box-shadow:0 0 0 3px var(--purple-lite)"></div>
+                <div class="ttc-line"></div>
+              </div>
+              <div class="ttc-right">
+                <div style="font-size:.67rem;font-family:'DM Mono',monospace;color:var(--ink-faint);margin-bottom:.2rem">15:00 · 10 Apr</div>
+                <div style="font-size:.85rem;font-weight:700;color:var(--ink);margin-bottom:.2rem">Manager Sign-off</div>
+                <div style="font-size:.77rem;color:var(--ink-soft);margin-bottom:.4rem">Manager memberi persetujuan final untuk pencairan dana.</div>
+                <span class="badge b-purple">✓ Manager Approve</span>
+              </div>
+            </div>
+
+            <!-- Row 5: kiri — final -->
+            <div class="ttc-row">
+              <div class="ttc-left">
+                <div style="font-size:.67rem;font-family:'DM Mono',monospace;color:var(--ink-faint);margin-bottom:.2rem">09:00 · 11 Apr</div>
+                <div style="font-size:.85rem;font-weight:700;color:var(--green);margin-bottom:.2rem">💰 Dana Dicairkan</div>
+                <div style="font-size:.77rem;color:var(--ink-soft);margin-bottom:.4rem">Rp 2.500.000 berhasil ditransfer ke rekening Ahmad Fauzi.</div>
+                <span class="badge b-green">✓ Selesai</span>
+              </div>
+              <div class="ttc-center">
+                <div class="ttc-dot" style="background:var(--green);box-shadow:0 0 0 3px var(--green-lite)"></div>
+              </div>
+              <div class="ttc-right ttc-empty"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB 3: COMPACT ═══ -->
+    <div class="sect" id="t3">
+      <div class="g2">
+        <div class="sc">
+          <div class="sc-head"><div class="sc-ico">⚡</div><div><div class="sc-ttl">Compact — Minimal</div><div class="sc-sub">Padat, untuk sidebar widget atau panel kecil</div></div></div>
+          <div class="sc-body">
+            <div class="tl-compact">
+              <div class="tlcp-item">
+                <div class="tlcp-left"><div class="tlcp-dot" style="background:var(--cobalt)"></div></div>
+                <div class="tlcp-body"><div class="tlcp-ttl">Klaim #KLM-0053 diajukan</div><div class="tlcp-sub">Ahmad Fauzi · Sell Out · Rp 2.500.000</div></div>
+                <div class="tlcp-right"><div class="tlcp-time">14:32</div><span class="badge b-blue" style="font-size:.62rem">Baru</span></div>
+              </div>
+              <div class="tlcp-item">
+                <div class="tlcp-left"><div class="tlcp-dot" style="background:var(--green)"></div></div>
+                <div class="tlcp-body"><div class="tlcp-ttl">Klaim #KLM-0052 disetujui</div><div class="tlcp-sub">Dewi (Admin) · Rp 1.800.000</div></div>
+                <div class="tlcp-right"><div class="tlcp-time">10:15</div><span class="badge b-green" style="font-size:.62rem">✓</span></div>
+              </div>
+              <div class="tlcp-item">
+                <div class="tlcp-left"><div class="tlcp-dot" style="background:var(--orange)"></div></div>
+                <div class="tlcp-body"><div class="tlcp-ttl">Klaim #KLM-0051 dikembalikan</div><div class="tlcp-sub">Dokumen belum lengkap</div></div>
+                <div class="tlcp-right"><div class="tlcp-time">Kemarin</div></div>
+              </div>
+              <div class="tlcp-item">
+                <div class="tlcp-left"><div class="tlcp-dot" style="background:var(--teal)"></div></div>
+                <div class="tlcp-body"><div class="tlcp-ttl">Target Q3 diperbarui</div><div class="tlcp-sub">Admin · Naik 15%</div></div>
+                <div class="tlcp-right"><div class="tlcp-time">2 hari lalu</div></div>
+              </div>
+              <div class="tlcp-item">
+                <div class="tlcp-left"><div class="tlcp-dot" style="background:var(--red)"></div></div>
+                <div class="tlcp-body"><div class="tlcp-ttl">Klaim #KLM-0049 ditolak</div><div class="tlcp-sub">Nilai melebihi limit budget</div></div>
+                <div class="tlcp-right"><div class="tlcp-time">3 hari lalu</div><span class="badge b-red" style="font-size:.62rem">✕</span></div>
+              </div>
+              <div class="tlcp-item">
+                <div class="tlcp-left"><div class="tlcp-dot" style="background:var(--purple)"></div></div>
+                <div class="tlcp-body"><div class="tlcp-ttl">Salesman baru didaftarkan</div><div class="tlcp-sub">Hana Pertiwi · General Trade</div></div>
+                <div class="tlcp-right"><div class="tlcp-time">4 hari lalu</div></div>
+              </div>
+              <div class="tlcp-item">
+                <div class="tlcp-left"><div class="tlcp-dot" style="background:var(--silver)"></div></div>
+                <div class="tlcp-body"><div class="tlcp-ttl">Laporan bulanan digenerate</div><div class="tlcp-sub">Maret 2025 · PDF</div></div>
+                <div class="tlcp-right"><div class="tlcp-time">1 minggu lalu</div></div>
+              </div>
+            </div>
+            <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:.75rem;font-size:.78rem" onclick="toast('📋 Memuat lebih banyak...','inf')">Lihat Semua →</button>
+          </div>
+        </div>
+
+        <!-- Compact with number badge -->
+        <div class="sc">
+          <div class="sc-head"><div class="sc-ico">⚡</div><div><div class="sc-ttl">Compact — Numbered</div><div class="sc-sub">Dengan nomor urut dan nilai transaksi</div></div></div>
+          <div class="sc-body">
+            <div class="tl-compact">
+              <div class="tlcp-item">
+                <div class="tlcp-left">
+                  <div style="width:22px;height:22px;border-radius:6px;background:var(--cobalt);color:#fff;font-size:.68rem;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace">1</div>
+                </div>
+                <div class="tlcp-body">
+                  <div class="tlcp-ttl">Serum Vitamin C Pro — 240 unit</div>
+                  <div class="tlcp-sub">Indomaret Sudirman · Jul 2025</div>
+                </div>
+                <div class="tlcp-right" style="text-align:right">
+                  <div style="font-family:'DM Mono',monospace;font-size:.78rem;font-weight:700;color:var(--green)">Rp 12.000.000</div>
+                  <div class="tlcp-time">10 Apr</div>
+                </div>
+              </div>
+              <div class="tlcp-item">
+                <div class="tlcp-left">
+                  <div style="width:22px;height:22px;border-radius:6px;background:var(--sky);color:#fff;font-size:.68rem;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace">2</div>
+                </div>
+                <div class="tlcp-body">
+                  <div class="tlcp-ttl">Parfum Rose Gold — 150 unit</div>
+                  <div class="tlcp-sub">Alfamart Kemang · Jul 2025</div>
+                </div>
+                <div class="tlcp-right" style="text-align:right">
+                  <div style="font-family:'DM Mono',monospace;font-size:.78rem;font-weight:700;color:var(--green)">Rp 9.750.000</div>
+                  <div class="tlcp-time">9 Apr</div>
+                </div>
+              </div>
+              <div class="tlcp-item">
+                <div class="tlcp-left">
+                  <div style="width:22px;height:22px;border-radius:6px;background:var(--teal);color:#fff;font-size:.68rem;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace">3</div>
+                </div>
+                <div class="tlcp-body">
+                  <div class="tlcp-ttl">Lotion Brightening SPF — 320 unit</div>
+                  <div class="tlcp-sub">Guardian Senayan · Jul 2025</div>
+                </div>
+                <div class="tlcp-right" style="text-align:right">
+                  <div style="font-family:'DM Mono',monospace;font-size:.78rem;font-weight:700;color:var(--green)">Rp 8.320.000</div>
+                  <div class="tlcp-time">8 Apr</div>
+                </div>
+              </div>
+              <div class="tlcp-item">
+                <div class="tlcp-left">
+                  <div style="width:22px;height:22px;border-radius:6px;background:var(--orange);color:#fff;font-size:.68rem;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace">4</div>
+                </div>
+                <div class="tlcp-body">
+                  <div class="tlcp-ttl">Toner Hyaluronic — 180 unit</div>
+                  <div class="tlcp-sub">Watson Kemang · Jul 2025</div>
+                </div>
+                <div class="tlcp-right" style="text-align:right">
+                  <div style="font-family:'DM Mono',monospace;font-size:.78rem;font-weight:700;color:var(--cobalt)">Rp 7.200.000</div>
+                  <div class="tlcp-time">7 Apr</div>
+                </div>
+              </div>
+              <div class="tlcp-item">
+                <div class="tlcp-left">
+                  <div style="width:22px;height:22px;border-radius:6px;background:var(--purple);color:#fff;font-size:.68rem;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace">5</div>
+                </div>
+                <div class="tlcp-body">
+                  <div class="tlcp-ttl">Lipstik Matte 12 Shade — 96 unit</div>
+                  <div class="tlcp-sub">Matahari Bogor · Jun 2025</div>
+                </div>
+                <div class="tlcp-right" style="text-align:right">
+                  <div style="font-family:'DM Mono',monospace;font-size:.78rem;font-weight:700;color:var(--cobalt)">Rp 6.720.000</div>
+                  <div class="tlcp-time">5 Apr</div>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:.85rem;padding-top:.75rem;border-top:1px solid var(--border-lite);display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:.76rem;color:var(--ink-soft)">Total 5 transaksi</span>
+              <span style="font-family:'DM Mono',monospace;font-weight:800;color:var(--green);font-size:.88rem">Rp 43.990.000</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB 4: ACTIVITY FEED ═══ -->
+    <div class="sect" id="t4">
+      <div class="sc">
+        <div class="sc-head"><div class="sc-ico">📡</div><div><div class="sc-ttl">Activity Feed</div><div class="sc-sub">Card-style feed — aktivitas sistem, notifikasi, dan log perubahan</div></div></div>
+        <div class="sc-body">
+          <div class="tl-date-label" style="margin-top:0"><span class="tl-date-txt">Hari Ini · 10 Apr 2025</span></div>
+          <div class="tl-feed">
+            <div class="tlf-item">
+              <div class="tlf-ico" style="background:var(--cobalt-soft)">📌</div>
+              <div class="tlf-body">
+                <div class="tlf-ttl">Klaim Baru — #KLM-2025-0053</div>
+                <div class="tlf-sub">Ahmad Fauzi mengajukan klaim Sell Out untuk outlet Indomaret Sudirman, nilai <strong>Rp 2.500.000</strong>. Menunggu review admin.</div>
+                <div class="tlf-meta">
+                  <span class="tlf-time">14:32 WIB</span>
+                  <div class="av av-sm" style="background:#2563a8">AF</div>
+                  <span style="font-size:.73rem;font-weight:600;color:var(--ink-mid)">Ahmad Fauzi</span>
+                  <span class="badge b-blue">Sell Out</span>
+                </div>
+              </div>
+              <div class="tlf-right">
+                <span class="badge b-blue">● Pending</span>
+                <button class="btn btn-primary btn-sm" onclick="toast('📋 Membuka klaim','inf')">Review</button>
+              </div>
+            </div>
+
+            <div class="tlf-item">
+              <div class="tlf-ico" style="background:var(--green-soft)">✅</div>
+              <div class="tlf-body">
+                <div class="tlf-ttl">Klaim Disetujui — #KLM-2025-0050</div>
+                <div class="tlf-sub">Budi Santoso (Supervisor) menyetujui klaim senilai <strong>Rp 4.250.000</strong>. Proses pencairan dimulai.</div>
+                <div class="tlf-meta">
+                  <span class="tlf-time">10:15 WIB</span>
+                  <div class="av av-sm" style="background:#16a34a">BS</div>
+                  <span style="font-size:.73rem;font-weight:600;color:var(--ink-mid)">Budi Santoso</span>
+                  <span class="badge b-green">PPL</span>
+                </div>
+              </div>
+              <div class="tlf-right">
+                <span class="badge b-green">✓ Approved</span>
+              </div>
+            </div>
+
+            <div class="tlf-item">
+              <div class="tlf-ico" style="background:var(--orange-soft)">⟲</div>
+              <div class="tlf-body">
+                <div class="tlf-ttl">Klaim Dikembalikan — #KLM-2025-0049</div>
+                <div class="tlf-sub">Dokumen bukti tidak lengkap. Ahmad diminta melengkapi foto struk dan nota dalam 2×24 jam.</div>
+                <div class="tlf-meta">
+                  <span class="tlf-time">09:40 WIB</span>
+                  <span class="badge b-orange">Insentif BA</span>
+                </div>
+              </div>
+              <div class="tlf-right"><span class="badge b-orange">⟲ Returned</span></div>
+            </div>
+
+            <div class="tl-date-label"><span class="tl-date-txt">Kemarin · 9 Apr 2025</span></div>
+
+            <div class="tlf-item">
+              <div class="tlf-ico" style="background:var(--purple-soft)">👤</div>
+              <div class="tlf-body">
+                <div class="tlf-ttl">Salesman Baru Terdaftar</div>
+                <div class="tlf-sub">Hana Pertiwi berhasil didaftarkan sebagai salesman General Trade area Bandung. Akun aktif.</div>
+                <div class="tlf-meta"><span class="tlf-time">15:20 WIB</span><span class="badge b-purple">General Trade</span></div>
+              </div>
+              <div class="tlf-right"><span class="badge b-purple">Baru</span></div>
+            </div>
+
+            <div class="tlf-item">
+              <div class="tlf-ico" style="background:var(--teal-soft)">🎯</div>
+              <div class="tlf-body">
+                <div class="tlf-ttl">Target Q3 2025 Ditetapkan</div>
+                <div class="tlf-sub">Admin menetapkan target sell out Q3 2025 untuk 12 salesman Modern Trade: <strong>Rp 50.000.000</strong>/salesman/bulan.</div>
+                <div class="tlf-meta"><span class="tlf-time">13:00 WIB</span><span class="badge b-teal">Q3 2025</span></div>
+              </div>
+              <div class="tlf-right"><span class="badge b-teal">Target</span></div>
+            </div>
+
+            <div class="tlf-item">
+              <div class="tlf-ico" style="background:var(--red-soft)">❌</div>
+              <div class="tlf-body">
+                <div class="tlf-ttl">Klaim Ditolak — #KLM-2025-0047</div>
+                <div class="tlf-sub">Nilai klaim Rp 8.500.000 melebihi limit budget yang disetujui (Rp 5.000.000). Harap ajukan ulang.</div>
+                <div class="tlf-meta"><span class="tlf-time">09:55 WIB</span><span class="badge b-red">Retur</span></div>
+              </div>
+              <div class="tlf-right"><span class="badge b-red">✕ Rejected</span></div>
+            </div>
+          </div>
+          <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:1rem" onclick="toast('📋 Memuat lebih banyak...','inf')">Muat Lebih Banyak</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB 5: APPROVAL TRACK ═══ -->
+    <div class="sect" id="t5">
+      <div class="g2">
+        <div class="sc">
+          <div class="sc-head"><div class="sc-ico">✅</div><div><div class="sc-ttl">Approval Track — Selesai</div><div class="sc-sub">Semua level approval berhasil dilalui</div></div></div>
+          <div class="sc-body">
+            <div class="tl-approval">
+              <div class="tla-item">
+                <div class="tla-left"><div class="tla-ico done">✓</div></div>
+                <div class="tla-body">
+                  <div class="tla-header"><div class="tla-ttl">Submit Klaim</div><span class="badge b-green">✓ Selesai</span></div>
+                  <div class="tla-actor"><div class="av av-sm" style="background:#2563a8;margin-right:.25rem">AF</div><span class="tla-actor-name">Ahmad Fauzi</span><span>· Salesman</span></div>
+                  <div class="tla-sub" style="margin-top:.3rem">Klaim Sell Out #KLM-0053 senilai Rp 2.500.000</div>
+                  <div class="tla-time">10 Apr 2025 · 09:00 WIB</div>
+                </div>
+              </div>
+              <div class="tla-item">
+                <div class="tla-left"><div class="tla-ico done">✓</div></div>
+                <div class="tla-body">
+                  <div class="tla-header"><div class="tla-ttl">Review Admin</div><span class="badge b-green">✓ Disetujui</span></div>
+                  <div class="tla-actor"><div class="av av-sm" style="background:#3aaa8c;margin-right:.25rem">DK</div><span class="tla-actor-name">Dewi Kartika</span><span>· Admin</span></div>
+                  <div class="tla-sub" style="margin-top:.3rem">Data lengkap, dokumen valid</div>
+                  <div class="tla-note">Catatan: Semua dokumen bukti sudah sesuai ketentuan. Diteruskan ke SPV.</div>
+                  <div class="tla-time" style="margin-top:.4rem">10 Apr 2025 · 10:15 WIB</div>
+                </div>
+              </div>
+              <div class="tla-item">
+                <div class="tla-left"><div class="tla-ico done">✓</div></div>
+                <div class="tla-body">
+                  <div class="tla-header"><div class="tla-ttl">SPV Approval</div><span class="badge b-green">✓ Disetujui</span></div>
+                  <div class="tla-actor"><div class="av av-sm" style="background:#ea580c;margin-right:.25rem">BS</div><span class="tla-actor-name">Budi Santoso</span><span>· Supervisor</span></div>
+                  <div class="tla-sub" style="margin-top:.3rem">Verifikasi outlet selesai</div>
+                  <div class="tla-time">10 Apr 2025 · 13:30 WIB</div>
+                </div>
+              </div>
+              <div class="tla-item">
+                <div class="tla-left"><div class="tla-ico done">✓</div></div>
+                <div class="tla-body">
+                  <div class="tla-header"><div class="tla-ttl">Manager Sign-off</div><span class="badge b-green">✓ Ditandatangani</span></div>
+                  <div class="tla-actor"><div class="av av-sm" style="background:#7c3aed;margin-right:.25rem">RA</div><span class="tla-actor-name">Rini Astuti</span><span>· Manager</span></div>
+                  <div class="tla-time" style="margin-top:.3rem">10 Apr 2025 · 15:00 WIB</div>
+                </div>
+              </div>
+              <div class="tla-item">
+                <div class="tla-left"><div class="tla-ico done">💰</div></div>
+                <div class="tla-body">
+                  <div class="tla-header"><div class="tla-ttl">Dana Dicairkan</div><span class="badge b-green">✓ Selesai</span></div>
+                  <div class="tla-sub">Rp 2.500.000 berhasil ditransfer ke rekening Ahmad Fauzi (BCA ****1234)</div>
+                  <div class="tla-time">11 Apr 2025 · 09:00 WIB</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sc">
+          <div class="sc-head"><div class="sc-ico">✅</div><div><div class="sc-ttl">Approval Track — Ditolak</div><div class="sc-sub">Salah satu level menolak — flow berhenti</div></div></div>
+          <div class="sc-body">
+            <div class="tl-approval">
+              <div class="tla-item">
+                <div class="tla-left"><div class="tla-ico done">✓</div></div>
+                <div class="tla-body">
+                  <div class="tla-header"><div class="tla-ttl">Submit Klaim</div><span class="badge b-green">✓ Selesai</span></div>
+                  <div class="tla-actor"><div class="av av-sm" style="background:#2563a8;margin-right:.25rem">CD</div><span class="tla-actor-name">Citra Dewi</span><span>· Salesman</span></div>
+                  <div class="tla-sub" style="margin-top:.3rem">Klaim Retur #KLM-0051 senilai Rp 8.500.000</div>
+                  <div class="tla-time">9 Apr 2025 · 08:30 WIB</div>
+                </div>
+              </div>
+              <div class="tla-item">
+                <div class="tla-left"><div class="tla-ico done">✓</div></div>
+                <div class="tla-body">
+                  <div class="tla-header"><div class="tla-ttl">Review Admin</div><span class="badge b-green">✓ Disetujui</span></div>
+                  <div class="tla-actor"><div class="av av-sm" style="background:#3aaa8c;margin-right:.25rem">DK</div><span class="tla-actor-name">Dewi Kartika</span><span>· Admin</span></div>
+                  <div class="tla-time" style="margin-top:.3rem">9 Apr 2025 · 09:15 WIB</div>
+                </div>
+              </div>
+              <div class="tla-item">
+                <div class="tla-left"><div class="tla-ico rejected">✕</div></div>
+                <div class="tla-body">
+                  <div class="tla-header"><div class="tla-ttl">SPV Approval</div><span class="badge b-red">✕ Ditolak</span></div>
+                  <div class="tla-actor"><div class="av av-sm" style="background:#ea580c;margin-right:.25rem">BS</div><span class="tla-actor-name">Budi Santoso</span><span>· Supervisor</span></div>
+                  <div class="tla-note rejected-note" style="margin-top:.38rem">Alasan penolakan: Nilai Rp 8.500.000 melebihi limit budget yang disetujui untuk kategori Retur (maks. Rp 5.000.000). Harap ajukan ulang sesuai limit.</div>
+                  <div class="tla-time" style="margin-top:.4rem">9 Apr 2025 · 11:55 WIB</div>
+                </div>
+              </div>
+              <div class="tla-item">
+                <div class="tla-left"><div class="tla-ico pending" style="opacity:.4">4</div></div>
+                <div class="tla-body">
+                  <div class="tla-header"><div class="tla-ttl" style="color:var(--ink-faint)">Manager Sign-off</div><span class="badge b-gray">Dilewati</span></div>
+                  <div class="tla-sub">Tidak diproses karena klaim ditolak di level SPV</div>
+                </div>
+              </div>
+              <div class="tla-item">
+                <div class="tla-left"><div class="tla-ico skipped" style="font-size:.7rem;opacity:.5">—</div></div>
+                <div class="tla-body">
+                  <div class="tla-header"><div class="tla-ttl" style="color:var(--ink-faint)">Pencairan Dana</div><span class="badge b-gray">Dilewati</span></div>
+                  <div class="tla-sub">Tidak diproses</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB 6: HORIZONTAL ═══ -->
+    <div class="sect" id="t6">
+      <div class="sc">
+        <div class="sc-head"><div class="sc-ico">➡️</div><div><div class="sc-ttl">Horizontal Timeline</div><div class="sc-sub">Scroll horizontal — cocok untuk menampilkan milestone atau fase proyek</div></div></div>
+        <div class="sc-body">
+          <!-- Milestone horizontal -->
+          <div style="font-size:.75rem;font-weight:700;color:var(--ink-soft);margin-bottom:.65rem;text-transform:uppercase;letter-spacing:.08em">Milestone Klaim #KLM-0053</div>
+          <div class="tl-horizontal">
+            <div class="tlh-inner">
+              <div class="tlh-item">
+                <div class="tlh-dot" style="background:var(--green);box-shadow:0 0 0 3px var(--green-lite)">✓</div>
+                <div class="tlh-content">
+                  <div class="tlh-time">09:00 · 10 Apr</div>
+                  <div class="tlh-ttl">Submit</div>
+                  <div class="tlh-sub">Ahmad Fauzi</div>
+                  <span class="badge b-green" style="font-size:.62rem;margin-top:.3rem">✓</span>
+                </div>
+              </div>
+              <div class="tlh-item">
+                <div class="tlh-dot" style="background:var(--green);box-shadow:0 0 0 3px var(--green-lite)">✓</div>
+                <div class="tlh-content">
+                  <div class="tlh-time">10:15 · 10 Apr</div>
+                  <div class="tlh-ttl">Review Admin</div>
+                  <div class="tlh-sub">Dewi Kartika</div>
+                  <span class="badge b-green" style="font-size:.62rem;margin-top:.3rem">✓</span>
+                </div>
+              </div>
+              <div class="tlh-item">
+                <div class="tlh-dot" style="background:var(--cobalt);box-shadow:0 0 0 3px var(--cobalt-lite);animation:ripple 1.8s ease-in-out infinite">●</div>
+                <div class="tlh-content">
+                  <div class="tlh-time">Sekarang</div>
+                  <div class="tlh-ttl" style="color:var(--cobalt)">SPV Approval</div>
+                  <div class="tlh-sub">Menunggu</div>
+                  <span class="badge b-blue" style="font-size:.62rem;margin-top:.3rem">Pending</span>
+                </div>
+              </div>
+              <div class="tlh-item">
+                <div class="tlh-dot" style="background:var(--silver-lite);box-shadow:0 0 0 3px var(--border-lite)"></div>
+                <div class="tlh-content">
+                  <div class="tlh-time">—</div>
+                  <div class="tlh-ttl" style="color:var(--ink-faint)">Manager</div>
+                  <div class="tlh-sub" style="color:var(--ink-faint)">Belum</div>
+                  <span class="badge b-gray" style="font-size:.62rem;margin-top:.3rem">Antri</span>
+                </div>
+              </div>
+              <div class="tlh-item">
+                <div class="tlh-dot" style="background:var(--silver-lite);box-shadow:0 0 0 3px var(--border-lite)"></div>
+                <div class="tlh-content">
+                  <div class="tlh-time">—</div>
+                  <div class="tlh-ttl" style="color:var(--ink-faint)">Pencairan</div>
+                  <div class="tlh-sub" style="color:var(--ink-faint)">Belum</div>
+                  <span class="badge b-gray" style="font-size:.62rem;margin-top:.3rem">Antri</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:1.4rem;font-size:.75rem;font-weight:700;color:var(--ink-soft);margin-bottom:.65rem;text-transform:uppercase;letter-spacing:.08em">Timeline Produk Unggulan Q3 2025</div>
+          <div class="tl-horizontal">
+            <div class="tlh-inner">
+              <div class="tlh-item" style="width:130px">
+                <div class="tlh-dot" style="background:var(--cobalt);box-shadow:0 0 0 3px var(--cobalt-lite)">📦</div>
+                <div class="tlh-content">
+                  <div class="tlh-time">Jul 2025</div>
+                  <div class="tlh-ttl">Serum Vit C</div>
+                  <div class="tlh-sub">8.420 unit</div>
+                  <div style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--green);font-weight:700;margin-top:.2rem">Rp 421jt</div>
+                </div>
+              </div>
+              <div class="tlh-item" style="width:130px">
+                <div class="tlh-dot" style="background:var(--sky);box-shadow:0 0 0 3px var(--sky-lite)">🌹</div>
+                <div class="tlh-content">
+                  <div class="tlh-time">Ags 2025</div>
+                  <div class="tlh-ttl">Parfum Rose</div>
+                  <div class="tlh-sub">6.380 unit</div>
+                  <div style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--green);font-weight:700;margin-top:.2rem">Rp 319jt</div>
+                </div>
+              </div>
+              <div class="tlh-item" style="width:130px">
+                <div class="tlh-dot" style="background:var(--pink);box-shadow:0 0 0 3px var(--pink-soft)">💄</div>
+                <div class="tlh-content">
+                  <div class="tlh-time">Ags 2025</div>
+                  <div class="tlh-ttl">Lipstik Matte</div>
+                  <div class="tlh-sub">6.720 unit</div>
+                  <div style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--green);font-weight:700;margin-top:.2rem">Rp 336jt</div>
+                </div>
+              </div>
+              <div class="tlh-item" style="width:130px">
+                <div class="tlh-dot" style="background:var(--teal);box-shadow:0 0 0 3px var(--teal-lite)">🧴</div>
+                <div class="tlh-content">
+                  <div class="tlh-time">Sep 2025</div>
+                  <div class="tlh-ttl">Lotion Bright</div>
+                  <div class="tlh-sub">7.260 unit</div>
+                  <div style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--green);font-weight:700;margin-top:.2rem">Rp 363jt</div>
+                </div>
+              </div>
+              <div class="tlh-item" style="width:130px">
+                <div class="tlh-dot" style="background:var(--orange);box-shadow:0 0 0 3px var(--orange-lite)">💧</div>
+                <div class="tlh-content">
+                  <div class="tlh-time">Sep 2025</div>
+                  <div class="tlh-ttl">Toner Hyalu</div>
+                  <div class="tlh-sub">5.140 unit</div>
+                  <div style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--green);font-weight:700;margin-top:.2rem">Rp 257jt</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB 7: CHAT / MESSAGE ═══ -->
+    <div class="sect" id="t7">
+      <div class="sc">
+        <div class="sc-head"><div class="sc-ico">💬</div><div><div class="sc-ttl">Chat / Message Timeline</div><div class="sc-sub">Percakapan bubble — cocok untuk komentar, catatan approval, atau diskusi klaim</div></div></div>
+        <div class="sc-body" style="background:var(--silver-soft);border-radius:10px;padding:1.1rem;">
+          <div class="tl-chat">
+            <div class="tlch-sys">📋 Klaim #KLM-0053 dibuat — 10 Apr 2025, 09:00</div>
+
+            <div class="tlch-item">
+              <div class="tlch-av"><div class="av av-md" style="background:#2563a8">AF</div></div>
+              <div class="tlch-bubble">
+                <div class="tlch-name">Ahmad Fauzi · Salesman</div>
+                <div class="tlch-msg">Pak, saya sudah upload dokumen untuk klaim ini. Mohon segera direview ya.</div>
+                <div class="tlch-attach">
+                  📎 bukti_transaksi_indomaret.pdf
+                </div>
+                <div class="tlch-time">09:05 ✓✓</div>
+              </div>
+            </div>
+
+            <div class="tlch-item right">
+              <div class="tlch-av"><div class="av av-md" style="background:#3aaa8c">DK</div></div>
+              <div class="tlch-bubble">
+                <div class="tlch-name">Dewi Kartika · Admin</div>
+                <div class="tlch-msg">Oke Ahmad, sudah saya cek. Dokumennya lengkap. Saya forward ke Pak Budi untuk approval SPV.</div>
+                <div class="tlch-time">10:15 ✓✓</div>
+              </div>
+            </div>
+
+            <div class="tlch-sys">🔄 Klaim diteruskan ke SPV — 10:16</div>
+
+            <div class="tlch-item">
+              <div class="tlch-av"><div class="av av-md" style="background:#ea580c">BS</div></div>
+              <div class="tlch-bubble">
+                <div class="tlch-name">Budi Santoso · Supervisor</div>
+                <div class="tlch-msg">Ahmad, saya perlu konfirmasi — outlet Indomaret Sudirman ini sudah aktif di database kita? Tolong kirim juga foto display produknya.</div>
+                <div class="tlch-time">11:30 ✓✓</div>
+              </div>
+            </div>
+
+            <div class="tlch-item right">
+              <div class="tlch-av"><div class="av av-md" style="background:#2563a8">AF</div></div>
+              <div class="tlch-bubble">
+                <div class="tlch-name">Ahmad Fauzi · Salesman</div>
+                <div class="tlch-msg">Siap Pak, ini foto display produk dan NPWP outlet-nya.</div>
+                <div class="tlch-attach">🖼️ foto_display_indomaret.jpg</div>
+                <div class="tlch-attach">📄 npwp_outlet.pdf</div>
+                <div class="tlch-time">11:45 ✓✓</div>
+              </div>
+            </div>
+
+            <div class="tlch-item">
+              <div class="tlch-av"><div class="av av-md" style="background:#ea580c">BS</div></div>
+              <div class="tlch-bubble">
+                <div class="tlch-name">Budi Santoso · Supervisor</div>
+                <div class="tlch-msg">Oke, sudah saya approve. 👍 Tinggal Manager sign-off dan dana akan cair dalam 2 hari kerja.</div>
+                <div class="tlch-time">13:32 ✓✓</div>
+              </div>
+            </div>
+
+            <div class="tlch-sys">✅ Klaim disetujui SPV — 13:30 · Diteruskan ke Manager</div>
+
+            <div class="tlch-item right">
+              <div class="tlch-av"><div class="av av-md" style="background:#7c3aed">RA</div></div>
+              <div class="tlch-bubble">
+                <div class="tlch-name">Rini Astuti · Manager</div>
+                <div class="tlch-msg">Approved. Dana segera diproses Finance. Terima kasih Ahmad, pertahankan performanya!</div>
+                <div class="tlch-time">15:00 ✓✓</div>
+              </div>
+            </div>
+
+            <div class="tlch-sys">💰 Dana dicairkan Rp 2.500.000 — 11 Apr 2025, 09:00</div>
+          </div>
+
+          <!-- Input bar (UI only) -->
+          <div style="display:flex;gap:.55rem;align-items:center;margin-top:1rem;padding-top:.85rem;border-top:1px solid var(--border-lite);">
+            <input style="flex:1;padding:.52rem .85rem;border:1.5px solid var(--border);border-radius:99px;font-size:.83rem;font-family:inherit;outline:none;background:#fff;" placeholder="Tulis catatan atau komentar…" onfocus="this.style.borderColor='var(--sky)'" onblur="this.style.borderColor='var(--border)'"/>
+            <button class="btn btn-primary" style="border-radius:99px;padding:.52rem 1rem" onclick="toast('💬 Pesan terkirim','ok')">Kirim</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB 8: KLAIM HISTORY (USE CASE) ═══ -->
+    <div class="sect" id="t8">
+      <div class="sc">
+        <div class="sc-head"><div class="sc-ico">📌</div><div><div class="sc-ttl">Riwayat Klaim — Use Case Lengkap</div><div class="sc-sub">Kombinasi timeline + metadata klaim, siap pakai di halaman detail klaim</div></div></div>
+        <div class="sc-body">
+          <!-- Klaim header info -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.65rem;margin-bottom:1.1rem;padding:.9rem;background:var(--cobalt-soft);border:1px solid var(--cobalt-lite);border-radius:12px;">
+            <div><div style="font-size:.65rem;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">No. Klaim</div><div style="font-family:'DM Mono',monospace;font-size:.85rem;font-weight:800;color:var(--cobalt)">KLM-2025-0053</div></div>
+            <div><div style="font-size:.65rem;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Salesman</div><div style="font-size:.83rem;font-weight:600;color:var(--ink)">Ahmad Fauzi</div></div>
+            <div><div style="font-size:.65rem;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Nilai</div><div style="font-family:'DM Mono',monospace;font-size:.85rem;font-weight:800;color:var(--green)">Rp 2.500.000</div></div>
+            <div><div style="font-size:.65rem;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Status</div><span class="badge b-blue">● Menunggu SPV</span></div>
+          </div>
+
+          <!-- Combined: approval track + activity in one view -->
+          <div class="tl-classic">
+            <div class="tl-date-label" style="margin-top:0"><span class="tl-date-txt">10 Apr 2025</span></div>
+
+            <div class="tlc-item">
+              <div class="tlc-dot d-green">✓</div>
+              <div class="tlc-time">09:00 WIB</div>
+              <div class="tlc-ttl">Klaim Diajukan</div>
+              <div class="tlc-by" style="margin-top:.22rem">
+                <div class="av av-sm" style="background:#2563a8">AF</div>
+                <span class="tlc-by-name">Ahmad Fauzi</span><span>· Salesman · Modern Trade</span>
+              </div>
+              <div class="tlc-card">
+                <div class="tlc-card-row"><span class="tlc-card-lbl">Jenis</span><span class="tlc-card-val">Sell Out</span></div>
+                <div class="tlc-card-row"><span class="tlc-card-lbl">Outlet</span><span class="tlc-card-val">Indomaret Sudirman</span></div>
+                <div class="tlc-card-row"><span class="tlc-card-lbl">Periode</span><span class="tlc-card-val">Sep 2025</span></div>
+              </div>
+              <div class="tlc-img-row">
+                <div class="tlc-img">📄</div><div class="tlc-img">🖼️</div><div class="tlc-img">📋</div>
+              </div>
+            </div>
+
+            <div class="tlc-item">
+              <div class="tlc-dot d-teal">✓</div>
+              <div class="tlc-time">10:15 WIB</div>
+              <div class="tlc-ttl">Review Admin — Disetujui</div>
+              <div class="tlc-by" style="margin-top:.22rem">
+                <div class="av av-sm" style="background:#3aaa8c">DK</div>
+                <span class="tlc-by-name">Dewi Kartika</span><span>· Admin</span>
+              </div>
+              <div class="tlc-sub" style="margin-top:.3rem">Dokumen lengkap dan valid. Klaim diteruskan ke SPV.</div>
+              <div class="tlc-meta"><span class="badge b-green">✓ Admin Approve</span></div>
+            </div>
+
+            <div class="tlc-item">
+              <div class="tlc-dot d-blue d-pulse" style="color:var(--cobalt)">●</div>
+              <div class="tlc-time">Sekarang — Menunggu</div>
+              <div class="tlc-ttl" style="color:var(--cobalt)">SPV Approval — Pending</div>
+              <div class="tlc-by" style="margin-top:.22rem">
+                <div class="av av-sm" style="background:#ea580c">BS</div>
+                <span class="tlc-by-name">Budi Santoso</span><span>· Supervisor</span>
+              </div>
+              <div class="tlc-sub" style="margin-top:.3rem">Klaim sedang direview oleh Supervisor. Estimasi selesai 1×4 jam.</div>
+              <div class="tlc-card">
+                <div class="tlc-card-actions">
+                  <button class="btn btn-primary btn-sm" onclick="toast('✅ SPV menyetujui klaim','ok')">✅ Setujui</button>
+                  <button class="btn btn-secondary btn-sm" onclick="toast('↩ Dikembalikan','inf')">↩ Kembalikan</button>
+                  <button class="btn btn-ghost btn-sm" style="background:var(--red-soft);color:var(--red);border-color:var(--red-lite)" onclick="toast('❌ Klaim ditolak','err')">✕ Tolak</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="tlc-item" style="opacity:.45">
+              <div class="tlc-dot d-gray">4</div>
+              <div class="tlc-time">—</div>
+              <div class="tlc-ttl" style="color:var(--ink-faint)">Manager Sign-off — Menunggu</div>
+              <div class="tlc-sub">Akan diproses setelah SPV approval selesai</div>
+              <div class="tlc-meta"><span class="badge b-gray">○ Antri</span></div>
+            </div>
+
+            <div class="tlc-item" style="opacity:.45">
+              <div class="tlc-dot d-gray">5</div>
+              <div class="tlc-time">—</div>
+              <div class="tlc-ttl" style="color:var(--ink-faint)">Pencairan Dana — Menunggu</div>
+              <div class="tlc-sub">Dana akan cair dalam 2 hari kerja setelah semua approval selesai</div>
+              <div class="tlc-meta"><span class="badge b-gray">○ Antri</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /#content -->
+</div><!-- /.main -->
+<div id="toasts"></div>
+
+<script>
+'use strict';
+function openSb(){document.getElementById('sb').classList.add('open');document.getElementById('sb-ov').classList.add('on');}
+function closeSb(){document.getElementById('sb').classList.remove('open');document.getElementById('sb-ov').classList.remove('on');}
+function togDD(id){document.querySelectorAll('.ddp').forEach(p=>{if(p.id!==id)p.classList.remove('on');});document.getElementById(id).classList.toggle('on');}
+document.addEventListener('click',e=>{if(!e.target.closest('.ddw'))document.querySelectorAll('.ddp').forEach(p=>p.classList.remove('on'));});
+function showTab(id,btn){document.querySelectorAll('.sect').forEach(s=>s.classList.remove('on'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('on'));document.getElementById(id).classList.add('on');btn.classList.add('on');}
+function toast(msg,type){const tc=document.getElementById('toasts'),t=document.createElement('div');const c={ok:'t-ok',err:'t-err',inf:'t-inf'};t.className='toast '+(c[type]||'t-inf');t.innerHTML='<span>'+msg+'</span>';tc.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300);},2800);}
+</script>
+</body>
+</html>

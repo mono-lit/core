@@ -1,0 +1,331 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   The mono scrollbar — ONE design, defined once, used by every scroll surface.
+
+   An 8px fully-rounded pill thumb on a transparent track. Before this file the
+   five components that styled a scrollbar each hand-rolled their own: widths of
+   4 / 6 / 8px, radii of `99px` and `9999px`, and four different colour sources —
+   while eleven other scroll containers (the main table scroller included) had no
+   rule at all and fell back to the browser's own bar.
+
+   ── Two engines, two lanes, and why they must NOT be mixed ─────────────────
+   This is the trap that made the previous attempt a no-op: **Chrome ignores
+   every `::-webkit-scrollbar` rule as soon as `scrollbar-width` or
+   `scrollbar-color` is set on the same element.** Measured in Chrome 134 —
+   a scroller with `::-webkit-scrollbar { width: 14px }` reserves 14px, and the
+   same scroller with `scrollbar-width: thin` added reserves 11px, Chrome's own
+   thin bar. So declaring both "for cross-browser safety" silently throws away
+   the custom design and hands Chrome its default scrollbar back.
+
+   Hence the split: the standard properties are fenced behind `@supports` tests
+   that only a non-WebKit engine passes, so Chrome/Safari see the webkit lane
+   alone and Firefox sees the standard lane alone. Two guards rather than one
+   because each covers the other's uncertainty: `selector(::-webkit-scrollbar)`
+   is the semantically correct test (verified false-in-Firefox by construction —
+   Firefox implements no such pseudo-element), and `-moz-appearance` is a plain
+   Firefox sniff. Both are verified INERT in Chrome (`CSS.supports` returns
+   false for `-moz-appearance`, true for the selector test), so Chrome cannot
+   accidentally enter the standard lane through either door.
+
+   Firefox exposes no numeric width — `thin` is all it has — so the 8px rail and
+   the pill radius are WebKit-only by nature, not by choice.
+
+   ── Colour: `currentColor`, so every theme is right for free ───────────────
+   The thumb is a low-alpha mix of the container's OWN text colour. A scroll
+   container inherits `color` from the panel it sits in, so the thumb comes out
+   dark on a white modal and pale on ONE's navy sidebar with no colour named
+   anywhere and no per-component override. This replaces four bespoke sources,
+   three of which mixed toward `white` (assuming a light panel) and one of which
+   derived from the accent — which on a panel painted in that same accent
+   dissolves into it. A new theme, flavor or `color` preset is correct for free.
+
+   ── The token chain ───────────────────────────────────────────────────────
+   Standard three-tier resolvers. Two rules govern where they may be written:
+
+   1. The resolvers are declared on the SCROLL CONTAINERS, never on `:root`. A
+      `var()` substitutes on the element that declares it, so a resolver at
+      `:root` could never see a `-preset` a flavor sets on `<body>` — the same
+      trap `sidebar.css` documents for `.mono-sidebar-panel`. Declaring them on
+      the container is also what puts `currentColor` in the right place.
+   2. The public `--mono-scrollbar-*` vars are NOT declared anywhere. Declaring
+      one would mean it is always set, and a flavor's `-preset` could then never
+      win. The defaults live only as the innermost fallback below.
+
+   Order stays: default < flavor `-preset` < a consumer's public `--mono-*`.
+   No flavor overrides these today — one scrollbar across every theme is the
+   point — but the `-preset` slots exist for a flavor that wants its own rail.
+
+   ── Adding a scroll container ─────────────────────────────────────────────
+   Add its selector to the list below. `theme-parity.spec.mjs` fails the build
+   for any `overflow: auto|scroll` in `src/components/**` that is missing here,
+   and for any component CSS that styles a scrollbar itself.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.mono-scrollbar,
+:where([mono-sidebar]) :where([mono-panel]) > [mono-body],
+.mono-drawer-body,
+:where([mono-drawer] > [mono-panel]) > [mono-body],
+.mono-modal-body,
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body],
+.mono-select-dropdown-body,
+
+[mono-select] [mono-dropdown-body],
+.mono-tag-input-dropdown,
+[mono-tag-input] > [mono-dropdown],
+:where([mono-dropdown]) > [mono-panel],
+:where([mono-button-dropdown]) > [mono-panel],
+.mono-tag-input-more-panel,
+[mono-tag-input] > [mono-more-panel],
+.mono-textarea-field,
+[mono-table-scroll],
+[mono-search-more-panel],
+[mono-search-filter],
+[mono-search-panel],
+[mono-th-filter-list],
+[mono-dropdown-table] [mono-dd-more],
+[mono-dropdown-table] [mono-dd-region="body"],
+[mono-filter-builder] > [mono-filter-group] {
+  --_mono-scrollbar-size: var(--mono-scrollbar-size, var(--_mono-scrollbar-size-preset, 8px));
+  --_mono-scrollbar-radius: var(--mono-scrollbar-radius, var(--_mono-scrollbar-radius-preset, 999px));
+  --_mono-scrollbar-track: var(--mono-scrollbar-track, var(--_mono-scrollbar-track-preset, transparent));
+  --_mono-scrollbar-thumb: var(
+    --mono-scrollbar-thumb,
+    var(--_mono-scrollbar-thumb-preset, color-mix(in srgb, currentColor 22%, transparent))
+  );
+  --_mono-scrollbar-thumb-hover: var(
+    --mono-scrollbar-thumb-hover,
+    var(--_mono-scrollbar-thumb-hover-preset, color-mix(in srgb, currentColor 38%, transparent))
+  );
+}
+
+/* ── Firefox lane. Inert in Chrome/Safari — see the header: setting either of
+      these there would disable the webkit lane below and restore Chrome's own
+      scrollbar. Duplicated across two guards rather than comma-joined because
+      `@supports` conditions cannot be combined with a selector list. ───────── */
+@supports not selector(::-webkit-scrollbar) {
+  .mono-scrollbar,
+  :where([mono-sidebar]) :where([mono-panel]) > [mono-body],
+  .mono-drawer-body,
+  :where([mono-drawer] > [mono-panel]) > [mono-body],
+  .mono-modal-body,
+  :where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body],
+  .mono-select-dropdown-body,
+
+  [mono-select] [mono-dropdown-body],
+  .mono-tag-input-dropdown,
+  [mono-tag-input] > [mono-dropdown],
+  :where([mono-dropdown]) > [mono-panel],
+  :where([mono-button-dropdown]) > [mono-panel],
+  .mono-tag-input-more-panel,
+  [mono-tag-input] > [mono-more-panel],
+  .mono-textarea-field,
+  [mono-table-scroll],
+  [mono-search-more-panel],
+  [mono-search-filter],
+  [mono-search-panel],
+  [mono-th-filter-list],
+  [mono-dropdown-table] [mono-dd-more],
+  [mono-dropdown-table] [mono-dd-region="body"],
+  [mono-filter-builder] > [mono-filter-group] {
+    scrollbar-width: thin;
+    scrollbar-color: var(--_mono-scrollbar-thumb) var(--_mono-scrollbar-track);
+  }
+}
+
+@supports (-moz-appearance: none) {
+  .mono-scrollbar,
+  :where([mono-sidebar]) :where([mono-panel]) > [mono-body],
+  .mono-drawer-body,
+  :where([mono-drawer] > [mono-panel]) > [mono-body],
+  .mono-modal-body,
+  :where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body],
+  .mono-select-dropdown-body,
+
+  [mono-select] [mono-dropdown-body],
+  .mono-tag-input-dropdown,
+  [mono-tag-input] > [mono-dropdown],
+  :where([mono-dropdown]) > [mono-panel],
+  :where([mono-button-dropdown]) > [mono-panel],
+  .mono-tag-input-more-panel,
+  [mono-tag-input] > [mono-more-panel],
+  .mono-textarea-field,
+  [mono-table-scroll],
+  [mono-search-more-panel],
+  [mono-search-filter],
+  [mono-search-panel],
+  [mono-th-filter-list],
+  [mono-dropdown-table] [mono-dd-more],
+  [mono-dropdown-table] [mono-dd-region="body"],
+  [mono-filter-builder] > [mono-filter-group] {
+    scrollbar-width: thin;
+    scrollbar-color: var(--_mono-scrollbar-thumb) var(--_mono-scrollbar-track);
+  }
+}
+
+/* ── WebKit / Blink lane: the actual design. ──────────────────────────────── */
+
+.mono-scrollbar::-webkit-scrollbar,
+:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar,
+.mono-drawer-body::-webkit-scrollbar,
+:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar,
+.mono-modal-body::-webkit-scrollbar,
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar,
+.mono-select-dropdown-body::-webkit-scrollbar,
+
+[mono-select] [mono-dropdown-body]::-webkit-scrollbar,
+.mono-tag-input-dropdown::-webkit-scrollbar,
+[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar,
+:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar,
+:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar,
+.mono-tag-input-more-panel::-webkit-scrollbar,
+[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar,
+.mono-textarea-field::-webkit-scrollbar,
+[mono-table-scroll]::-webkit-scrollbar,
+[mono-search-more-panel]::-webkit-scrollbar,
+[mono-search-filter]::-webkit-scrollbar,
+[mono-search-panel]::-webkit-scrollbar,
+[mono-th-filter-list]::-webkit-scrollbar,
+[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar,
+[mono-dropdown-table] [mono-dd-region="body"]::-webkit-scrollbar,
+[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar {
+  width: var(--_mono-scrollbar-size);
+  height: var(--_mono-scrollbar-size);
+}
+
+.mono-scrollbar::-webkit-scrollbar-track,
+:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar-track,
+.mono-drawer-body::-webkit-scrollbar-track,
+:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar-track,
+.mono-modal-body::-webkit-scrollbar-track,
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar-track,
+.mono-select-dropdown-body::-webkit-scrollbar-track,
+
+[mono-select] [mono-dropdown-body]::-webkit-scrollbar-track,
+.mono-tag-input-dropdown::-webkit-scrollbar-track,
+[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar-track,
+:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar-track,
+:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar-track,
+.mono-tag-input-more-panel::-webkit-scrollbar-track,
+[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar-track,
+.mono-textarea-field::-webkit-scrollbar-track,
+[mono-table-scroll]::-webkit-scrollbar-track,
+[mono-search-more-panel]::-webkit-scrollbar-track,
+[mono-search-filter]::-webkit-scrollbar-track,
+[mono-search-panel]::-webkit-scrollbar-track,
+[mono-th-filter-list]::-webkit-scrollbar-track,
+[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar-track,
+[mono-dropdown-table] [mono-dd-region="body"]::-webkit-scrollbar-track,
+[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar-track {
+  background: var(--_mono-scrollbar-track);
+}
+
+.mono-scrollbar::-webkit-scrollbar-thumb,
+:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar-thumb,
+.mono-drawer-body::-webkit-scrollbar-thumb,
+:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar-thumb,
+.mono-modal-body::-webkit-scrollbar-thumb,
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar-thumb,
+.mono-select-dropdown-body::-webkit-scrollbar-thumb,
+
+[mono-select] [mono-dropdown-body]::-webkit-scrollbar-thumb,
+.mono-tag-input-dropdown::-webkit-scrollbar-thumb,
+[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar-thumb,
+:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar-thumb,
+:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar-thumb,
+.mono-tag-input-more-panel::-webkit-scrollbar-thumb,
+[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar-thumb,
+.mono-textarea-field::-webkit-scrollbar-thumb,
+[mono-table-scroll]::-webkit-scrollbar-thumb,
+[mono-search-more-panel]::-webkit-scrollbar-thumb,
+[mono-search-filter]::-webkit-scrollbar-thumb,
+[mono-search-panel]::-webkit-scrollbar-thumb,
+[mono-th-filter-list]::-webkit-scrollbar-thumb,
+[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar-thumb,
+[mono-dropdown-table] [mono-dd-region="body"]::-webkit-scrollbar-thumb,
+[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar-thumb {
+  background: var(--_mono-scrollbar-thumb);
+  border-radius: var(--_mono-scrollbar-radius);
+}
+
+.mono-scrollbar::-webkit-scrollbar-thumb:hover,
+:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar-thumb:hover,
+.mono-drawer-body::-webkit-scrollbar-thumb:hover,
+:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar-thumb:hover,
+.mono-modal-body::-webkit-scrollbar-thumb:hover,
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar-thumb:hover,
+.mono-select-dropdown-body::-webkit-scrollbar-thumb:hover,
+
+[mono-select] [mono-dropdown-body]::-webkit-scrollbar-thumb:hover,
+.mono-tag-input-dropdown::-webkit-scrollbar-thumb:hover,
+[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar-thumb:hover,
+:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar-thumb:hover,
+:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar-thumb:hover,
+.mono-tag-input-more-panel::-webkit-scrollbar-thumb:hover,
+[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar-thumb:hover,
+.mono-textarea-field::-webkit-scrollbar-thumb:hover,
+[mono-table-scroll]::-webkit-scrollbar-thumb:hover,
+[mono-search-more-panel]::-webkit-scrollbar-thumb:hover,
+[mono-search-filter]::-webkit-scrollbar-thumb:hover,
+[mono-search-panel]::-webkit-scrollbar-thumb:hover,
+[mono-th-filter-list]::-webkit-scrollbar-thumb:hover,
+[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar-thumb:hover,
+[mono-dropdown-table] [mono-dd-region="body"]::-webkit-scrollbar-thumb:hover,
+[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar-thumb:hover {
+  background: var(--_mono-scrollbar-thumb-hover);
+}
+
+/* Chrome draws stepper arrows on a custom scrollbar in some configurations, and
+   the corner square where two bars meet takes the UA's own grey. Both are part
+   of "do not look like the browser's scrollbar". */
+.mono-scrollbar::-webkit-scrollbar-button,
+:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar-button,
+.mono-drawer-body::-webkit-scrollbar-button,
+:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar-button,
+.mono-modal-body::-webkit-scrollbar-button,
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar-button,
+.mono-select-dropdown-body::-webkit-scrollbar-button,
+
+[mono-select] [mono-dropdown-body]::-webkit-scrollbar-button,
+.mono-tag-input-dropdown::-webkit-scrollbar-button,
+[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar-button,
+:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar-button,
+:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar-button,
+.mono-tag-input-more-panel::-webkit-scrollbar-button,
+[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar-button,
+.mono-textarea-field::-webkit-scrollbar-button,
+[mono-table-scroll]::-webkit-scrollbar-button,
+[mono-search-more-panel]::-webkit-scrollbar-button,
+[mono-search-filter]::-webkit-scrollbar-button,
+[mono-search-panel]::-webkit-scrollbar-button,
+[mono-th-filter-list]::-webkit-scrollbar-button,
+[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar-button,
+[mono-dropdown-table] [mono-dd-region="body"]::-webkit-scrollbar-button,
+[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar-button {
+  display: none;
+}
+
+.mono-scrollbar::-webkit-scrollbar-corner,
+:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar-corner,
+.mono-drawer-body::-webkit-scrollbar-corner,
+:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar-corner,
+.mono-modal-body::-webkit-scrollbar-corner,
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar-corner,
+.mono-select-dropdown-body::-webkit-scrollbar-corner,
+
+[mono-select] [mono-dropdown-body]::-webkit-scrollbar-corner,
+.mono-tag-input-dropdown::-webkit-scrollbar-corner,
+[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar-corner,
+:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar-corner,
+:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar-corner,
+.mono-tag-input-more-panel::-webkit-scrollbar-corner,
+[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar-corner,
+.mono-textarea-field::-webkit-scrollbar-corner,
+[mono-table-scroll]::-webkit-scrollbar-corner,
+[mono-search-more-panel]::-webkit-scrollbar-corner,
+[mono-search-filter]::-webkit-scrollbar-corner,
+[mono-search-panel]::-webkit-scrollbar-corner,
+[mono-th-filter-list]::-webkit-scrollbar-corner,
+[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar-corner,
+[mono-dropdown-table] [mono-dd-region="body"]::-webkit-scrollbar-corner,
+[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar-corner {
+  background: var(--_mono-scrollbar-track);
+}

@@ -1,0 +1,501 @@
+/* =========================================================================
+   mono-checkbox — a port of Basecoat's `.input[type='checkbox']` and the
+   `.label` beside it (basecoat-css@1.0.2, vega style).
+
+   Styled by ATTRIBUTE, like Basecoat — and the attributes mirror the element's
+   props one for one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-checkbox size="sm" color="danger" label="Agree" model-value>
+     <label mono-checkbox mono-size="sm" mono-color="danger">
+       <input mono-input type="checkbox" checked />
+       <span mono-box aria-hidden="true"></span>
+       <span mono-label><span mono-label-text>Agree</span></span>
+     </label>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-color])` = primary). The element renders these attributes on its
+   root <label> (both builds) plus the STATES `mono-checked` / `mono-indeterminate`
+   / `mono-loading`; hand-written markup may rely on the native input's `:checked`
+   / `:indeterminate` instead — every state rule reads both. The old classes
+   (`.mono-checkbox.sm.mono-checkbox-checked`) are still emitted as inert hooks
+   until 2.0 but no rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-checkbox]                               ≡ .label (flex gap-2 text-sm font-medium leading-snug select-none)
+     :where([mono-checkbox]) > [mono-box]                  ≡ .input[type='checkbox'] (size-4 rounded-[4px] border-input shadow-xs; the real input is visually hidden)
+     [mono-checked] / [mono-input]:checked         ≡ :checked (bg-primary border-primary text-primary-foreground + the --check-icon mask)
+     [mono-indeterminate] / :indeterminate         ≡ EXTENSION (the same fill, a dash instead of the check)
+     [mono-input]:focus-visible + [mono-box]       ≡ focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50
+     [mono-invalid] / [mono-input][aria-invalid]   ≡ aria-invalid:border-destructive aria-invalid:ring-destructive/20
+     [mono-disabled] / [mono-input]:disabled       ≡ disabled:opacity-50 cursor-not-allowed
+     [mono-label-text]                             ≡ .label text
+     [mono-description]                            ≡ .field > p (text-sm text-muted-foreground)
+     [mono-size="xs|sm|lg|xl|xxl"]                 ≡ EXTENSION — the box is 4/9 of the --mono-control-height-* step
+                                                     (16px at vega md), label / description / gap step with it
+     [mono-color="…"]                              ≡ EXTENSION (the checked fill in the role's colour)
+     [mono-loading]                                ≡ EXTENSION (a spinner on the accent-filled box)
+
+   Specificity contract (same as the pre-port class sheet): a part's RESTING rule is
+   exactly one attribute strong — `:where([mono-checkbox]) [mono-box]` = (0,1,0) —
+   so a utility class handed in through `cssClass` (`rounded-3`, `font-800`, …)
+   wins by source order, while state rules (checked / indeterminate / focus /
+   invalid / disabled, keyed on the root or the native input) stay heavier and
+   win over it, as they always did.
+
+   Inner parts: [mono-input], [mono-box] (+ [mono-custom-icon] / [mono-custom-
+   indeterminate-icon] when a custom glyph replaces the default), [mono-icon] /
+   [mono-indeterminate-icon] (the custom glyph wrappers), [mono-spinner],
+   [mono-label] > [mono-label-text] / [mono-description]. The shadow build marks
+   an unassigned slot wrapper [mono-empty].
+
+   The box sits on the label's CAP BAND (see `--_mono-checkbox-line-offset`):
+   mono's own alignment rule, kept — Basecoat centres a lone checkbox on its
+   line box with `items-center`, which is the same thing for a one-line label and
+   drifts for a described one.
+
+   FLAVORS set `--mono-checkbox-{radius,shadow,ring-width,ring-alpha,bg,border-color}`
+   (the per-style `.input[type='checkbox']` deltas); every fallback here is vega's
+   value (`node scripts/basecoat-styles.mjs --varying "input\[type='checkbox'\]"`).
+   ========================================================================= */
+
+mono-checkbox {
+  display: inline-block;
+}
+
+[mono-checkbox] {
+  /* ── palette: each slot is a public knob over a Basecoat token ─────────── */
+  --_mono-checkbox-text: var(--mono-checkbox-text, var(--foreground));
+  --_mono-checkbox-description: var(--mono-checkbox-description, var(--muted-foreground));
+  --_mono-checkbox-primary: var(--mono-checkbox-primary, var(--primary));
+  --_mono-checkbox-primary-foreground: var(--mono-checkbox-primary-foreground, var(--primary-foreground));
+  --_mono-checkbox-accent: var(--mono-checkbox-accent, var(--_mono-checkbox-accent-preset, var(--_mono-checkbox-primary)));
+  --_mono-checkbox-icon: var(--mono-checkbox-icon, var(--_mono-checkbox-icon-preset, var(--_mono-checkbox-primary-foreground)));
+  --_mono-checkbox-border-color: var(--mono-checkbox-border, var(--mono-checkbox-border-color, var(--input)));
+  --_mono-checkbox-bg: var(--mono-checkbox-bg, var(--mono-mode-surface));
+  --_mono-checkbox-shadow: var(--mono-checkbox-shadow, var(--mono-shadow-xs));
+  --_mono-checkbox-radius: var(--mono-checkbox-radius, 4px);
+  --_mono-checkbox-border-width: var(--mono-checkbox-border-width, var(--mono-border-width));
+  --_mono-checkbox-ring-color: var(--mono-checkbox-ring-color, var(--ring));
+  --_mono-checkbox-ring-width: var(--mono-checkbox-ring-width, var(--mono-ring-width));
+  --_mono-checkbox-ring-alpha: var(--mono-checkbox-ring-alpha, var(--mono-ring-alpha));
+
+  /* ── md metrics live on the unqualified root ON PURPOSE ────────────────────
+     basecoat@1.0.2 styles/vega.css .input[type='checkbox'] — size-4 (= 4/9 of the
+     h-9 control); .field > label, .label — gap-2 text-sm leading-snug */
+  --_mono-checkbox-control: var(--mono-checkbox-size-md, calc(var(--mono-control-height-md) * 4 / 9));
+  --_mono-checkbox-gap: var(--mono-checkbox-gap, var(--mono-checkbox-gap-md, calc(var(--mono-spacing) * 2)));
+  --_mono-checkbox-label-font: var(--mono-checkbox-label-font-md, var(--mono-text-sm));
+  --_mono-checkbox-description-font: var(--mono-checkbox-description-font-md, 0.8125rem);
+  --_mono-checkbox-glyph: var(--mono-checkbox-glyph, 87.5%);
+
+  /* ── whole pixels ────────────────────────────────────────────────────────
+     The box is a ratio of the control step, so it lands on a fraction (18.39px,
+     17.77px…). A fractional round shape is antialiased on every edge — the
+     switch thumb, which parks flush against the track's cap, picked up a dark
+     rim that changed with the flavor and the screen's pixel ratio. Snap the
+     derived size to 1px; `round()` has the same browser floor as `color-mix()`
+     and `:has()`, which this sheet already requires. Snapping happens HERE, at
+     one place per value, so the per-size blocks stay plain arithmetic. */
+  --_mono-checkbox-control-px: round(nearest, var(--_mono-checkbox-control), 1px);
+
+  /* ── alignment with the label ────────────────────────────────────────────
+     The box is centred on the label's CAP BAND — the ink the eye reads, not the
+     line box. `-optical-shift` is the measured correction (the line box carries
+     descender space the capitals never fill); `-optical-nudge` absorbs the
+     whole-pixel rounding of a font's ascent per size. See the pairing spec. */
+  --_mono-checkbox-label-line-height: var(--mono-checkbox-label-line-height, var(--mono-leading-snug));
+  --_mono-checkbox-optical-shift: 0.045;
+  --_mono-checkbox-optical-nudge: 0px;
+  --_mono-checkbox-line-offset: calc(
+    (var(--_mono-checkbox-label-font) * var(--_mono-checkbox-label-line-height) - var(--_mono-checkbox-control-px)) / 2 +
+      var(--_mono-checkbox-label-font) * var(--_mono-checkbox-optical-shift) + var(--_mono-checkbox-optical-nudge)
+  );
+
+  /* The element build nests this root inside its host, so it is never itself a
+     grid or flex item and shrink-wraps its content. Hand-written markup usually
+     IS the item (a radio in a `display: grid` list), and an item blockifies —
+     `inline-flex` becomes `flex` and the row stretches to the widest sibling,
+     wrapping its label at a different point than the element's. `fit-content`
+     keeps both shapes shrink-wrapped; a consumer who wants a full-width row
+     still sets a width. */
+  width: fit-content;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--_mono-checkbox-gap);
+  position: relative;
+  vertical-align: top;
+  cursor: pointer;
+  user-select: none;
+  font-family: inherit;
+  color: var(--_mono-checkbox-text);
+}
+
+[mono-checkbox],
+:where([mono-checkbox]) *,
+:where([mono-checkbox]) *::before,
+:where([mono-checkbox]) *::after {
+  box-sizing: border-box;
+}
+
+:where([mono-checkbox]) :is([mono-label], [mono-label-text], [mono-description])[mono-empty] {
+  display: none;
+}
+
+/* the box seats on the first line of a label that is actually there; a bare
+   box (what mono-table-checkbox emits) stays flush at the top */
+[mono-checkbox]:has([mono-label-text]:not([mono-empty])) > [mono-box] {
+  margin-top: var(--_mono-checkbox-line-offset, 0px);
+}
+
+/* =========================================
+   Sizes — EXTENSION: the box is 4/9 of the control step (vega md: 36 × 4/9 = 16px),
+   label, description and gap step with it (md = Basecoat's text-sm / gap-2)
+   ========================================= */
+
+[mono-checkbox][mono-size="xs"] {
+  --_mono-checkbox-control: var(--mono-checkbox-size-xs, calc(var(--mono-control-height-xs) * 4 / 9));
+  --_mono-checkbox-gap: var(--mono-checkbox-gap, var(--mono-checkbox-gap-xs, calc(var(--mono-spacing) * 1.25)));
+  --_mono-checkbox-label-font: var(--mono-checkbox-label-font-xs, var(--mono-text-xs));
+  --_mono-checkbox-description-font: var(--mono-checkbox-description-font-xs, 0.6875rem);
+}
+
+[mono-checkbox][mono-size="sm"] {
+  --_mono-checkbox-control: var(--mono-checkbox-size-sm, calc(var(--mono-control-height-sm) * 4 / 9));
+  --_mono-checkbox-gap: var(--mono-checkbox-gap, var(--mono-checkbox-gap-sm, calc(var(--mono-spacing) * 1.5)));
+  --_mono-checkbox-label-font: var(--mono-checkbox-label-font-sm, 0.8125rem);
+  --_mono-checkbox-description-font: var(--mono-checkbox-description-font-sm, var(--mono-text-xs));
+}
+
+[mono-checkbox][mono-size="lg"] {
+  --_mono-checkbox-control: var(--mono-checkbox-size-lg, calc(var(--mono-control-height-lg) * 4 / 9));
+  --_mono-checkbox-gap: var(--mono-checkbox-gap, var(--mono-checkbox-gap-lg, calc(var(--mono-spacing) * 2.5)));
+  --_mono-checkbox-label-font: var(--mono-checkbox-label-font-lg, var(--mono-text-base));
+  --_mono-checkbox-description-font: var(--mono-checkbox-description-font-lg, var(--mono-text-sm));
+  /* 16px text rounds its ascent such that the box lands ~0.35px low */
+  --_mono-checkbox-optical-nudge: -0.35px;
+}
+
+[mono-checkbox][mono-size="xl"] {
+  --_mono-checkbox-control: var(--mono-checkbox-size-xl, calc(var(--mono-control-height-xl) * 4 / 9));
+  --_mono-checkbox-gap: var(--mono-checkbox-gap, var(--mono-checkbox-gap-xl, calc(var(--mono-spacing) * 3)));
+  --_mono-checkbox-label-font: var(--mono-checkbox-label-font-xl, var(--mono-text-lg));
+  --_mono-checkbox-description-font: var(--mono-checkbox-description-font-xl, var(--mono-text-base));
+}
+
+[mono-checkbox][mono-size="xxl"] {
+  --_mono-checkbox-control: var(--mono-checkbox-size-xxl, calc(var(--mono-control-height-xxl) * 4 / 9));
+  --_mono-checkbox-gap: var(--mono-checkbox-gap, var(--mono-checkbox-gap-xxl, calc(var(--mono-spacing) * 3.5)));
+  --_mono-checkbox-label-font: var(--mono-checkbox-label-font-xxl, var(--mono-text-xl));
+  --_mono-checkbox-description-font: var(--mono-checkbox-description-font-xxl, var(--mono-text-lg));
+  /* 20px text rounds the other way, leaving the box ~1.1px high */
+  --_mono-checkbox-optical-nudge: 1.1px;
+}
+
+/* =========================================
+   Colours — EXTENSION: the checked fill in the role's colour
+   ========================================= */
+
+[mono-checkbox]:is(:not([mono-color]), [mono-color="primary"]) {
+  --_mono-checkbox-accent-preset: var(--_mono-checkbox-primary);
+  --_mono-checkbox-icon-preset: var(--_mono-checkbox-primary-foreground);
+}
+[mono-checkbox][mono-color="secondary"] {
+  --_mono-checkbox-accent-preset: var(--secondary-foreground);
+  --_mono-checkbox-icon-preset: var(--secondary);
+}
+[mono-checkbox][mono-color="success"] {
+  --_mono-checkbox-accent-preset: var(--success);
+  --_mono-checkbox-icon-preset: var(--success-foreground);
+}
+[mono-checkbox][mono-color="danger"] {
+  --_mono-checkbox-accent-preset: var(--destructive);
+  --_mono-checkbox-icon-preset: var(--destructive-foreground);
+}
+[mono-checkbox][mono-color="warning"] {
+  --_mono-checkbox-accent-preset: var(--warning);
+  --_mono-checkbox-icon-preset: var(--warning-foreground);
+}
+[mono-checkbox][mono-color="info"] {
+  --_mono-checkbox-accent-preset: var(--info);
+  --_mono-checkbox-icon-preset: var(--info-foreground);
+}
+[mono-checkbox][mono-color="teal"] {
+  --_mono-checkbox-accent-preset: var(--teal);
+  --_mono-checkbox-icon-preset: var(--teal-foreground);
+}
+[mono-checkbox][mono-color="purple"] {
+  --_mono-checkbox-accent-preset: var(--purple);
+  --_mono-checkbox-icon-preset: var(--purple-foreground);
+}
+[mono-checkbox][mono-color="neutral"] {
+  --_mono-checkbox-accent-preset: var(--neutral);
+  --_mono-checkbox-icon-preset: var(--neutral-foreground);
+}
+[mono-checkbox][mono-color="dark"] {
+  --_mono-checkbox-accent-preset: var(--dark);
+  --_mono-checkbox-icon-preset: var(--dark-foreground);
+}
+
+/* =========================================
+   States on the root
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .field > label, .label — in-data-[disabled=true]:opacity-50
+   A BUSY box is exempt: while a select-all drains the server every box on the grid
+   is disabled, but the one spinning was acted on — it reads as "working", never
+   "unavailable" */
+[mono-checkbox][mono-disabled]:not([mono-loading]),
+[mono-checkbox]:not([mono-loading]):has(> [mono-input]:disabled) {
+  cursor: not-allowed;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+[mono-checkbox][mono-loading] {
+  cursor: progress;
+}
+
+/* the native input is the accessible control; the box is its painted twin */
+:where([mono-checkbox]) [mono-input] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  /* the UA gives an <input> its own font; inside a shadow root nothing resets it,
+     so the hidden control ended up with a different computed font in the two
+     builds. It paints nothing either way — this just keeps them identical. */
+  font: inherit;
+  color: inherit;
+}
+
+/* =========================================
+   The box
+   ========================================= */
+
+/* basecoat@1.0.2 components/checkbox.css .field > input[type='checkbox']:not([role='switch']), .input[type='checkbox']:not([role='switch'])
+   — relative shrink-0 appearance-none outline-none */
+/* basecoat@1.0.2 styles/vega.css .field > input[type='checkbox']:not([role='switch']), .input[type='checkbox']:not([role='switch'])
+   — flex size-4 items-center justify-center rounded-[4px] border border-input
+   shadow-xs transition-shadow (dark:bg-input/30 via --mono-mode-surface);
+   checked:bg-primary checked:border-primary checked:text-primary-foreground;
+   mono: `--tw-ring-*` flattened to the ring + shadow slots */
+:where([mono-checkbox]) > [mono-box] {
+  --_mono-checkbox-ring: 0 0 #0000;
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-checkbox-control-px);
+  height: var(--_mono-checkbox-control-px);
+  border: var(--_mono-checkbox-border-width) solid var(--_mono-checkbox-border-color);
+  border-radius: var(--_mono-checkbox-radius);
+  background-color: var(--_mono-checkbox-bg);
+  box-shadow: var(--_mono-checkbox-ring), var(--_mono-checkbox-shadow);
+  color: var(--_mono-checkbox-icon);
+  overflow: hidden;
+  transition-property: box-shadow, background-color, border-color;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+}
+
+/* focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 */
+:where([mono-checkbox]) > [mono-input]:focus-visible + [mono-box] {
+  border-color: var(--_mono-checkbox-ring-color);
+  --_mono-checkbox-ring: 0 0 0 var(--_mono-checkbox-ring-width) color-mix(in oklab, var(--_mono-checkbox-ring-color) var(--_mono-checkbox-ring-alpha), transparent);
+}
+
+/* aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20
+   (dark: /50, /40 via the mode tokens); aria-invalid:checked:border-primary */
+[mono-checkbox][mono-invalid] > [mono-box],
+:where([mono-checkbox]) > [mono-input][aria-invalid="true"] + [mono-box] {
+  border-color: var(--mono-mode-invalid-border);
+  --_mono-checkbox-ring: 0 0 0 var(--_mono-checkbox-ring-width) var(--mono-mode-invalid-ring);
+}
+
+/* checked:bg-primary checked:border-primary checked:text-primary-foreground —
+   generalised per hue; indeterminate takes the same fill */
+[mono-checkbox]:is([mono-checked], [mono-indeterminate]) > [mono-box],
+:where([mono-checkbox]) > [mono-input]:is(:checked, :indeterminate) + [mono-box] {
+  border-color: var(--_mono-checkbox-accent);
+  background-color: var(--_mono-checkbox-accent);
+  color: var(--_mono-checkbox-icon);
+}
+
+/* =========================================
+   Glyphs — every glyph is out of flow (`inset: 0; margin: auto`) so the box keeps
+   a stable synthesised baseline whichever one is showing
+   ========================================= */
+
+/* basecoat@1.0.2 components/checkbox.css .field > input[type='checkbox']:not([role='switch']), .input[type='checkbox']:not([role='switch'])
+   — checked:after: block bg-current, mask-image var(--check-icon), mask-size 0.875rem
+   (= 87.5% of the 16px box; mono sizes it as that share so it tracks every step) */
+:where([mono-checkbox]) > [mono-box]::before {
+  content: "";
+  display: none;
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: var(--_mono-checkbox-glyph);
+  height: var(--_mono-checkbox-glyph);
+  background-color: currentColor;
+  pointer-events: none;
+  mask-image: var(--mono-checkbox-check-icon, var(--check-icon));
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-image: var(--mono-checkbox-check-icon, var(--check-icon));
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+/* EXTENSION — the indeterminate dash: 60% wide, 14% tall (2px at md), pill-shaped */
+:where([mono-checkbox]) > [mono-box]::after {
+  content: "";
+  display: none;
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 60%;
+  height: max(1.5px, 14%);
+  border-radius: 999px;
+  background-color: currentColor;
+  pointer-events: none;
+}
+
+[mono-checkbox][mono-checked]:not([mono-indeterminate]) > [mono-box]:not([mono-custom-icon])::before,
+:where([mono-checkbox]) > [mono-input]:checked:not(:indeterminate) + [mono-box]:not([mono-custom-icon])::before {
+  display: block;
+}
+
+[mono-checkbox][mono-indeterminate] > [mono-box]:not([mono-custom-indeterminate-icon])::after,
+:where([mono-checkbox]) > [mono-input]:indeterminate + [mono-box]:not([mono-custom-indeterminate-icon])::after {
+  display: block;
+}
+
+/* a custom glyph replaces the default one (the box is marked, or holds the wrapper) */
+:where([mono-checkbox]) > [mono-box]:has([mono-icon])::before,
+:where([mono-checkbox]) > [mono-box]:has([mono-indeterminate-icon])::after {
+  display: none !important;
+}
+
+/* custom icon wrappers — fill the box's inner area, out of flow like the pseudo-glyphs */
+:where([mono-checkbox]) [mono-icon],
+:where([mono-checkbox]) [mono-indeterminate-icon] {
+  display: none;
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 100%;
+  height: 100%;
+  color: var(--_mono-checkbox-icon);
+  pointer-events: none;
+}
+
+:where([mono-checkbox]) [mono-icon] > *,
+:where([mono-checkbox]) [mono-indeterminate-icon] > * {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+[mono-checkbox][mono-checked]:not([mono-indeterminate]) [mono-icon],
+:where([mono-checkbox]) > [mono-input]:checked:not(:indeterminate) + [mono-box] [mono-icon],
+[mono-checkbox][mono-indeterminate] [mono-indeterminate-icon],
+:where([mono-checkbox]) > [mono-input]:indeterminate + [mono-box] [mono-indeterminate-icon] {
+  display: inline-block;
+}
+
+/* the shadow build projects the custom glyph through a bare <slot> */
+:where([mono-checkbox]) > [mono-box] > slot[name="icon"],
+:where([mono-checkbox]) > [mono-box] > slot[name="indeterminate-icon"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+:where([mono-checkbox]) > [mono-box] > slot[name="icon"]::slotted(*),
+:where([mono-checkbox]) > [mono-box] > slot[name="indeterminate-icon"]::slotted(*) {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: var(--_mono-checkbox-icon);
+  pointer-events: none;
+}
+
+/* =========================================
+   Label
+   ========================================= */
+
+:where([mono-checkbox]) > [mono-label] {
+  min-width: 0;
+}
+
+/* basecoat@1.0.2 styles/vega.css .field > label, .label — text-sm leading-snug font-medium;
+   `block` so the first line box is exactly font × line-height */
+:where([mono-checkbox]) [mono-label-text] {
+  display: block;
+  font-size: var(--_mono-checkbox-label-font);
+  line-height: var(--_mono-checkbox-label-line-height);
+  font-weight: var(--mono-checkbox-label-font-weight, var(--mono-label-font-weight, var(--mono-font-weight-medium)));
+  color: var(--_mono-checkbox-text);
+}
+
+/* basecoat@1.0.2 styles/vega.css .fieldset legend + p, .field > p, .field section > p
+   — text-sm text-muted-foreground leading-normal font-normal; EXTENSION: one step
+   under the label per size */
+:where([mono-checkbox]) [mono-description] {
+  display: block;
+  margin-top: calc(var(--mono-spacing) * 0.5);
+  font-size: var(--_mono-checkbox-description-font);
+  line-height: var(--mono-leading-normal);
+  font-weight: var(--mono-font-weight-normal);
+  color: var(--_mono-checkbox-description);
+}
+
+/* =========================================
+   Loading — EXTENSION: a spinner in the box (the select-all drain of
+   mono-table-checkbox and mono-tag-input). THE ONLY copy of this look: the two
+   hosts emit [mono-checkbox][mono-loading] > [mono-box] > [mono-spinner] and
+   restate nothing.
+   ========================================= */
+
+/* the busy box fills with the accent whatever its checked state, so the spinner
+   always has the accent behind it and the icon colour in front — never white on
+   white; no transition, the state may last 200ms */
+[mono-checkbox][mono-loading] > [mono-box] {
+  border-color: var(--_mono-checkbox-accent);
+  background-color: var(--_mono-checkbox-accent);
+  color: var(--_mono-checkbox-icon);
+  transition: none;
+}
+
+:where([mono-checkbox]) [mono-spinner] {
+  display: block;
+  width: 82%;
+  height: 82%;
+  animation: mono-checkbox-spin 0.7s linear infinite;
+}
+
+@keyframes mono-checkbox-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([mono-checkbox]) > [mono-box] {
+    transition: none;
+  }
+
+  :where([mono-checkbox]) [mono-spinner] {
+    animation-duration: 2.4s;
+  }
+}

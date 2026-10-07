@@ -1,0 +1,45 @@
+{
+  "name": "docs",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "node:header-size": "node -e \"const { spawn } = require('node:child_process'); const [cmd,...args]=process.argv.slice(1); const child=spawn(cmd,args,{stdio:'inherit',shell:process.platform==='win32',env:{...process.env,NODE_OPTIONS:[process.env.NODE_OPTIONS,'--max-http-header-size=65536'].filter(Boolean).join(' ')}}); child.on('exit',c=>process.exit(c ?? 0));\"",
+    "dev": "pnpm run node:header-size -- vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview",
+    "build:cf": "vitepress build"
+  },
+  "devDependencies": {
+    "@floating-ui/core": "1.8.0",
+    "@floating-ui/dom": "1.8.0",
+    "@iconify-json/mdi": "^1.2.3",
+    "@iconify/json": "2.2.505",
+    "@types/markdown-it": "^14.1.2",
+    "@unocss/reset": "^66.6.8",
+    "chart.js": "4.5.1",
+    "dotenv-cli": "^11.0.0",
+    "markdown-it": "^14.1.0",
+    "mermaid": "^11.15.0",
+    "shiki": "^4.0.2",
+    "suneditor": "3.3.3",
+    "taze": "^19.11.0",
+    "typescript": "^6.0.3",
+    "unocss": "^66.6.8",
+    "vitepress": "^1.6.4",
+    "vitepress-plugin-mermaid": "^2.0.17",
+    "vue": "^3.5.33",
+    "wrangler": "^4.0.0"
+  },
+  "dependencies": {
+    "devextreme": "25.1.7",
+    "dotenv": "^17.4.2",
+    "exceljs": "^4.4.0",
+    "handlebars": "^4.7.9",
+    "lit": "^3.3.2",
+    "@mono-lit/devextreme": "workspace:*",
+    "@mono-lit/helper": "workspace:*",
+    "@mono-lit/utility": "workspace:*",
+    "vitepress-plugin-llmstxt": "^0.5.1"
+  }
+}

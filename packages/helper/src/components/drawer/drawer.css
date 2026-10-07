@@ -1,0 +1,926 @@
+/* @unocss-include */
+
+/* =========================================================================
+   mono-drawer — a port of Basecoat's `.drawer` (basecoat-css@1.0.2, vega style).
+
+   Styled by ATTRIBUTE, like Basecoat — and the attributes mirror the element's
+   props one for one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-drawer size="lg" color="success" position="left" model-value>
+     <div mono-drawer mono-size="lg" mono-color="success" mono-position="left"
+          mono-open role="dialog" aria-modal="true">
+       <div mono-overlay></div>
+       <div mono-panel role="document">
+         <div mono-resizer role="separator"></div>
+         <div mono-header>
+           <div mono-heading>
+             <div mono-title>Filters</div>
+             <div mono-subtitle>Narrow the results</div>
+           </div>
+           <button mono-close type="button" aria-label="Close drawer">…</button>
+         </div>
+         <div mono-body>…</div>
+         <div mono-footer>…</div>
+       </div>
+     </div>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-color])` = primary, `:not([mono-position])` = RIGHT — upstream's
+   unqualified side is `bottom`, ours is `right`). The element writes them on its
+   ROOT — the `<body>` portal in the light build, an inner root `<div>` in the
+   shadow one — along with every state below. The old classes
+   (`.mono-drawer.md.primary.position-right.open`) are still emitted as inert
+   hooks until 2.0 but no rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-drawer]        ≡ .drawer (the <dialog>) — DEVIATION: a var scope, not a
+                            `fixed inset-0` box, because the overlay and the panel
+                            are each `position: fixed` and this component owns its
+                            own layer through `composables/popup-stack`
+     [mono-overlay]       ≡ .drawer::backdrop (bg-black/10 backdrop-blur-xs) — the
+                            fill is `--mono-mode-backdrop`, a token, since a
+                            pseudo-element cannot be reached from a shadow sheet
+     [mono-panel]         ≡ .drawer > * (fixed flex h-auto flex-col
+                            transition-transform duration-500
+                            ease-[cubic-bezier(0.32,0.72,0,1)], bg-popover
+                            text-popover-foreground text-sm), plus the per-side
+                            inset / measure / translate and the ONE rounded edge
+                            and border that face the content
+     [mono-position=…]    ≡ [data-side='…'] (left / right / top / bottom)
+     [mono-header]        ≡ .drawer > * > header (flex flex-col gap-0.5 p-4
+                            text-start, md:gap-1.5) — DEVIATION: a ROW, because
+                            the ✕ lives inside it (see below), and NOT centred on
+                            the top / bottom sides for the same reason
+     [mono-heading]       ≡ upstream's header column itself (flex-col gap-0.5,
+                            md:gap-1.5) — the ✕'s row-mate; `slot="header"`
+                            replaces it
+     [mono-title]         ≡ .drawer > * > header > h2 (text-lg font-semibold
+                            leading-none tracking-tight)
+     [mono-subtitle]      ≡ .drawer > * > header > p (text-muted-foreground
+                            text-sm)
+     [mono-body]          ≡ .drawer > * > section (min-h-0 flex-1 overflow-y-auto)
+                            — DEVIATION: padded. Upstream leaves the section bare
+                            and its own examples pad the content they put in it;
+                            here the body is a SLOT a consumer fills with plain
+                            text, so it brings the `p-4` itself
+                            (`--mono-drawer-body-pad` turns it off)
+     [mono-footer]        ≡ .drawer > * > footer (mt-auto flex flex-col gap-2 p-4)
+     [mono-close]         ≡ EXTENSION (upstream's drawer has no close button)
+     [mono-resizer]       ≡ EXTENSION (the grab bar on the inner edge)
+     [mono-size]/[mono-color] ≡ EXTENSION (upstream ships one drawer, no colour)
+
+   THE TINTED HEADER IS GONE, exactly as in the modal: `--mono-drawer-header-bg`
+   and `-footer-bg` remain as knobs, defaulting to transparent, with matching
+   `-border` / `-border-width` so a consumer who wants the bars back sets them.
+
+   THE FOOTER STACKS. Upstream's drawer footer is a COLUMN — it is the mobile
+   sheet idiom, where the actions are full-width and stacked — where this
+   component's was a right-aligned row. `--mono-drawer-footer-direction: row`
+   restores the row, and ONE sets it, so the default flavor is unchanged.
+
+   PART NAMES ARE PATH-SCOPED. `[mono-panel]`, `[mono-body]` and `[mono-title]`
+   are also dropdown's, card's and modal's part names, and a drawer BODY is where
+   consumers put all three. Every rule here is written as an explicit child path
+   from the root, with `:where()` keeping the resting weight at (0,1,0) so a
+   `cssClass` utility still wins by source order.
+
+   FLAVORS set `--mono-drawer-{radius,shadow,overlay-*,pad,header-gap,footer-gap,
+   title-*,body-font,body-line-height,width,height}` (+ the per-size forms), and
+   the four that float the panel as a card set the `inset` trio as well
+   (`--mono-drawer-{inset,inset-radius,inset-border-width}` with
+   `--mono-drawer-panel-pad`). Every fallback here is vega's value
+   (`node scripts/basecoat-styles.mjs --varying ".drawer"`).
+   ========================================================================= */
+
+mono-drawer {
+  display: contents;
+}
+
+/* =========================================
+   Root — the layer
+   ========================================= */
+
+[mono-drawer] {
+  /* ── the six roles, each a public knob over a Basecoat token ───────────── */
+  --_mono-drawer-primary: var(--mono-drawer-primary, var(--primary));
+  --_mono-drawer-secondary: var(--mono-drawer-secondary, var(--secondary-foreground));
+  --_mono-drawer-success: var(--mono-drawer-success, var(--success));
+  --_mono-drawer-danger: var(--mono-drawer-danger, var(--destructive));
+  --_mono-drawer-warning: var(--mono-drawer-warning, var(--warning));
+  --_mono-drawer-info: var(--mono-drawer-info, var(--info));
+  --_mono-drawer-teal: var(--mono-drawer-teal, var(--teal));
+  --_mono-drawer-purple: var(--mono-drawer-purple, var(--purple));
+  --_mono-drawer-neutral: var(--mono-drawer-neutral, var(--neutral));
+  --_mono-drawer-dark: var(--mono-drawer-dark, var(--dark));
+  /* the colour in play — `primary` unless a [mono-color] rule re-points it */
+  --_mono-drawer-accent: var(--mono-drawer-accent, var(--_mono-drawer-accent-preset, var(--_mono-drawer-primary)));
+
+  /* ── panel paint — `bg-popover text-popover-foreground`, one border edge ── */
+  --_mono-drawer-bg: var(--mono-drawer-bg, var(--mono-drawer-surface, var(--popover)));
+  --_mono-drawer-text: var(--mono-drawer-text, var(--popover-foreground));
+  --_mono-drawer-border: var(--mono-drawer-border, var(--border));
+  --_mono-drawer-border-width: var(--mono-drawer-border-width, var(--mono-border-width));
+  --_mono-drawer-shadow: var(--mono-drawer-shadow, var(--mono-shadow-lg));
+  /* a faint halo of the accent under the elevation — nothing until `color` is set */
+  --_mono-drawer-glow: var(--mono-drawer-glow, 0 0 #0000);
+  /* maia, mira, luma and rhea float the panel as an INSET card (`before:inset-2`
+     over a transparent panel); at 0 the card is the panel itself, which is vega. */
+  --_mono-drawer-inset: var(--mono-drawer-inset, 0px);
+  --_mono-drawer-panel-pad: var(--mono-drawer-panel-pad, 0px);
+  /* vega borders the ONE edge that faces the content; an inset card is a free
+     floating box, so it borders all four (`before:border`). At 0 the per-side
+     rules below are the only edge, which is vega. */
+  --_mono-drawer-inset-border-width: var(--mono-drawer-inset-border-width, 0px);
+
+  /* The tinted head / foot bars of the pre-port drawer. Upstream has neither, so
+     both default to nothing — set the pair (and the `-border-width`) to restore. */
+  --_mono-drawer-header-bg: var(--mono-drawer-header-bg, var(--mono-drawer-head-bg, transparent));
+  --_mono-drawer-footer-bg: var(--mono-drawer-footer-bg, var(--mono-drawer-foot-bg, transparent));
+  --_mono-drawer-header-border: var(--mono-drawer-header-border, transparent);
+  --_mono-drawer-footer-border: var(--mono-drawer-footer-border, transparent);
+  --_mono-drawer-header-border-width: var(--mono-drawer-header-border-width, 0);
+  --_mono-drawer-footer-border-width: var(--mono-drawer-footer-border-width, 0);
+
+  /* ── md metrics live on the unqualified root ON PURPOSE ────────────────────
+     basecoat@1.0.2 styles/vega.css .drawer > * > header — gap-0.5 p-4 (md:gap-1.5)
+     basecoat@1.0.2 styles/vega.css .drawer > * > footer — gap-2 p-4 */
+  --_mono-drawer-radius: var(--mono-drawer-radius, var(--_mono-drawer-radius-preset, var(--mono-drawer-radius-md, var(--mono-radius-xl))));
+  --_mono-drawer-pad: var(--mono-drawer-pad, var(--_mono-drawer-pad-preset, var(--mono-drawer-pad-md, calc(var(--mono-spacing) * 4))));
+  --_mono-drawer-header-gap: var(--mono-drawer-header-gap, var(--_mono-drawer-header-gap-preset, var(--mono-drawer-header-gap-md, calc(var(--mono-spacing) * 1.5))));
+  --_mono-drawer-footer-gap: var(--mono-drawer-footer-gap, var(--_mono-drawer-footer-gap-preset, var(--mono-drawer-footer-gap-md, calc(var(--mono-spacing) * 2))));
+  --_mono-drawer-font: var(--mono-drawer-font, var(--_mono-drawer-font-preset, var(--mono-drawer-body-font-md, var(--mono-text-sm))));
+  --_mono-drawer-body-line-height: var(--mono-drawer-body-line-height, var(--_mono-drawer-body-line-height-preset, var(--mono-text-sm--lh)));
+  /* `text-lg font-semibold leading-none tracking-tight` — the drawer's title is
+     the loud one; the dialog's is `font-medium` at the panel's own size. */
+  --_mono-drawer-title-font: var(--mono-drawer-title-font, var(--_mono-drawer-title-font-preset, var(--mono-drawer-title-font-md, var(--mono-text-lg))));
+  --_mono-drawer-title-weight: var(--mono-drawer-title-weight, var(--mono-font-weight-semibold));
+  --_mono-drawer-title-tracking: var(--mono-drawer-title-tracking, -0.015em);
+  --_mono-drawer-title-line-height: var(--mono-drawer-title-line-height, var(--mono-leading-none, 1));
+  --_mono-drawer-title-transform: var(--mono-drawer-title-transform, none);
+  --_mono-drawer-title-color: var(--mono-drawer-title-color, var(--_mono-drawer-text));
+  /* the description line — `text-muted-foreground text-sm`; the font follows the
+     drawer's per-size body step, which is `text-sm` at md */
+  --_mono-drawer-subtitle-font: var(--mono-drawer-subtitle-font, var(--_mono-drawer-font));
+  --_mono-drawer-subtitle-color: var(--mono-drawer-subtitle-color, var(--muted-foreground));
+
+  /* ── the close ✕ — EXTENSION, styled like the dialog's ─────────────────── */
+  --_mono-drawer-close-size: var(--mono-drawer-close-size, var(--_mono-drawer-close-size-preset, var(--mono-drawer-close-size-md, calc(var(--mono-spacing) * 7))));
+  --_mono-drawer-close-glyph: var(--mono-drawer-close-glyph, var(--_mono-drawer-icon-size-preset, calc(var(--mono-spacing) * 4)));
+  --_mono-drawer-close-radius: var(--mono-drawer-close-radius, var(--mono-radius-sm));
+  --_mono-drawer-close-bg: var(--mono-drawer-close-bg, transparent);
+  --_mono-drawer-close-color: var(--mono-drawer-close-color, var(--_mono-drawer-text));
+  --_mono-drawer-close-opacity: var(--mono-drawer-close-opacity, 0.7);
+  --_mono-drawer-close-hover-opacity: var(--mono-drawer-close-hover-opacity, 1);
+  --_mono-drawer-close-hover-bg: var(--mono-drawer-close-hover-bg, transparent);
+
+  /* ── the backdrop — `bg-black/10 backdrop-blur-xs` ─────────────────────── */
+  --_mono-drawer-overlay-bg: var(--mono-drawer-overlay-bg, var(--mono-mode-backdrop));
+  --_mono-drawer-overlay-backdrop-filter: var(--mono-drawer-overlay-backdrop-filter, blur(var(--mono-blur-xs)));
+
+  --_mono-drawer-z: var(--mono-drawer-z, 9990);
+
+  /* `w-3/4 max-w-sm` on the side drawers; `max-h-[80vh]` with a content height on
+     the sheet ones. Both are PROPS here (`width` / `height`), so these are the
+     defaults they override. */
+  --_mono-drawer-width: var(--mono-drawer-width, min(75%, var(--mono-container-sm)));
+  --_mono-drawer-height: var(--mono-drawer-height, auto);
+  --_mono-drawer-max-height: var(--mono-drawer-max-height, 80vh);
+
+  /* ── the slide — `duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]` ────────
+     Open/close animation duration. One source of truth for the panel's slide AND
+     the delayed `visibility` / `content-visibility` flips, which have to stay in
+     lockstep with it. Set `--mono-drawer-duration: 0s` for an instant,
+     animation-free drawer — worth doing when the drawer body holds a lot of
+     components, since that is what the open/close frames have to re-measure. */
+  --_mono-drawer-duration: var(--mono-drawer-duration, 500ms);
+  --_mono-drawer-ease: var(--mono-drawer-ease, cubic-bezier(0.32, 0.72, 0, 1));
+  /* The overlay follows the panel unless it is given its own. */
+  --_mono-drawer-overlay-duration: var(--mono-drawer-duration, 500ms);
+
+  font-family: inherit;
+  color: var(--_mono-drawer-text);
+}
+
+[mono-drawer],
+:where([mono-drawer]) *,
+:where([mono-drawer]) *::before,
+:where([mono-drawer]) *::after {
+  box-sizing: border-box;
+}
+
+/* =========================================
+   Sizes — EXTENSION: `size` is the CONTENT scale, never the measure
+   ========================================= */
+
+[mono-drawer][mono-size="xs"] {
+  --_mono-drawer-radius-preset: var(--mono-drawer-radius-xs, var(--mono-radius-md));
+  --_mono-drawer-pad-preset: var(--mono-drawer-pad-xs, calc(var(--mono-spacing) * 2));
+  --_mono-drawer-header-gap-preset: var(--mono-drawer-header-gap-xs, calc(var(--mono-spacing) * 0.5));
+  --_mono-drawer-footer-gap-preset: var(--mono-drawer-footer-gap-xs, var(--mono-spacing));
+  --_mono-drawer-font-preset: var(--mono-drawer-body-font-xs, var(--mono-text-xs));
+  --_mono-drawer-body-line-height-preset: var(--mono-text-xs--lh);
+  --_mono-drawer-title-font-preset: var(--mono-drawer-title-font-xs, var(--mono-text-sm));
+  --_mono-drawer-close-size-preset: var(--mono-drawer-close-size-xs, calc(var(--mono-spacing) * 5));
+  --_mono-drawer-icon-size-preset: calc(var(--mono-spacing) * 3);
+}
+
+[mono-drawer][mono-size="sm"] {
+  --_mono-drawer-radius-preset: var(--mono-drawer-radius-sm, var(--mono-radius-lg));
+  --_mono-drawer-pad-preset: var(--mono-drawer-pad-sm, calc(var(--mono-spacing) * 3));
+  --_mono-drawer-header-gap-preset: var(--mono-drawer-header-gap-sm, var(--mono-spacing));
+  --_mono-drawer-footer-gap-preset: var(--mono-drawer-footer-gap-sm, calc(var(--mono-spacing) * 1.5));
+  --_mono-drawer-font-preset: var(--mono-drawer-body-font-sm, var(--mono-text-xs));
+  --_mono-drawer-body-line-height-preset: var(--mono-text-xs--lh);
+  --_mono-drawer-title-font-preset: var(--mono-drawer-title-font-sm, var(--mono-text-base));
+  --_mono-drawer-close-size-preset: var(--mono-drawer-close-size-sm, calc(var(--mono-spacing) * 6));
+  --_mono-drawer-icon-size-preset: calc(var(--mono-spacing) * 3.5);
+}
+
+[mono-drawer][mono-size="lg"] {
+  --_mono-drawer-radius-preset: var(--mono-drawer-radius-lg, var(--mono-radius-2xl));
+  --_mono-drawer-pad-preset: var(--mono-drawer-pad-lg, calc(var(--mono-spacing) * 5));
+  --_mono-drawer-header-gap-preset: var(--mono-drawer-header-gap-lg, calc(var(--mono-spacing) * 2));
+  --_mono-drawer-footer-gap-preset: var(--mono-drawer-footer-gap-lg, calc(var(--mono-spacing) * 2.5));
+  --_mono-drawer-font-preset: var(--mono-drawer-body-font-lg, var(--mono-text-base));
+  --_mono-drawer-body-line-height-preset: var(--mono-text-base--lh);
+  --_mono-drawer-title-font-preset: var(--mono-drawer-title-font-lg, var(--mono-text-xl));
+  --_mono-drawer-close-size-preset: var(--mono-drawer-close-size-lg, calc(var(--mono-spacing) * 8));
+  --_mono-drawer-icon-size-preset: calc(var(--mono-spacing) * 4.5);
+}
+
+[mono-drawer][mono-size="xl"] {
+  --_mono-drawer-radius-preset: var(--mono-drawer-radius-xl, var(--mono-radius-2xl));
+  --_mono-drawer-pad-preset: var(--mono-drawer-pad-xl, calc(var(--mono-spacing) * 6));
+  --_mono-drawer-header-gap-preset: var(--mono-drawer-header-gap-xl, calc(var(--mono-spacing) * 2.5));
+  --_mono-drawer-footer-gap-preset: var(--mono-drawer-footer-gap-xl, calc(var(--mono-spacing) * 3));
+  --_mono-drawer-font-preset: var(--mono-drawer-body-font-xl, var(--mono-text-lg));
+  --_mono-drawer-body-line-height-preset: var(--mono-text-lg--lh);
+  --_mono-drawer-title-font-preset: var(--mono-drawer-title-font-xl, var(--mono-text-2xl, 1.5rem));
+  --_mono-drawer-close-size-preset: var(--mono-drawer-close-size-xl, calc(var(--mono-spacing) * 9));
+  --_mono-drawer-icon-size-preset: calc(var(--mono-spacing) * 5);
+}
+
+[mono-drawer][mono-size="xxl"] {
+  --_mono-drawer-radius-preset: var(--mono-drawer-radius-xxl, var(--mono-radius-4xl));
+  --_mono-drawer-pad-preset: var(--mono-drawer-pad-xxl, calc(var(--mono-spacing) * 7));
+  --_mono-drawer-header-gap-preset: var(--mono-drawer-header-gap-xxl, calc(var(--mono-spacing) * 3));
+  --_mono-drawer-footer-gap-preset: var(--mono-drawer-footer-gap-xxl, calc(var(--mono-spacing) * 3.5));
+  --_mono-drawer-font-preset: var(--mono-drawer-body-font-xxl, var(--mono-text-lg));
+  --_mono-drawer-body-line-height-preset: var(--mono-text-lg--lh);
+  --_mono-drawer-title-font-preset: var(--mono-drawer-title-font-xxl, 1.75rem);
+  --_mono-drawer-close-size-preset: var(--mono-drawer-close-size-xxl, calc(var(--mono-spacing) * 10));
+  --_mono-drawer-icon-size-preset: calc(var(--mono-spacing) * 5.5);
+}
+
+/* =========================================
+   Colours — EXTENSION: the role tints the resizer and whatever the consumer
+   turns back on (the head bar, the close hover)
+   ========================================= */
+
+[mono-drawer][mono-color="primary"] { --_mono-drawer-accent-preset: var(--_mono-drawer-primary); }
+[mono-drawer][mono-color="secondary"] { --_mono-drawer-accent-preset: var(--_mono-drawer-secondary); }
+[mono-drawer][mono-color="success"] { --_mono-drawer-accent-preset: var(--_mono-drawer-success); }
+[mono-drawer][mono-color="danger"] { --_mono-drawer-accent-preset: var(--_mono-drawer-danger); }
+[mono-drawer][mono-color="warning"] { --_mono-drawer-accent-preset: var(--_mono-drawer-warning); }
+[mono-drawer][mono-color="info"] { --_mono-drawer-accent-preset: var(--_mono-drawer-info); }
+[mono-drawer][mono-color="teal"] { --_mono-drawer-accent-preset: var(--_mono-drawer-teal); }
+[mono-drawer][mono-color="purple"] { --_mono-drawer-accent-preset: var(--_mono-drawer-purple); }
+[mono-drawer][mono-color="neutral"] { --_mono-drawer-accent-preset: var(--_mono-drawer-neutral); }
+[mono-drawer][mono-color="dark"] { --_mono-drawer-accent-preset: var(--_mono-drawer-dark); }
+
+/* An explicit `color` shows on the panel itself: its edge (the one border in
+   vega, the whole inset card in maia / mira / luma / rhea) becomes a thin line
+   of the accent and a faint halo of it sits under the elevation. Without
+   `color` the edge stays `--border` and there is no halo. A consumer's
+   `--mono-drawer-border` / `--mono-drawer-glow` still win. */
+[mono-drawer][mono-color] {
+  --_mono-drawer-border: var(--mono-drawer-border, var(--mono-drawer-accent-border, color-mix(in oklab, var(--_mono-drawer-accent) 35%, var(--border))));
+  --_mono-drawer-glow: var(--mono-drawer-glow, 0 0 24px -4px color-mix(in oklab, var(--_mono-drawer-accent) 45%, transparent));
+}
+
+/* =========================================
+   Overlay — `::backdrop`
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .drawer::backdrop — bg-black/10 backdrop-blur-xs.
+   A real `::backdrop` cannot be reached from a shadow sheet and cannot stack with
+   this component's own layer manager, so it is an element. */
+:where([mono-drawer]) > [mono-overlay] {
+  /* Sized in VIEWPORT units, not `inset: 0`. `inset`/`100%` resolve against the
+     initial containing block, which a horizontally-overflowing page inflates under
+     mobile emulation (measured: 481x1041 on a 390x844 screen), so the scrim
+     overshot the screen. `dvh`/`dvw` also track mobile browser chrome; the plain
+     `v*` line above each is the pre-2022 fallback. */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  width: 100dvw;
+  height: 100vh;
+  height: 100dvh;
+  z-index: var(--_mono-drawer-z);
+  background: var(--_mono-drawer-overlay-bg);
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+
+  /* The blur is applied only while open, and its removal is DELAYED by the fade
+     so the backdrop does not snap sharp while the scrim is still going. */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition:
+    opacity var(--_mono-drawer-overlay-duration) var(--_mono-drawer-ease),
+    backdrop-filter 0s linear var(--_mono-drawer-overlay-duration),
+    -webkit-backdrop-filter 0s linear var(--_mono-drawer-overlay-duration);
+}
+
+[mono-drawer][mono-open] > [mono-overlay] {
+  opacity: 1;
+  pointer-events: auto;
+  backdrop-filter: var(--_mono-drawer-overlay-backdrop-filter);
+  -webkit-backdrop-filter: var(--_mono-drawer-overlay-backdrop-filter);
+  transition:
+    opacity var(--_mono-drawer-overlay-duration) var(--_mono-drawer-ease),
+    backdrop-filter 0s linear 0s,
+    -webkit-backdrop-filter 0s linear 0s;
+}
+
+[mono-drawer][mono-no-overlay] > [mono-overlay] {
+  display: none;
+}
+
+/* Stacked drawers: when another drawer or modal WITH an overlay is open above
+   this one, hide this backdrop so dim layers don't compound — the topmost
+   overlay alone dims everything beneath it. An `overlay="false"` dialog above
+   does not count, so this one keeps dimming the page. */
+[mono-drawer][mono-open][mono-has-drawer-above] > [mono-overlay] {
+  opacity: 0;
+}
+
+/* =========================================
+   Panel — `.drawer > *`
+   ========================================= */
+
+/* basecoat@1.0.2 components/drawer.css .drawer >> > * — fixed z-50 flex h-auto
+   flex-col transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]
+   will-change-transform outline-hidden */
+/* basecoat@1.0.2 styles/vega.css .drawer > * — bg-popover text-popover-foreground text-sm */
+:where([mono-drawer]) > [mono-panel] {
+  position: fixed;
+  z-index: calc(var(--_mono-drawer-z) + 1);
+  display: flex;
+  flex-direction: column;
+  padding: var(--_mono-drawer-panel-pad);
+  color: var(--_mono-drawer-text);
+  font-size: var(--_mono-drawer-font);
+  outline: none;
+  pointer-events: auto;
+  will-change: transform;
+
+  /* Closed state: invisible (hides the shadow halo too) until the slide-in
+     begins. On close the visibility flip is delayed by the transform duration so
+     the slide-out animation plays first. */
+  visibility: hidden;
+  transition:
+    transform var(--_mono-drawer-duration) var(--_mono-drawer-ease),
+    visibility 0s linear var(--_mono-drawer-duration);
+}
+
+/* The panel's PAINT is a layer, not the panel's own box: maia, mira, luma and
+   rhea float the drawer as a card inset from the viewport edge
+   (`before:inset-2 before:rounded-4xl before:border`) over a transparent panel.
+   At `--mono-drawer-inset: 0` the layer is exactly the panel, which is vega. */
+[mono-drawer] > [mono-panel]::before {
+  content: '';
+  position: absolute;
+  inset: var(--_mono-drawer-inset);
+  z-index: -1;
+  background: var(--_mono-drawer-bg);
+  /* `inherit` picks up the panel's per-corner radii, which is the vega card.
+     A flavor that INSETS the layer rounds all four corners instead, so it sets
+     the radius outright. */
+  border-radius: var(--mono-drawer-inset-radius, inherit);
+  border: var(--_mono-drawer-inset-border-width) solid var(--_mono-drawer-border);
+  box-shadow: var(--_mono-drawer-glow), var(--_mono-drawer-shadow);
+  pointer-events: none;
+}
+
+[mono-drawer][mono-open] > [mono-panel] {
+  visibility: visible;
+  transition:
+    transform var(--_mono-drawer-duration) var(--_mono-drawer-ease),
+    visibility 0s linear 0s;
+}
+
+/* =========================================
+   Positions — `[data-side]`
+   -----------------------------------------------------------------------------
+   Each side fixes the two insets it spans, takes its measure from the axis it
+   grows on, and rounds + borders the ONE edge that faces the content.
+   ========================================= */
+
+/* basecoat@1.0.2 components/drawer.css .drawer >> &[data-side='right'] > *
+   — inset-y-0 right-0 w-3/4 max-w-sm translate-x-full */
+/* basecoat@1.0.2 styles/vega.css .drawer[data-side='right'] > * — rounded-l-xl border-l
+   DEVIATION: `right` is this component's DEFAULT side, where upstream's is
+   `bottom`, so the unqualified root is this one. */
+[mono-drawer]:is(:not([mono-position]), [mono-position="right"]) > [mono-panel] {
+  top: 0;
+  right: 0;
+  height: 100vh;
+  height: 100dvh;
+  width: var(--_mono-drawer-width);
+  max-width: 100vw;
+  max-width: 100dvw;
+  transform: translateX(100%);
+  border-start-start-radius: var(--_mono-drawer-radius);
+  border-end-start-radius: var(--_mono-drawer-radius);
+}
+
+[mono-drawer]:is(:not([mono-position]), [mono-position="right"]) > [mono-panel]::before {
+  border-left-width: var(--_mono-drawer-border-width);
+}
+
+[mono-drawer][mono-open]:is(:not([mono-position]), [mono-position="right"]) > [mono-panel] {
+  transform: translateX(0);
+}
+
+/* basecoat@1.0.2 components/drawer.css .drawer >> &[data-side='left'] > *
+   — inset-y-0 left-0 w-3/4 max-w-sm -translate-x-full */
+/* basecoat@1.0.2 styles/vega.css .drawer[data-side='left'] > * — rounded-r-xl border-r */
+[mono-drawer][mono-position="left"] > [mono-panel] {
+  top: 0;
+  left: 0;
+  height: 100vh;
+  height: 100dvh;
+  width: var(--_mono-drawer-width);
+  max-width: 100vw;
+  max-width: 100dvw;
+  transform: translateX(-100%);
+  border-start-end-radius: var(--_mono-drawer-radius);
+  border-end-end-radius: var(--_mono-drawer-radius);
+}
+
+[mono-drawer][mono-position="left"] > [mono-panel]::before {
+  border-right-width: var(--_mono-drawer-border-width);
+}
+
+[mono-drawer][mono-open][mono-position="left"] > [mono-panel] {
+  transform: translateX(0);
+}
+
+/* basecoat@1.0.2 components/drawer.css .drawer >> &[data-side='top'] > *
+   — inset-x-0 top-0 mb-24 max-h-[80vh] -translate-y-full */
+/* basecoat@1.0.2 styles/vega.css .drawer[data-side='top'] > * — rounded-b-xl border-b */
+[mono-drawer][mono-position="top"] > [mono-panel] {
+  top: 0;
+  left: 0;
+  width: 100vw;
+  width: 100dvw;
+  height: var(--_mono-drawer-height);
+  max-height: var(--_mono-drawer-max-height);
+  transform: translateY(-100%);
+  border-end-start-radius: var(--_mono-drawer-radius);
+  border-end-end-radius: var(--_mono-drawer-radius);
+}
+
+[mono-drawer][mono-position="top"] > [mono-panel]::before {
+  border-bottom-width: var(--_mono-drawer-border-width);
+}
+
+[mono-drawer][mono-open][mono-position="top"] > [mono-panel] {
+  transform: translateY(0);
+}
+
+/* basecoat@1.0.2 components/drawer.css .drawer >> &:not([data-side]) > *, &[data-side='bottom'] > *
+   — inset-x-0 bottom-0 mt-24 max-h-[80vh] translate-y-full */
+/* basecoat@1.0.2 styles/vega.css .drawer:not([data-side]) > *, .drawer[data-side='bottom'] > *
+   — rounded-t-xl border-t */
+[mono-drawer][mono-position="bottom"] > [mono-panel] {
+  bottom: 0;
+  left: 0;
+  width: 100vw;
+  width: 100dvw;
+  height: var(--_mono-drawer-height);
+  max-height: var(--_mono-drawer-max-height);
+  transform: translateY(100%);
+  border-start-start-radius: var(--_mono-drawer-radius);
+  border-start-end-radius: var(--_mono-drawer-radius);
+}
+
+[mono-drawer][mono-position="bottom"] > [mono-panel]::before {
+  border-top-width: var(--_mono-drawer-border-width);
+}
+
+[mono-drawer][mono-open][mono-position="bottom"] > [mono-panel] {
+  transform: translateY(0);
+}
+
+/* =========================================
+   Resizer — EXTENSION: a grab bar on the panel's inner edge
+   ========================================= */
+
+:where([mono-drawer] > [mono-panel]) > [mono-resizer] {
+  position: absolute;
+  z-index: 2;
+  touch-action: none;
+  background: transparent;
+  transition: background-color var(--mono-duration) var(--mono-ease);
+}
+
+[mono-drawer] > [mono-panel] > [mono-resizer]:hover,
+[mono-drawer][mono-resizing] > [mono-panel] > [mono-resizer] {
+  background: color-mix(in oklab, var(--_mono-drawer-accent) 30%, transparent);
+}
+
+[mono-drawer]:is(:not([mono-position]), [mono-position="right"]) > [mono-panel] > [mono-resizer] {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 6px;
+  cursor: ew-resize;
+}
+
+[mono-drawer][mono-position="left"] > [mono-panel] > [mono-resizer] {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 6px;
+  cursor: ew-resize;
+}
+
+[mono-drawer][mono-position="top"] > [mono-panel] > [mono-resizer] {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  cursor: ns-resize;
+}
+
+[mono-drawer][mono-position="bottom"] > [mono-panel] > [mono-resizer] {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 6px;
+  cursor: ns-resize;
+}
+
+/* No lag while dragging the handle. */
+[mono-drawer][mono-resizing] > [mono-panel] {
+  transition: none;
+}
+
+[mono-drawer][mono-resizing] {
+  user-select: none;
+}
+
+/* =========================================
+   Header — `> header`
+   ========================================= */
+
+/* basecoat@1.0.2 components/drawer.css .drawer >> > * > header — flex flex-col */
+/* basecoat@1.0.2 styles/vega.css .drawer > * > header — gap-0.5 p-4 text-start
+   DEVIATIONS: a ROW, because the ✕ lives inside it (upstream's drawer has no
+   close button and its header is a column of title + description); and NOT
+   centred on the top / bottom sides for the same reason — a centred title beside
+   a trailing ✕ reads as a mistake. */
+:where([mono-drawer] > [mono-panel]) > [mono-header] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--_mono-drawer-header-gap);
+  flex-shrink: 0;
+  padding: var(--_mono-drawer-pad);
+  text-align: start;
+  border-bottom: var(--_mono-drawer-header-border-width) solid var(--_mono-drawer-header-border);
+  background: var(--_mono-drawer-header-bg);
+}
+
+/* basecoat@1.0.2 styles/vega.css .drawer > * > header > h2, .drawer > * > [data-title]
+   — text-lg font-semibold leading-none tracking-tight */
+/* basecoat@1.0.2 components/drawer.css .drawer >> > * > header — flex flex-col
+   (+ vega's gap-0.5 md:gap-1.5): the title / subtitle column beside the ✕. */
+:where([mono-drawer] > [mono-panel] > [mono-header]) > [mono-heading] {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mono-drawer-heading-gap, var(--_mono-drawer-header-gap));
+}
+
+:where([mono-drawer] > [mono-panel] > [mono-header]) [mono-title] {
+  min-width: 0;
+  font-size: var(--_mono-drawer-title-font);
+  font-weight: var(--_mono-drawer-title-weight);
+  line-height: var(--_mono-drawer-title-line-height);
+  letter-spacing: var(--_mono-drawer-title-tracking);
+  text-transform: var(--_mono-drawer-title-transform);
+  color: var(--_mono-drawer-title-color);
+}
+
+/* basecoat@1.0.2 styles/vega.css .drawer > * > header > p, .drawer > * > [data-description]
+   — text-muted-foreground text-sm */
+:where([mono-drawer] > [mono-panel] > [mono-header]) [mono-subtitle] {
+  min-width: 0;
+  font-size: var(--_mono-drawer-subtitle-font);
+  line-height: var(--mono-drawer-subtitle-line-height, var(--mono-leading-normal));
+  color: var(--_mono-drawer-subtitle-color);
+}
+
+/* Empty regions. The light build omits them; the shadow build always renders
+   them (its native `<slot>`s must exist to be scanned) and marks them
+   [mono-empty]. The heading parts are matched as descendants because the shadow
+   build nests them inside the `header` slot's fallback. */
+:where([mono-drawer] > [mono-panel]) > :is([mono-header], [mono-footer])[mono-empty],
+:where([mono-drawer] > [mono-panel] > [mono-header]) > [mono-heading][mono-empty],
+:where([mono-drawer] > [mono-panel] > [mono-header] > [mono-heading]) :is([mono-title], [mono-subtitle])[mono-empty] {
+  display: none;
+}
+
+/* =========================================
+   Close — EXTENSION, styled like the dialog's
+   ========================================= */
+
+/* basecoat@1.0.2 components/dialog.css .dialog >> > * > :is(button, form[method='dialog'] > button)
+   — inline-flex items-center justify-center opacity-70 transition-opacity
+   hover:opacity-100. Upstream's DRAWER has no close button at all; borrowing the
+   dialog's keeps the two consistent. */
+:where([mono-drawer] > [mono-panel] > [mono-header]) [mono-close] {
+  flex-shrink: 0;
+  /* stays at the end even when the heading column is empty (hidden) */
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-drawer-close-size);
+  height: var(--_mono-drawer-close-size);
+  padding: 0;
+  border: none;
+  border-radius: var(--_mono-drawer-close-radius);
+  background: var(--_mono-drawer-close-bg);
+  color: var(--_mono-drawer-close-color);
+  opacity: var(--_mono-drawer-close-opacity);
+  cursor: pointer;
+  appearance: none;
+  transition:
+    opacity var(--mono-duration) var(--mono-ease),
+    background-color var(--mono-duration) var(--mono-ease);
+}
+
+@media (hover: hover) {
+  [mono-drawer] [mono-close]:hover {
+    opacity: var(--_mono-drawer-close-hover-opacity);
+    background: var(--_mono-drawer-close-hover-bg);
+  }
+}
+
+[mono-drawer] [mono-close]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 var(--mono-ring-width)
+    color-mix(in oklab, var(--ring) var(--mono-ring-alpha), transparent);
+}
+
+[mono-drawer] [mono-close] > :is(svg, span) {
+  display: block;
+  width: var(--_mono-drawer-close-glyph);
+  height: var(--_mono-drawer-close-glyph);
+}
+
+/* =========================================
+   Body — `> section`
+   ========================================= */
+
+/* basecoat@1.0.2 components/drawer.css .drawer >> > * > section
+   — min-h-0 flex-1 overflow-y-auto
+   DEVIATION: padded. Upstream leaves the section bare and pads the content it
+   puts inside; here the body is a SLOT a consumer fills with plain text, so it
+   brings the same `p-4` the header and footer use. `--mono-drawer-body-pad: 0`
+   gives upstream's bare section back. */
+:where([mono-drawer] > [mono-panel]) > [mono-body] {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--mono-drawer-body-pad, var(--_mono-drawer-pad));
+  font-size: var(--_mono-drawer-font);
+  line-height: var(--_mono-drawer-body-line-height);
+}
+
+/* =========================================
+   Footer — `> footer`
+   ========================================= */
+
+/* basecoat@1.0.2 components/drawer.css .drawer >> > * > footer — mt-auto flex flex-col */
+/* basecoat@1.0.2 styles/vega.css .alert-dialog > * > footer, .dialog > * > footer — gap-2
+   basecoat@1.0.2 styles/vega.css .drawer > * > footer — gap-2 p-4
+   The COLUMN is upstream's: a drawer footer is the mobile-sheet idiom, where the
+   actions are full-width and stacked. `--mono-drawer-footer-direction: row`
+   restores the pre-port right-aligned row, and ONE sets it. */
+:where([mono-drawer] > [mono-panel]) > [mono-footer] {
+  display: flex;
+  flex-direction: var(--mono-drawer-footer-direction, column);
+  align-items: var(--mono-drawer-footer-align, stretch);
+  justify-content: var(--mono-drawer-footer-justify, flex-start);
+  gap: var(--_mono-drawer-footer-gap);
+  margin-top: auto;
+  flex-shrink: 0;
+  padding: var(--_mono-drawer-pad);
+  border-top: var(--_mono-drawer-footer-border-width) solid var(--_mono-drawer-footer-border);
+  background: var(--_mono-drawer-footer-bg);
+}
+
+/* The light build re-appends slotted nodes into a `[data-mono-slot]` outlet.
+   Left inline, that outlet is ONE flex child, so the footer's gap and
+   justification apply to IT rather than to the buttons inside it — while the
+   shadow build's `<slot>` is `display: contents` per the UA sheet and the
+   hand-written markup has no wrapper at all. Dissolving the outlet is what
+   makes the three agree, and it is what a consumer writing
+   `<button slot="footer">` twice expects. */
+:where([mono-drawer] > [mono-panel] > [mono-footer]) > [data-mono-slot] {
+  display: contents;
+}
+
+/* =========================================
+   Closed
+   ========================================= */
+
+[mono-drawer]:not([mono-open]) {
+  pointer-events: none;
+}
+
+[mono-drawer]:not([mono-open]) > [mono-overlay] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* A closed drawer is hidden with `visibility: hidden`, which skips PAINT but not
+   LAYOUT — so the panel and everything slotted into it kept generating boxes and
+   being measured even for a drawer the user never opened.
+   `content-visibility: hidden` drops the closed subtree entirely.
+
+   Measured alongside the modal (Chromium, ~400-node panels, 10 modal+drawer pairs):
+   layout objects 12281 → 81, mount layout+style 94.6ms → 14.9ms and flat in the
+   count. One open+close costs slightly more in exchange, since an opening panel is
+   laid out from scratch; `--mono-drawer-duration: 0s` removes that if it matters.
+
+   `allow-discrete` is what makes it safe to animate: opening flips the property to
+   `visible` at 0% so the slide-in has something to composite; closing holds it
+   `visible` until 100% so the panel slides out instead of vanishing on frame one.
+
+   Gated behind @supports deliberately — `content-visibility … allow-discrete` in the
+   `transition` SHORTHAND is a parse error without the feature, and one bad entry
+   drops the WHOLE declaration, which would take the slide with it. Inside the guard
+   the shorthand is known to parse, so the list is restated in full. Browsers without
+   support keep exactly the previous behaviour.
+
+   Safe for every position: the side drawers fix `top`/`bottom` and take an explicit
+   `width`, the sheet ones fix `left`/`right` and cap their height, so size
+   containment has no content-driven dimension to collapse while closed.
+
+   Must stay ABOVE the reduced-motion block below — @supports adds no specificity, so
+   source order is what keeps `transition: none` the winner there. */
+@supports (transition-behavior: allow-discrete) {
+  :where([mono-drawer]) > [mono-panel] {
+    content-visibility: hidden;
+    contain-intrinsic-size: 0;
+    transition:
+      transform var(--_mono-drawer-duration) var(--_mono-drawer-ease),
+      visibility 0s linear var(--_mono-drawer-duration),
+      content-visibility var(--_mono-drawer-duration) allow-discrete;
+  }
+
+  [mono-drawer][mono-open] > [mono-panel] {
+    content-visibility: visible;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [mono-drawer] > [mono-panel],
+  [mono-drawer] > [mono-overlay] {
+    transition: none;
+  }
+}
+
+/* =========================================
+   Auto full-screen (`auto-fullscreen` prop)
+   =========================================
+
+   Fill the screen at a Tailwind breakpoint and below, keeping the drawer's
+   `position` — a `right` drawer still slides in from the right, it just covers the
+   viewport. Boundaries are `<breakpoint> - 0.02px` to match Tailwind's `max-*`
+   variants (at exactly 640px `sm:` applies, so auto-fullscreen must not).
+
+   No `!important` needed, unlike modal.css: drawer sizing arrives as the
+   `--mono-drawer-*` custom properties on the ROOT, while the panel's
+   `width`/`height` come from the position rules above — (0,2,1) selectors that
+   these, at (0,2,1) and declared AFTER, beat on order. Keep this section last.
+*/
+
+@media (max-width: 639.98px) {
+  [mono-drawer][mono-auto-fullscreen="sm"] > [mono-panel] {
+    width: 100vw;
+    width: 100dvw;
+    height: 100vh;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  [mono-drawer][mono-auto-fullscreen="sm"] > [mono-panel]::before {
+    border-width: 0;
+    inset: 0;
+  }
+
+  /* Load-bearing, not cosmetic: the rules above outrank the `--mono-drawer-width`
+     the resizer writes, so a drag here moves nothing visible YET still records a
+     width — and the drawer would snap to it the moment the viewport grew back past
+     the breakpoint. Hiding the handle removes the pointer target so no such drag
+     can begin (`_onResizeStart` also guards, as belt-and-braces). */
+  [mono-drawer][mono-auto-fullscreen="sm"] > [mono-panel] > [mono-resizer] {
+    display: none;
+  }
+}
+
+@media (max-width: 767.98px) {
+  [mono-drawer][mono-auto-fullscreen="md"] > [mono-panel] {
+    width: 100vw;
+    width: 100dvw;
+    height: 100vh;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  [mono-drawer][mono-auto-fullscreen="md"] > [mono-panel]::before {
+    border-width: 0;
+    inset: 0;
+  }
+
+  [mono-drawer][mono-auto-fullscreen="md"] > [mono-panel] > [mono-resizer] {
+    display: none;
+  }
+}
+
+@media (max-width: 1023.98px) {
+  [mono-drawer][mono-auto-fullscreen="lg"] > [mono-panel] {
+    width: 100vw;
+    width: 100dvw;
+    height: 100vh;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  [mono-drawer][mono-auto-fullscreen="lg"] > [mono-panel]::before {
+    border-width: 0;
+    inset: 0;
+  }
+
+  [mono-drawer][mono-auto-fullscreen="lg"] > [mono-panel] > [mono-resizer] {
+    display: none;
+  }
+}
+
+@media (max-width: 1279.98px) {
+  [mono-drawer][mono-auto-fullscreen="xl"] > [mono-panel] {
+    width: 100vw;
+    width: 100dvw;
+    height: 100vh;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  [mono-drawer][mono-auto-fullscreen="xl"] > [mono-panel]::before {
+    border-width: 0;
+    inset: 0;
+  }
+
+  [mono-drawer][mono-auto-fullscreen="xl"] > [mono-panel] > [mono-resizer] {
+    display: none;
+  }
+}
+
+@media (max-width: 1535.98px) {
+  [mono-drawer][mono-auto-fullscreen="2xl"] > [mono-panel] {
+    width: 100vw;
+    width: 100dvw;
+    height: 100vh;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  [mono-drawer][mono-auto-fullscreen="2xl"] > [mono-panel]::before {
+    border-width: 0;
+    inset: 0;
+  }
+
+  [mono-drawer][mono-auto-fullscreen="2xl"] > [mono-panel] > [mono-resizer] {
+    display: none;
+  }
+}

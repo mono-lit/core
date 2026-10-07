@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+        "target": "esnext",
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "declaration": true,
+        "declarationDir": "./dist",
+        "declarationMap": false,
+        "emitDeclarationOnly": true,
+        "outDir": "./dist",
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "strict": true,
+        "allowSyntheticDefaultImports": true,
+    },
+    "include": [
+        "src/**/*.ts",
+        "src/**/*.d.ts",
+        "src/**/*.vue",
+        "pkg/**/*.ts", 
+    ],
+    "exclude": [
+        "node_modules",
+        "dist",
+    ]
+}

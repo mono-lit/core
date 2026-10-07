@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+        "target": "esnext",
+        "module": "esnext",
+        "declaration": true,
+        "declarationDir": "./dist",
+        "declarationMap": false,
+        "emitDeclarationOnly": true,
+        "outDir": "./dist",
+        "rootDir": ".",
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "strict": true,
+        "allowSyntheticDefaultImports": true,
+    },
+    "include": [
+        "src/**/*.ts",
+        "src/**/*.d.ts",
+        "src/**/*.vue",
+        "pkg/**/*.ts", 
+    ],
+    "exclude": [
+        "node_modules",
+        "dist",
+    ]
+}

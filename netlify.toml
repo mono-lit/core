@@ -1,0 +1,148 @@
+# Netlify: VitePress documentation site + npm registry on ONE site.
+#
+#   https://mono-libs.netlify.app/*     → VitePress docs (static)
+#   https://mono-libs.netlify.app/npm/* → npm registry (netlify/functions/npm.ts)
+#
+# Setup (one time, free plan, no credit card):
+#   Sites → Add new site → Import an existing project → this repo
+#   - Site name: mono-libs   (→ https://mono-libs.netlify.app)
+#   - Production branch: the branch you deploy from
+#   Environment variable (Site configuration → Environment variables):
+#   - REGISTRY_PUBLISH_TOKEN — shared secret required for `pnpm publish`.
+#     Consumers installing packages need NO token. If the variable is unset,
+#     publishes are accepted without auth (not recommended).
+#
+# The registry data (tarballs + packuments) lives in two site-scoped Netlify
+# Blobs stores ("tarballs", "metadata") — provisioned automatically, strongly
+# consistent, with conditional writes for version immutability. Everything
+# that is not a mono package is REDIRECTED to registry.npmjs.org at the edge —
+# see the [[redirects]] below — and never invokes the function.
+
+[build]
+  # Docs import the mono packages as workspace deps → build them first,
+  # then the VitePress site into the publish directory below.
+  command = "pnpm -r --filter @mono-lit/devextreme --filter @mono-lit/utility --filter @mono-lit/helper run build && pnpm --filter docs run build"
+  publish = "docs/.vitepress/dist"
+
+[functions]
+  directory = "netlify/functions"
+
+# ── Registry routing ──────────────────────────────────────────────────────────
+#
+# A consumer's .npmrc may point a registry at this host (scoped:
+# `@mono-lit:registry=…`; older setups used the GLOBAL `registry=`), and with a
+# global one every public package in their tree — lit-html, @types/node,
+# remark-gfm, hundreds per install — is requested here too. Those must never invoke the function: with it mounted on `/npm/*`
+# each one was a Lambda that fetched npmjs live, and a `pnpm i` burned the
+# monthly function budget while timing out over a slow link.
+#
+# So the function is mounted on the OWNED names only (netlify/functions/npm.ts,
+# `monoFunctionPaths()` — keep this block in step with MONO_PACKAGES in
+# netlify/registry/packages.ts), and everything else under /npm/ is a 302 to
+# registry.npmjs.org, answered by the CDN edge. pnpm follows it and drops this
+# host's token on the way (verified). Rules match top-down, first wins.
+#
+# Each scoped name is listed in all three spellings clients send: a literal
+# slash (tarball URLs) and an encoded `%2f` / `%2F` (packuments, publishes).
+#
+# The explicit owned rewrites make the outcome the same whichever Netlify
+# evaluates first, functions or redirects: an owned name always lands on the
+# function, a foreign name always lands on the redirect. The handler already
+# strips the `/.netlify/functions/npm` prefix.
+
+[[redirects]]
+  from = "/npm/@mono-lit/helper"
+  to = "/.netlify/functions/npm/@mono-lit/helper"
+  status = 200
+[[redirects]]
+  from = "/npm/@mono-lit/helper/*"
+  to = "/.netlify/functions/npm/@mono-lit/helper/:splat"
+  status = 200
+[[redirects]]
+  from = "/npm/@mono-lit%2fhelper"
+  to = "/.netlify/functions/npm/@mono-lit%2fhelper"
+  status = 200
+[[redirects]]
+  from = "/npm/@mono-lit%2fhelper/*"
+  to = "/.netlify/functions/npm/@mono-lit%2fhelper/:splat"
+  status = 200
+[[redirects]]
+  from = "/npm/@mono-lit%2Fhelper"
+  to = "/.netlify/functions/npm/@mono-lit%2Fhelper"
+  status = 200
+[[redirects]]
+  from = "/npm/@mono-lit%2Fhelper/*"
+  to = "/.netlify/functions/npm/@mono-lit%2Fhelper/:splat"
+  status = 200
+[[redirects]]
+  from = "/npm/@mono-lit/utility"
+  to = "/.netlify/functions/npm/@mono-lit/utility"
+  status = 200
+[[redirects]]
+  from = "/npm/@mono-lit/utility/*"
+  to = "/.netlify/functions/npm/@mono-lit/utility/:splat"
+  status = 200
+[[redirects]]
+  from = "/npm/@mono-lit%2futility"
+  to = "/.netlify/functions/npm/@mono-lit%2futility"
+  status = 200
+[[redirects]]
+  from = "/npm/@mono-lit%2futility/*"
+  to = "/.netlify/functions/npm/@mono-lit%2futility/:splat"
+  status = 200
+[[redirects]]
+  from = "/npm/@mono-lit%2Futility"
+  to = "/.netlify/functions/npm/@mono-lit%2Futility"
+  status = 200
+[[redirects]]
+  from = "/npm/@mono-lit%2Futility/*"
+  to = "/.netlify/functions/npm/@mono-lit%2Futility/:splat"
+  status = 200
+[[redirects]]
+  from = "/npm/@mono-lit/devextreme"
+  to = "/.netlify/functions/npm/@mono-lit/devextreme"
+  status = 200
+[[redirects]]
+  from = "/npm/@mono-lit/devextreme/*"
+  to = "/.netlify/functions/npm/@mono-lit/devextreme/:splat"
+  status = 200
+[[redirects]]
+  from = "/npm/@mono-lit%2fdevextreme"
+  to = "/.netlify/functions/npm/@mono-lit%2fdevextreme"
+  status = 200
+[[redirects]]
+  from = "/npm/@mono-lit%2fdevextreme/*"
+  to = "/.netlify/functions/npm/@mono-lit%2fdevextreme/:splat"
+  status = 200
+[[redirects]]
+  from = "/npm/@mono-lit%2Fdevextreme"
+  to = "/.netlify/functions/npm/@mono-lit%2Fdevextreme"
+  status = 200
+[[redirects]]
+  from = "/npm/@mono-lit%2Fdevextreme/*"
+  to = "/.netlify/functions/npm/@mono-lit%2Fdevextreme/:splat"
+  status = 200
+[[redirects]]
+  from = "/npm/-/*"
+  to = "/.netlify/functions/npm/-/:splat"
+  status = 200
+
+# Everything else under /npm/ is a public package: send the client to npmjs.
+# A 302 (not a 200 rewrite — a 200 would make Netlify PROXY it, which is the
+# very thing being removed). The query string rides along on `:splat` rules.
+[[redirects]]
+  from = "/npm/*"
+  to = "https://registry.npmjs.org/:splat"
+  status = 302
+
+# Publishes the mono packages to this site's own registry after every
+# production deploy goes live (skips already-published versions).
+[[plugins]]
+  package = "./netlify/plugins/publish-registry"
+
+[build.environment]
+  NODE_VERSION = "22"
+  PNPM_VERSION = "10"
+  # VitePress (Vite client+server bundles) exceeds Node's default ~2 GB heap
+  # on the build machine — raise it explicitly.
+  NODE_OPTIONS = "--max-old-space-size=4096"

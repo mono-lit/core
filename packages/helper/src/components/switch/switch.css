@@ -1,0 +1,453 @@
+/* =========================================================================
+   mono-switch — a port of Basecoat's `.input[type='checkbox'][role='switch']`
+   and the `.label` beside it (basecoat-css@1.0.2, vega style).
+
+   Styled by ATTRIBUTE, like Basecoat — and the attributes mirror the element's
+   props one for one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-switch size="sm" color="danger" label="Notifications" model-value>
+     <label mono-switch mono-size="sm" mono-color="danger">
+       <input mono-input type="checkbox" role="switch" checked />
+       <span mono-track aria-hidden="true"><span mono-thumb></span></span>
+       <span mono-label><span mono-label-text>Notifications</span></span>
+     </label>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-color])` = primary). The element renders these attributes on its
+   root <label> (both builds) plus the STATES `mono-checked` / `mono-loading`;
+   hand-written markup may rely on the native input's `:checked` instead — every
+   state rule reads both. The old classes (`.mono-switch.sm.mono-switch-checked`)
+   are still emitted as inert hooks until 2.0 but no rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-switch]                                 ≡ .label (flex gap-2 text-sm font-medium leading-snug select-none)
+     [mono-switch] > [mono-track]                  ≡ .input[type='checkbox'][role='switch'] (h-[18.4px] w-[32px] rounded-full border border-transparent shadow-xs, not-checked:bg-input)
+     [mono-track] > [mono-thumb]                   ≡ :before (size-4 rounded-full bg-background; dark not-checked:bg-foreground, checked:bg-primary-foreground — via --mono-mode-switch-thumb*)
+     [mono-checked] / [mono-input]:checked         ≡ :checked (bg-primary) + :before translate-x-[calc(100%-2px)]
+     [mono-input]:focus-visible + [mono-track]     ≡ focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50
+     [mono-invalid] / [mono-input][aria-invalid]   ≡ aria-invalid:border-destructive aria-invalid:ring-destructive/20
+     [mono-disabled] / [mono-input]:disabled       ≡ disabled:cursor-not-allowed disabled:opacity-50
+     [mono-label-text]                             ≡ .label text
+     [mono-description]                            ≡ .field > p (text-sm text-muted-foreground)
+     [mono-size="xs|sm|lg|xl|xxl"]                 ≡ EXTENSION — upstream has two steps (default / data-size='sm');
+                                                     mono derives all six from --mono-control-height-*
+     [mono-color="…"]                              ≡ EXTENSION (the ON track in the role's colour)
+     [mono-loading]                                ≡ EXTENSION (the thumb pulses while a change is in flight)
+
+   GEOMETRY — one anchor, everything else derived, and it lands exactly on
+   Basecoat at md: the THUMB is the checkbox box (--mono-control-height-md × 4/9
+   = 16px = upstream's `size-4`), the track is 1.15 × that tall (18.4px =
+   `h-[18.4px]`) and 2 × that wide (32px = `w-[32px]`). So a switch, a checkbox
+   and a radio in one column share one scale by construction. The thumb travels
+   the width of the track's CONTENT box minus its own — which parks it flush
+   inside the border at both ends, so there is no inset to tune. (Upstream writes
+   that as `calc(100% - 2px)`, the same number at vega's 1px border and 2:1
+   track, but wrong for any flavor that changes either.)
+
+   Specificity contract (same as the pre-port class sheet): a part's RESTING rule
+   is exactly one attribute strong — `:where([mono-switch]) [mono-track]` =
+   (0,1,0) — so a utility class handed in through `cssClass` wins by source
+   order, while state rules (checked / focus / invalid / disabled / loading,
+   keyed on the root or the native input) stay heavier and win over it.
+
+   Inner parts: [mono-input], [mono-track] > [mono-thumb], [mono-label] >
+   [mono-label-text] / [mono-description]. The shadow build marks an unassigned
+   slot wrapper [mono-empty].
+
+   The track sits on the label's CAP BAND (see `--_mono-switch-line-offset`) —
+   mono's own alignment rule, kept, and the same numbers checkbox.css uses.
+
+   FLAVORS set `--mono-switch-{radius,shadow,border-width,border-color,
+   checked-border-color,ring-width,ring-alpha,track-off,track-height-md,
+   track-ratio,thumb-ratio,thumb-width-ratio,thumb-radius,thumb-shadow}` (the per-style `[role='switch']` deltas); every fallback here is
+   vega's value (`node scripts/basecoat-styles.mjs --varying "role='switch'"`).
+   ========================================================================= */
+
+mono-switch {
+  display: inline-block;
+}
+
+[mono-switch] {
+  /* ── palette: each slot is a public knob over a Basecoat token ─────────── */
+  --_mono-switch-text: var(--mono-switch-text, var(--foreground));
+  --_mono-switch-description: var(--mono-switch-description, var(--muted-foreground));
+  --_mono-switch-primary: var(--mono-switch-primary, var(--primary));
+  --_mono-switch-accent: var(--mono-switch-accent, var(--_mono-switch-accent-preset, var(--_mono-switch-primary)));
+  /* not-checked:bg-input (dark: /80 — the mode token carries it) */
+  --_mono-switch-track-off: var(--mono-switch-track-off, var(--mono-mode-surface-strong));
+  --_mono-switch-thumb: var(--mono-switch-thumb, var(--mono-mode-switch-thumb));
+  --_mono-switch-thumb-checked: var(--mono-switch-thumb-checked, var(--mono-mode-switch-thumb-checked));
+  --_mono-switch-shadow: var(--mono-switch-shadow, var(--mono-shadow-xs));
+  --_mono-switch-thumb-shadow: var(--mono-switch-thumb-shadow, 0 0 #0000);
+  --_mono-switch-radius: var(--mono-switch-radius, var(--mono-radius-full));
+  --_mono-switch-border-width: var(--mono-switch-border-width, var(--mono-border-width));
+  --_mono-switch-border-color: var(--mono-switch-border-color, transparent);
+  --_mono-switch-ring-color: var(--mono-switch-ring-color, var(--ring));
+  --_mono-switch-ring-width: var(--mono-switch-ring-width, var(--mono-ring-width));
+  --_mono-switch-ring-alpha: var(--mono-switch-ring-alpha, var(--mono-ring-alpha));
+
+  /* ── md metrics live on the unqualified root ON PURPOSE ────────────────────
+     basecoat@1.0.2 styles/vega.css [role='switch'] — h-[18.4px] w-[32px] with a
+     size-4 thumb; 18.4 = (36 × 4/9) × 1.15 and 32 = (36 × 4/9) × 2 */
+  --_mono-switch-track-h: var(--mono-switch-track-height, var(--mono-switch-track-height-md, calc(var(--mono-control-height-md) * 23 / 45)));
+  --_mono-switch-track-w: var(--mono-switch-track-width, calc(var(--_mono-switch-track-h) * var(--mono-switch-track-ratio, 1.7391)));
+  --_mono-switch-track-inner-h: calc(var(--_mono-switch-track-h) - 2 * var(--_mono-switch-border-width));
+  --_mono-switch-track-inner-w: calc(var(--_mono-switch-track-w) - 2 * var(--_mono-switch-border-width));
+  /* `min()` so a flavor with a thicker border (luma, rhea: border-2) cannot
+     push the thumb past the track content box. The width is its own ratio:
+     luma's thumb is a PILL (h-4 w-6), not a circle. */
+  --_mono-switch-thumb-size: min(
+    calc(var(--_mono-switch-track-h) * var(--mono-switch-thumb-ratio, 0.8696)),
+    var(--_mono-switch-track-inner-h)
+  );
+  --_mono-switch-thumb-w: min(
+    calc(var(--_mono-switch-track-h) * var(--mono-switch-thumb-width-ratio, var(--mono-switch-thumb-ratio, 0.8696))),
+    var(--_mono-switch-track-inner-w)
+  );
+  /* ON travel = the content box minus the thumb. Upstream writes it
+     `translate-x-[calc(100%-2px)]`, which is the same number at vega's 1px
+     border and 2:1 track — and only there: luma's border-2 left the thumb short
+     of the end, rhea's narrower track pushed it past. */
+  --_mono-switch-travel: calc(var(--_mono-switch-track-inner-w) - var(--_mono-switch-thumb-w));
+  /* ── whole pixels ────────────────────────────────────────────────────────
+     Every part of the switch is a ratio of the control step, so it lands on a
+     fraction (18.39px, 16.34px, 17.77px…). A fractional round shape is
+     antialiased on every edge, and the thumb — which parks flush against the
+     track's cap — picked up a dark rim that changed with the flavor and the
+     screen's pixel ratio.
+
+     Snap the THUMB and its inset, then build the track height from them, rather
+     than rounding each value on its own: rounding independently can leave half a
+     pixel above and below the thumb (an odd track around an even thumb), which
+     blurs exactly the edge this is meant to sharpen, or stretch the thumb into an
+     ellipse. `round()` has the same browser floor as `color-mix()` and `:has()`,
+     which this sheet already requires. */
+  --_mono-switch-thumb-h-px: round(nearest, var(--_mono-switch-thumb-size), 1px);
+  --_mono-switch-thumb-w-px: round(nearest, var(--_mono-switch-thumb-w), 1px);
+  --_mono-switch-thumb-inset-y: max(
+    0px,
+    round(nearest, calc((var(--_mono-switch-track-inner-h) - var(--_mono-switch-thumb-size)) / 2), 1px)
+  );
+  --_mono-switch-track-h-px: calc(
+    var(--_mono-switch-thumb-h-px) + 2 * var(--_mono-switch-border-width) + 2 * var(--_mono-switch-thumb-inset-y)
+  );
+  --_mono-switch-track-w-px: round(nearest, var(--_mono-switch-track-w), 1px);
+  --_mono-switch-travel-px: calc(
+    var(--_mono-switch-track-w-px) - 2 * var(--_mono-switch-border-width) - var(--_mono-switch-thumb-w-px)
+  );
+
+  --_mono-switch-gap: var(--mono-switch-gap, var(--mono-switch-gap-md, calc(var(--mono-spacing) * 2)));
+  --_mono-switch-label-font: var(--mono-switch-label-font-md, var(--mono-text-sm));
+  --_mono-switch-description-font: var(--mono-switch-description-font-md, 0.8125rem);
+
+  /* ── alignment with the label ────────────────────────────────────────────
+     The track is centred on the label's CAP BAND — the ink the eye reads, not
+     the line box. Every number is checkbox.css's. */
+  --_mono-switch-label-line-height: var(--mono-switch-label-line-height, var(--mono-leading-snug));
+  --_mono-switch-optical-shift: 0.045;
+  --_mono-switch-optical-nudge: 0px;
+  --_mono-switch-line-offset: calc(
+    (var(--_mono-switch-label-font) * var(--_mono-switch-label-line-height) - var(--_mono-switch-track-h-px)) / 2 +
+      var(--_mono-switch-label-font) * var(--_mono-switch-optical-shift) + var(--_mono-switch-optical-nudge)
+  );
+
+  /* The element build nests this root inside its host, so it is never itself a
+     grid or flex item and shrink-wraps its content. Hand-written markup usually
+     IS the item (a radio in a `display: grid` list), and an item blockifies —
+     `inline-flex` becomes `flex` and the row stretches to the widest sibling,
+     wrapping its label at a different point than the element's. `fit-content`
+     keeps both shapes shrink-wrapped; a consumer who wants a full-width row
+     still sets a width. */
+  width: fit-content;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--_mono-switch-gap);
+  position: relative;
+  vertical-align: top;
+  cursor: pointer;
+  user-select: none;
+  font-family: inherit;
+  color: var(--_mono-switch-text);
+}
+
+[mono-switch],
+:where([mono-switch]) *,
+:where([mono-switch]) *::before,
+:where([mono-switch]) *::after {
+  box-sizing: border-box;
+}
+
+:where([mono-switch]) :is([mono-label], [mono-label-text], [mono-description])[mono-empty] {
+  display: none;
+}
+
+/* the track seats on the first line of a label that is actually there; a bare
+   track stays flush at the top */
+[mono-switch]:has([mono-label-text]:not([mono-empty])) > [mono-track] {
+  margin-top: var(--_mono-switch-line-offset, 0px);
+}
+
+/* =========================================
+   Sizes — EXTENSION: upstream has two steps; mono derives six from the control
+   ladder, so the thumb is the checkbox box at every one of them
+   ========================================= */
+
+[mono-switch][mono-size="xs"] {
+  --_mono-switch-track-h: var(--mono-switch-track-height, var(--mono-switch-track-height-xs, calc(var(--mono-control-height-xs) * 23 / 45)));
+  --_mono-switch-gap: var(--mono-switch-gap, var(--mono-switch-gap-xs, calc(var(--mono-spacing) * 1.25)));
+  --_mono-switch-label-font: var(--mono-switch-label-font-xs, var(--mono-text-xs));
+  --_mono-switch-description-font: var(--mono-switch-description-font-xs, 0.6875rem);
+}
+
+[mono-switch][mono-size="sm"] {
+  --_mono-switch-track-h: var(--mono-switch-track-height, var(--mono-switch-track-height-sm, calc(var(--mono-control-height-sm) * 23 / 45)));
+  --_mono-switch-gap: var(--mono-switch-gap, var(--mono-switch-gap-sm, calc(var(--mono-spacing) * 1.5)));
+  --_mono-switch-label-font: var(--mono-switch-label-font-sm, 0.8125rem);
+  --_mono-switch-description-font: var(--mono-switch-description-font-sm, var(--mono-text-xs));
+}
+
+[mono-switch][mono-size="lg"] {
+  --_mono-switch-track-h: var(--mono-switch-track-height, var(--mono-switch-track-height-lg, calc(var(--mono-control-height-lg) * 23 / 45)));
+  --_mono-switch-gap: var(--mono-switch-gap, var(--mono-switch-gap-lg, calc(var(--mono-spacing) * 2.5)));
+  --_mono-switch-label-font: var(--mono-switch-label-font-lg, var(--mono-text-base));
+  --_mono-switch-description-font: var(--mono-switch-description-font-lg, var(--mono-text-sm));
+  /* 16px text rounds its ascent such that the track lands ~0.35px low */
+  --_mono-switch-optical-nudge: -0.35px;
+}
+
+[mono-switch][mono-size="xl"] {
+  --_mono-switch-track-h: var(--mono-switch-track-height, var(--mono-switch-track-height-xl, calc(var(--mono-control-height-xl) * 23 / 45)));
+  --_mono-switch-gap: var(--mono-switch-gap, var(--mono-switch-gap-xl, calc(var(--mono-spacing) * 3)));
+  --_mono-switch-label-font: var(--mono-switch-label-font-xl, var(--mono-text-lg));
+  --_mono-switch-description-font: var(--mono-switch-description-font-xl, var(--mono-text-base));
+}
+
+[mono-switch][mono-size="xxl"] {
+  --_mono-switch-track-h: var(--mono-switch-track-height, var(--mono-switch-track-height-xxl, calc(var(--mono-control-height-xxl) * 23 / 45)));
+  --_mono-switch-gap: var(--mono-switch-gap, var(--mono-switch-gap-xxl, calc(var(--mono-spacing) * 3.5)));
+  --_mono-switch-label-font: var(--mono-switch-label-font-xxl, var(--mono-text-xl));
+  --_mono-switch-description-font: var(--mono-switch-description-font-xxl, var(--mono-text-lg));
+  /* 20px text rounds the other way, leaving the track ~1.1px high */
+  --_mono-switch-optical-nudge: 1.1px;
+}
+
+/* =========================================
+   Colours — EXTENSION: the ON track in the role's colour
+   ========================================= */
+
+[mono-switch]:is(:not([mono-color]), [mono-color="primary"]) {
+  --_mono-switch-accent-preset: var(--_mono-switch-primary);
+}
+[mono-switch][mono-color="secondary"] {
+  --_mono-switch-accent-preset: var(--secondary-foreground);
+}
+[mono-switch][mono-color="success"] {
+  --_mono-switch-accent-preset: var(--success);
+}
+[mono-switch][mono-color="danger"] {
+  --_mono-switch-accent-preset: var(--destructive);
+}
+[mono-switch][mono-color="warning"] {
+  --_mono-switch-accent-preset: var(--warning);
+}
+[mono-switch][mono-color="info"] {
+  --_mono-switch-accent-preset: var(--info);
+}
+[mono-switch][mono-color="teal"] {
+  --_mono-switch-accent-preset: var(--teal);
+}
+[mono-switch][mono-color="purple"] {
+  --_mono-switch-accent-preset: var(--purple);
+}
+[mono-switch][mono-color="neutral"] {
+  --_mono-switch-accent-preset: var(--neutral);
+}
+[mono-switch][mono-color="dark"] {
+  --_mono-switch-accent-preset: var(--dark);
+}
+
+/* =========================================
+   States on the root
+   ========================================= */
+
+/* basecoat@1.0.2 components/switch.css .field > input[type='checkbox'][role='switch'], .input[type='checkbox'][role='switch']
+   — disabled:cursor-not-allowed disabled:opacity-50.
+   A BUSY switch is exempt: the input is disabled so a second click cannot race
+   the first, but it reads as "working", not "unavailable". */
+[mono-switch][mono-disabled]:not([mono-loading]),
+[mono-switch]:not([mono-loading]):has(> [mono-input]:disabled) {
+  cursor: not-allowed;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+[mono-switch][mono-loading] {
+  cursor: progress;
+  pointer-events: none;
+}
+
+/* the native input is the accessible control; the track is its painted twin */
+:where([mono-switch]) [mono-input] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  /* the UA gives an <input> its own font; inside a shadow root nothing resets it,
+     so the hidden control ended up with a different computed font in the two
+     builds. It paints nothing either way — this just keeps them identical. */
+  font: inherit;
+  color: inherit;
+}
+
+/* =========================================
+   The track
+   ========================================= */
+
+/* basecoat@1.0.2 components/switch.css .field > input[type='checkbox'][role='switch'], .input[type='checkbox'][role='switch']
+   — inline-flex shrink-0 appearance-none items-center transition-all outline-none */
+/* basecoat@1.0.2 styles/vega.css .field > input[type='checkbox'][role='switch'], .input[type='checkbox'][role='switch']
+   — rounded-full border border-transparent shadow-xs; not-checked:bg-input
+   (dark /80 via --mono-mode-surface-strong); checked:bg-primary;
+   mono: `--tw-ring-*` flattened to the ring + shadow slots */
+/* basecoat@1.0.2 styles/vega.css :is(.field > input[type='checkbox'][role='switch'], .input[type='checkbox'][role='switch']):not([data-size='sm'])
+   — h-[18.4px] w-[32px] (mono derives both from the control step) */
+:where([mono-switch]) > [mono-track] {
+  --_mono-switch-ring: 0 0 #0000;
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  width: var(--_mono-switch-track-w-px);
+  height: var(--_mono-switch-track-h-px);
+  border: var(--_mono-switch-border-width) solid var(--_mono-switch-border-color);
+  border-radius: var(--_mono-switch-radius);
+  background-color: var(--_mono-switch-track-off);
+  box-shadow: var(--_mono-switch-ring), var(--_mono-switch-shadow);
+  /* the track's own ink is the ACCENT, so a flavor that outlines the ON track
+     (luma, sera, rhea) says `--mono-switch-checked-border-color: currentColor`
+     with public knobs alone */
+  color: var(--_mono-switch-accent);
+  transition-property: box-shadow, background-color, border-color;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+}
+
+/* focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 */
+:where([mono-switch]) > [mono-input]:focus-visible + [mono-track] {
+  border-color: var(--_mono-switch-ring-color);
+  --_mono-switch-ring: 0 0 0 var(--_mono-switch-ring-width) color-mix(in oklab, var(--_mono-switch-ring-color) var(--_mono-switch-ring-alpha), transparent);
+}
+
+/* aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20
+   (dark: /50, /40 via the mode tokens) */
+[mono-switch][mono-invalid] > [mono-track],
+:where([mono-switch]) > [mono-input][aria-invalid="true"] + [mono-track] {
+  border-color: var(--mono-mode-invalid-border);
+  --_mono-switch-ring: 0 0 0 var(--_mono-switch-ring-width) var(--mono-mode-invalid-ring);
+}
+
+/* checked:bg-primary — generalised per hue */
+[mono-switch][mono-checked] > [mono-track],
+:where([mono-switch]) > [mono-input]:checked + [mono-track] {
+  background-color: var(--_mono-switch-accent);
+  border-color: var(--mono-switch-checked-border-color, var(--_mono-switch-border-color));
+}
+
+/* =========================================
+   The thumb — upstream's `:before`
+   ========================================= */
+
+/* basecoat@1.0.2 components/switch.css .field > input[type='checkbox'][role='switch'], .input[type='checkbox'][role='switch']
+   — before:pointer-events-none before:block before:content-[''] before:ring-0 before:transition-transform */
+/* basecoat@1.0.2 styles/vega.css :is(.field > input[type='checkbox'][role='switch'], .input[type='checkbox'][role='switch']):before
+   — bg-background rounded-full (dark: not-checked bg-foreground / checked
+   bg-primary-foreground, via --mono-mode-switch-thumb*) */
+/* basecoat@1.0.2 styles/vega.css :is(.field > input[type='checkbox'][role='switch'], .input[type='checkbox'][role='switch']):not([data-size='sm']):before
+   — size-4 (mono: that share of the track, so it tracks every step) */
+:where([mono-switch]) > [mono-track] > [mono-thumb] {
+  display: block;
+  flex: 0 0 auto;
+  pointer-events: none;
+  width: var(--_mono-switch-thumb-w-px);
+  height: var(--_mono-switch-thumb-h-px);
+  border-radius: var(--mono-switch-thumb-radius, var(--mono-radius-full));
+  background-color: var(--_mono-switch-thumb);
+  box-shadow: var(--_mono-switch-thumb-shadow);
+  /* `translate`, not `transform`: the loading pulse owns `transform`, and the
+     two are independent properties, so they no longer collide */
+  translate: 0;
+  transition-property: translate, background-color;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+}
+
+/* :checked:before — translate-x-[calc(100%-2px)]: the thumb parks flush inside
+   the track's border at both ends (see --_mono-switch-travel) */
+[mono-switch][mono-checked] > [mono-track] > [mono-thumb],
+:where([mono-switch]) > [mono-input]:checked + [mono-track] > [mono-thumb] {
+  translate: var(--_mono-switch-travel-px);
+  background-color: var(--_mono-switch-thumb-checked);
+}
+
+[mono-switch][mono-checked] > [mono-track] > [mono-thumb]:dir(rtl),
+:where([mono-switch]) > [mono-input]:checked + [mono-track] > [mono-thumb]:dir(rtl) {
+  translate: calc(-1 * var(--_mono-switch-travel-px));
+}
+
+/* EXTENSION — the thumb pulses while a change is in flight */
+[mono-switch][mono-loading] > [mono-track] > [mono-thumb] {
+  animation: mono-switch-pulse 1s ease-in-out infinite;
+}
+
+@keyframes mono-switch-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.86);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([mono-switch]) > [mono-track],
+  :where([mono-switch]) > [mono-track] > [mono-thumb] {
+    transition: none;
+  }
+
+  [mono-switch][mono-loading] > [mono-track] > [mono-thumb] {
+    animation-duration: 2.4s;
+  }
+}
+
+/* =========================================
+   Label
+   ========================================= */
+
+:where([mono-switch]) > [mono-label] {
+  min-width: 0;
+}
+
+/* basecoat@1.0.2 styles/vega.css .field > label, .label — text-sm leading-snug font-medium;
+   `block` so the first line box is exactly font × line-height */
+:where([mono-switch]) [mono-label-text] {
+  display: block;
+  font-size: var(--_mono-switch-label-font);
+  line-height: var(--_mono-switch-label-line-height);
+  font-weight: var(--mono-switch-label-font-weight, var(--mono-label-font-weight, var(--mono-font-weight-medium)));
+  color: var(--_mono-switch-text);
+}
+
+/* basecoat@1.0.2 styles/vega.css .fieldset legend + p, .field > p, .field section > p
+   — text-sm text-muted-foreground leading-normal font-normal; EXTENSION: one step
+   under the label per size */
+:where([mono-switch]) [mono-description] {
+  display: block;
+  margin-top: calc(var(--mono-spacing) * 0.5);
+  font-size: var(--_mono-switch-description-font);
+  line-height: var(--mono-leading-normal);
+  font-weight: var(--mono-font-weight-normal);
+  color: var(--_mono-switch-description);
+}

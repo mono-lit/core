@@ -1,0 +1,794 @@
+/* @unocss-include */
+
+/* =========================================================================
+   mono-sidebar — a port of Basecoat's `.sidebar` (basecoat-css@1.0.2, vega
+   style).
+
+   Styled by ATTRIBUTE, like Basecoat — and the attributes mirror the element's
+   props one for one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-sidebar mode="rail" location="right" color="primary" model-value>
+     <div mono-sidebar mono-mode="rail" mono-effective="rail"
+          mono-location="right" mono-color="primary" mono-open role="navigation">
+       <div mono-scrim></div>
+       <aside mono-panel>
+         <div mono-topbar>
+           <div mono-header>…</div>
+           <div mono-rail><button mono-rail-toggle>…</button></div>
+         </div>
+         <div mono-body>…</div>
+         <div mono-footer>…</div>
+       </aside>
+     </div>
+
+   An absent attribute is the prop's default (`:not([mono-density])` =
+   comfortable, `:not([mono-color])` = surface, `:not([mono-variant])` =
+   elevated, `:not([mono-location])` = left). `mono-effective` carries the
+   mode after `auto` resolves, which is what the layout rules key on. The old
+   classes (`[mono-sidebar][mono-mode="auto"][mono-effective="permanent"][mono-location="left"]…`) are
+   still emitted as inert hooks until 2.0 but no rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-sidebar]     ≡ .sidebar (the overlay wrapper)
+     :where([mono-sidebar]) [mono-panel]       ≡ .sidebar nav (fixed inset-y-0 z-50 flex w-… flex-col
+                          transition-transform duration-300 ease-in-out)
+     :where([mono-sidebar]) [mono-scrim]       ≡ .sidebar:not([aria-hidden]) max-md:bg-black/50
+     :where([mono-sidebar]) [mono-header] / [mono-footer] ≡ .sidebar nav > header, > footer
+                          (flex flex-col, gap-2 p-2)
+     :where([mono-sidebar]) [mono-body]        ≡ .sidebar nav > section (flex min-h-0 flex-1 flex-col
+                          overflow-y-auto, gap-2)
+     [mono-location=…]  ≡ [data-side='left' | 'right'] (border-r / border-l)
+     :not([mono-open])  ≡ [aria-hidden=true] (translate the panel out)
+     :where([mono-sidebar]) [mono-rail] / [mono-rail-toggle] / [mono-topbar] ≡ EXTENSION (upstream has
+                          no rail mode)
+     [mono-mode=…] / [mono-variant=…] / [mono-density=…] / [mono-color=…]
+                        ≡ EXTENSION
+
+   NO GRADIENTS. The painted panel was a two-stop brand gradient with a coloured
+   halo; it is the flat role fill now, inked in that role's `-foreground` the
+   way `.btn[data-variant='primary']` is. The scrim is `--mono-mode-backdrop`.
+
+   DARK MODE comes free — every colour resolves through a Basecoat token that
+   already flips. A selector crosses neither the custom-element host nor the
+   shadow boundary, so no `[mono-color="dark"]` rule can live in component CSS.
+
+   FLAVORS set `--mono-sidebar-{width,radius,shadow,pad-*,gap,scrim-*}` (+ the
+   per-density forms); every fallback here is vega's value
+   (`node scripts/basecoat-styles.mjs --grep "sidebar"`).
+   ========================================================================= */
+
+mono-sidebar {
+  display: contents;
+}
+
+[mono-sidebar] {
+  /* ── the ten roles, each a public knob over a Basecoat token ────────────── */
+  --_mono-sidebar-primary: var(--mono-sidebar-primary, var(--primary));
+  --_mono-sidebar-secondary: var(--mono-sidebar-secondary, var(--secondary-foreground));
+  --_mono-sidebar-success: var(--mono-sidebar-success, var(--success));
+  --_mono-sidebar-danger: var(--mono-sidebar-danger, var(--destructive));
+  --_mono-sidebar-warning: var(--mono-sidebar-warning, var(--warning));
+  --_mono-sidebar-info: var(--mono-sidebar-info, var(--info));
+  --_mono-sidebar-teal: var(--mono-sidebar-teal, var(--teal));
+  --_mono-sidebar-purple: var(--mono-sidebar-purple, var(--purple));
+  --_mono-sidebar-neutral: var(--mono-sidebar-neutral, var(--neutral));
+  --_mono-sidebar-dark: var(--mono-sidebar-dark, var(--dark));
+
+  /* ── the chrome surface — upstream's own sidebar tokens ──────────────────
+     basecoat@1.0.2 styles/vega.css .sidebar nav — bg-sidebar text-sidebar-foreground */
+  --_mono-sidebar-surface: var(--mono-sidebar-surface, var(--_mono-sidebar-surface-preset, var(--sidebar)));
+  --_mono-sidebar-surface-soft: var(--mono-sidebar-surface-soft, var(--muted));
+  --_mono-sidebar-text: var(--mono-sidebar-text, var(--_mono-sidebar-text-preset, var(--sidebar-foreground)));
+  --_mono-sidebar-text-soft: var(--mono-sidebar-text-soft, var(--_mono-sidebar-text-soft-preset, color-mix(in oklab, var(--_mono-sidebar-text) 70%, transparent)));
+  /* basecoat@1.0.2 styles/vega.css .sidebar nav [role=separator] — border-sidebar-border mx-2 */
+  --_mono-sidebar-border: var(--mono-sidebar-border, var(--_mono-sidebar-border-preset, var(--sidebar-border)));
+  --_mono-sidebar-border-lite: var(--mono-sidebar-border-lite, var(--_mono-sidebar-border-lite-preset, var(--_mono-sidebar-border)));
+
+  --_mono-sidebar-accent: var(--mono-sidebar-accent, var(--_mono-sidebar-accent-preset, var(--_mono-sidebar-primary)));
+  /* Ink for a panel painted in the accent. Each role points this at its own
+     `-foreground` token, so a light role gets readable ink without a luminance
+     calculation; a literal colour gets one written inline by the component.
+     Every softened tint on a painted panel mixes from THIS, never from a
+     literal white, so the whole treatment flips with the ink. */
+  --_mono-sidebar-on-accent: var(--mono-sidebar-on-accent, var(--_mono-sidebar-on-accent-preset, var(--primary-foreground)));
+
+  --_mono-sidebar-bg: var(--mono-sidebar-bg, var(--_mono-sidebar-bg-preset, var(--_mono-sidebar-surface)));
+  /* upstream's `--sidebar-width` / `--sidebar-mobile-width` are the measure */
+  --_mono-sidebar-width: var(--mono-sidebar-width, var(--sidebar-width));
+  --_mono-sidebar-rail-width: var(--mono-sidebar-rail-width, calc(var(--mono-spacing) * 16));
+  --_mono-sidebar-current-width: var(--_mono-sidebar-width);
+  --_mono-sidebar-z: var(--mono-sidebar-z, 50);
+  /* basecoat@1.0.2 styles/vega.css .sidebar nav > header, .sidebar nav > footer — gap-2 p-2 */
+  --_mono-sidebar-pad-x: var(--mono-sidebar-pad-x, var(--_mono-sidebar-pad-x-preset, var(--mono-sidebar-pad-x-comfortable, calc(var(--mono-spacing) * 2))));
+  --_mono-sidebar-pad-y: var(--mono-sidebar-pad-y, var(--_mono-sidebar-pad-y-preset, var(--mono-sidebar-pad-y-comfortable, calc(var(--mono-spacing) * 2))));
+  /* basecoat@1.0.2 styles/vega.css .sidebar nav > section — gap-2 */
+  --_mono-sidebar-gap: var(--mono-sidebar-gap, var(--_mono-sidebar-gap-preset, var(--mono-sidebar-gap-comfortable, calc(var(--mono-spacing) * 2))));
+  --_mono-sidebar-radius: var(--mono-sidebar-radius, 0);
+  --_mono-sidebar-shadow: var(--mono-sidebar-shadow, var(--mono-shadow-sm));
+  --_mono-sidebar-border-width: var(--mono-sidebar-border-width, var(--mono-border-width));
+  --_mono-sidebar-scrim-bg: var(--mono-sidebar-scrim-bg, var(--mono-mode-backdrop));
+  --_mono-sidebar-duration: var(--mono-sidebar-duration, var(--mono-duration-slow, 300ms));
+
+  /* Hand the panel's resolved palette to any <mono-menu> in the body. These are
+     menu's PUBLIC vars, so they inherit in the light build and pierce the shadow
+     boundary in the shadow one — the same handoff the rail layout uses below.
+
+     Unconditional on purpose. A panel gets painted from three independent places
+     — the `color` prop, a flavor, or a consumer's own `--mono-sidebar-bg` — and
+     only the first is visible to a selector here. Deriving from
+     `--_mono-sidebar-*` means the menu follows the panel whichever one painted
+     it; before this, a navy panel carried menu labels still inked near-black.
+
+     Only the HUE comes from the sidebar; the soft/faint steps keep menu's own
+     ratios rather than the sidebar's, which is tuned for chrome and would wash a
+     menu label out. */
+  --mono-menu-text: var(--_mono-sidebar-text);
+  --mono-menu-text-soft: color-mix(in oklab, var(--_mono-sidebar-text) 72%, transparent);
+  --mono-menu-text-faint: color-mix(in oklab, var(--_mono-sidebar-text) 68%, transparent);
+  --mono-menu-surface: transparent;
+  --mono-menu-border: var(--_mono-sidebar-border);
+  --mono-menu-border-lite: var(--_mono-sidebar-border-lite);
+  --mono-menu-accent: var(--_mono-sidebar-accent);
+  --mono-menu-hover-bg: color-mix(in oklab, var(--_mono-sidebar-text) 8%, transparent);
+  --mono-menu-hover-color: var(--_mono-sidebar-text);
+  --mono-menu-hover-border-color: color-mix(in oklab, var(--_mono-sidebar-text) 14%, transparent);
+  /* The pill is a wash of the menu accent over WHATEVER the panel is, so it has
+     to be mixed with `transparent`, not with the document's `--sidebar-accent`
+     the way menu's own default is. On a navy panel the accent is white, and
+     mixing white into the page's near-white chrome painted a white pill under
+     white ink. */
+  --mono-menu-active-bg: color-mix(in oklab, var(--_mono-sidebar-accent) 18%, transparent);
+  --mono-menu-active-color: var(--_mono-sidebar-accent);
+  --mono-menu-active-shadow: none;
+
+  font-family: inherit;
+  color: var(--_mono-sidebar-text);
+}
+
+[mono-sidebar],
+:where([mono-sidebar]) *,
+:where([mono-sidebar]) *::before,
+:where([mono-sidebar]) *::after {
+  box-sizing: border-box;
+}
+
+
+/* ─────── DENSITY ─────── */
+[mono-sidebar][mono-density="compact"] {
+  --_mono-sidebar-pad-x-preset: 0.6rem;
+  --_mono-sidebar-pad-y-preset: 0.6rem;
+  --_mono-sidebar-gap-preset: 0.3rem;
+}
+
+[mono-sidebar][mono-density="comfortable"] {
+  --_mono-sidebar-pad-x-preset: 0.85rem;
+  --_mono-sidebar-pad-y-preset: 0.85rem;
+  --_mono-sidebar-gap-preset: 0.4rem;
+}
+
+[mono-sidebar][mono-density="default"] {
+  --_mono-sidebar-pad-x-preset: 1.05rem;
+  --_mono-sidebar-pad-y-preset: 1.05rem;
+  --_mono-sidebar-gap-preset: 0.5rem;
+}
+
+/* ─────── COLOR ─────── */
+/* EVERY `-preset` here has to sit on `[mono-sidebar]`, the element that DECLARES the
+   resolvers above — never on the `[mono-panel]` child. A `var()` substitutes on
+   the element that declares it, so `--_mono-sidebar-bg` is already resolved by the time
+   a descendant sets `--_mono-sidebar-bg-preset`; the panel just inherits the finished
+   value and the preset is dead. The painting block below used to be written as
+   `[mono-sidebar][mono-color="primary"] [mono-panel]`, which is exactly why no color ever
+   painted. Same trap as the one documented in checkbox.css's border-width block. */
+[mono-sidebar][mono-color="primary"] {
+  --_mono-sidebar-accent-preset: var(--_mono-sidebar-primary);
+  --_mono-sidebar-on-accent-preset: var(--primary-foreground);
+}
+
+[mono-sidebar][mono-color="secondary"] {
+  --_mono-sidebar-accent-preset: var(--_mono-sidebar-secondary);
+  /* the role IS --secondary-foreground, so the ink on it is --secondary */
+  --_mono-sidebar-on-accent-preset: var(--secondary);
+}
+
+[mono-sidebar][mono-color="success"] {
+  --_mono-sidebar-accent-preset: var(--_mono-sidebar-success);
+  --_mono-sidebar-on-accent-preset: var(--success-foreground);
+}
+
+[mono-sidebar][mono-color="danger"] {
+  --_mono-sidebar-accent-preset: var(--_mono-sidebar-danger);
+  --_mono-sidebar-on-accent-preset: var(--destructive-foreground);
+}
+
+[mono-sidebar][mono-color="warning"] {
+  --_mono-sidebar-accent-preset: var(--_mono-sidebar-warning);
+  --_mono-sidebar-on-accent-preset: var(--warning-foreground);
+}
+
+[mono-sidebar][mono-color="info"] {
+  --_mono-sidebar-accent-preset: var(--_mono-sidebar-info);
+  --_mono-sidebar-on-accent-preset: var(--info-foreground);
+}
+
+[mono-sidebar][mono-color="teal"] {
+  --_mono-sidebar-accent-preset: var(--_mono-sidebar-teal);
+  --_mono-sidebar-on-accent-preset: var(--teal-foreground);
+}
+
+[mono-sidebar][mono-color="purple"] {
+  --_mono-sidebar-accent-preset: var(--_mono-sidebar-purple);
+  --_mono-sidebar-on-accent-preset: var(--purple-foreground);
+}
+
+[mono-sidebar][mono-color="neutral"] {
+  --_mono-sidebar-accent-preset: var(--_mono-sidebar-neutral);
+  --_mono-sidebar-on-accent-preset: var(--neutral-foreground);
+}
+
+[mono-sidebar][mono-color="dark"] {
+  --_mono-sidebar-accent-preset: var(--_mono-sidebar-dark);
+  --_mono-sidebar-on-accent-preset: var(--dark-foreground);
+}
+
+/* `color` given a literal (`#7c3aed`, `rgb(…)`) instead of a token name. The three
+   presets are written INLINE on this same element by `_inlineRootStyle`, because a
+   literal cannot be a class name and cannot be known to a stylesheet; this class only
+   opts the element into the painting treatment below. */
+[mono-sidebar][mono-color="custom"] {
+  /* deliberately empty — the values arrive inline */
+}
+
+/* surface keeps the white-with-themed-border look — never painted.
+   It sets NO accent preset on purpose: the resolver's own fallback is already
+   `--_mono-sidebar-primary`, so declaring it here would add nothing under Mono while
+   overriding a flavor's accent (ONE sets a white one on <body>) for the default color. */
+[mono-sidebar][mono-color="surface"] {
+  /* deliberately empty — see above */
+}
+
+/* Themed colors paint the panel with the accent, and every foreground on it is mixed
+   from `--_mono-sidebar-on-accent` so the treatment works with dark ink as well as
+   white. `color-mix(…, transparent)` rather than `rgba(255,255,255,α)` for the same
+   reason. `-surface-preset` re-tints the rail toggle, which would otherwise stay a
+   white chip carrying white glyphs. */
+[mono-sidebar][mono-color="primary"],
+[mono-sidebar][mono-color="secondary"],
+[mono-sidebar][mono-color="success"],
+[mono-sidebar][mono-color="danger"],
+[mono-sidebar][mono-color="warning"],
+[mono-sidebar][mono-color="info"],
+[mono-sidebar][mono-color="teal"],
+[mono-sidebar][mono-color="purple"],
+[mono-sidebar][mono-color="neutral"],
+[mono-sidebar][mono-color="dark"],
+[mono-sidebar][mono-color="custom"] {
+  --_mono-sidebar-bg-preset: var(--_mono-sidebar-accent);
+  --_mono-sidebar-text-preset: var(--_mono-sidebar-on-accent);
+  --_mono-sidebar-text-soft-preset: color-mix(in oklab, var(--_mono-sidebar-on-accent) 78%, transparent);
+  --_mono-sidebar-border-preset: color-mix(in oklab, var(--_mono-sidebar-on-accent) 18%, transparent);
+  --_mono-sidebar-border-lite-preset: color-mix(in oklab, var(--_mono-sidebar-on-accent) 12%, transparent);
+  --_mono-sidebar-surface-preset: color-mix(in oklab, var(--_mono-sidebar-on-accent) 16%, transparent);
+
+  /* The whole menu palette — pill included — is forwarded unconditionally up in
+     `[mono-sidebar]` and keys off `--_mono-sidebar-accent`. On a PAINTED panel that
+     accent IS the panel colour, so the pill would sit invisibly on it. Re-point
+     the menu's copy at the on-accent ink — and only the menu's copy: the panel's
+     own `--_mono-sidebar-bg-preset` reads `--_mono-sidebar-accent` in this very
+     block, so shadowing it here would repaint the panel white. */
+  --mono-menu-accent: var(--_mono-sidebar-on-accent);
+  --mono-menu-active-bg: color-mix(in oklab, var(--_mono-sidebar-on-accent) 18%, transparent);
+  --mono-menu-active-color: var(--_mono-sidebar-on-accent);
+}
+
+/* ─────── PANEL (the visible container) ─────── */
+:where([mono-sidebar]) [mono-panel] {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: var(--_mono-sidebar-z);
+  width: var(--_mono-sidebar-current-width);
+  /* basecoat@1.0.2 styles/vega.css .sidebar nav > header, .sidebar nav > footer — gap-2 p-2
+     maia, luma and rhea set [--radius: var(--radius-xl)] on the shell, sera 0 —
+     the chrome inside a panel follows the flavor, and so does the panel itself
+     wherever its corner shows (a contained sidebar; a full-height one has none). */
+  border-radius: var(--_mono-sidebar-radius);
+  background: var(--_mono-sidebar-bg);
+  color: var(--_mono-sidebar-text);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  pointer-events: auto;
+  transition:
+    width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s linear 0.26s,
+    background-color var(--mono-duration) var(--mono-ease),
+    box-shadow var(--mono-duration) var(--mono-ease),
+    border-color var(--mono-duration) var(--mono-ease);
+}
+
+[mono-sidebar][mono-contained] [mono-panel] {
+  position: absolute;
+}
+
+/* `contained` scopes the sidebar to its own box, so the page-level z ladder is wrong
+   for it: at 50 the panel outranked site chrome and painted OVER a sticky header while
+   the container scrolled past it (VitePress's navbar is z 30). Re-resolving the private
+   var with a LOCAL default keeps the panel above its own scrim and nothing else; an
+   explicit --mono-sidebar-z still wins. Not `isolation: isolate` — a stacking context
+   here would trap a fixed overlay (a modal or drawer opened from inside the sidebar)
+   in the container, which is the trap DemoPreview.vue's stage comment records. */
+[mono-sidebar][mono-contained] {
+  --_mono-sidebar-z: var(--mono-sidebar-z, 2);
+}
+
+/* Location anchor */
+[mono-sidebar][mono-location="left"] [mono-panel] {
+  left: 0;
+}
+
+[mono-sidebar][mono-location="right"] [mono-panel] {
+  right: 0;
+}
+
+/* ─────── VARIANT ─────── */
+[mono-sidebar][mono-variant="elevated"][mono-location="left"] [mono-panel] {
+  box-shadow: var(--_mono-sidebar-shadow);
+}
+
+[mono-sidebar][mono-variant="elevated"][mono-location="right"] [mono-panel] {
+  box-shadow: -4px 0 24px color-mix(in oklab, var(--_mono-sidebar-accent) 8%, transparent);
+}
+
+[mono-sidebar][mono-variant="flat"] [mono-panel] {
+  box-shadow: none;
+}
+
+[mono-sidebar][mono-variant="outlined"][mono-location="left"] [mono-panel] {
+  box-shadow: none;
+  border-right: 1px solid var(--_mono-sidebar-border);
+}
+
+[mono-sidebar][mono-variant="outlined"][mono-location="right"] [mono-panel] {
+  box-shadow: none;
+  border-left: 1px solid var(--_mono-sidebar-border);
+}
+
+/* ─────── EFFECTIVE MODE: PERMANENT ─────── */
+/* Set --sidebar-current-width on the ROOT (not the panel) so the rail toggle
+   sibling can read it for its left/right offset. CSS variables only cascade
+   downward — putting the override on a sibling doesn't help the toggle. */
+[mono-sidebar][mono-effective="permanent"] {
+  --_mono-sidebar-current-width: var(--_mono-sidebar-width);
+}
+
+[mono-sidebar][mono-effective="permanent"] [mono-panel] {
+  visibility: visible;
+  transform: none;
+}
+
+/* ─────── EFFECTIVE MODE: RAIL ─────── */
+[mono-sidebar][mono-effective="rail"] {
+  --_mono-sidebar-current-width: var(--_mono-sidebar-rail-width);
+}
+
+[mono-sidebar][mono-effective="rail"] [mono-panel] {
+  visibility: visible;
+  transform: none;
+}
+
+/* In rail mode, when modelValue === true, expand to full width. */
+[mono-sidebar][mono-effective="rail"][mono-open] {
+  --_mono-sidebar-current-width: var(--_mono-sidebar-width);
+}
+
+/* expand-on-hover only applies when rail is collapsed (not user-toggled open).
+   Hover is on the root so both panel and toggle pick up the new width. */
+[mono-sidebar][mono-effective="rail"][mono-expand-on-hover]:not([mono-open]):hover {
+  --_mono-sidebar-current-width: var(--_mono-sidebar-width);
+}
+
+/* ─────── EFFECTIVE MODE: TEMPORARY ─────── */
+[mono-sidebar][mono-effective="temporary"] {
+  --_mono-sidebar-current-width: var(--_mono-sidebar-width);
+}
+
+[mono-sidebar][mono-effective="temporary"] [mono-panel] {
+  visibility: hidden;
+}
+
+[mono-sidebar][mono-effective="temporary"][mono-location="left"] [mono-panel] {
+  transform: translateX(-100%);
+}
+
+[mono-sidebar][mono-effective="temporary"][mono-location="right"] [mono-panel] {
+  transform: translateX(100%);
+}
+
+[mono-sidebar][mono-effective="temporary"][mono-open] [mono-panel] {
+  visibility: visible;
+  transform: translateX(0);
+  transition:
+    width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s linear 0s,
+    background-color var(--mono-duration) var(--mono-ease),
+    box-shadow var(--mono-duration) var(--mono-ease),
+    border-color var(--mono-duration) var(--mono-ease);
+}
+
+/* ─────── SCRIM (temporary mode only) ─────── */
+:where([mono-sidebar]) [mono-scrim] {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--_mono-sidebar-z) - 1);
+  background: var(--_mono-sidebar-scrim-bg);
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition: opacity 0.24s ease;
+  display: none;
+}
+
+[mono-sidebar][mono-contained] [mono-scrim] {
+  position: absolute;
+}
+
+[mono-sidebar][mono-effective="temporary"]:not([mono-no-scrim]) [mono-scrim] {
+  display: block;
+}
+
+[mono-sidebar][mono-effective="temporary"][mono-open] [mono-scrim] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ─────── HEADER / BODY / FOOTER ─────── */
+:where([mono-sidebar]) :where([mono-topbar]) > [mono-header] {
+  flex-shrink: 0;
+  padding: var(--_mono-sidebar-pad-y) var(--_mono-sidebar-pad-x);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 0;
+}
+
+:where([mono-sidebar]) :where([mono-topbar]) > [mono-header]:empty {
+  display: none;
+}
+
+:where([mono-sidebar]) :where([mono-panel]) > [mono-body] {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--_mono-sidebar-pad-y) var(--_mono-sidebar-pad-x);
+}
+
+:where([mono-sidebar]) :where([mono-panel]) > [mono-body]:empty {
+  padding: 0;
+}
+
+:where([mono-sidebar]) :where([mono-panel]) > [mono-footer] {
+  flex-shrink: 0;
+  padding: var(--_mono-sidebar-pad-y) var(--_mono-sidebar-pad-x);
+  border-top: 1px solid var(--_mono-sidebar-border-lite);
+}
+
+:where([mono-sidebar]) :where([mono-panel]) > [mono-footer]:empty {
+  display: none;
+}
+
+/* ─────── TOP BAR (header + rail share one row, justify-between) ─────── */
+:where([mono-sidebar]) :where([mono-panel]) > [mono-topbar] {
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  border-bottom: 1px solid var(--_mono-sidebar-border-lite);
+}
+
+/* Hide the border when the topbar would be visually empty
+   (header empty AND no rail bar rendered at all). */
+:where([mono-sidebar]) :where([mono-panel]) > [mono-topbar]:not(:has(> [mono-rail])):has(> [mono-header]:empty) {
+  border-bottom: none;
+}
+
+/* For right-located sidebar, mirror the row so the rail toggle sits on the
+   viewport-edge side and the header sits on the interior side. */
+[mono-sidebar][mono-location="right"] :where([mono-panel]) > [mono-topbar] {
+  flex-direction: row-reverse;
+}
+
+/* When the row contains both header and rail, header takes the available
+   space and rail hugs its content — the visual "justify-between" effect. */
+:where([mono-sidebar]) :where([mono-panel]) > [mono-topbar] > [mono-header] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+:where([mono-sidebar]) :where([mono-panel]) > [mono-topbar] > [mono-rail] {
+  flex: 0 0 auto;
+}
+
+/* In collapsed rail (no toggle-open, no hover-expand): show the header (so the
+   user sees their brand/avatar) and HIDE the rail bar (chevron). The chevron
+   only reveals when the user hovers the top row (see swap rule below). */
+[mono-sidebar][mono-effective="rail"]:not([mono-open]) :where([mono-panel]) > [mono-topbar] > [mono-rail] {
+  display: none;
+}
+
+[mono-sidebar][mono-effective="rail"]:not([mono-open]) :where([mono-panel]) > [mono-topbar] > [mono-header] {
+  flex: 1 1 auto;
+}
+
+/* Collapsed rail + topbar hover (no expand-on-hover): swap — hide the header
+   and reveal the chevron in its place. Hover scope is the whole topbar (not
+   just the header) so the swap doesn't flicker when the cursor crosses
+   between the header's slot content and the revealed chevron.
+   Skipped when `expand-on-hover` is set: that path widens the panel instead
+   and shows both header + chevron side-by-side via the rules below.
+   Also gated on `:has(> [mono-rail])` — when the user takes over via
+   the `rail` boolean prop the default chevron isn't rendered, so there's
+   nothing to swap to and we should leave the header alone. */
+[mono-sidebar][mono-effective="rail"]:not([mono-open]):not([mono-expand-on-hover]) :where([mono-panel]) > [mono-topbar]:has(> [mono-rail]):hover > [mono-header] {
+  display: none;
+}
+
+[mono-sidebar][mono-effective="rail"]:not([mono-open]):not([mono-expand-on-hover]) :where([mono-panel]) > [mono-topbar]:has(> [mono-rail]):hover > [mono-rail] {
+  display: flex;
+  flex: 1 1 auto;
+}
+
+/* Toggled-open or hover-expanded via expand-on-hover: header keeps its space,
+   rail hugs its content — both visible side-by-side. */
+[mono-sidebar][mono-effective="rail"][mono-open] :where([mono-panel]) > [mono-topbar] > [mono-rail],
+[mono-sidebar][mono-effective="rail"][mono-expand-on-hover]:hover :where([mono-panel]) > [mono-topbar] > [mono-rail] {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+/* ─────── RAIL BAR (slot host for the chevron / user content) ─────── */
+:where([mono-sidebar]) [mono-rail] {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: var(--_mono-sidebar-pad-y) var(--_mono-sidebar-pad-x);
+}
+
+/* Collapsed rail: zero horizontal padding, center the chevron inside the
+   full-width rail bar (header is hidden so the bar takes the whole panel). */
+[mono-sidebar][mono-effective="rail"]:not([mono-open]) [mono-rail] {
+  padding-left: 0;
+  padding-right: 0;
+  justify-content: center;
+}
+
+/* Expanded (toggled-open or hover-expanded): the rail hugs its content and
+   sits at the trailing edge of the row, so its inside padding only needs to
+   provide the gap between the chevron and the header. */
+[mono-sidebar][mono-effective="rail"][mono-open] [mono-rail],
+[mono-sidebar][mono-effective="rail"][mono-expand-on-hover]:hover [mono-rail] {
+  padding-left: var(--_mono-sidebar-pad-x);
+  padding-right: var(--_mono-sidebar-pad-x);
+  justify-content: center;
+}
+
+/* ─────── DEFAULT RAIL TOGGLE BUTTON ─────── */
+:where([mono-sidebar]) [mono-rail-toggle] {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--mono-sidebar-rail-toggle-radius, var(--mono-radius-md));
+  border: 1px solid var(--_mono-sidebar-border);
+  background: var(--_mono-sidebar-surface);
+  color: var(--_mono-sidebar-text-soft);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition:
+    background-color 0.14s ease,
+    color 0.14s ease,
+    border-color 0.14s ease;
+}
+
+:where([mono-sidebar]) [mono-rail-toggle]:hover {
+  background: var(--_mono-sidebar-surface);
+  color: var(--_mono-sidebar-accent);
+  border-color: var(--_mono-sidebar-accent);
+}
+
+/* On a painted panel the accent IS the surface behind this button, so the default
+   hover above would tint the glyph and its border into the background. Keep the
+   on-accent ink and let only the chip deepen. */
+[mono-sidebar][mono-color="primary"] [mono-rail-toggle]:hover,
+[mono-sidebar][mono-color="secondary"] [mono-rail-toggle]:hover,
+[mono-sidebar][mono-color="success"] [mono-rail-toggle]:hover,
+[mono-sidebar][mono-color="danger"] [mono-rail-toggle]:hover,
+[mono-sidebar][mono-color="warning"] [mono-rail-toggle]:hover,
+[mono-sidebar][mono-color="info"] [mono-rail-toggle]:hover,
+[mono-sidebar][mono-color="teal"] [mono-rail-toggle]:hover,
+[mono-sidebar][mono-color="purple"] [mono-rail-toggle]:hover,
+[mono-sidebar][mono-color="neutral"] [mono-rail-toggle]:hover,
+[mono-sidebar][mono-color="dark"] [mono-rail-toggle]:hover,
+[mono-sidebar][mono-color="custom"] [mono-rail-toggle]:hover {
+  background: color-mix(in oklab, var(--_mono-sidebar-on-accent) 28%, transparent);
+  color: var(--_mono-sidebar-on-accent);
+  border-color: color-mix(in oklab, var(--_mono-sidebar-on-accent) 38%, transparent);
+}
+
+:where([mono-sidebar]) [mono-rail-toggle] > .mono-icon {
+  display: block;
+  width: var(--mono-icon-md);
+  height: var(--mono-icon-md);
+  transition: transform var(--mono-duration) var(--mono-ease);
+}
+
+/* Arrow direction (set directly on the icon via per-state rules so transitions
+   fire cleanly on every state flip — `var()`-driven transforms have known
+   quirks where some browsers skip the transition):
+   - location-left, collapsed → points right (►) to invite expansion
+   - location-left, expanded  → points left  (◄) to invite collapse
+   - location-right is mirrored
+   "Expanded" covers BOTH the toggled-open state (`[mono-open]`, set after click)
+   AND the hover-expanded state (`[mono-expand-on-hover]:hover`). */
+
+/* Default for location-right: mirror the icon so the chevron faces the panel. */
+[mono-sidebar][mono-location="right"] [mono-rail-toggle] > .mono-icon {
+  transform: scaleX(-1);
+}
+
+/* Toggled open (after click): rotate to point inward. Active in any mode. */
+[mono-sidebar][mono-location="left"][mono-open] [mono-rail-toggle] > .mono-icon {
+  transform: rotate(180deg);
+}
+
+[mono-sidebar][mono-location="right"][mono-open] [mono-rail-toggle] > .mono-icon {
+  transform: scaleX(-1) rotate(180deg);
+}
+
+/* Hover-expanded via expand-on-hover (panel widens on hover, no click yet).
+   Higher specificity than the [mono-open] rule, so when both apply (cursor still
+   over the panel after a click) the result is identical. */
+[mono-sidebar][mono-effective="rail"][mono-expand-on-hover][mono-location="left"]:hover [mono-rail-toggle] > .mono-icon {
+  transform: rotate(180deg);
+}
+
+[mono-sidebar][mono-effective="rail"][mono-expand-on-hover][mono-location="right"]:hover [mono-rail-toggle] > .mono-icon {
+  transform: scaleX(-1) rotate(180deg);
+}
+
+/* Opt-in label convention (brand text, footer labels, …): display is read from an
+   inherited custom property, so the rail-collapse below can hide it across the
+   shadow boundary (a shadow-scoped descendant selector can't reach a slotted
+   light-DOM label). Unset → the element's natural display. Mirrors the menu's
+   `display: var(--mono-menu-label-display, <natural>)` contract. */
+.mono-sidebar-label {
+  display: var(--mono-sidebar-label-display, revert);
+}
+
+/* ─────── RAIL: COLLAPSE MENU + LABELS ─────── */
+/* When the rail is collapsed (not toggled-open and not hover-expanded), the
+   panel is too narrow to fit icon + text — for both menu rows and header/footer
+   slot content. We:
+   1. Hide text-bearing parts of any descendant `<mono-menu>` and shrink each
+      action to a centered icon-only pill (so the active-state pill hugs the
+      icon instead of stretching across the full panel).
+   2. Zero the header / body / footer horizontal padding so their centered
+      content lines up on the panel's center column, keeping the header
+      avatar visually flush with the menu icons below it.
+   3. Hide any element opted into the `.mono-sidebar-label` convention —
+      the typical wrapper for brand text, footer labels, etc. that should
+      collapse alongside the menu titles.
+   Every rule unwinds under `[mono-open]` or `[mono-expand-on-hover]:hover`, so labels
+   reappear in lockstep with the panel widening. */
+
+/* 1 — the menu interior collapses to icons: text-bearing parts are hidden, the
+   tree loses its indent and guide, and a group folds shut visually even while
+   the menu's own `_openGroups` state still has it marked open — the state
+   survives the round-trip and reappears the moment the panel widens. */
+/* Rail-collapse, entirely through inherited custom properties. Set on the body
+   (the menu's flattened parent) they cross the shadow boundary into a slotted
+   shadow <mono-menu>, whose rows no descendant selector here can reach; menu.css
+   consumes every one of them. Restored to `initial` on open / hover-expand
+   below, so `var(--x, fallback)` falls back to each element's natural value.
+   Pure CSS → works on the server (no-JS) and syncs with `:hover`.
+
+   This used to run alongside a parallel `.mono-menu-*` descendant path that only
+   the light build could see, because only it still emits the old classes. Two
+   paths meant three builds: light centred its rows and closed the tree guide,
+   shadow and hand-written markup did neither. */
+[mono-sidebar][mono-effective="rail"] :where([mono-panel]) > [mono-body] {
+  --mono-menu-label-display: none;
+  --mono-menu-row-display: flex;
+  --mono-menu-row-justify: center;
+  --mono-menu-action-width: auto;
+  --mono-menu-action-justify: center;
+  --mono-menu-action-gap: 0;
+  --mono-menu-group-children-display: none;
+  /* a collapsed rail has no room for the tree's indent or its guide */
+  --mono-menu-indent: 0px;
+  --mono-menu-guide-width: 0px;
+  --mono-menu-guide-offset: 0px;
+}
+
+/* 2 — header / body / footer drop horizontal padding and center their content */
+[mono-sidebar][mono-effective="rail"] :where([mono-topbar]) > [mono-header],
+[mono-sidebar][mono-effective="rail"] :where([mono-panel]) > [mono-footer] {
+  padding-left: 0;
+  padding-right: 0;
+  justify-content: center;
+}
+
+[mono-sidebar][mono-effective="rail"] :where([mono-panel]) > [mono-body] {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* 3 — opt-in label convention for slot content (brand text, footer labels, …).
+   Display is driven by an inherited custom property so the rail-collapse reaches
+   slotted labels ACROSS the shadow boundary — the same contract the menu uses
+   (see `--mono-menu-label-display`). Set on the rail root so labels in ANY region
+   (header / body / footer) inherit it; the label consumes it via the base rule
+   below (`display: var(--mono-sidebar-label-display, revert)`). */
+[mono-sidebar][mono-effective="rail"] {
+  --mono-sidebar-label-display: none;
+}
+
+/* ─── Restore on toggled-open or hover-expanded ─── */
+/* When the rail expands, defer to the data-open attribute — open groups
+   reveal their children, closed groups stay closed. */
+/* Restore the cross-shadow rail-collapse vars on toggle-open / hover-expand:
+   `initial` makes the menu's `var(--x, fallback)` resolve to each element's
+   natural value, re-expanding the slotted shadow <mono-menu> in lockstep. */
+[mono-sidebar][mono-effective="rail"][mono-open] :where([mono-panel]) > [mono-body],
+[mono-sidebar][mono-effective="rail"][mono-expand-on-hover]:hover :where([mono-panel]) > [mono-body] {
+  --mono-menu-label-display: initial;
+  --mono-menu-row-display: initial;
+  --mono-menu-row-justify: initial;
+  --mono-menu-action-width: initial;
+  --mono-menu-action-justify: initial;
+  --mono-menu-action-gap: initial;
+  --mono-menu-group-children-display: initial;
+  --mono-menu-indent: initial;
+  --mono-menu-guide-width: initial;
+  --mono-menu-guide-offset: initial;
+}
+
+[mono-sidebar][mono-effective="rail"][mono-open] :where([mono-topbar]) > [mono-header],
+[mono-sidebar][mono-effective="rail"][mono-open] :where([mono-panel]) > [mono-body],
+[mono-sidebar][mono-effective="rail"][mono-open] :where([mono-panel]) > [mono-footer],
+[mono-sidebar][mono-effective="rail"][mono-expand-on-hover]:hover :where([mono-topbar]) > [mono-header],
+[mono-sidebar][mono-effective="rail"][mono-expand-on-hover]:hover :where([mono-panel]) > [mono-body],
+[mono-sidebar][mono-effective="rail"][mono-expand-on-hover]:hover :where([mono-panel]) > [mono-footer] {
+  padding-left: var(--_mono-sidebar-pad-x);
+  padding-right: var(--_mono-sidebar-pad-x);
+}
+
+[mono-sidebar][mono-effective="rail"][mono-open] :where([mono-topbar]) > [mono-header],
+[mono-sidebar][mono-effective="rail"][mono-open] :where([mono-panel]) > [mono-footer],
+[mono-sidebar][mono-effective="rail"][mono-expand-on-hover]:hover :where([mono-topbar]) > [mono-header],
+[mono-sidebar][mono-effective="rail"][mono-expand-on-hover]:hover :where([mono-panel]) > [mono-footer] {
+  justify-content: flex-start;
+}
+
+/* Restore the label on toggle-open / hover-expand: `initial` makes the custom
+   property guaranteed-invalid, so the label's `var(--x, revert)` falls back to
+   its natural display — re-expanding slotted labels (light + shadow) in lockstep
+   with the menu (mirrors the `--mono-menu-*` restore above). */
+[mono-sidebar][mono-effective="rail"][mono-open],
+[mono-sidebar][mono-effective="rail"][mono-expand-on-hover]:hover {
+  --mono-sidebar-label-display: initial;
+}
+
+/* ─────── REDUCED MOTION ─────── */
+@media (prefers-reduced-motion: reduce) {
+  :where([mono-sidebar]) [mono-panel],
+  :where([mono-sidebar]) [mono-scrim],
+  :where([mono-sidebar]) [mono-rail-toggle] {
+    transition: none;
+  }
+}

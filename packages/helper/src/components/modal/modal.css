@@ -1,0 +1,877 @@
+/* @unocss-include */
+
+/* =========================================================================
+   mono-modal — a port of Basecoat's `.dialog` (basecoat-css@1.0.2, vega style).
+
+   Styled by ATTRIBUTE, like Basecoat — and the attributes mirror the element's
+   props one for one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-modal size="lg" color="success" model-value title="Settings">
+     <div mono-modal mono-size="lg" mono-color="success" mono-open
+          role="dialog" aria-modal="true">
+       <div mono-overlay></div>
+       <div mono-panel-wrap>
+         <div mono-panel role="document">
+           <div mono-header>
+             <div mono-heading>
+               <div mono-title>Settings</div>
+               <div mono-subtitle>Manage your account</div>
+             </div>
+             <button mono-close type="button" aria-label="Close">…</button>
+           </div>
+           <div mono-body>…</div>
+           <div mono-footer>…</div>
+         </div>
+       </div>
+     </div>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-color])` = primary). The element writes them on its ROOT — the
+   `<body>` portal in the light build, an inner root `<div>` in the shadow one —
+   along with every state below. The old classes (`.mono-modal.md.primary.open`)
+   are still emitted as inert hooks until 2.0 but no rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-modal]        ≡ .dialog (the <dialog> itself) — DEVIATION: a fixed
+                           full-viewport wrapper, because this component predates
+                           `<dialog>` support and owns its own stacking through
+                           `composables/popup-stack`
+     [mono-overlay]      ≡ .dialog::backdrop (bg-black/10 backdrop-blur-xs) — the
+                           fill is `--mono-mode-backdrop`, a token, since a
+                           pseudo-element cannot be reached from a shadow sheet
+     [mono-panel-wrap]   ≡ EXTENSION (upstream centres the panel itself with
+                           `fixed top-1/2 left-1/2 -translate-1/2`; a flex wrap
+                           centres a DRAGGED panel correctly, which that cannot)
+     [mono-panel]        ≡ .dialog > * (bg-popover text-popover-foreground ring-1
+                           ring-foreground/10 rounded-xl p-6 gap-6 text-sm
+                           max-w-[calc(100%-2rem)] max-h-[calc(100%-2rem)]
+                           flex flex-col sm:max-w-md)
+     [mono-header]         ≡ .dialog > * > header (flex flex-col gap-2) — DEVIATION:
+                           a ROW, because the ✕ lives inside it (see below)
+     [mono-heading]      ≡ upstream's header column itself (flex flex-col gap-2)
+                           — the ✕'s row-mate; `slot="header"` replaces it
+     [mono-title]        ≡ .dialog > * > header > h2 (leading-none font-medium)
+     [mono-subtitle]     ≡ .dialog > * > header > p (text-muted-foreground text-sm
+                           leading-normal)
+     [mono-body]         ≡ .dialog > * > section (flex-1)
+     [mono-footer]         ≡ .dialog > * > footer (flex flex-col-reverse gap-2,
+                           sm:flex-row sm:justify-end)
+     [mono-close]        ≡ .dialog > * > button (opacity-70 hover:opacity-100,
+                           svg size-4) — DEVIATION: in flow inside the head
+                           rather than `absolute top-4 end-4`, because the head is
+                           also the drag handle; a `slot="header"` replaces only
+                           the heading column, never the ✕
+     [mono-size]         ≡ EXTENSION. Upstream's `data-size` is a WIDTH; ours is
+                           the content scale (padding, type, radius, close box).
+                           Width is its own prop — a compact `sm` can still be
+                           wide — and defaults to `--mono-container-md`, which is
+                           upstream's `sm:max-w-md`.
+     [mono-color]        ≡ EXTENSION (upstream's dialog has no colour)
+
+   THE TINTED HEADER IS GONE. Upstream's dialog is one padded box: the panel
+   carries `p-6` and `gap-6`, and header / section / footer are unpadded,
+   unbordered, untinted regions inside it. The gradient head bar, the tinted
+   footer and both divider rules went with it — `--mono-modal-header-bg` and
+   `-foot-bg` remain as knobs, defaulting to `transparent`, so a consumer who
+   wants the bar back sets those two.
+
+   PART NAMES ARE PATH-SCOPED. `[mono-panel]`, `[mono-body]`, `[mono-title]` and
+   `[mono-close]` are also dropdown's, card's and input's part names, and a modal
+   BODY is where consumers put all three. Every rule here is written as an
+   explicit child path from the root, with `:where()` keeping the resting weight
+   at (0,1,0) so a `cssClass` utility still wins by source order.
+
+   FLAVORS set `--mono-modal-{radius,padding,gap,ring-color,shadow,width,
+   title-font,overlay-bg,overlay-backdrop-filter,close-*}` (+ the per-size
+   forms); every fallback here is vega's value
+   (`node scripts/basecoat-styles.mjs --varying "dialog"` prints the matrix).
+   ========================================================================= */
+
+mono-modal {
+  display: contents;
+}
+
+/* =========================================
+   Root — the layer
+   ========================================= */
+
+[mono-modal] {
+  /* ── the six roles, each a public knob over a Basecoat token ───────────── */
+  --_mono-modal-primary: var(--mono-modal-primary, var(--primary));
+  --_mono-modal-secondary: var(--mono-modal-secondary, var(--secondary-foreground));
+  --_mono-modal-success: var(--mono-modal-success, var(--success));
+  --_mono-modal-danger: var(--mono-modal-danger, var(--destructive));
+  --_mono-modal-warning: var(--mono-modal-warning, var(--warning));
+  --_mono-modal-info: var(--mono-modal-info, var(--info));
+  --_mono-modal-teal: var(--mono-modal-teal, var(--teal));
+  --_mono-modal-purple: var(--mono-modal-purple, var(--purple));
+  --_mono-modal-neutral: var(--mono-modal-neutral, var(--neutral));
+  --_mono-modal-dark: var(--mono-modal-dark, var(--dark));
+  /* the colour in play — `primary` unless a [mono-color] rule re-points it */
+  --_mono-modal-accent: var(--mono-modal-accent, var(--_mono-modal-accent-preset, var(--_mono-modal-primary)));
+
+  /* ── panel paint — `bg-popover text-popover-foreground ring-foreground/10` ── */
+  --_mono-modal-bg: var(--mono-modal-bg, var(--mono-modal-surface, var(--popover)));
+  --_mono-modal-text: var(--mono-modal-text, var(--popover-foreground));
+  --_mono-modal-border: var(--mono-modal-border, var(--border));
+  --_mono-modal-ring-width: var(--mono-modal-ring-width, var(--mono-border-width));
+  --_mono-modal-ring-color: var(--mono-modal-ring-color,
+    color-mix(in oklab, var(--foreground) 10%, transparent));
+  --_mono-modal-shadow: var(--mono-modal-shadow, var(--mono-shadow-lg));
+  /* a faint halo of the accent under the elevation — nothing until `color` is set */
+  --_mono-modal-glow: var(--mono-modal-glow, 0 0 #0000);
+
+  /* The tinted head / foot bars of the pre-port modal. Upstream has neither —
+     its dialog is ONE padded box — so both default to nothing, and a consumer
+     who wants the bar back sets the pair (and `-head-border` for the rule). */
+  --_mono-modal-header-bg: var(--mono-modal-header-bg, var(--mono-modal-head-bg, transparent));
+  --_mono-modal-footer-bg: var(--mono-modal-footer-bg, transparent);
+  --_mono-modal-header-border: var(--mono-modal-header-border, transparent);
+  --_mono-modal-footer-border: var(--mono-modal-footer-border, transparent);
+  /* 0, not a transparent hairline: upstream has no divider, and a transparent
+     one would still take a pixel of layout. Restoring the bar means setting the
+     width with the colour. */
+  --_mono-modal-header-border-width: var(--mono-modal-header-border-width, 0);
+  --_mono-modal-footer-border-width: var(--mono-modal-footer-border-width, 0);
+
+  /* ── md metrics live on the unqualified root ON PURPOSE ────────────────────
+     basecoat@1.0.2 styles/vega.css .dialog > * — rounded-xl p-6 gap-6 text-sm */
+  --_mono-modal-radius: var(--mono-modal-radius, var(--_mono-modal-radius-preset, var(--mono-modal-radius-md, var(--mono-radius-xl))));
+  --_mono-modal-pad: var(--mono-modal-pad, var(--_mono-modal-pad-preset, var(--mono-modal-pad-md, calc(var(--mono-spacing) * 6))));
+  --_mono-modal-gap: var(--mono-modal-gap, var(--_mono-modal-gap-preset, var(--mono-modal-gap-md, calc(var(--mono-spacing) * 6))));
+  --_mono-modal-header-gap: var(--mono-modal-header-gap, var(--_mono-modal-header-gap-preset, var(--mono-modal-header-gap-md, calc(var(--mono-spacing) * 2))));
+  --_mono-modal-footer-gap: var(--mono-modal-footer-gap, var(--_mono-modal-footer-gap-preset, var(--mono-modal-footer-gap-md, calc(var(--mono-spacing) * 2))));
+  --_mono-modal-body-font: var(--mono-modal-body-font, var(--_mono-modal-body-font-preset, var(--mono-modal-body-font-md, var(--mono-text-sm))));
+  --_mono-modal-body-line-height: var(--mono-modal-body-line-height, var(--_mono-modal-body-line-height-preset, var(--mono-text-sm--lh)));
+  /* `leading-none font-medium`, at the panel's own size — four of the eight
+     flavors bump it to `text-base` and sera to `text-lg`. */
+  --_mono-modal-title-font: var(--mono-modal-title-font, var(--_mono-modal-title-font-preset, var(--mono-modal-title-font-md, var(--mono-text-sm))));
+  --_mono-modal-title-weight: var(--mono-modal-title-weight, var(--mono-font-weight-medium));
+  --_mono-modal-title-color: var(--mono-modal-title-color, var(--_mono-modal-text));
+  /* the description line — `text-muted-foreground text-sm leading-normal`; the
+     font follows the body's per-size step, which is `text-sm` at md */
+  --_mono-modal-subtitle-font: var(--mono-modal-subtitle-font, var(--_mono-modal-body-font));
+  --_mono-modal-subtitle-color: var(--mono-modal-subtitle-color, var(--muted-foreground));
+
+  /* ── the close ✕ — `opacity-70 hover:opacity-100`, glyph `size-4` ───────── */
+  --_mono-modal-close-size: var(--mono-modal-close-size, var(--_mono-modal-close-size-preset, var(--mono-modal-close-size-md, calc(var(--mono-spacing) * 7))));
+  --_mono-modal-close-glyph: var(--mono-modal-close-glyph, var(--_mono-modal-close-glyph-preset, calc(var(--mono-spacing) * 4)));
+  --_mono-modal-close-radius: var(--mono-modal-close-radius, var(--mono-radius-sm));
+  --_mono-modal-close-bg: var(--mono-modal-close-bg, transparent);
+  --_mono-modal-close-color: var(--mono-modal-close-color, var(--_mono-modal-text));
+  --_mono-modal-close-opacity: var(--mono-modal-close-opacity, 0.7);
+  --_mono-modal-close-hover-opacity: var(--mono-modal-close-hover-opacity, 1);
+  --_mono-modal-close-hover-bg: var(--mono-modal-close-hover-bg, transparent);
+
+  /* ── the backdrop — `bg-black/10 backdrop-blur-xs` ─────────────────────── */
+  --_mono-modal-overlay-bg: var(--mono-modal-overlay-bg, var(--mono-mode-backdrop));
+  /* Public so a flavor can drop the blur; a descendant rule would not reach the
+     shadow build's overlay. */
+  --_mono-modal-overlay-backdrop-filter: var(--mono-modal-overlay-backdrop-filter, blur(var(--mono-blur-xs)));
+
+  --_mono-modal-z: var(--mono-modal-z, 600);
+
+  /* `max-w-[calc(100%-2rem)] sm:max-w-md` — the width is a PROP here (a dialog's
+     measure and its density are independent choices, which is why `size` does
+     not touch it), so the default is upstream's `md` container. */
+  --_mono-modal-width: var(--mono-modal-width, min(calc(100% - 2rem), var(--mono-container-md)));
+
+  /* Open/close animation duration. One source of truth for the panel's opacity +
+     transform AND the delayed `visibility` / `content-visibility` flips, which have
+     to stay in lockstep with them — they used to be six hand-maintained `0.22s`
+     literals. Set `--mono-modal-duration: 0s` for an instant, animation-free modal;
+     worth doing when the modal body holds a lot of components, since that is what
+     the open/close frames have to re-measure. */
+  --_mono-modal-duration: var(--mono-modal-duration, var(--mono-duration-slow));
+  /* The overlay keeps its own default so an explicit `--mono-modal-duration: 0s`
+     does not leave the scrim fading on its own. */
+  --_mono-modal-overlay-duration: var(--mono-modal-duration, var(--mono-duration-slow));
+
+  /* Sized in VIEWPORT units, not `inset: 0`/`100%`. Both of those resolve against
+     the initial containing block, which a horizontally-overflowing page inflates
+     under mobile emulation (measured: 481x1041 on a 390x844 screen) — the panel
+     then centres inside an oversized wrap and stops covering the screen. Viewport
+     units stay correct there. `dvh`/`dvw` additionally track mobile browser chrome,
+     so the `v*` line below is only the pre-2022 fallback. */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  width: 100dvw;
+  height: 100vh;
+  height: 100dvh;
+  z-index: var(--_mono-modal-z);
+  pointer-events: none;
+  font-family: inherit;
+  color: var(--_mono-modal-text);
+}
+
+[mono-modal],
+:where([mono-modal]) *,
+:where([mono-modal]) *::before,
+:where([mono-modal]) *::after {
+  box-sizing: border-box;
+}
+
+/* =========================================
+   Sizes — EXTENSION: upstream's `data-size` is a width; this is the density
+   ========================================= */
+
+[mono-modal][mono-size="xs"] {
+  --_mono-modal-radius-preset: var(--mono-modal-radius-xs, var(--mono-radius-md));
+  --_mono-modal-pad-preset: var(--mono-modal-pad-xs, calc(var(--mono-spacing) * 3));
+  --_mono-modal-gap-preset: var(--mono-modal-gap-xs, calc(var(--mono-spacing) * 3));
+  --_mono-modal-header-gap-preset: var(--mono-modal-header-gap-xs, var(--mono-spacing));
+  --_mono-modal-footer-gap-preset: var(--mono-modal-footer-gap-xs, var(--mono-spacing));
+  --_mono-modal-title-font-preset: var(--mono-modal-title-font-xs, var(--mono-text-xs));
+  --_mono-modal-body-font-preset: var(--mono-modal-body-font-xs, var(--mono-text-xs));
+  --_mono-modal-body-line-height-preset: var(--mono-text-xs--lh);
+  --_mono-modal-close-size-preset: var(--mono-modal-close-size-xs, calc(var(--mono-spacing) * 5));
+  --_mono-modal-close-glyph-preset: calc(var(--mono-spacing) * 3);
+}
+
+[mono-modal][mono-size="sm"] {
+  --_mono-modal-radius-preset: var(--mono-modal-radius-sm, var(--mono-radius-lg));
+  --_mono-modal-pad-preset: var(--mono-modal-pad-sm, calc(var(--mono-spacing) * 4));
+  --_mono-modal-gap-preset: var(--mono-modal-gap-sm, calc(var(--mono-spacing) * 4));
+  --_mono-modal-header-gap-preset: var(--mono-modal-header-gap-sm, calc(var(--mono-spacing) * 1.5));
+  --_mono-modal-footer-gap-preset: var(--mono-modal-footer-gap-sm, calc(var(--mono-spacing) * 2));
+  --_mono-modal-title-font-preset: var(--mono-modal-title-font-sm, var(--mono-text-sm));
+  --_mono-modal-body-font-preset: var(--mono-modal-body-font-sm, var(--mono-text-xs));
+  --_mono-modal-body-line-height-preset: var(--mono-text-xs--lh);
+  --_mono-modal-close-size-preset: var(--mono-modal-close-size-sm, calc(var(--mono-spacing) * 6));
+  --_mono-modal-close-glyph-preset: calc(var(--mono-spacing) * 3.5);
+}
+
+[mono-modal][mono-size="lg"] {
+  --_mono-modal-radius-preset: var(--mono-modal-radius-lg, var(--mono-radius-2xl));
+  --_mono-modal-pad-preset: var(--mono-modal-pad-lg, calc(var(--mono-spacing) * 7));
+  --_mono-modal-gap-preset: var(--mono-modal-gap-lg, calc(var(--mono-spacing) * 7));
+  --_mono-modal-header-gap-preset: var(--mono-modal-header-gap-lg, calc(var(--mono-spacing) * 2.5));
+  --_mono-modal-footer-gap-preset: var(--mono-modal-footer-gap-lg, calc(var(--mono-spacing) * 2.5));
+  --_mono-modal-title-font-preset: var(--mono-modal-title-font-lg, var(--mono-text-base));
+  --_mono-modal-body-font-preset: var(--mono-modal-body-font-lg, var(--mono-text-sm));
+  --_mono-modal-close-size-preset: var(--mono-modal-close-size-lg, calc(var(--mono-spacing) * 8));
+  --_mono-modal-close-glyph-preset: calc(var(--mono-spacing) * 4.5);
+}
+
+[mono-modal][mono-size="xl"] {
+  --_mono-modal-radius-preset: var(--mono-modal-radius-xl, var(--mono-radius-2xl));
+  --_mono-modal-pad-preset: var(--mono-modal-pad-xl, calc(var(--mono-spacing) * 8));
+  --_mono-modal-gap-preset: var(--mono-modal-gap-xl, calc(var(--mono-spacing) * 8));
+  --_mono-modal-header-gap-preset: var(--mono-modal-header-gap-xl, calc(var(--mono-spacing) * 3));
+  --_mono-modal-footer-gap-preset: var(--mono-modal-footer-gap-xl, calc(var(--mono-spacing) * 3));
+  --_mono-modal-title-font-preset: var(--mono-modal-title-font-xl, var(--mono-text-lg));
+  --_mono-modal-body-font-preset: var(--mono-modal-body-font-xl, var(--mono-text-base));
+  --_mono-modal-body-line-height-preset: var(--mono-text-base--lh);
+  --_mono-modal-close-size-preset: var(--mono-modal-close-size-xl, calc(var(--mono-spacing) * 9));
+  --_mono-modal-close-glyph-preset: calc(var(--mono-spacing) * 5);
+}
+
+[mono-modal][mono-size="xxl"] {
+  --_mono-modal-radius-preset: var(--mono-modal-radius-xxl, var(--mono-radius-4xl));
+  --_mono-modal-pad-preset: var(--mono-modal-pad-xxl, calc(var(--mono-spacing) * 9));
+  --_mono-modal-gap-preset: var(--mono-modal-gap-xxl, calc(var(--mono-spacing) * 9));
+  --_mono-modal-header-gap-preset: var(--mono-modal-header-gap-xxl, calc(var(--mono-spacing) * 3.5));
+  --_mono-modal-footer-gap-preset: var(--mono-modal-footer-gap-xxl, calc(var(--mono-spacing) * 3.5));
+  --_mono-modal-title-font-preset: var(--mono-modal-title-font-xxl, var(--mono-text-xl));
+  --_mono-modal-body-font-preset: var(--mono-modal-body-font-xxl, var(--mono-text-lg));
+  --_mono-modal-body-line-height-preset: var(--mono-text-lg--lh);
+  --_mono-modal-close-size-preset: var(--mono-modal-close-size-xxl, calc(var(--mono-spacing) * 10));
+  --_mono-modal-close-glyph-preset: calc(var(--mono-spacing) * 5.5);
+}
+
+/* =========================================
+   Colours — EXTENSION: the role tints the ring and whatever the consumer
+   turns back on (the head bar, the close hover)
+   ========================================= */
+
+[mono-modal][mono-color="primary"] { --_mono-modal-accent-preset: var(--_mono-modal-primary); }
+[mono-modal][mono-color="secondary"] { --_mono-modal-accent-preset: var(--_mono-modal-secondary); }
+[mono-modal][mono-color="success"] { --_mono-modal-accent-preset: var(--_mono-modal-success); }
+[mono-modal][mono-color="danger"] { --_mono-modal-accent-preset: var(--_mono-modal-danger); }
+[mono-modal][mono-color="warning"] { --_mono-modal-accent-preset: var(--_mono-modal-warning); }
+[mono-modal][mono-color="info"] { --_mono-modal-accent-preset: var(--_mono-modal-info); }
+[mono-modal][mono-color="teal"] { --_mono-modal-accent-preset: var(--_mono-modal-teal); }
+[mono-modal][mono-color="purple"] { --_mono-modal-accent-preset: var(--_mono-modal-purple); }
+[mono-modal][mono-color="neutral"] { --_mono-modal-accent-preset: var(--_mono-modal-neutral); }
+[mono-modal][mono-color="dark"] { --_mono-modal-accent-preset: var(--_mono-modal-dark); }
+
+/* An explicit `color` shows on the panel itself, not only in the ✕ hover: a
+   thin line of the accent sits ON the ring and a faint halo of it under the
+   elevation — "bordered green, glowing green just a little". Both live in the
+   glow layer (first in the shadow list, so the translucent foreground/10 ring
+   does not muddy the line, and a flavour's own `--mono-modal-ring-color` is
+   left alone). Without `color` the layer is nothing. `--mono-modal-glow`
+   replaces the whole layer; `--mono-modal-accent-ring` recolours the line. */
+[mono-modal][mono-color] {
+  --_mono-modal-glow: var(--mono-modal-glow,
+    0 0 0 var(--_mono-modal-ring-width) var(--mono-modal-accent-ring, color-mix(in oklab, var(--_mono-modal-accent) 35%, var(--_mono-modal-border))),
+    0 0 24px -4px color-mix(in oklab, var(--_mono-modal-accent) 45%, transparent));
+}
+
+/* =========================================
+   Overlay — `::backdrop`
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .dialog::backdrop, .alert-dialog::backdrop, .command-dialog::backdrop
+   — bg-black/10 backdrop-blur-xs duration-100. A real `::backdrop` cannot be
+   reached from a shadow sheet and cannot stack with this component's own layer
+   manager, so it is an element — the fill is upstream's, through the mode token. */
+:where([mono-modal]) > [mono-overlay] {
+  /* Viewport units, not `inset: 0` — see the note on the root. */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  width: 100dvw;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--_mono-modal-overlay-bg);
+  opacity: 0;
+  pointer-events: none;
+
+  /* The blur is applied only while open; it used to be declared unconditionally with
+     `opacity: 0` as the only thing hiding it. Hygiene rather than a measured win —
+     `backdrop-filter` is a paint/composite cost, and the layout+style metrics used to
+     validate the `content-visibility` change below cannot attribute anything to it
+     either way. Kept because a filter on a never-shown full-viewport element is work
+     the browser should never be asked to consider, and the change is free.
+
+     Removal is DELAYED by the fade duration (the same idiom this file already uses
+     for `visibility` below): drop it immediately and the backdrop snaps sharp while
+     the scrim is still fading out. `backdrop-filter` is animatable, so a plain
+     delayed transition does the job — no `allow-discrete` needed. */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition:
+    opacity var(--_mono-modal-overlay-duration) var(--mono-ease),
+    backdrop-filter 0s linear var(--_mono-modal-overlay-duration),
+    -webkit-backdrop-filter 0s linear var(--_mono-modal-overlay-duration);
+}
+
+[mono-modal][mono-open] > [mono-overlay] {
+  opacity: 1;
+  pointer-events: auto;
+  backdrop-filter: var(--_mono-modal-overlay-backdrop-filter);
+  -webkit-backdrop-filter: var(--_mono-modal-overlay-backdrop-filter);
+  transition:
+    opacity var(--_mono-modal-overlay-duration) var(--mono-ease),
+    backdrop-filter 0s linear 0s,
+    -webkit-backdrop-filter 0s linear 0s;
+}
+
+[mono-modal][mono-no-overlay] > [mono-overlay] {
+  display: none;
+}
+
+/* Stacked modals: when another modal or drawer WITH an overlay is open above
+   this one, hide this backdrop so dim layers don't compound — the topmost
+   overlay alone dims everything beneath it. An `overlay="false"` dialog above
+   does not count, so this one keeps dimming the page. */
+[mono-modal][mono-open][mono-has-modal-above] > [mono-overlay] {
+  opacity: 0;
+}
+
+/* =========================================
+   Panel — `.dialog > *`
+   ========================================= */
+
+/* EXTENSION — the centring box. Upstream centres the panel itself
+   (`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2`), which this
+   component cannot: the drag offset is a `translate` too, and the two would
+   fight. A flex wrap centres without spending the transform. */
+:where([mono-modal]) > [mono-panel-wrap] {
+  /* Viewport units, not `inset: 0` — see the note on the root. This is the box
+     the panel centres in, so an inflated one offsets the panel off-screen. */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  width: 100dvw;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  pointer-events: none;
+  z-index: calc(var(--_mono-modal-z) + 1);
+}
+
+/* basecoat@1.0.2 components/dialog.css .dialog, .alert-dialog >> > * — fixed z-50
+   flex max-h-[calc(100%_-_2rem)] w-full flex-col transition-all outline-hidden */
+/* basecoat@1.0.2 styles/vega.css .dialog > * — bg-popover text-popover-foreground
+   ring-foreground/10 max-w-[calc(100%-2rem)] gap-6 rounded-xl p-6 text-sm ring-1
+   duration-100 sm:max-w-md */
+:where([mono-modal] > [mono-panel-wrap]) > [mono-panel] {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--_mono-modal-gap);
+  width: var(--_mono-modal-width);
+  max-width: calc(100% - 2rem);
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  padding: var(--_mono-modal-pad);
+  border-radius: var(--_mono-modal-radius);
+  background: var(--_mono-modal-bg);
+  color: var(--_mono-modal-text);
+  box-shadow:
+    var(--_mono-modal-glow),
+    0 0 0 var(--_mono-modal-ring-width) var(--_mono-modal-ring-color),
+    var(--_mono-modal-shadow);
+  overflow: hidden;
+  outline: none;
+  pointer-events: auto;
+
+  /* Closed state: invisible (hides shadow halo) + scaled-down, which is
+     upstream's `@starting-style` pair (`opacity-0` + `scale-95`) written as a
+     class transition — a `<dialog>`'s discrete open/close is not available to a
+     component that manages its own layer. The visibility flip is delayed on
+     close so the scale-out animation plays first. */
+  opacity: 0;
+  transform: translate(var(--drag-x, 0px), var(--drag-y, 0px)) scale(0.95);
+  visibility: hidden;
+  transition:
+    opacity var(--_mono-modal-duration) var(--mono-ease),
+    transform var(--_mono-modal-duration) var(--mono-ease),
+    visibility 0s linear var(--_mono-modal-duration);
+}
+
+[mono-modal][mono-open] > [mono-panel-wrap] > [mono-panel] {
+  opacity: 1;
+  transform: translate(var(--drag-x, 0px), var(--drag-y, 0px)) scale(1);
+  visibility: visible;
+  transition:
+    opacity var(--_mono-modal-duration) var(--mono-ease),
+    transform var(--_mono-modal-duration) var(--mono-ease),
+    visibility 0s linear 0s;
+}
+
+/* Draggable: the head is the drag handle; suppress the transform transition while
+   dragging so the panel tracks the pointer 1:1 and snaps instantly on drop. */
+[mono-modal][mono-draggable] > [mono-panel-wrap] > [mono-panel] > [mono-header] {
+  cursor: move;
+  touch-action: none;
+  user-select: none;
+}
+
+[mono-modal][mono-draggable] > [mono-panel-wrap] > [mono-panel] > [mono-header] [mono-close] {
+  cursor: pointer;
+}
+
+[mono-modal][mono-dragging] > [mono-panel-wrap] > [mono-panel] {
+  transition: none;
+}
+
+/* =========================================
+   Head — `> header`
+   ========================================= */
+
+/* basecoat@1.0.2 components/dialog.css .dialog >> > * > header — flex flex-col */
+/* basecoat@1.0.2 styles/vega.css .dialog > * > header — gap-2
+   DEVIATION: a ROW. Upstream's header is a column of title + description with the
+   ✕ absolutely positioned beside it; ours holds the ✕ because the head is the
+   drag handle. Upstream's column is `[mono-heading]` below, the ✕'s row-mate —
+   and all a `slot="header"` replaces. */
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-header] {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--_mono-modal-header-gap);
+  flex-shrink: 0;
+  padding: var(--mono-modal-header-pad, 0);
+  border-bottom: var(--_mono-modal-header-border-width) solid var(--_mono-modal-header-border);
+  background: var(--_mono-modal-header-bg);
+}
+
+/* basecoat@1.0.2 styles/vega.css .dialog > * > header > h2, .dialog > * > [data-title]
+   — leading-none font-medium */
+/* basecoat@1.0.2 components/dialog.css .dialog >> > * > header — flex flex-col
+   (+ vega's gap-2): the title / subtitle column, taking the row beside the ✕. */
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel] > [mono-header]) > [mono-heading] {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mono-modal-heading-gap, var(--_mono-modal-header-gap));
+}
+
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel] > [mono-header]) [mono-title] {
+  min-width: 0;
+  font-size: var(--_mono-modal-title-font);
+  font-weight: var(--_mono-modal-title-weight);
+  line-height: var(--mono-leading-none, 1);
+  color: var(--_mono-modal-title-color);
+}
+
+/* basecoat@1.0.2 styles/vega.css .dialog > * > header > p, .dialog > * > [data-description]
+   — text-muted-foreground text-sm leading-normal */
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel] > [mono-header]) [mono-subtitle] {
+  min-width: 0;
+  font-size: var(--_mono-modal-subtitle-font);
+  line-height: var(--mono-modal-subtitle-line-height, var(--mono-leading-normal));
+  color: var(--_mono-modal-subtitle-color);
+}
+
+/* Empty regions. The light build omits them; the shadow build always renders
+   them (its native `<slot>`s must exist to be scanned) and marks them
+   [mono-empty]. The heading parts are matched as descendants because the shadow
+   build nests them inside the `header` slot's fallback. */
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > :is([mono-header], [mono-footer])[mono-empty],
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel] > [mono-header]) > [mono-heading][mono-empty],
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel] > [mono-header] > [mono-heading]) :is([mono-title], [mono-subtitle])[mono-empty] {
+  display: none;
+}
+
+/* =========================================
+   Close — `> button`
+   ========================================= */
+
+/* basecoat@1.0.2 components/dialog.css .dialog >> > * > :is(button, form[method='dialog'] > button)
+   — inline-flex items-center justify-center opacity-70 transition-opacity
+   hover:opacity-100 focus-visible:outline-hidden disabled:pointer-events-none
+   DEVIATION: in flow inside the head rather than `absolute top-4 end-4` — see
+   the header note above. */
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel] > [mono-header]) [mono-close] {
+  flex-shrink: 0;
+  /* stays at the end even when the heading column is empty (hidden) */
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-modal-close-size);
+  height: var(--_mono-modal-close-size);
+  padding: 0;
+  border: none;
+  border-radius: var(--_mono-modal-close-radius);
+  background: var(--_mono-modal-close-bg);
+  color: var(--_mono-modal-close-color);
+  opacity: var(--_mono-modal-close-opacity);
+  cursor: pointer;
+  appearance: none;
+  transition:
+    opacity var(--mono-duration) var(--mono-ease),
+    background-color var(--mono-duration) var(--mono-ease);
+}
+
+@media (hover: hover) {
+  [mono-modal] [mono-close]:hover {
+    opacity: var(--_mono-modal-close-hover-opacity);
+    background: var(--_mono-modal-close-hover-bg);
+  }
+}
+
+[mono-modal] [mono-close]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 var(--mono-ring-width)
+    color-mix(in oklab, var(--ring) var(--mono-ring-alpha), transparent);
+}
+
+/* basecoat@1.0.2 components/dialog.css .dialog >> > * > :is(button, form[method='dialog'] > button) > svg:not([class*='size-'])
+   — size-4 */
+[mono-modal] [mono-close] > :is(svg, span) {
+  display: block;
+  width: var(--_mono-modal-close-glyph);
+  height: var(--_mono-modal-close-glyph);
+}
+
+/* =========================================
+   Body — `> section`
+   ========================================= */
+
+/* basecoat@1.0.2 components/dialog.css .dialog >> > * > section — flex-1
+   The panel's own `p-6` is the padding; `--mono-modal-body-pad` restores an
+   inner one for a body that scrolls under a restored head bar. */
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body] {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--mono-modal-body-pad, 0);
+  font-size: var(--_mono-modal-body-font);
+  line-height: var(--_mono-modal-body-line-height);
+  color: var(--_mono-modal-text);
+}
+
+/* =========================================
+   Foot — `> footer`
+   ========================================= */
+
+/* basecoat@1.0.2 components/dialog.css .dialog >> > * > footer
+   — flex flex-col-reverse sm:flex-row sm:justify-end */
+/* basecoat@1.0.2 styles/vega.css .alert-dialog > * > footer, .dialog > * > footer — gap-2 */
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-footer] {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--_mono-modal-footer-gap);
+  flex-shrink: 0;
+  margin: var(--mono-modal-footer-margin, 0);
+  padding: var(--mono-modal-footer-pad, 0);
+  border-top: var(--_mono-modal-footer-border-width) solid var(--_mono-modal-footer-border);
+  border-end-start-radius: var(--mono-modal-footer-radius, 0);
+  border-end-end-radius: var(--mono-modal-footer-radius, 0);
+  background: var(--_mono-modal-footer-bg);
+}
+
+@media (width >= 40rem) {
+  [mono-modal] > [mono-panel-wrap] > [mono-panel] > [mono-footer] {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+  }
+}
+
+/* =========================================
+   Full screen — both width and height passed as "100%"
+   ========================================= */
+
+[mono-modal][mono-fullscreen] > [mono-panel-wrap] {
+  padding: 0;
+}
+
+[mono-modal][mono-fullscreen] > [mono-panel-wrap] > [mono-panel] {
+  width: 100vw;
+  width: 100dvw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: 100vw;
+  max-width: 100dvw;
+  max-height: 100vh;
+  max-height: 100dvh;
+  border-radius: 0;
+}
+
+/* A closed modal is hidden with `visibility: hidden`, which skips PAINT but not
+   LAYOUT — so the panel and everything slotted into it kept generating boxes and
+   being measured even for a modal the user never opened. That cost is paid at mount:
+   `mono-modal.ts` builds the <body> portal in `createRenderRoot()`, moves the
+   consumer's children into it, and forces a synchronous `performUpdate()` from
+   `connectedCallback`. `content-visibility: hidden` drops the closed subtree
+   entirely, so a heavy modal costs nothing until it is opened.
+
+   Measured (Chromium, ~400-node panels, 10 modal+drawer pairs, 20k DOM nodes):
+     layout objects: 12281 → 81 (−99.3%); with a single pair, 1237 → 18
+     mount layout+style: 94.6ms → 14.9ms, and flat in the number of modals
+   The trade, same as the accordion's: one open+close costs MORE (2.1ms → 8.0ms),
+   because an opening panel is laid out from scratch instead of incrementally. Worth
+   it — you mount once and toggle rarely — and `--mono-modal-duration: 0s` claws the
+   toggle back if a body is heavy enough to notice.
+
+   `allow-discrete` is what makes it safe to animate. Opening flips the property to
+   `visible` at 0%, so the scale/opacity animation has something to composite;
+   closing holds it `visible` until 100%, so the panel scales out instead of
+   vanishing on the first frame.
+
+   Gated behind @supports deliberately: `content-visibility … allow-discrete` inside
+   the `transition` SHORTHAND is a parse error to a browser without the feature, and
+   one bad entry drops the WHOLE declaration — which would take the modal's fade and
+   scale with it. Inside the guard the shorthand is known to parse, so the list is
+   restated in full. Browsers without support keep exactly the previous behaviour.
+
+   Must stay ABOVE the reduced-motion block below: that block wins on `!important`,
+   but @supports adds no specificity, so source order is what keeps it winning. */
+@supports (transition-behavior: allow-discrete) {
+  :where([mono-modal] > [mono-panel-wrap]) > [mono-panel] {
+    content-visibility: hidden;
+    contain-intrinsic-size: 0;
+    transition:
+      opacity var(--_mono-modal-duration) var(--mono-ease),
+      transform var(--_mono-modal-duration) var(--mono-ease),
+      visibility 0s linear var(--_mono-modal-duration),
+      content-visibility var(--_mono-modal-duration) allow-discrete;
+  }
+
+  [mono-modal][mono-open] > [mono-panel-wrap] > [mono-panel] {
+    content-visibility: visible;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  [mono-modal] > [mono-overlay],
+  [mono-modal] > [mono-panel-wrap] > [mono-panel] {
+    transition: opacity 0.01s linear, visibility 0s linear !important;
+    transform: none !important;
+  }
+}
+
+/* =========================================
+   Auto full-screen (`auto-fullscreen` prop)
+   =========================================
+
+   Fill the screen at a Tailwind breakpoint and below. The boundaries are
+   `<breakpoint> - 0.02px` so they match Tailwind's `max-*` variants exactly: at
+   exactly 640px `sm:` applies, so auto-fullscreen must NOT.
+
+   Two things to know before editing:
+
+   1. `!important` is required here, unlike `[mono-fullscreen]` above.
+      `_panelSizeStyle()` writes `width`/`height`/`min-*`/`max-*` as INLINE styles
+      whenever the consumer sets a sizing prop, and inline beats any selector —
+      without it `<mono-modal auto-fullscreen width="720">` would stay 720px on a
+      phone. The `min-*` resets matter too: a `min-width` larger than `width` still
+      wins.
+   2. The five near-identical blocks are unavoidable — a media query cannot be
+      parameterised by an attribute or a custom property, so each breakpoint needs
+      its own. Keep them in sync.
+*/
+
+@media (max-width: 639.98px) {
+  [mono-modal][mono-auto-fullscreen="sm"] > [mono-panel-wrap] {
+    padding: 0;
+  }
+
+  [mono-modal][mono-auto-fullscreen="sm"] > [mono-panel-wrap] > [mono-panel] {
+    width: 100vw !important;
+    width: 100dvw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: 100vw !important;
+    max-width: 100dvw !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    border-radius: 0;
+  }
+}
+
+@media (max-width: 767.98px) {
+  [mono-modal][mono-auto-fullscreen="md"] > [mono-panel-wrap] {
+    padding: 0;
+  }
+
+  [mono-modal][mono-auto-fullscreen="md"] > [mono-panel-wrap] > [mono-panel] {
+    width: 100vw !important;
+    width: 100dvw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: 100vw !important;
+    max-width: 100dvw !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    border-radius: 0;
+  }
+}
+
+@media (max-width: 1023.98px) {
+  [mono-modal][mono-auto-fullscreen="lg"] > [mono-panel-wrap] {
+    padding: 0;
+  }
+
+  [mono-modal][mono-auto-fullscreen="lg"] > [mono-panel-wrap] > [mono-panel] {
+    width: 100vw !important;
+    width: 100dvw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: 100vw !important;
+    max-width: 100dvw !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    border-radius: 0;
+  }
+}
+
+@media (max-width: 1279.98px) {
+  [mono-modal][mono-auto-fullscreen="xl"] > [mono-panel-wrap] {
+    padding: 0;
+  }
+
+  [mono-modal][mono-auto-fullscreen="xl"] > [mono-panel-wrap] > [mono-panel] {
+    width: 100vw !important;
+    width: 100dvw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: 100vw !important;
+    max-width: 100dvw !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    border-radius: 0;
+  }
+}
+
+@media (max-width: 1535.98px) {
+  [mono-modal][mono-auto-fullscreen="2xl"] > [mono-panel-wrap] {
+    padding: 0;
+  }
+
+  [mono-modal][mono-auto-fullscreen="2xl"] > [mono-panel-wrap] > [mono-panel] {
+    width: 100vw !important;
+    width: 100dvw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: 100vw !important;
+    max-width: 100dvw !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    border-radius: 0;
+  }
+}
+
+/* ── Programmatic dialog (`controlMonoModal().dialog`) ─────────────────────────
+   The compact question box the controller builds by code — upstream's
+   `.alert-dialog`: the text centred, the actions centred under it, and a lighter
+   scrim, because what the question is about should stay readable behind it.
+   `mono-dialog` is set through `cssClassName` on the dialog's own modal, so an
+   ordinary <mono-modal> is untouched. */
+[mono-modal][mono-dialog] {
+  --_mono-modal-overlay-backdrop-filter: var(--mono-modal-overlay-backdrop-filter, none);
+  --_mono-modal-overlay-bg: var(--mono-modal-overlay-bg,
+    color-mix(in oklab, black 22%, transparent));
+}
+
+/* basecoat@1.0.2 components/dialog.css .alert-dialog >> > * > header — grid
+   place-items-center text-center sm:place-items-start sm:text-start
+   DEVIATION: centred at EVERY width. This box is one question and two buttons —
+   upstream's `sm:` left-align belongs to the icon+title+description layout its
+   alert dialog builds, which the controller does not produce. */
+[mono-modal][mono-dialog] > [mono-panel-wrap] > [mono-panel] > [mono-body] {
+  text-align: center;
+}
+
+/* basecoat@1.0.2 components/dialog.css .alert-dialog >> &:is([data-size='sm']) > * > footer, > [data-size='sm'] > footer
+   — grid grid-cols-2. The controller's dialog is that `sm` alert: its actions sit
+   together under the question rather than trailing to the end. */
+[mono-modal][mono-dialog] > [mono-panel-wrap] > [mono-panel] > [mono-footer] {
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* The light build re-appends slotted nodes into a `[data-mono-slot]` outlet.
+   Left inline, that outlet is ONE flex child, so the footer's gap and
+   justification apply to IT rather than to the buttons inside it — while the
+   shadow build's `<slot>` is `display: contents` per the UA sheet and the
+   hand-written markup has no wrapper at all. Dissolving the outlet is what
+   makes the three agree, and it is what a consumer writing
+   `<button slot="footer">` twice expects. */
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel] > [mono-footer]) > [data-mono-slot] {
+  display: contents;
+}
+
+/* The captured footer lands in an inline `<span data-mono-slot="foot">` outlet, so
+   the buttons would otherwise sit in a LINE box — baseline-aligned, a solid button
+   with an icon a few px lower than an outline one beside it, with line-height air
+   underneath. The outlet becomes the flex row instead, and the actions wrapper
+   dissolves into it. */
+[mono-modal][mono-dialog] > [mono-panel-wrap] > [mono-panel] > [mono-footer] > [data-mono-slot="foot"] {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--_mono-modal-footer-gap);
+  line-height: 1;
+}
+
+[mono-modal][mono-dialog] .mono-modal-dialog-actions {
+  display: contents;
+}

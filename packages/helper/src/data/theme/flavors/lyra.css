@@ -1,0 +1,287 @@
+/* ============================================================
+   Basecoat "lyra" style (basecoat-css@1.0.2 styles/lyra.css) as a
+   @mono-lit/helper flavor.  Square, small type.
+
+   Basecoat is the source of truth. A style never touches tokens or fonts —
+   it is a per-component set of metrics — so everything here is a knob a
+   ported component reads, inherited through the shadow boundary. Vega is
+   the default (its values are baked into the component CSS as fallbacks);
+   this sheet is lyra's DELTA against vega, read off
+   `node scripts/basecoat-styles.mjs --varying "<selector>"`.
+
+   Deltas: one step shorter ladder, rounded-none everywhere, text-xs labels, a 1px focus ring, no shadow on the outline surface.
+
+   Usage:  import "@mono-lit/helper/ui/theme/lyra.css"  then add
+           class="theme-lyra" on <html> (or any ancestor). Composes with a
+           .theme-color-* preset; dark mode follows html.dark as usual.
+
+   Ported components carried here: button, input, select, date, tag-input, checkbox, radio, switch, card, textarea, file-upload, chip, dropdown, button-dropdown, accordion, tabs, modal, drawer, nav, breadcrumb, menu, sidebar, table.
+   Every component is ported. dropdown-table, filter and rich-text-editor are
+   EXTENSIONS that read the ported components' public knobs (tag-input's, input's,
+   button's, textarea's, the select panel's) and carry nothing here on purpose;
+   chart reads the page tokens (--chart-1…5, --border, --foreground, --popover) directly.
+   ============================================================ */
+
+.theme-lyra {
+  /* control ladder — .btn / .input / .select: sm h-7, default h-8, lg h-9 (xl/xxl continue the grid) */
+  --mono-control-height-xs: 1.5rem;
+  --mono-control-height-sm: 1.75rem;
+  --mono-control-height-md: 2rem;
+  --mono-control-height-lg: 2.25rem;
+  --mono-control-height-xl: 2.5rem;
+  --mono-control-height-xxl: 2.75rem;
+
+  /* focus-visible:ring-[1px] */
+  --mono-ring-width: 1px;
+
+  /* button — .btn rounded-none text-xs; sm svg size-3.5; outline: no shadow-xs */
+  --mono-button-md-radius: 0;
+  --mono-button-xs-radius: 0;
+  --mono-button-sm-radius: 0;
+  --mono-button-md-font-size: var(--mono-text-xs);
+  --mono-button-md-line-height: var(--mono-text-xs--lh);
+  --mono-button-sm-icon-size: 0.875rem;
+  --mono-button-outline-shadow: 0 0 #0000;
+
+  /* input — .input-group h-8 rounded-none, no shadow-xs, ring-1, text-xs,
+     disabled:bg-input/50 (dark:bg-input/80); .field gap-2; label text-xs (no
+     font-medium); .field > p and [role=alert] text-xs; the affix button rounded-none */
+  --mono-input-radius: 0;
+  --mono-input-outline-shadow: 0 0 #0000;
+  --mono-input-font-md: var(--mono-text-xs);
+  --mono-input-line-height-md: var(--mono-text-xs--lh);
+  --mono-input-disabled-bg: color-mix(in oklab, var(--input) 50%, transparent);
+  --mono-input-gap: calc(var(--mono-spacing) * 2);
+  --mono-input-label-font-size: var(--mono-text-xs);
+  --mono-input-label-font-weight: var(--mono-font-weight-normal);
+  --mono-input-message-font-size: var(--mono-text-xs);
+  --mono-input-clear-radius: 0;
+
+  /* select — .select > button h-8 rounded-none text-xs, no shadow-xs, ring-1;
+     [data-popover] rounded-none, listbox p-0; [role=option] rounded-none py-2 text-xs;
+     [role=heading] py-2; empty row text-xs; label text-xs; .field gap-2 */
+  --mono-select-radius: 0;
+  --mono-select-outline-shadow: 0 0 #0000;
+  --mono-select-font-md: var(--mono-text-xs);
+  --mono-select-line-height-md: var(--mono-text-xs--lh);
+  --mono-select-gap: calc(var(--mono-spacing) * 2);
+  --mono-select-dropdown-radius: 0;
+  /* basecoat@1.0.2 styles/lyra.css [data-tooltip]::before — rounded-none (every tooltip's corner: SunEditor's, and any of mono's) */
+  --mono-tooltip-radius: 0;
+  --mono-select-dropdown-padding: 0;
+  --mono-select-option-radius: 0;
+  --mono-select-option-padding-y: calc(var(--mono-spacing) * 2);
+  --mono-select-option-font-size: var(--mono-text-xs);
+  --mono-select-option-line-height: var(--mono-text-xs--lh);
+  --mono-select-group-padding-y: calc(var(--mono-spacing) * 2);
+  --mono-select-label-font-size: var(--mono-text-xs);
+  --mono-select-label-font-weight: var(--mono-font-weight-normal);
+  --mono-select-message-font-size: var(--mono-text-xs);
+  --mono-select-clear-radius: 0;
+
+  /* date — the input's box + [data-popover] rounded-none */
+  --mono-date-radius: 0;
+  --mono-date-outline-shadow: 0 0 #0000;
+  --mono-date-font-md: var(--mono-text-xs);
+  --mono-date-line-height-md: var(--mono-text-xs--lh);
+  --mono-date-disabled-bg: color-mix(in oklab, var(--input) 50%, transparent);
+  --mono-date-gap: calc(var(--mono-spacing) * 2);
+  --mono-date-label-font-size: var(--mono-text-xs);
+  --mono-date-label-font-weight: var(--mono-font-weight-normal);
+  --mono-date-message-font-size: var(--mono-text-xs);
+  --mono-date-clear-radius: 0;
+  --mono-date-calendar-radius: 0;
+  --mono-date-calendar-day-radius: 0;
+
+  /* tag-input — .combobox-chips min-h-8 gap-1 rounded-none px-1 py-1 text-xs, no
+     shadow-xs, ring-1; .combobox-chip h-5.25 rounded-none; [data-popover]
+     rounded-none, listbox p-0; options rounded-none py-2 text-xs; label text-xs */
+  --mono-tag-input-radius: 0;
+  --mono-tag-input-outline-shadow: 0 0 #0000;
+  --mono-tag-input-chip-gap: var(--mono-spacing);
+  --mono-tag-input-padding-x: var(--mono-spacing);
+  --mono-tag-input-padding-y: var(--mono-spacing);
+  --mono-tag-input-font-md: var(--mono-text-xs);
+  --mono-tag-input-line-height-md: var(--mono-text-xs--lh);
+  --mono-tag-input-chip-height-md: calc(var(--mono-spacing) * 5.25);
+  --mono-tag-input-chip-radius: 0;
+  --mono-tag-input-gap: calc(var(--mono-spacing) * 2);
+  --mono-tag-input-dropdown-radius: 0;
+  --mono-tag-input-dropdown-padding: 0;
+  --mono-tag-input-option-radius: 0;
+  --mono-tag-input-option-padding-y: calc(var(--mono-spacing) * 2);
+  --mono-tag-input-option-font-size: var(--mono-text-xs);
+  --mono-tag-input-option-line-height: var(--mono-text-xs--lh);
+  --mono-tag-input-group-padding-y: calc(var(--mono-spacing) * 2);
+  --mono-tag-input-label-font-size: var(--mono-text-xs);
+  --mono-tag-input-label-font-weight: var(--mono-font-weight-normal);
+  --mono-tag-input-message-font-size: var(--mono-text-xs);
+  --mono-tag-input-clear-radius: 0;
+
+  /* checkbox — .input[type='checkbox'] rounded-none, no shadow-xs, ring-1 */
+  --mono-checkbox-radius: 0;
+  --mono-checkbox-shadow: 0 0 #0000;
+
+  /* switch — [role='switch'] no shadow-xs, ring-1 */
+  --mono-switch-shadow: 0 0 #0000;
+
+  /* alert — .alert rounded-none px-2.5 py-2 text-xs has-[>svg]:gap-x-2
+     [&>svg]:translate-y-0; section text-xs/relaxed */
+  --mono-alert-radius: 0;
+  --mono-alert-padding-x: calc(var(--mono-spacing) * 2.5);
+  --mono-alert-padding-y: calc(var(--mono-spacing) * 2);
+  --mono-alert-font-size: var(--mono-text-xs);
+  --mono-alert-line-height: var(--mono-text-xs--lh);
+  --mono-alert-subtitle-font-size: var(--mono-text-xs);
+  --mono-alert-subtitle-line-height: var(--mono-leading-relaxed);
+  --mono-alert-icon-gap: calc(var(--mono-spacing) * 2);
+  --mono-alert-icon-offset: 0px;
+  /* card — .card rounded-none text-xs/relaxed gap-4 py-4 (px-4), no shadow-xs,
+     title text-sm, description text-xs */
+  --_mono-card-radius-preset: 0;
+  --mono-card-shadow: 0 0 #0000;
+  --mono-card-padding-md: calc(var(--mono-spacing) * 4);
+  --mono-card-gap-md: calc(var(--mono-spacing) * 4);
+  --mono-card-padding-sm: calc(var(--mono-spacing) * 3);
+  --mono-card-gap-sm: calc(var(--mono-spacing) * 3);
+  --mono-card-font-md: var(--mono-text-xs);
+  --mono-card-title-font-md: var(--mono-text-sm);
+  --mono-card-subtitle-font-md: var(--mono-text-xs);
+
+  /* textarea — .textarea rounded-none text-xs, no shadow-xs, ring-1, disabled:bg-input/50 */
+  --mono-textarea-outline-radius: 0;
+  --mono-textarea-outline-shadow: 0 0 #0000;
+  --mono-textarea-font-md: var(--mono-text-xs);
+  --mono-textarea-disabled-bg: color-mix(in oklab, var(--input) 50%, transparent);
+
+  /* file-upload — .empty rounded-none p-6, square size-8 figure (size-4 glyph),
+     text-sm heading over a text-xs line; .item rounded-none text-xs */
+  --mono-file-upload-radius: 0;
+  --mono-file-upload-dropzone-padding: calc(var(--mono-spacing) * 6);
+  --mono-file-upload-icon-size: calc(var(--mono-spacing) * 8);
+  --mono-file-upload-icon-glyph-size: calc(var(--mono-spacing) * 4);
+  --mono-file-upload-icon-radius: 0;
+  --mono-file-upload-title-font-size: var(--mono-text-sm);
+  --mono-file-upload-title-line-height: var(--mono-leading-snug);
+  --mono-file-upload-subtext-font-size: var(--mono-text-xs);
+  --mono-file-upload-item-radius: 0;
+  --mono-file-upload-item-font-size: var(--mono-text-xs);
+  --mono-file-upload-name-font-size: var(--mono-text-xs);
+  --mono-file-upload-meta-font-size: var(--mono-text-xs);
+  --mono-file-upload-thumb-radius: 0;
+
+  /* card — .card rounded-none text-xs/relaxed gap-4 py-4 (px-4), no shadow-xs,
+     title text-sm, description text-xs */
+  --mono-card-radius: 0;
+  --mono-card-shadow: 0 0 #0000;
+  --mono-card-padding-md: calc(var(--mono-spacing) * 4);
+  --mono-card-gap-md: calc(var(--mono-spacing) * 4);
+  --mono-card-padding-sm: calc(var(--mono-spacing) * 3);
+  --mono-card-gap-sm: calc(var(--mono-spacing) * 3);
+  --mono-card-font-md: var(--mono-text-xs);
+  --mono-card-title-font-md: var(--mono-text-sm);
+  --mono-card-subtitle-font-md: var(--mono-text-xs);
+
+  /* chip — .badge rounded-none */
+  /* the radius is written at the PRESET tier because the `rounded` prop drives
+     the same value — a flavor setting the public `--mono-chip-radius` would
+     out-rank the prop and freeze every chip at one shape */
+  --_mono-chip-radius-preset: 0;
+
+  /* dropdown — [data-popover] gap-2.5 rounded-none p-2.5 text-xs */
+  --mono-dropdown-radius-md: 0;
+  --mono-dropdown-pad-x-md: calc(var(--mono-spacing) * 2.5);
+  --mono-dropdown-pad-y-md: calc(var(--mono-spacing) * 2.5);
+  --mono-dropdown-gap-md: calc(var(--mono-spacing) * 2.5);
+  --mono-dropdown-font-md: var(--mono-text-xs);
+  /* button-dropdown — [data-popover] rounded-none p-0; [role='menuitem'] rounded-none py-2 text-xs */
+  --mono-button-dropdown-radius-md: 0;
+  --mono-button-dropdown-padding-md: 0;
+  --mono-button-dropdown-item-radius: 0;
+  /* accordion — summary rounded-none py-2.5 text-xs; body pb-2.5 text-xs */
+  --mono-accordion-radius-md: 0;
+  --mono-accordion-pad-y-md: calc(var(--mono-spacing) * 2.5);
+  --mono-accordion-title-font-md: var(--mono-text-xs);
+  --mono-accordion-body-font-md: var(--mono-text-xs);
+  /* the rest of the ladder around that tighter md (the component's own sm is
+     taller than this md, and its lg type jumps two steps) */
+  --mono-accordion-pad-y-xs: calc(var(--mono-spacing) * 1.5);
+  --mono-accordion-pad-y-sm: calc(var(--mono-spacing) * 2);
+  --mono-accordion-pad-y-lg: calc(var(--mono-spacing) * 3.5);
+  --mono-accordion-pad-y-xl: calc(var(--mono-spacing) * 4);
+  --mono-accordion-pad-y-xxl: calc(var(--mono-spacing) * 4.5);
+  --mono-accordion-title-font-lg: var(--mono-text-sm);
+  --mono-accordion-title-font-xl: var(--mono-text-base);
+  --mono-accordion-title-font-xxl: var(--mono-text-lg);
+  --mono-accordion-body-font-lg: var(--mono-text-sm);
+  --mono-accordion-body-font-xl: var(--mono-text-base);
+  --mono-accordion-body-font-xxl: var(--mono-text-lg);
+  /* tabs — tablist rounded-none h-8; tab rounded-none px-1.5 py-0.5 text-xs */
+  --mono-tabs-radius-md: 0;
+  --mono-tabs-height-md: var(--mono-control-height-sm);
+  --mono-tabs-tab-radius-md: 0;
+  --mono-tabs-tab-pad-x-md: calc(var(--mono-spacing) * 1.5);
+  --mono-tabs-tab-pad-y-md: calc(var(--mono-spacing) * 0.5);
+  --mono-tabs-tab-font-md: var(--mono-text-xs);
+  --mono-tabs-tab-icon-pad: var(--mono-spacing);
+  /* modal — .dialog > * gap-4 rounded-none p-4 text-xs sm:max-w-sm; header gap-1;
+     h2 text-sm; close top-2 end-2 */
+  --mono-modal-radius-md: 0;
+  --mono-modal-pad-md: calc(var(--mono-spacing) * 4);
+  --mono-modal-gap-md: calc(var(--mono-spacing) * 4);
+  --mono-modal-header-gap-md: var(--mono-spacing);
+  --mono-modal-width: min(calc(100% - 2rem), var(--mono-container-sm));
+  --mono-modal-title-font-md: var(--mono-text-sm);
+  --mono-modal-body-font-md: var(--mono-text-xs);
+  /* drawer — square (the sides drop their one rounded edge), xs/relaxed copy and
+     a text-sm font-medium title; the backdrop is vega's. */
+  --mono-drawer-radius-md: 0;
+  --mono-drawer-body-font-md: var(--mono-text-xs);
+  --mono-drawer-body-line-height: var(--mono-leading-relaxed);
+  --mono-drawer-header-gap-md: calc(var(--mono-spacing) * 0.5);
+  --mono-drawer-title-font-md: var(--mono-text-sm);
+  --mono-drawer-title-weight: var(--mono-font-weight-medium);
+  --mono-drawer-title-tracking: normal;
+  --mono-drawer-title-line-height: var(--mono-text-sm--lh);
+  /* nav — EXTENSION, and the nav IS a card (see nav.css): lyra's card is
+     square, shadowless, p-4 and text-xs */
+  --mono-nav-radius: 0;
+  --mono-nav-shadow: 0 0 #0000;
+  --mono-nav-pad-x-comfortable: calc(var(--mono-spacing) * 4);
+  --mono-nav-bar-height-comfortable: calc(var(--mono-spacing) * 12);
+  --mono-nav-extension-height-comfortable: calc(var(--mono-spacing) * 9);
+  --mono-nav-gap-comfortable: calc(var(--mono-spacing) * 2.5);
+  --mono-nav-font-comfortable: var(--mono-text-xs);
+  --mono-nav-extension-font-comfortable: var(--mono-text-xs);
+  /* breadcrumb — .breadcrumb > ol text-xs with no sm: step, li gap-1;
+     .badge rounded-none */
+  --mono-breadcrumb-font-md: var(--mono-text-xs);
+  --mono-breadcrumb-line-height-md: var(--mono-text-xs--lh);
+  --mono-breadcrumb-sep-font-md: var(--mono-text-xs);
+  --mono-breadcrumb-gap-md: var(--mono-spacing);
+  --mono-breadcrumb-gap-wide-md: var(--mono-spacing);
+  --mono-breadcrumb-badge-radius: 0;
+  /* lyra squares every chrome row off and drops its font-medium */
+  --mono-breadcrumb-radius-md: 0;
+  /* menu — .sidebar nav li > a rounded-none text-xs; h3 rounded-none and no
+     font-medium; ul gap-0 */
+  --mono-menu-radius-comfortable: 0;
+  --mono-menu-font-comfortable: var(--mono-text-xs);
+  --mono-menu-gap-comfortable: 0px;
+  --mono-menu-subheader-radius: 0;
+  --mono-menu-subheader-weight: var(--mono-font-weight-normal);
+  /* sidebar */
+  --mono-sidebar-gap-comfortable: 0px;
+  /* table — .table text-xs, caption text-xs */
+  --mono-table-font: var(--mono-text-xs);
+  --mono-table-line-height: var(--mono-text-xs--lh);
+  /* [data-popover] — the portaled filter / menu / suggestion panels */
+  --mono-table-panel-radius: 0;
+}
+
+/* dark: the same knobs, Basecoat's dark: twins */
+:is(html, body, .mono-theme).dark .theme-lyra,
+.theme-lyra:is(html, body, .mono-theme).dark {
+  --mono-input-disabled-bg: color-mix(in oklab, var(--input) 80%, transparent);
+  --mono-date-disabled-bg: color-mix(in oklab, var(--input) 80%, transparent);
+}

@@ -1,0 +1,1006 @@
+/* =========================================================================
+   mono-button — a port of Basecoat's `.btn` (basecoat-css@1.0.2, vega style).
+
+   Styled by ATTRIBUTE, like Basecoat (`.btn[data-size='sm']`) — and the
+   attributes mirror the element's props one for one, so hand-written markup
+   reads like the Lit / Vue tag:
+
+     <mono-button size="sm" color="danger" variant="outline" rounded="full">
+     <div mono-button mono-size="sm" mono-color="danger" mono-variant="outline" mono-rounded="full">
+       <button>…</button>
+     </div>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-color])` = primary, `:not([mono-variant])` = solid). The element
+   renders these attributes on its wrapper (both builds); the old classes
+   (`.mono-button.sm.outline-primary`) are still emitted as inert hooks for
+   consumer CSS until 2.0 but no rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-button] > :is(button, a)                ≡ .btn
+     [mono-size="xs|sm|md|lg"]                     ≡ .btn[data-size='xs'|'sm'|default|'lg']
+     [mono-size="xl|xxl"]                          ≡ EXTENSION (h-11 / h-12 on the same grid)
+     [mono-icon-only][mono-size=…]                 ≡ .btn[data-size='icon-<size>']
+     [mono-variant="solid"][mono-color=<hue>]      ≡ .btn[data-variant='primary'] with the hue swapped
+     [mono-variant="solid"][mono-color="secondary"]≡ .btn[data-variant='secondary']
+     [mono-variant="solid"][mono-color="light"]    ≡ .btn[data-variant='outline']
+     [mono-variant="outline"][mono-color=<hue>]    ≡ EXTENSION (outline pattern, hue-inked)
+     [mono-variant="tonal"][mono-color=<hue>]      ≡ .btn[data-variant='destructive'] with the hue swapped
+     [mono-variant="text"]                         ≡ .btn[data-variant='ghost'] (+ hue ink)
+     [mono-link]                                   ≡ .btn[data-variant='link']
+     [mono-content] > [mono-icon]:first/last-child ≡ has-[[data-icon='inline-start'|'inline-end']]
+     [mono-affix="prepend|append"]                 ≡ .button-group siblings
+
+   Inner parts are attributes too, so a hand-written button is attributes all
+   the way down: [mono-native] on the <button>/<a>, [mono-content],
+   [mono-icon] (+ [mono-spinning] / [mono-empty] / [mono-hidden]), [mono-text],
+   [mono-badge="red|green|orange|cobalt"], [mono-affix="prepend|append"]
+   (+ [mono-divider] / [mono-disabled] / [mono-empty]).
+
+   Values are copied from the compiled vendor sheet (vendor/basecoat/basecoat-
+   vega.cdn.css) through the token layer: `--spacing` → `--mono-spacing`,
+   `--text-sm` → `--mono-text-sm`, `--radius-md` → `--mono-radius-md`,
+   `--color-x` → `--x`, Tailwind's `--tw-ring-*` stack → the two-slot
+   `box-shadow: ring, shadow` below, and every `dark:` variant → a
+   `--mono-mode-*` token (a selector cannot cross a shadow boundary; an
+   inherited custom property can).
+
+   FLAVORS (Basecoat's other seven styles, src/data/theme/flavors/*.css) set the
+   `--mono-button-<size>-*` style knobs read below — `-radius`, `-padding-inline`,
+   `-icon-padding`, `-gap`, `-font-size`, `-line-height`, `-icon-size` — plus
+   `--mono-button-font-weight` / `-text-transform` / `-letter-spacing` /
+   `-icon-size` / `-outline-shadow` / `-outline-bg` / `-outline-hover-bg` /
+   `-link-decoration`. Every fallback here is vega's value
+   (`node scripts/basecoat-styles.mjs --varying "^\.btn"` prints the matrix).
+
+   The public `--mono-button-*` knobs and the three-tier resolver
+   (`--mono-button-x` → `--_mono-button-x-preset` → base) are unchanged: a
+   colour/variant class only ever writes a `*-preset` slot, so a consumer's
+   own `--mono-button-bg` on the host still wins.
+   ========================================================================= */
+
+mono-button {
+  display: inline-block;
+}
+
+[mono-button] {
+  /* ── palette: each slot is a public knob over a Basecoat token ─────────── */
+  --_mono-button-primary: var(--mono-button-primary, var(--primary));
+  --_mono-button-primary-foreground: var(--mono-button-primary-foreground, var(--primary-foreground));
+  --_mono-button-secondary: var(--mono-button-secondary, var(--secondary));
+  --_mono-button-secondary-foreground: var(--mono-button-secondary-foreground, var(--secondary-foreground));
+  --_mono-button-success: var(--mono-button-success, var(--success));
+  --_mono-button-success-foreground: var(--mono-button-success-foreground, var(--success-foreground));
+  --_mono-button-danger: var(--mono-button-danger, var(--destructive));
+  --_mono-button-danger-foreground: var(--mono-button-danger-foreground, var(--destructive-foreground));
+  --_mono-button-warning: var(--mono-button-warning, var(--warning));
+  --_mono-button-warning-foreground: var(--mono-button-warning-foreground, var(--warning-foreground));
+  --_mono-button-info: var(--mono-button-info, var(--info));
+  --_mono-button-info-foreground: var(--mono-button-info-foreground, var(--info-foreground));
+  --_mono-button-teal: var(--mono-button-teal, var(--teal));
+  --_mono-button-teal-foreground: var(--mono-button-teal-foreground, var(--teal-foreground));
+  --_mono-button-purple: var(--mono-button-purple, var(--purple));
+  --_mono-button-purple-foreground: var(--mono-button-purple-foreground, var(--purple-foreground));
+  --_mono-button-dark: var(--mono-button-dark, var(--dark));
+  --_mono-button-dark-foreground: var(--mono-button-dark-foreground, var(--dark-foreground));
+  --_mono-button-neutral: var(--mono-button-neutral, var(--neutral));
+  --_mono-button-neutral-foreground: var(--mono-button-neutral-foreground, var(--neutral-foreground));
+  --_mono-button-text: var(--mono-button-text, var(--foreground));
+  --_mono-button-background: var(--mono-button-background, var(--background));
+  --_mono-button-muted: var(--mono-button-muted, var(--muted));
+  --_mono-button-border: var(--mono-button-border, var(--mono-mode-outline-border));
+
+  /* ── tonal tint ramp: `bg-x/10 hover:bg-x/20` (dark 20 / 30) ────────────
+     One alpha pair for every hue instead of the old srgb-with-white mixes;
+     the per-colour `--mono-button-<c>-soft(-hover)` knobs below still win. */
+  --_mono-button-tint: var(--mono-button-tint, var(--mono-mode-tint));
+  --_mono-button-tint-hover: var(--mono-button-tint-hover, var(--mono-mode-tint-hover));
+  --_mono-button-primary-soft: var(--mono-button-primary-soft, color-mix(in oklab, var(--_mono-button-primary) var(--_mono-button-tint), transparent));
+  --_mono-button-primary-soft-hover: var(--mono-button-primary-soft-hover, color-mix(in oklab, var(--_mono-button-primary) var(--_mono-button-tint-hover), transparent));
+  --_mono-button-success-soft: var(--mono-button-success-soft, color-mix(in oklab, var(--_mono-button-success) var(--_mono-button-tint), transparent));
+  --_mono-button-success-soft-hover: var(--mono-button-success-soft-hover, color-mix(in oklab, var(--_mono-button-success) var(--_mono-button-tint-hover), transparent));
+  --_mono-button-danger-soft: var(--mono-button-danger-soft, color-mix(in oklab, var(--_mono-button-danger) var(--_mono-button-tint), transparent));
+  --_mono-button-danger-soft-hover: var(--mono-button-danger-soft-hover, color-mix(in oklab, var(--_mono-button-danger) var(--_mono-button-tint-hover), transparent));
+  --_mono-button-warning-soft: var(--mono-button-warning-soft, color-mix(in oklab, var(--_mono-button-warning) var(--_mono-button-tint), transparent));
+  --_mono-button-warning-soft-hover: var(--mono-button-warning-soft-hover, color-mix(in oklab, var(--_mono-button-warning) var(--_mono-button-tint-hover), transparent));
+  --_mono-button-info-soft: var(--mono-button-info-soft, color-mix(in oklab, var(--_mono-button-info) var(--_mono-button-tint), transparent));
+  --_mono-button-info-soft-hover: var(--mono-button-info-soft-hover, color-mix(in oklab, var(--_mono-button-info) var(--_mono-button-tint-hover), transparent));
+  --_mono-button-teal-soft: var(--mono-button-teal-soft, color-mix(in oklab, var(--_mono-button-teal) var(--_mono-button-tint), transparent));
+  --_mono-button-teal-soft-hover: var(--mono-button-teal-soft-hover, color-mix(in oklab, var(--_mono-button-teal) var(--_mono-button-tint-hover), transparent));
+  --_mono-button-purple-soft: var(--mono-button-purple-soft, color-mix(in oklab, var(--_mono-button-purple) var(--_mono-button-tint), transparent));
+  --_mono-button-purple-soft-hover: var(--mono-button-purple-soft-hover, color-mix(in oklab, var(--_mono-button-purple) var(--_mono-button-tint-hover), transparent));
+  --_mono-button-dark-soft: var(--mono-button-dark-soft, color-mix(in oklab, var(--_mono-button-dark) var(--_mono-button-tint), transparent));
+  --_mono-button-dark-soft-hover: var(--mono-button-dark-soft-hover, color-mix(in oklab, var(--_mono-button-dark) var(--_mono-button-tint-hover), transparent));
+  --_mono-button-neutral-soft: var(--mono-button-neutral-soft, color-mix(in oklab, var(--_mono-button-neutral) var(--_mono-button-tint), transparent));
+  --_mono-button-neutral-soft-hover: var(--mono-button-neutral-soft-hover, color-mix(in oklab, var(--_mono-button-neutral) var(--_mono-button-tint-hover), transparent));
+
+  /* ── corner: .btn is rounded-md; xs/sm clamp it (set by the size classes) ── */
+  --_mono-button-radius: var(--mono-button-radius, var(--_mono-button-radius-preset, var(--mono-button-md-radius, var(--mono-radius-md))));
+
+  /* ── focus ring colour: `--ring`, or the hue for tonal (destructive idiom) ── */
+  --_mono-button-ring-color: var(--mono-button-ring-color, var(--_mono-button-ring-color-preset, var(--ring)));
+
+  /* ── the painted result — three tiers, base = .btn[data-variant='primary'] ── */
+  --_mono-button-bg: var(--mono-button-bg, var(--_mono-button-bg-preset, var(--_mono-button-primary)));
+  --_mono-button-color: var(--mono-button-color, var(--_mono-button-color-preset, var(--_mono-button-primary-foreground)));
+  --_mono-button-border-color: var(--mono-button-border-color, var(--_mono-button-border-color-preset, transparent));
+  --_mono-button-shadow: var(--mono-button-shadow, var(--_mono-button-shadow-preset, 0 0 #0000));
+  /* Hover falls back to the RESTING colour at 80% (`hover:bg-primary/80`), so a
+     consumer who overrides only the resting colour keeps a matching hover. */
+  --_mono-button-hover-bg: var(--mono-button-hover-bg, var(--_mono-button-hover-bg-preset, color-mix(in oklab, var(--_mono-button-bg) 80%, transparent)));
+  --_mono-button-hover-color: var(--mono-button-hover-color, var(--_mono-button-hover-color-preset, var(--_mono-button-color)));
+  --_mono-button-hover-border-color: var(--mono-button-hover-border-color, var(--_mono-button-hover-border-color-preset, var(--_mono-button-border-color)));
+  --_mono-button-hover-shadow: var(--mono-button-hover-shadow, var(--_mono-button-hover-shadow-preset, var(--_mono-button-shadow)));
+
+  /* ── box: how much room the control takes, and where its content sits ────
+     Both are `auto` / `center` for a standalone button. They exist as KNOBS
+     because a button placed inside another component's list — a
+     `mono-button-dropdown` menu row — has to stretch and left-align, and that
+     component cannot reach the control with a selector: in the shadow build the
+     control lives behind a boundary. An inherited custom property crosses it. */
+  --_mono-button-width: var(--mono-button-width, auto);
+  --_mono-button-justify: var(--mono-button-justify, center);
+  /* The press nudge, as a knob for the same reason: a list row must not twitch
+     under the pointer, and the menu that holds it cannot reach the control. */
+  --_mono-button-press-translate: var(--mono-button-press-translate, 0 1px);
+
+  /* The focus / invalid ring slot — `0 0 #0000` until a state sets it. Kept as a
+     slot so a variant can neutralise the resting shadow without ever writing
+     `box-shadow: none` (which would out-specify the ring). */
+  --_mono-button-ring: 0 0 #0000;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-family: inherit;
+  user-select: none;
+  cursor: pointer;
+  text-decoration: none;
+  width: var(--_mono-button-width);
+  /* ALWAYS transparent — reserves the control's 1px border on the wrapper so
+     the wrapper matches the control's outer box. Not `--mono-button-border-color`:
+     that is declared HERE for the affix zones, and painting it would ring the
+     control twice. */
+  border: var(--mono-border-width) solid transparent;
+}
+
+/* A page-level `* { box-sizing: border-box }` reset does NOT cross a shadow
+   boundary; scoped here so the `<a>` form of an icon-only button measures the
+   same in both builds. */
+[mono-button],
+[mono-button] * {
+  box-sizing: border-box;
+}
+
+/* =========================================
+   The control
+   ========================================= */
+
+/* basecoat@1.0.2 components/button.css .btn */
+/* basecoat@1.0.2 styles/vega.css .btn — mono: `--tw-ring-*` stack flattened to
+   the ring + shadow slots; the label font/transform are public knobs so a
+   flavor reaches the shadow build */
+[mono-button] > :is(button, a) {
+  --_mono-button-font-weight: var(--mono-button-font-weight, var(--mono-font-weight-medium));
+  --_mono-button-text-transform: var(--mono-button-text-transform, none);
+  --_mono-button-letter-spacing: var(--mono-button-letter-spacing, normal);
+
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: var(--_mono-button-justify);
+  width: var(--_mono-button-width);
+  position: relative;
+  white-space: nowrap;
+  user-select: none;
+  cursor: pointer;
+  text-decoration: none;
+  outline-style: none;
+  border-radius: var(--_mono-button-radius);
+  border: var(--mono-border-width) solid var(--_mono-button-border-color);
+  background-clip: padding-box;
+  background: var(--_mono-button-bg);
+  color: var(--_mono-button-color);
+  box-shadow: var(--_mono-button-ring), var(--_mono-button-shadow);
+  font-family: inherit;
+  font-size: var(--mono-text-sm);
+  line-height: var(--mono-text-sm--lh);
+  font-weight: var(--_mono-button-font-weight);
+  text-transform: var(--_mono-button-text-transform);
+  letter-spacing: var(--_mono-button-letter-spacing);
+  transition-property: all;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+
+  /* focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 */
+  &:focus-visible {
+    border-color: var(--_mono-button-ring-color);
+    --_mono-button-ring: 0 0 0 var(--mono-ring-width) color-mix(in oklab, var(--_mono-button-ring-color) var(--mono-ring-alpha), transparent);
+  }
+
+  /* aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20
+     (dark: border /50, ring /40 — carried by the mode tokens) */
+  &[aria-invalid='true'] {
+    border-color: var(--mono-mode-invalid-border);
+    --_mono-button-ring: 0 0 0 var(--mono-ring-width) var(--mono-mode-invalid-ring);
+  }
+
+  /* active:not-aria-[haspopup]:translate-y-px */
+  &:active:not([aria-haspopup]):not([mono-disabled]):not(:disabled) {
+    translate: var(--_mono-button-press-translate);
+  }
+
+  /* disabled:pointer-events-none disabled:opacity-50 */
+  &:disabled,
+  &[mono-disabled] {
+    pointer-events: none;
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  & svg,
+  & [mono-icon] {
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+}
+
+/* Every Basecoat hover sits behind `@media (hover: hover)`: no sticky hover on touch. */
+@media (hover: hover) {
+  [mono-button] > :is(button, a):hover:not([mono-disabled]):not(:disabled) {
+    background: var(--_mono-button-hover-bg);
+    color: var(--_mono-button-hover-color);
+    border-color: var(--_mono-button-hover-border-color);
+    --_mono-button-shadow: var(--_mono-button-hover-shadow);
+  }
+}
+
+/* =========================================
+   Sizes — the control height IS the token (see tests/perf/field-heights)
+   ========================================= */
+
+/* The unqualified control carries the `md` metrics ON PURPOSE: hand-written
+   `<div mono-button>` markup that names no size renders exactly like `size="md"`. */
+/* basecoat@1.0.2 styles/vega.css .btn:not([data-size]), .btn[data-size='default'] — h-9 gap-1.5 px-2.5 */
+[mono-button]:not([mono-icon-only]) > :is(button, a) {
+  --_mono-button-gap: var(--mono-button-md-gap, calc(var(--mono-spacing) * 1.5));
+  --_mono-button-icon-padding: var(--mono-button-md-icon-padding, calc(var(--mono-spacing) * 2));
+  min-height: var(--mono-control-height-md);
+  padding-inline: var(--mono-button-md-padding-inline, calc(var(--mono-spacing) * 2.5));
+  padding-block: 0;
+  font-size: var(--mono-button-md-font-size, var(--mono-text-sm));
+  line-height: var(--mono-button-md-line-height, var(--mono-text-sm--lh));
+}
+
+/* basecoat@1.0.2 styles/vega.css .btn[data-size='xs'] — h-6 gap-1 px-2 text-xs rounded-[min(var(--radius-md),8px)] */
+[mono-button][mono-size="xs"] {
+  --_mono-button-radius-preset: var(--mono-button-xs-radius, min(var(--mono-radius-md), 8px));
+}
+[mono-button][mono-size="xs"]:not([mono-icon-only]) > :is(button, a) {
+  --_mono-button-gap: var(--mono-button-xs-gap, var(--mono-spacing));
+  --_mono-button-icon-padding: var(--mono-button-xs-icon-padding, calc(var(--mono-spacing) * 1.5));
+  min-height: var(--mono-control-height-xs);
+  padding-inline: var(--mono-button-xs-padding-inline, calc(var(--mono-spacing) * 2));
+  font-size: var(--mono-button-xs-font-size, var(--mono-text-xs));
+  line-height: var(--mono-button-xs-line-height, var(--mono-text-xs--lh));
+}
+
+/* basecoat@1.0.2 styles/vega.css .btn[data-size='sm'] — h-8 gap-1 px-2.5 rounded-[min(var(--radius-md),10px)] */
+[mono-button][mono-size="sm"] {
+  --_mono-button-radius-preset: var(--mono-button-sm-radius, min(var(--mono-radius-md), 10px));
+}
+[mono-button][mono-size="sm"]:not([mono-icon-only]) > :is(button, a) {
+  --_mono-button-gap: var(--mono-button-sm-gap, var(--mono-spacing));
+  --_mono-button-icon-padding: var(--mono-button-sm-icon-padding, calc(var(--mono-spacing) * 1.5));
+  min-height: var(--mono-control-height-sm);
+  padding-inline: var(--mono-button-sm-padding-inline, calc(var(--mono-spacing) * 2.5));
+  font-size: var(--mono-button-sm-font-size, var(--mono-button-md-font-size, var(--mono-text-sm)));
+  line-height: var(--mono-button-sm-line-height, var(--mono-button-md-line-height, var(--mono-text-sm--lh)));
+}
+
+/* basecoat@1.0.2 styles/vega.css .btn[data-size='lg'] — h-10 gap-1.5 px-2.5 */
+[mono-button][mono-size="lg"]:not([mono-icon-only]) > :is(button, a) {
+  --_mono-button-gap: var(--mono-button-lg-gap, calc(var(--mono-spacing) * 1.5));
+  --_mono-button-icon-padding: var(--mono-button-lg-icon-padding, calc(var(--mono-spacing) * 2));
+  min-height: var(--mono-control-height-lg);
+  padding-inline: var(--mono-button-lg-padding-inline, calc(var(--mono-spacing) * 2.5));
+  font-size: var(--mono-button-lg-font-size, var(--mono-button-md-font-size, var(--mono-text-sm)));
+  line-height: var(--mono-button-lg-line-height, var(--mono-button-md-line-height, var(--mono-text-sm--lh)));
+}
+
+/* EXTENSION — xl / xxl continue the grid: h-11 gap-2 px-3 text-base, h-12 gap-2 px-4 text-lg */
+[mono-button][mono-size="xl"]:not([mono-icon-only]) > :is(button, a) {
+  --_mono-button-gap: var(--mono-button-xl-gap, calc(var(--mono-spacing) * 2));
+  --_mono-button-icon-padding: var(--mono-button-xl-icon-padding, calc(var(--mono-spacing) * 2.5));
+  min-height: var(--mono-control-height-xl);
+  padding-inline: var(--mono-button-xl-padding-inline, calc(var(--mono-spacing) * 3));
+  font-size: var(--mono-button-xl-font-size, var(--mono-text-base));
+  line-height: var(--mono-button-xl-line-height, var(--mono-text-base--lh));
+}
+[mono-button][mono-size="xxl"]:not([mono-icon-only]) > :is(button, a) {
+  --_mono-button-gap: var(--mono-button-xxl-gap, calc(var(--mono-spacing) * 2));
+  --_mono-button-icon-padding: var(--mono-button-xxl-icon-padding, calc(var(--mono-spacing) * 3));
+  min-height: var(--mono-control-height-xxl);
+  padding-inline: var(--mono-button-xxl-padding-inline, calc(var(--mono-spacing) * 4));
+  font-size: var(--mono-button-xxl-font-size, var(--mono-text-lg));
+  line-height: var(--mono-button-xxl-line-height, var(--mono-text-lg--lh));
+}
+
+/* has-[[data-icon='inline-start']]:pl-2 / has-[[data-icon='inline-end']]:pr-2
+   (xs/sm: 1.5). Our icon box is the first or last child of `[mono-content]`
+   depending on `icon-position`; `:not([mono-empty])` is the light /
+   shadow spelling of "there is something in it" — an icon OR the spinner that
+   replaces it, so both builds tighten the same side while loading. */
+[mono-button] > :is(button, a):has(> [mono-content] > [mono-icon]:first-child:not([mono-empty])) {
+  padding-left: var(--_mono-button-icon-padding);
+}
+[mono-button] > :is(button, a):has(> [mono-content] > [mono-icon]:last-child:not([mono-empty])) {
+  padding-right: var(--_mono-button-icon-padding);
+}
+
+/* Icon-only: a square of the control height.
+   basecoat@1.0.2 styles/vega.css .btn[data-size='icon'] — size-9 (md) */
+[mono-button][mono-icon-only] > :is(button, a) {
+  width: var(--mono-control-height-md);
+  height: var(--mono-control-height-md);
+  padding: 0;
+}
+/* basecoat@1.0.2 styles/vega.css .btn[data-size='icon-xs'] — size-6 rounded-[min(var(--radius-md),8px)] */
+[mono-button][mono-icon-only][mono-size="xs"] > :is(button, a) {
+  width: var(--mono-control-height-xs);
+  height: var(--mono-control-height-xs);
+}
+/* basecoat@1.0.2 styles/vega.css .btn[data-size='icon-sm'] — size-8 rounded-[min(var(--radius-md),10px)] */
+[mono-button][mono-icon-only][mono-size="sm"] > :is(button, a) {
+  width: var(--mono-control-height-sm);
+  height: var(--mono-control-height-sm);
+}
+/* basecoat@1.0.2 styles/vega.css .btn[data-size='icon-lg'] — size-10 */
+[mono-button][mono-icon-only][mono-size="lg"] > :is(button, a) {
+  width: var(--mono-control-height-lg);
+  height: var(--mono-control-height-lg);
+}
+/* EXTENSION — size-11 / size-12 */
+[mono-button][mono-icon-only][mono-size="xl"] > :is(button, a) {
+  width: var(--mono-control-height-xl);
+  height: var(--mono-control-height-xl);
+}
+[mono-button][mono-icon-only][mono-size="xxl"] > :is(button, a) {
+  width: var(--mono-control-height-xxl);
+  height: var(--mono-control-height-xxl);
+}
+
+/* =========================================
+   Content
+   ========================================= */
+
+[mono-button] [mono-content] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--_mono-button-gap, calc(var(--mono-spacing) * 1.5));
+  min-width: 0;
+  line-height: inherit;
+}
+
+[mono-button] [mono-text] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  position: relative;
+  transition: opacity var(--mono-duration) var(--mono-ease);
+}
+
+/* The icon box. `[&_svg:not([class*='size-'])]:size-4` (xs: size-3) — our
+   icons are UnoCSS `i-*` mask spans as often as SVGs, so the box itself is
+   sized and whatever is inside fills it. Every rule is scoped under
+   [mono-button] so a consumer's own [mono-icon] elsewhere is untouched. */
+[mono-button] [mono-icon] {
+  --_mono-button-icon-size: var(--mono-button-md-icon-size, var(--mono-button-icon-size, calc(var(--mono-spacing) * 4)));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: var(--_mono-button-icon-size);
+  height: var(--_mono-button-icon-size);
+  line-height: 1;
+}
+
+[mono-button][mono-size="xs"] [mono-icon] {
+  --_mono-button-icon-size: var(--mono-button-xs-icon-size, calc(var(--mono-spacing) * 3));
+}
+[mono-button][mono-icon-only]:is(:not([mono-size]), [mono-size="md"]) [mono-icon] {
+  --_mono-button-icon-size: var(--mono-button-icononly-md-icon-size, var(--mono-button-md-icon-size, var(--mono-button-icon-size, calc(var(--mono-spacing) * 4))));
+}
+[mono-button][mono-size="sm"] [mono-icon] {
+  --_mono-button-icon-size: var(--mono-button-sm-icon-size, var(--mono-button-icon-size, calc(var(--mono-spacing) * 4)));
+}
+[mono-button][mono-size="lg"] [mono-icon] {
+  --_mono-button-icon-size: var(--mono-button-lg-icon-size, var(--mono-button-icon-size, calc(var(--mono-spacing) * 4)));
+}
+
+/* EXTENSION — the two larger steps get a size-5 glyph */
+[mono-button]:is([mono-size="xl"], [mono-size="xxl"]) [mono-icon] {
+  --_mono-button-icon-size: var(--mono-button-xl-icon-size, calc(var(--mono-spacing) * 5));
+}
+
+[mono-button] [mono-icon] > svg,
+[mono-button] [mono-icon] > span,
+[mono-button] [mono-icon] > * {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The SHADOW build's icon arrives through a `<slot>`; `[mono-icon] > svg`
+   cannot reach assigned nodes. Inert in the light build. */
+[mono-button] [mono-icon] ::slotted(svg),
+[mono-button] [mono-icon] ::slotted(*) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+[mono-button] [mono-icon][mono-hidden] {
+  display: none !important;
+}
+
+/* =========================================
+   Badge (mono extension; painted with the role tokens) — `mono-badge` takes the
+   `badge-color` value: red (default) | green | orange | cobalt
+   ========================================= */
+
+[mono-button] > :is(button, a) [mono-badge] {
+  position: absolute;
+  top: calc(var(--mono-spacing) * -1);
+  right: calc(var(--mono-spacing) * -1);
+  min-width: calc(var(--mono-spacing) * 5);
+  height: calc(var(--mono-spacing) * 5);
+  padding: 0 calc(var(--mono-spacing) * 1.5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--mono-radius-full);
+  font-size: var(--mono-text-xs);
+  line-height: 1;
+  font-weight: var(--mono-font-weight-semibold);
+  pointer-events: none;
+}
+
+[mono-button] [mono-badge]:is(:not([mono-badge=""]), [mono-badge="red"]):not([mono-badge="green"]):not([mono-badge="orange"]):not([mono-badge="cobalt"]) {
+  background-color: var(--_mono-button-danger);
+  color: var(--_mono-button-danger-foreground);
+}
+
+[mono-button] [mono-badge="green"] {
+  background-color: var(--_mono-button-success);
+  color: var(--_mono-button-success-foreground);
+}
+
+[mono-button] [mono-badge="orange"] {
+  background-color: var(--_mono-button-warning);
+  color: var(--_mono-button-warning-foreground);
+}
+
+[mono-button] [mono-badge="cobalt"] {
+  background-color: var(--_mono-button-primary);
+  color: var(--_mono-button-primary-foreground);
+}
+
+/* =========================================
+   Colours
+   -----------------------------------------
+   `mono-color` × `mono-variant` (solid | outline | tonal | text). Two kinds of
+   colour:
+
+     hues      primary success danger warning info teal purple dark
+               ink = the colour, fill = the colour, on-fill = `--<c>-foreground`
+     surfaces  secondary  (shadcn's muted surface — NOT a second brand hue)
+               light      (the page background)
+
+   Each hue publishes its palette into `--_mono-button-c*`, and ONE rule per
+   variant does the styling; the two layers set disjoint properties, so their
+   order does not matter. No attribute = the default (primary / solid).
+   ========================================= */
+
+[mono-button]:is(:not([mono-color]), [mono-color="primary"]) {
+  --_mono-button-c: var(--_mono-button-primary);
+  --_mono-button-c-foreground: var(--_mono-button-primary-foreground);
+  --_mono-button-c-soft: var(--_mono-button-primary-soft);
+  --_mono-button-c-soft-hover: var(--_mono-button-primary-soft-hover);
+}
+[mono-button][mono-color="success"] {
+  --_mono-button-c: var(--_mono-button-success);
+  --_mono-button-c-foreground: var(--_mono-button-success-foreground);
+  --_mono-button-c-soft: var(--_mono-button-success-soft);
+  --_mono-button-c-soft-hover: var(--_mono-button-success-soft-hover);
+}
+[mono-button][mono-color="danger"] {
+  --_mono-button-c: var(--_mono-button-danger);
+  --_mono-button-c-foreground: var(--_mono-button-danger-foreground);
+  --_mono-button-c-soft: var(--_mono-button-danger-soft);
+  --_mono-button-c-soft-hover: var(--_mono-button-danger-soft-hover);
+}
+[mono-button][mono-color="warning"] {
+  --_mono-button-c: var(--_mono-button-warning);
+  --_mono-button-c-foreground: var(--_mono-button-warning-foreground);
+  --_mono-button-c-soft: var(--_mono-button-warning-soft);
+  --_mono-button-c-soft-hover: var(--_mono-button-warning-soft-hover);
+}
+[mono-button][mono-color="info"] {
+  --_mono-button-c: var(--_mono-button-info);
+  --_mono-button-c-foreground: var(--_mono-button-info-foreground);
+  --_mono-button-c-soft: var(--_mono-button-info-soft);
+  --_mono-button-c-soft-hover: var(--_mono-button-info-soft-hover);
+}
+[mono-button][mono-color="teal"] {
+  --_mono-button-c: var(--_mono-button-teal);
+  --_mono-button-c-foreground: var(--_mono-button-teal-foreground);
+  --_mono-button-c-soft: var(--_mono-button-teal-soft);
+  --_mono-button-c-soft-hover: var(--_mono-button-teal-soft-hover);
+}
+[mono-button][mono-color="purple"] {
+  --_mono-button-c: var(--_mono-button-purple);
+  --_mono-button-c-foreground: var(--_mono-button-purple-foreground);
+  --_mono-button-c-soft: var(--_mono-button-purple-soft);
+  --_mono-button-c-soft-hover: var(--_mono-button-purple-soft-hover);
+}
+[mono-button][mono-color="dark"] {
+  --_mono-button-c: var(--_mono-button-dark);
+  --_mono-button-c-foreground: var(--_mono-button-dark-foreground);
+  --_mono-button-c-soft: var(--_mono-button-dark-soft);
+  --_mono-button-c-soft-hover: var(--_mono-button-dark-soft-hover);
+}
+/* neutral — the mid grey with white ink (chip / card have it; the form demos'
+   Discard buttons used it and silently painted primary). */
+[mono-button][mono-color="neutral"] {
+  --_mono-button-c: var(--_mono-button-neutral);
+  --_mono-button-c-foreground: var(--_mono-button-neutral-foreground);
+  --_mono-button-c-soft: var(--_mono-button-neutral-soft);
+  --_mono-button-c-soft-hover: var(--_mono-button-neutral-soft-hover);
+}
+
+/* ── solid ────────────────────────────────────────────────────────────── */
+
+/* basecoat@1.0.2 styles/vega.css .btn:not([data-variant]), .btn[data-variant='primary']
+   — bg-primary text-primary-foreground hover:bg-primary/80, generalised per hue */
+[mono-button]:is(:not([mono-variant]), [mono-variant="solid"]):is(:not([mono-color]), [mono-color="primary"], [mono-color="success"], [mono-color="danger"], [mono-color="warning"], [mono-color="info"], [mono-color="teal"], [mono-color="purple"], [mono-color="dark"], [mono-color="neutral"]) {
+  --_mono-button-bg-preset: var(--_mono-button-c);
+  --_mono-button-color-preset: var(--_mono-button-c-foreground);
+  --_mono-button-border-color-preset: transparent;
+  --_mono-button-shadow-preset: 0 0 #0000;
+  --_mono-button-hover-bg-preset: color-mix(in oklab, var(--_mono-button-c) 80%, transparent);
+  --_mono-button-hover-color-preset: var(--_mono-button-c-foreground);
+  --_mono-button-hover-border-color-preset: transparent;
+  --_mono-button-hover-shadow-preset: 0 0 #0000;
+}
+
+/* basecoat@1.0.2 styles/vega.css .btn[data-variant='secondary']
+   — bg-secondary text-secondary-foreground hover:bg-[color-mix(in oklch,var(--secondary),var(--foreground) 5%)] */
+[mono-button]:is(:not([mono-variant]), [mono-variant="solid"])[mono-color="secondary"] {
+  --_mono-button-bg-preset: var(--_mono-button-secondary);
+  --_mono-button-color-preset: var(--_mono-button-secondary-foreground);
+  --_mono-button-border-color-preset: transparent;
+  --_mono-button-shadow-preset: 0 0 #0000;
+  --_mono-button-hover-bg-preset: color-mix(in oklch, var(--_mono-button-secondary), var(--_mono-button-text) 5%);
+  --_mono-button-hover-color-preset: var(--_mono-button-secondary-foreground);
+  --_mono-button-hover-border-color-preset: transparent;
+  --_mono-button-hover-shadow-preset: 0 0 #0000;
+}
+
+/* basecoat@1.0.2 styles/vega.css .btn[data-variant='outline']
+   — border-border bg-background shadow-xs hover:bg-muted hover:text-foreground
+     dark:border-input dark:bg-input/30 dark:hover:bg-input/50 (mode tokens) */
+[mono-button]:is(:not([mono-variant]), [mono-variant="solid"])[mono-color="light"] {
+  --_mono-button-bg-preset: var(--mono-button-outline-bg, var(--mono-mode-outline-bg));
+  --_mono-button-color-preset: var(--_mono-button-text);
+  --_mono-button-border-color-preset: var(--_mono-button-border);
+  --_mono-button-shadow-preset: var(--mono-button-outline-shadow, var(--mono-shadow-xs));
+  --_mono-button-hover-bg-preset: var(--mono-button-outline-hover-bg, var(--mono-mode-surface-hover));
+  --_mono-button-hover-color-preset: var(--_mono-button-text);
+  --_mono-button-hover-border-color-preset: var(--_mono-button-border);
+  --_mono-button-hover-shadow-preset: var(--mono-button-outline-shadow, var(--mono-shadow-xs));
+}
+
+/* ── outline ──────────────────────────────────────────────────────────── */
+
+/* EXTENSION — the outline pattern inked in the hue: border + label in the
+   colour, hover lays the tonal tint under it (Basecoat never inverts to a
+   solid fill on hover). */
+[mono-button][mono-variant="outline"]:is(:not([mono-color]), [mono-color="primary"], [mono-color="success"], [mono-color="danger"], [mono-color="warning"], [mono-color="info"], [mono-color="teal"], [mono-color="purple"], [mono-color="dark"], [mono-color="neutral"]) {
+  --_mono-button-bg-preset: transparent;
+  --_mono-button-color-preset: var(--_mono-button-c);
+  --_mono-button-border-color-preset: var(--_mono-button-c);
+  --_mono-button-shadow-preset: var(--mono-button-outline-shadow, var(--mono-shadow-xs));
+  --_mono-button-hover-bg-preset: var(--_mono-button-c-soft);
+  --_mono-button-hover-color-preset: var(--_mono-button-c);
+  --_mono-button-hover-border-color-preset: var(--_mono-button-c);
+  --_mono-button-hover-shadow-preset: var(--mono-button-outline-shadow, var(--mono-shadow-xs));
+  --_mono-button-ring-color-preset: var(--_mono-button-c);
+}
+
+/* EXTENSION — outline on the two surfaces: the vendor outline with a neutral border */
+[mono-button][mono-variant="outline"][mono-color="secondary"] {
+  --_mono-button-bg-preset: transparent;
+  --_mono-button-color-preset: var(--_mono-button-secondary-foreground);
+  --_mono-button-border-color-preset: var(--_mono-button-border);
+  --_mono-button-shadow-preset: var(--mono-button-outline-shadow, var(--mono-shadow-xs));
+  --_mono-button-hover-bg-preset: var(--_mono-button-secondary);
+  --_mono-button-hover-color-preset: var(--_mono-button-secondary-foreground);
+  --_mono-button-hover-border-color-preset: var(--_mono-button-border);
+  --_mono-button-hover-shadow-preset: var(--mono-button-outline-shadow, var(--mono-shadow-xs));
+}
+[mono-button][mono-variant="outline"][mono-color="light"] {
+  --_mono-button-bg-preset: transparent;
+  --_mono-button-color-preset: var(--_mono-button-text);
+  --_mono-button-border-color-preset: var(--_mono-button-border);
+  --_mono-button-shadow-preset: var(--mono-button-outline-shadow, var(--mono-shadow-xs));
+  --_mono-button-hover-bg-preset: var(--mono-mode-surface-hover);
+  --_mono-button-hover-color-preset: var(--_mono-button-text);
+  --_mono-button-hover-border-color-preset: var(--_mono-button-border);
+  --_mono-button-hover-shadow-preset: var(--mono-button-outline-shadow, var(--mono-shadow-xs));
+}
+
+/* ── tonal ────────────────────────────────────────────────────────────── */
+
+/* basecoat@1.0.2 styles/vega.css .btn[data-variant='destructive']
+   — bg-destructive/10 text-destructive hover:bg-destructive/20
+     dark:bg-destructive/20 dark:hover:bg-destructive/30
+     focus-visible:border-destructive/40 focus-visible:ring-destructive/20
+   generalised per hue; the label keeps its colour so tonal never reads solid */
+[mono-button][mono-variant="tonal"]:is(:not([mono-color]), [mono-color="primary"], [mono-color="success"], [mono-color="danger"], [mono-color="warning"], [mono-color="info"], [mono-color="teal"], [mono-color="purple"], [mono-color="dark"], [mono-color="neutral"]) {
+  --_mono-button-bg-preset: var(--_mono-button-c-soft);
+  --_mono-button-color-preset: var(--_mono-button-c);
+  --_mono-button-border-color-preset: transparent;
+  --_mono-button-shadow-preset: 0 0 #0000;
+  --_mono-button-hover-bg-preset: var(--_mono-button-c-soft-hover);
+  --_mono-button-hover-color-preset: var(--_mono-button-c);
+  --_mono-button-hover-border-color-preset: transparent;
+  --_mono-button-hover-shadow-preset: 0 0 #0000;
+  --_mono-button-ring-color-preset: var(--_mono-button-c);
+}
+[mono-button][mono-variant="tonal"]:is(:not([mono-color]), [mono-color="primary"], [mono-color="success"], [mono-color="danger"], [mono-color="warning"], [mono-color="info"], [mono-color="teal"], [mono-color="purple"], [mono-color="dark"], [mono-color="neutral"]) > :is(button, a):focus-visible {
+  border-color: color-mix(in oklab, var(--_mono-button-c) 40%, transparent);
+  --_mono-button-ring: 0 0 0 var(--mono-ring-width) color-mix(in oklab, var(--_mono-button-c) var(--_mono-button-tint-hover), transparent);
+}
+
+/* EXTENSION — tonal on the surfaces: the secondary / muted fill, hover at 80% */
+[mono-button][mono-variant="tonal"][mono-color="secondary"] {
+  --_mono-button-bg-preset: var(--_mono-button-secondary);
+  --_mono-button-color-preset: var(--_mono-button-secondary-foreground);
+  --_mono-button-border-color-preset: transparent;
+  --_mono-button-shadow-preset: 0 0 #0000;
+  --_mono-button-hover-bg-preset: color-mix(in oklab, var(--_mono-button-secondary) 80%, transparent);
+  --_mono-button-hover-color-preset: var(--_mono-button-secondary-foreground);
+  --_mono-button-hover-border-color-preset: transparent;
+  --_mono-button-hover-shadow-preset: 0 0 #0000;
+}
+[mono-button][mono-variant="tonal"][mono-color="light"] {
+  --_mono-button-bg-preset: var(--_mono-button-muted);
+  --_mono-button-color-preset: var(--_mono-button-text);
+  --_mono-button-border-color-preset: transparent;
+  --_mono-button-shadow-preset: 0 0 #0000;
+  --_mono-button-hover-bg-preset: color-mix(in oklab, var(--_mono-button-muted) 80%, transparent);
+  --_mono-button-hover-color-preset: var(--_mono-button-text);
+  --_mono-button-hover-border-color-preset: transparent;
+  --_mono-button-hover-shadow-preset: 0 0 #0000;
+}
+
+/* ── text (ghost) ─────────────────────────────────────────────────────── */
+
+/* basecoat@1.0.2 styles/vega.css .btn[data-variant='ghost']
+   — hover:bg-muted hover:text-foreground dark:hover:bg-muted/50
+   generalised: a hue keeps its ink and hovers onto its own tint. The two
+   `--mono-button-plain-*` reads are public knobs a flavor sets (Material's
+   wash-only hover); they must stay literal `var(--mono-button-…)` here. */
+[mono-button][mono-variant="text"]:is(:not([mono-color]), [mono-color="primary"], [mono-color="success"], [mono-color="danger"], [mono-color="warning"], [mono-color="info"], [mono-color="teal"], [mono-color="purple"], [mono-color="dark"], [mono-color="neutral"]) {
+  --_mono-button-bg-preset: transparent;
+  --_mono-button-color-preset: var(--_mono-button-c);
+  --_mono-button-border-color-preset: transparent;
+  --_mono-button-shadow-preset: 0 0 #0000;
+  --_mono-button-hover-bg-preset: var(--mono-button-plain-hover-bg, var(--_mono-button-c-soft));
+  --_mono-button-hover-color-preset: var(--_mono-button-c);
+  --_mono-button-hover-border-color-preset: var(--mono-button-plain-hover-border-color, transparent);
+  --_mono-button-hover-shadow-preset: 0 0 #0000;
+}
+/* ghost verbatim for the two surfaces */
+[mono-button][mono-variant="text"]:is([mono-color="secondary"], [mono-color="light"]) {
+  --_mono-button-bg-preset: transparent;
+  --_mono-button-color-preset: var(--_mono-button-text);
+  --_mono-button-border-color-preset: transparent;
+  --_mono-button-shadow-preset: 0 0 #0000;
+  --_mono-button-hover-bg-preset: var(--mono-button-plain-hover-bg, var(--mono-mode-ghost-hover));
+  --_mono-button-hover-color-preset: var(--_mono-button-text);
+  --_mono-button-hover-border-color-preset: var(--mono-button-plain-hover-border-color, transparent);
+  --_mono-button-hover-shadow-preset: 0 0 #0000;
+}
+
+/* A text button has no chrome to anchor the focus ring against, so it also
+   takes its hover look on keyboard focus — the ring still draws on top. */
+[mono-button][mono-variant="text"] > :is(button, a):focus-visible {
+  background: var(--_mono-button-hover-bg);
+  color: var(--_mono-button-hover-color);
+}
+
+/* Pressing a text button carries it one rung further, onto the hover tint. */
+[mono-button][mono-variant="text"]:is(:not([mono-color]), [mono-color="primary"], [mono-color="success"], [mono-color="danger"], [mono-color="warning"], [mono-color="info"], [mono-color="teal"], [mono-color="purple"], [mono-color="dark"], [mono-color="neutral"]) > :is(button, a):active:not([mono-disabled]):not(:disabled) {
+  background: var(--_mono-button-c-soft-hover);
+}
+
+/* =========================================
+   Special types
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .btn[data-variant='link'] — text-primary underline-offset-4 hover:underline */
+[mono-button][mono-link] > :is(button, a) {
+  --_mono-button-bg-preset: transparent;
+  --_mono-button-color-preset: var(--_mono-button-primary);
+  --_mono-button-border-color-preset: transparent;
+  --_mono-button-shadow-preset: 0 0 #0000;
+  --_mono-button-hover-bg-preset: transparent;
+  --_mono-button-hover-color-preset: var(--_mono-button-primary);
+  --_mono-button-hover-border-color-preset: transparent;
+  --_mono-button-hover-shadow-preset: 0 0 #0000;
+  text-underline-offset: 4px;
+  text-decoration-line: var(--mono-button-link-decoration, none);
+}
+@media (hover: hover) {
+  [mono-button][mono-link] > :is(button, a):hover {
+    text-decoration-line: underline;
+  }
+}
+
+/* EXTENSION — dashed: the outline surface with a dashed edge, primary ink */
+[mono-button][mono-dashed] > :is(button, a) {
+  --_mono-button-bg-preset: var(--mono-mode-outline-bg);
+  --_mono-button-color-preset: var(--_mono-button-primary);
+  --_mono-button-border-color-preset: var(--_mono-button-border);
+  --_mono-button-shadow-preset: 0 0 #0000;
+  --_mono-button-hover-bg-preset: var(--_mono-button-primary-soft);
+  --_mono-button-hover-color-preset: var(--_mono-button-primary);
+  --_mono-button-hover-border-color-preset: var(--_mono-button-primary);
+  --_mono-button-hover-shadow-preset: 0 0 #0000;
+  border-style: dashed;
+}
+
+/* EXTENSION — glass: a translucent white surface for painted backgrounds */
+[mono-button][mono-glass] > :is(button, a) {
+  --_mono-button-bg-preset: color-mix(in oklab, white 18%, transparent);
+  --_mono-button-color-preset: white;
+  --_mono-button-border-color-preset: color-mix(in oklab, white 30%, transparent);
+  --_mono-button-shadow-preset: var(--mono-shadow-md);
+  --_mono-button-hover-bg-preset: color-mix(in oklab, white 28%, transparent);
+  --_mono-button-hover-color-preset: white;
+  --_mono-button-hover-border-color-preset: color-mix(in oklab, white 50%, transparent);
+  --_mono-button-hover-shadow-preset: var(--mono-shadow-lg);
+  backdrop-filter: blur(10px);
+}
+
+/* =========================================
+   Rounded — one prop for corners, on the Basecoat radius ladder
+   -----------------------------------------
+   Sets the PRESET rather than `border-radius`, so a consumer's own
+   `--mono-button-radius` still wins without anything here needing
+   `!important`. Steps map onto Basecoat's ladder: xs = radius-sm … xxl = 4xl.
+   ========================================= */
+
+[mono-button][mono-rounded="none"] { --_mono-button-radius-preset: 0; }
+[mono-button][mono-rounded="xs"] { --_mono-button-radius-preset: var(--mono-radius-sm); }
+[mono-button][mono-rounded="sm"] { --_mono-button-radius-preset: var(--mono-radius-md); }
+[mono-button][mono-rounded="md"] { --_mono-button-radius-preset: var(--mono-radius-lg); }
+[mono-button][mono-rounded="lg"] { --_mono-button-radius-preset: var(--mono-radius-xl); }
+[mono-button][mono-rounded="xl"] { --_mono-button-radius-preset: var(--mono-radius-2xl); }
+[mono-button][mono-rounded="xxl"] { --_mono-button-radius-preset: var(--mono-radius-4xl); }
+[mono-button][mono-rounded="full"] { --_mono-button-radius-preset: var(--mono-radius-full); }
+
+/* =========================================
+   Loading
+   ========================================= */
+
+[mono-button][mono-loading] > :is(button, a) {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+/* `pending` = self-driven loading that is still only WAITING (the debounce
+   timer or the throttle queue). Clicks are let back through on purpose: a
+   debounce has to SEE the repeat clicks to reset its timer. */
+[mono-button][mono-loading][mono-pending] > :is(button, a) {
+  pointer-events: auto;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ── The spinner — drawn INSIDE the icon box, so it replaces the icon, follows
+   `icon-position`, and cannot change the button's height (the box was already
+   reserved; tests/perf/field-heights asserts exactly that). ── */
+
+[mono-button] [mono-icon][mono-spinning] > *,
+[mono-button] [mono-icon][mono-spinning] ::slotted(*) {
+  visibility: hidden;
+}
+
+/* A button with no icon still reserves the box while spinning; `mono-empty`
+   collapses it the rest of the time (the shadow build marks an unassigned slot
+   the same way — icon and affix zones alike). */
+[mono-button] [mono-icon][mono-empty],
+[mono-button] [mono-affix][mono-empty] {
+  display: none;
+}
+
+[mono-button] [mono-icon][mono-spinning] {
+  position: relative;
+}
+
+[mono-button] [mono-icon][mono-spinning]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: mono-button-spin 0.65s linear infinite;
+}
+
+[mono-button]:is([mono-size="xs"], [mono-size="sm"]) [mono-icon][mono-spinning]::after {
+  border-width: 1.5px;
+}
+
+@keyframes mono-button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================
+   Sizing — width/height set on the host; `sized` makes the wrapper + control
+   fill it. Icon-only is included so a fixed square (a FAB) works.
+   ========================================= */
+
+[mono-button][mono-sized] {
+  width: 100%;
+  height: 100%;
+}
+
+[mono-button][mono-sized] > :is(button, a) {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  justify-content: center;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* =========================================
+   Media
+   ========================================= */
+
+@media (prefers-contrast: high) {
+  [mono-button] > :is(button, a) {
+    border-width: 2px;
+  }
+
+  /* Outline, tonal and text are low-contrast by design — force a solid fill in
+     the hue. `light` / `secondary` have no hue to fill with. */
+  [mono-button]:is([mono-variant="outline"], [mono-variant="tonal"], [mono-variant="text"]):is(:not([mono-color]), [mono-color="primary"], [mono-color="success"], [mono-color="danger"], [mono-color="warning"], [mono-color="info"], [mono-color="teal"], [mono-color="purple"], [mono-color="dark"], [mono-color="neutral"]) > :is(button, a) {
+    background: var(--_mono-button-c);
+    color: var(--_mono-button-c-foreground);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [mono-button] > :is(button, a) {
+    transition: none;
+  }
+
+  [mono-button] > :is(button, a):active {
+    translate: none;
+  }
+
+  [mono-button] [mono-icon][mono-spinning]::after {
+    animation: none;
+  }
+}
+
+/* =========================================================================
+   Prepend / append affixes  ≡  .button-group siblings
+   -------------------------------------------------------------------------
+   `slot="prepend"` / `slot="append"` render as `[mono-affix]` SIBLINGS of the native control,
+   never inside it (a `<button>` may not contain interactive content). The zones
+   paint themselves from the same `--_mono-button-*` variables the control
+   uses — which is why the colour rules above declare them on the ROOT.
+   ========================================================================= */
+
+/* basecoat@1.0.2 styles/vega.css .button-group > :is(span, label, output) — display:flex items-center */
+[mono-button] > [mono-affix] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  align-self: stretch;
+  box-sizing: border-box;
+  background: var(--_mono-button-bg);
+  color: var(--_mono-button-color);
+  border: var(--mono-border-width) solid var(--_mono-button-border-color);
+  padding: 0 var(--mono-button-md-padding-inline, calc(var(--mono-spacing) * 2.5));
+  gap: var(--mono-spacing);
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* The light build re-appends slotted nodes into a `[data-mono-slot]` element;
+   blockify it so an inline icon span actually renders its box. */
+[mono-button] > [mono-affix] > [data-mono-slot] {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* basecoat@1.0.2 components/button-group.css .button-group — the group shares
+   ONE ring: `*:not(:first-child)` squares its start corners and drops its start
+   border, `*:not(:last-child)` squares its end corners.
+   `:not([mono-empty])` is load-bearing: the SHADOW build always renders the
+   zone (its `<slot>` must stay in the tree) and marks it `mono-empty`; `:has()`
+   matches on presence, which `display: none` does not undo. */
+[mono-button]:has(> [mono-affix="prepend"]:not([mono-empty])) > :is(button, a) {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  border-inline-start-width: 0;
+}
+
+[mono-button]:has(> [mono-affix="append"]:not([mono-empty])) > :is(button, a) {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+  border-inline-end-width: 0;
+}
+
+[mono-button] > [mono-affix="prepend"] {
+  border-start-start-radius: var(--_mono-button-radius);
+  border-end-start-radius: var(--_mono-button-radius);
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+  border-inline-end-width: 0;
+}
+
+[mono-button] > [mono-affix="append"] {
+  border-start-end-radius: var(--_mono-button-radius);
+  border-end-end-radius: var(--_mono-button-radius);
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  border-inline-start-width: 0;
+}
+
+/* ── The divider — `hr[role='separator']`: restores the one edge the rules
+   above removed, single-width, the ring's own colour. */
+[mono-button] > [mono-affix="prepend"][mono-divider] {
+  border-inline-end-width: var(--mono-border-width);
+}
+
+[mono-button] > [mono-affix="append"][mono-divider] {
+  border-inline-start-width: var(--mono-border-width);
+}
+
+[mono-button] > [mono-affix][mono-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Per-size padding, mirroring the control's own steps. */
+[mono-button][mono-size="xs"] > [mono-affix] { padding: 0 var(--mono-button-xs-padding-inline, calc(var(--mono-spacing) * 2)); }
+[mono-button][mono-size="sm"] > [mono-affix] { padding: 0 var(--mono-button-sm-padding-inline, calc(var(--mono-spacing) * 2.5)); }
+[mono-button][mono-size="lg"] > [mono-affix] { padding: 0 var(--mono-button-lg-padding-inline, calc(var(--mono-spacing) * 2.5)); }
+[mono-button][mono-size="xl"] > [mono-affix] { padding: 0 var(--mono-button-xl-padding-inline, calc(var(--mono-spacing) * 3)); }
+[mono-button][mono-size="xxl"] > [mono-affix] { padding: 0 var(--mono-button-xxl-padding-inline, calc(var(--mono-spacing) * 4)); }

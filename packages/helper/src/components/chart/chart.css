@@ -1,0 +1,221 @@
+/* ============================================================================
+   mono-chart — a Chart.js canvas driven by `monoChart(...)` (or a raw chart.js
+   `data` object). The library is an OPTIONAL peer, loaded on demand; until it
+   resolves the element renders an empty, correctly-sized box so nothing jumps.
+
+   NOT attribute-styled, on purpose: the chart is a bitmap. This sheet declares
+   the palette and the inks as custom properties over the Basecoat tokens, and
+   the ELEMENT reads them back at mount (`_resolveColor`, `_themeColors`) and
+   hands Chart.js real values — a canvas cannot resolve `var()`. The two boxes
+   this sheet does paint (the message, the loading veil) keep their classes.
+
+   Tokens (ours → Basecoat):
+     --_mono-chart-1 … -5                  ≡ --chart-1 … --chart-5 (the default palette, in that order)
+     --_mono-chart-primary                 ≡ --primary
+     --_mono-chart-secondary               ≡ --muted-foreground (the "secondary" ink every field uses)
+     --_mono-chart-accent                  ≡ --chart-2 (Basecoat's --accent is a surface, not a series colour)
+     --_mono-chart-success/warning/danger/info ≡ --success / --warning / --destructive / --info
+     --_mono-chart-text                    ≡ --foreground (legend, title)
+     --_mono-chart-muted                   ≡ --muted-foreground (axis ticks, the empty message)
+     --_mono-chart-grid                    ≡ --border
+     --_mono-chart-surface                 ≡ --background (the hairline between slices)
+     --_mono-chart-tooltip-*               ≡ the select panel's popover: --mono-select-dropdown-{bg,color,radius,ring,shadow} → --popover … (the tooltip IS an element, painted here)
+     --_mono-chart-font                    ≡ text-xs, in the page font (inherited)
+     --_mono-chart-radius                  ≡ --mono-radius-md (tooltip corner, message box)
+     --_mono-chart-bar-radius              ≡ the field's corner chain (--mono-input-outline-radius → --mono-input-radius → --mono-radius-md)
+
+   Every `--mono-chart-<k>` is a public override; the flavours carry nothing —
+   the tokens they retune (border, foreground, popover, chart-n) reach the chart
+   through these chains. Dark mode is the same tokens flipped; the element
+   watches the mode class and repaints.
+   ============================================================================ */
+
+mono-chart,
+mono-chart-bar,
+mono-chart-line,
+mono-chart-pie,
+mono-chart-doughnut {
+  display: block;
+  width: 100%;
+}
+
+mono-chart *,
+mono-chart-bar *,
+mono-chart-line *,
+mono-chart-pie *,
+mono-chart-doughnut * {
+  box-sizing: border-box;
+}
+
+.mono-chart {
+  position: relative;
+  width: 100%;
+  color: var(--_mono-chart-text);
+  /* the canvas inherits nothing; the element READS these two off this box */
+  font-family: var(--_mono-chart-font-family);
+  font-size: var(--_mono-chart-font);
+
+  /* Public customization API → private resolvers. The ELEMENT also reads these
+     at mount time and hands the resolved colors to Chart.js: canvas painting
+     can't resolve `var()`, so the palette has to cross into JS as real values. */
+  --_mono-chart-1: var(--mono-chart-1, var(--chart-1));
+  --_mono-chart-2: var(--mono-chart-2, var(--chart-2));
+  --_mono-chart-3: var(--mono-chart-3, var(--chart-3));
+  --_mono-chart-4: var(--mono-chart-4, var(--chart-4));
+  --_mono-chart-5: var(--mono-chart-5, var(--chart-5));
+
+  --_mono-chart-primary: var(--mono-chart-primary, var(--primary));
+  --_mono-chart-secondary: var(--mono-chart-secondary, var(--muted-foreground));
+  --_mono-chart-accent: var(--mono-chart-accent, var(--chart-2));
+  --_mono-chart-success: var(--mono-chart-success, var(--success));
+  --_mono-chart-warning: var(--mono-chart-warning, var(--warning));
+  --_mono-chart-danger: var(--mono-chart-danger, var(--destructive));
+  --_mono-chart-info: var(--mono-chart-info, var(--info));
+
+  --_mono-chart-text: var(--mono-chart-text, var(--foreground));
+  --_mono-chart-muted: var(--mono-chart-muted, var(--muted-foreground));
+  --_mono-chart-grid: var(--mono-chart-grid, var(--border));
+  --_mono-chart-surface: var(--mono-chart-surface, var(--background));
+
+  /* basecoat@1.0.2 styles/vega.css .combobox [data-popover] — bg-popover text-popover-foreground ring-foreground/10 rounded-md shadow-md ring-1
+     (a tooltip is a popover: the same chrome, at text-xs). It is the FLAVOUR's
+     popover: the corner, ring and shadow read the select panel's public knobs,
+     which every flavour writes (luma 3xl + shadow-lg, lyra 0, maia 2xl …). */
+  --_mono-chart-tooltip-bg: var(--mono-chart-tooltip-bg, var(--mono-select-dropdown-bg, var(--popover)));
+  --_mono-chart-tooltip-color: var(--mono-chart-tooltip-color, var(--mono-select-dropdown-color, var(--popover-foreground)));
+  --_mono-chart-tooltip-border: var(--mono-chart-tooltip-border, var(--border));
+  --_mono-chart-tooltip-radius: var(--mono-chart-tooltip-radius, var(--mono-select-dropdown-radius, var(--mono-radius-md)));
+  --_mono-chart-tooltip-ring: var(--mono-chart-tooltip-ring, var(--mono-select-dropdown-ring, 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent)));
+  --_mono-chart-tooltip-shadow: var(--mono-chart-tooltip-shadow, var(--mono-select-dropdown-shadow, var(--mono-shadow-md)));
+
+  --_mono-chart-font: var(--mono-chart-font, var(--mono-text-xs));
+  /* INHERIT, not --font-sans: every other mono control inherits the page font
+     for its labels, and a chart sits among them */
+  --_mono-chart-font-family: var(--mono-chart-font-family, inherit);
+  --_mono-chart-radius: var(--mono-chart-radius, var(--mono-radius-md));
+  /* The bars' corner IS the flavour's field corner — lyra squares a field through
+     `--mono-input-radius`, sera through `--mono-input-outline-radius`, maia and
+     luma pill it through the same knob — so bars are square where the fields are
+     and round where they are, with nothing set. Chart.js clamps it to half a bar. */
+  --_mono-chart-bar-radius: var(--mono-chart-bar-radius, var(--mono-input-outline-radius, var(--mono-input-radius, var(--mono-radius-md))));
+
+  /* Chart.js wants PIXELS and a custom property's computed value is still the
+     token string (`calc(…)`, `2rem`), so the two radii are painted onto real,
+     invisible border-radius properties here and read back computed. */
+  border-radius: var(--_mono-chart-radius);
+}
+
+/* The canvas box. Chart.js sets the canvas' intrinsic width/height itself; this
+   wrapper owns the LAYOUT size so `responsive: true` has something to measure. */
+.mono-chart-canvas-wrap {
+  position: relative;
+  width: 100%;
+  /* the bar corner, in px — see the root */
+  border-radius: var(--_mono-chart-bar-radius);
+}
+
+.mono-chart canvas {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* The tooltip — an HTML popover placed over the canvas by the element
+   (Chart.js's `tooltip.external`), not the bitmap one: a canvas can take a
+   colour and a corner, not the flavour's ring and shadow. Positioned from the
+   caret; `data-side` says which way it opened. */
+.mono-chart-tooltip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  display: none;
+  flex-direction: column;
+  gap: calc(var(--mono-spacing) * 0.5);
+  /* basecoat@1.0.2 styles/vega.css .combobox [data-popover] — bg-popover text-popover-foreground ring-foreground/10 rounded-md shadow-md ring-1; px-3 py-1.5 text-xs */
+  padding: calc(var(--mono-spacing) * 1.5) calc(var(--mono-spacing) * 3);
+  border-radius: var(--_mono-chart-tooltip-radius);
+  background: var(--_mono-chart-tooltip-bg);
+  color: var(--_mono-chart-tooltip-color);
+  box-shadow: var(--_mono-chart-tooltip-ring), var(--_mono-chart-tooltip-shadow);
+  font-size: var(--_mono-chart-font);
+  line-height: var(--mono-text-xs--lh);
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - calc(var(--mono-spacing) * 2)));
+  opacity: 0;
+  transition: opacity var(--mono-duration-fast, 100ms) var(--mono-ease);
+}
+
+.mono-chart-tooltip[data-open] {
+  display: flex;
+  opacity: 1;
+}
+
+/* no room above the point: open below it */
+.mono-chart-tooltip[data-side='bottom'] {
+  transform: translate(-50%, calc(var(--mono-spacing) * 2));
+}
+
+.mono-chart-tooltip-title {
+  font-weight: var(--mono-font-weight-medium);
+}
+
+.mono-chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--mono-spacing) * 2);
+}
+
+/* the series swatch — a rounded chip, like the legend's */
+.mono-chart-tooltip-swatch {
+  flex: 0 0 auto;
+  width: calc(var(--mono-spacing) * 2.5);
+  height: calc(var(--mono-spacing) * 2.5);
+  border-radius: var(--mono-radius-sm);
+}
+
+.mono-chart-tooltip-value {
+  margin-inline-start: auto;
+  font-variant-numeric: tabular-nums;
+  padding-inline-start: calc(var(--mono-spacing) * 3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mono-chart-tooltip {
+    transition: none;
+  }
+}
+
+/* Shown while the optional peer loads, when there is no data, or on error —
+   basecoat's empty-state idiom: a dashed hairline, muted text. */
+.mono-chart-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 6rem;
+  padding: calc(var(--mono-spacing) * 4);
+  font-size: var(--mono-text-sm);
+  line-height: var(--mono-text-sm--lh);
+  color: var(--_mono-chart-muted);
+  text-align: center;
+  border: var(--mono-border-width) dashed var(--_mono-chart-grid);
+  border-radius: var(--_mono-chart-radius);
+}
+
+.mono-chart-message.error {
+  color: var(--_mono-chart-danger);
+  border-color: color-mix(in oklab, var(--_mono-chart-danger) 45%, var(--_mono-chart-grid));
+}
+
+/* Loading veil — the canvas stays mounted so Chart.js keeps its size. */
+.mono-chart.loading .mono-chart-canvas-wrap {
+  opacity: 0.55;
+  transition: opacity var(--mono-duration) var(--mono-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mono-chart.loading .mono-chart-canvas-wrap {
+    transition: none;
+  }
+}

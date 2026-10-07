@@ -1,0 +1,383 @@
+/* =========================================================================
+   mono-filter-builder — inline OData filter builder, a Basecoat EXTENSION
+
+   Upstream has no filter builder. Every surface here borrows the shape of the
+   Basecoat control it most resembles — the rule's field / operator / value
+   controls are `.field > select` and `.input`, Apply is `.btn`, Clear is
+   `.btn[data-variant='outline']`, the trash and "add nested" toggles are
+   `.btn[data-variant='ghost'][data-size='icon']`, and "Add rule" / "Add group"
+   are `.btn[data-variant='link']` — cited where each does.
+
+   The controls are styled HERE rather than by nesting three `<mono-input>`s per
+   row: that would couple this sheet to another component's PRIVATE resolvers.
+   They read the input's, select's and button's PUBLIC knobs instead —
+   `--mono-input-outline-radius`, `--mono-button-<size>-radius`,
+   `--mono-control-height-<size>` — which is exactly what a flavour writes, so
+   an `xs` builder matches an `xs` field and maia's pill, sera's square and
+   lyra's `text-xs` all arrive here by construction. There are no per-flavour
+   deltas for this component on purpose; there is nothing for them to drift from.
+
+   Styling is by ATTRIBUTE: the root is `[mono-filter-builder]` with `mono-size`
+   (`sm` is the default and emits nothing), and every part is family-unique
+   (`[mono-filter-row]`, `[mono-filter-control]`, …) so it needs no scoping and
+   cannot collide with the table's `[mono-th-filter-*]` / `[mono-search-filter-*]`.
+   The old classes are still emitted as inert hooks until 2.0.
+
+   Specificity: a part's resting rule is one attribute — (0,1,0) — so a
+   `cssClass` utility wins by source order; prop and state rules stay heavier.
+   ========================================================================= */
+
+mono-filter-builder,
+mono-shadow-filter-builder {
+  display: block;
+}
+
+[mono-filter-builder] {
+  /* ── ink and surface ────────────────────────────────────────────────────
+     Public `--mono-filter-*` → private resolvers (the library-wide pattern):
+     set any of them on the element, inline, or a wrapper — they inherit and
+     pierce the shadow boundary. */
+  --_mono-filter-primary: var(--mono-filter-primary, var(--primary));
+  --_mono-filter-on-primary: var(--mono-filter-on-primary, var(--primary-foreground));
+  /* the ink of the links and the group operator — upstream's `.btn[data-variant='link']` is `text-primary` */
+  --_mono-filter-accent: var(--mono-filter-accent, var(--primary));
+  --_mono-filter-text: var(--mono-filter-text, var(--foreground));
+  --_mono-filter-muted: var(--mono-filter-muted, var(--muted-foreground));
+  /* basecoat@1.0.2 styles/vega.css .field > select, select.select — border-input */
+  --_mono-filter-border: var(--mono-filter-border, var(--input));
+  /* the guide down a nested group — the page border, not the control edge */
+  --_mono-filter-guide: var(--mono-filter-guide, var(--border));
+  /* a control is `bg-transparent` upstream (`dark:bg-input/30` on the dark side) */
+  --_mono-filter-surface: var(--mono-filter-surface, var(--mono-mode-surface, transparent));
+  --_mono-filter-ring: var(--mono-filter-ring, var(--ring));
+  --_mono-filter-danger: var(--mono-filter-danger, var(--destructive));
+  --_mono-filter-indent: var(--mono-filter-indent, 1.25rem);
+
+  /* ── the size scale — sm on the unqualified root ON PURPOSE ─────────────
+     basecoat@1.0.2 styles/vega.css .btn[data-size='sm'] — h-8 gap-1 px-2.5 rounded-[min(var(--radius-md),10px)]
+     The metrics read the SAME public knobs mono-input / mono-select /
+     mono-button consume, so a flavour that retunes a field retunes these. */
+  --_mono-filter-height: var(--mono-filter-height-sm, var(--mono-input-height-sm, var(--mono-control-height-sm)));
+  --_mono-filter-font: var(--mono-filter-font-sm, var(--mono-input-font-sm, var(--mono-input-font-md, var(--mono-text-sm))));
+  /* outline → the field's own radius → the scale: lyra squares a field through
+     `--mono-input-radius`, sera and maia through `--mono-input-outline-radius` */
+  --_mono-filter-radius: var(--mono-filter-radius, var(--mono-input-outline-radius, var(--mono-input-radius, var(--mono-radius-md))));
+  --_mono-filter-btn-radius: var(--mono-filter-btn-radius-sm, var(--mono-button-sm-radius, var(--mono-radius-md)));
+  --_mono-filter-icon: var(--mono-filter-icon-sm, 0.875rem);
+  --_mono-filter-gap: var(--mono-filter-gap, calc(var(--mono-spacing) * 2));
+
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--_mono-filter-gap) * 1.5);
+  width: 100%;
+  /* Allow the rules region to shrink/scroll inside a bounded height. */
+  min-height: 0;
+  font-family: inherit;
+  color: var(--_mono-filter-text);
+  box-sizing: border-box;
+}
+
+[mono-filter-builder][mono-size="xs"] {
+  --_mono-filter-height: var(--mono-filter-height-xs, var(--mono-input-height-xs, var(--mono-control-height-xs)));
+  --_mono-filter-font: var(--mono-filter-font-xs, var(--mono-input-font-xs, var(--mono-text-xs)));
+  --_mono-filter-btn-radius: var(--mono-filter-btn-radius-xs, var(--mono-button-xs-radius, var(--mono-radius-md)));
+  --_mono-filter-icon: var(--mono-filter-icon-xs, 0.7rem);
+}
+[mono-filter-builder][mono-size="md"] {
+  --_mono-filter-height: var(--mono-filter-height-md, var(--mono-input-height-md, var(--mono-control-height-md)));
+  --_mono-filter-font: var(--mono-filter-font-md, var(--mono-input-font-md, var(--mono-text-sm)));
+  --_mono-filter-btn-radius: var(--mono-filter-btn-radius-md, var(--mono-button-md-radius, var(--mono-radius-md)));
+  --_mono-filter-icon: var(--mono-filter-icon-md, 1rem);
+}
+[mono-filter-builder][mono-size="lg"] {
+  --_mono-filter-height: var(--mono-filter-height-lg, var(--mono-input-height-lg, var(--mono-control-height-lg)));
+  --_mono-filter-font: var(--mono-filter-font-lg, var(--mono-input-font-lg, var(--mono-input-font-md, var(--mono-text-sm))));
+  --_mono-filter-btn-radius: var(--mono-filter-btn-radius-lg, var(--mono-button-lg-radius, var(--mono-radius-md)));
+  --_mono-filter-icon: var(--mono-filter-icon-lg, 1.125rem);
+}
+[mono-filter-builder][mono-size="xl"] {
+  --_mono-filter-height: var(--mono-filter-height-xl, var(--mono-input-height-xl, var(--mono-control-height-xl)));
+  --_mono-filter-font: var(--mono-filter-font-xl, var(--mono-input-font-xl, var(--mono-input-font-md, var(--mono-text-base))));
+  --_mono-filter-btn-radius: var(--mono-filter-btn-radius-xl, var(--mono-button-xl-radius, var(--mono-radius-md)));
+  --_mono-filter-icon: var(--mono-filter-icon-xl, 1.25rem);
+}
+[mono-filter-builder][mono-size="xxl"] {
+  --_mono-filter-height: var(--mono-filter-height-xxl, var(--mono-input-height-xxl, var(--mono-control-height-xxl)));
+  --_mono-filter-font: var(--mono-filter-font-xxl, var(--mono-input-font-xxl, var(--mono-input-font-md, var(--mono-text-base))));
+  --_mono-filter-btn-radius: var(--mono-filter-btn-radius-xxl, var(--mono-button-xxl-radius, var(--mono-radius-md)));
+  --_mono-filter-icon: var(--mono-filter-icon-xxl, 1.375rem);
+}
+
+[mono-filter-builder] *,
+[mono-filter-builder] *::before,
+[mono-filter-builder] *::after {
+  box-sizing: border-box;
+}
+
+/* ── Scroll layout ─────────────────────────────────────────────────────────
+   Apply/Clear stay pinned at the top, Add rule/group at the bottom; the ROOT
+   group is the only scroll region, so a bounded `height` / `max-height` scrolls
+   JUST the rules. (Nested groups are deeper, so the child combinator skips them.) */
+[mono-filter-builder] > [mono-filter-actions],
+[mono-filter-builder] > [mono-filter-add] {
+  flex: 0 0 auto;
+}
+[mono-filter-builder] > [mono-filter-group] {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  /* Portaled + anchored: a chained scroll would drag this panel off-screen
+     (see `[mono-th-filter-list]`). */
+  overscroll-behavior: contain;
+  padding-right: calc(var(--mono-spacing) * 1);
+}
+
+/* ── Apply / Clear — ABOVE the rules, not below ─────────────────────────── */
+[mono-filter-actions] {
+  display: flex;
+  align-items: center;
+  gap: var(--_mono-filter-gap);
+}
+
+/* basecoat@1.0.2 styles/vega.css .btn — inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:ring-3 disabled:opacity-50 */
+[mono-filter-btn] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 calc(var(--mono-spacing) * 2.5);
+  height: var(--_mono-filter-height);
+  border-radius: var(--_mono-filter-btn-radius);
+  border: var(--mono-border-width) solid transparent;
+  font: inherit;
+  font-size: var(--_mono-filter-font);
+  font-weight: var(--mono-font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--mono-duration-fast, 150ms) ease,
+    color var(--mono-duration-fast, 150ms) ease,
+    border-color var(--mono-duration-fast, 150ms) ease;
+}
+/* basecoat@1.0.2 styles/vega.css .btn:not([data-variant]), .btn[data-variant='primary'] — bg-primary text-primary-foreground hover:bg-primary/90 */
+[mono-filter-btn]:not([mono-variant]) {
+  background: var(--_mono-filter-primary);
+  color: var(--_mono-filter-on-primary);
+}
+[mono-filter-btn]:not([mono-variant]):hover {
+  background: color-mix(in oklab, var(--_mono-filter-primary) 90%, transparent);
+}
+/* basecoat@1.0.2 styles/vega.css .btn[data-variant='outline'] — border bg-background hover:bg-accent hover:text-accent-foreground */
+[mono-filter-btn][mono-variant="ghost"] {
+  background: var(--background);
+  border-color: var(--_mono-filter-border);
+  color: var(--_mono-filter-text);
+}
+[mono-filter-btn][mono-variant="ghost"]:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+[mono-filter-btn]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--_mono-filter-ring) 50%, transparent);
+}
+
+/* ── Group ──────────────────────────────────────────────────────────────── */
+[mono-filter-group] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--_mono-filter-gap);
+}
+/* Nested groups indent; the root sits flush. */
+[mono-filter-children] [mono-filter-group] {
+  padding-left: var(--_mono-filter-indent);
+  border-left: var(--mono-border-width) dashed var(--_mono-filter-guide);
+}
+[mono-filter-group-head] {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: calc(var(--_mono-filter-gap) * 0.75);
+  font-size: var(--_mono-filter-font);
+  color: var(--_mono-filter-muted);
+}
+[mono-filter-match] {
+  white-space: nowrap;
+}
+[mono-filter-group-actions] {
+  display: inline-flex;
+  gap: calc(var(--mono-spacing) * 0.5);
+  margin-left: auto;
+}
+
+[mono-filter-children] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--_mono-filter-gap);
+}
+
+/* ── Rule row ───────────────────────────────────────────────────────────── */
+[mono-filter-row] {
+  display: grid;
+  /* field | operator | value | nested | trash */
+  grid-template-columns: minmax(8rem, 1.4fr) minmax(8rem, 1.2fr) minmax(8rem, 2fr) auto auto;
+  align-items: center;
+  gap: var(--_mono-filter-gap);
+}
+@media (max-width: 720px) {
+  [mono-filter-row] {
+    grid-template-columns: 1fr 1fr auto auto;
+  }
+  [mono-filter-value-cell] {
+    grid-column: 1 / -1;
+  }
+}
+
+[mono-filter-value-cell],
+[mono-filter-range] {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--_mono-filter-gap) * 0.75);
+  min-width: 0;
+}
+
+/* ── Controls (selects + inputs) ─────────────────────────────────────────── */
+/* basecoat@1.0.2 styles/vega.css .field > select, select.select — border-input h-9 rounded-md border bg-transparent py-1 ps-2.5 pe-8 text-sm shadow-xs transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3
+   The text input is the same box; the flavour's outline knob decides the corner
+   for both, exactly as it does for `<mono-input>` and `<mono-select>`. */
+[mono-filter-control] {
+  width: 100%;
+  min-width: 0;
+  height: var(--_mono-filter-height);
+  padding: 0 calc(var(--mono-spacing) * 2.5);
+  border: var(--mono-border-width) solid var(--_mono-filter-border);
+  border-radius: var(--_mono-filter-radius);
+  background-color: var(--_mono-filter-surface);
+  color: var(--_mono-filter-text);
+  font: inherit;
+  font-size: var(--_mono-filter-font);
+  box-shadow: var(--mono-shadow-xs, none);
+  /* stated in both directions: a host page's preflight (Tailwind, UnoCSS) sets
+     `appearance: none` on a select and a shadow root escapes it — so without
+     this the light build lost its caret and the shadow build kept the native
+     one. Upstream draws its own; so does this. */
+  appearance: none;
+  outline: none;
+  transition:
+    border-color var(--mono-duration-fast, 150ms) ease,
+    box-shadow var(--mono-duration-fast, 150ms) ease;
+}
+[mono-filter-control]:focus,
+[mono-filter-control]:focus-visible {
+  border-color: var(--_mono-filter-ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--_mono-filter-ring) 50%, transparent);
+  outline: none;
+}
+/* `disabled:opacity-50` */
+[mono-filter-control]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* `placeholder:text-muted-foreground` — stated, so a host page's own placeholder
+   colour cannot reach a portaled builder */
+[mono-filter-control]::placeholder {
+  color: var(--_mono-filter-muted);
+  opacity: 1;
+}
+[mono-filter-range] > [mono-filter-control] {
+  min-width: 0;
+}
+
+/* basecoat@1.0.2 styles/vega.css .field > select, select.select — pe-8 bg-[image:var(--chevron-down-icon-50)] bg-no-repeat bg-position-[center_right_0.625rem] bg-size-[1rem]
+   The caret, drawn the way upstream draws it — the same token the ported
+   `<mono-select>` paints with, so it sits at the same place in every flavour. */
+select[mono-filter-control] {
+  padding-right: calc(var(--mono-spacing) * 8);
+  background-image: var(--chevron-down-icon-50);
+  background-repeat: no-repeat;
+  background-position: right calc(var(--mono-spacing) * 2.5) center;
+  background-size: 1rem;
+}
+
+/* The group operator sits inline in a sentence, so it must NOT grow — otherwise it
+   pushes the trailing "of the following rules:" to the far edge. Otherwise it
+   is a control like every other: bordered, and at the control HEIGHT rather
+   than `auto` — a bare select's intrinsic height differs between a page under
+   a preflight and a shadow root, which put the shadow build's rows 5px higher. */
+[mono-filter-group-op] {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 6rem;
+  color: var(--_mono-filter-accent);
+  font-weight: var(--mono-font-weight-semibold);
+}
+
+/* ── Icon buttons ───────────────────────────────────────────────────────── */
+/* basecoat@1.0.2 styles/vega.css .btn[data-variant='ghost'] — hover:bg-accent hover:text-accent-foreground */
+/* basecoat@1.0.2 styles/vega.css .btn[data-size='icon'] — size-9 */
+[mono-filter-icon-btn] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-filter-height);
+  height: var(--_mono-filter-height);
+  padding: 0;
+  border: 0;
+  border-radius: var(--_mono-filter-btn-radius);
+  background: transparent;
+  color: var(--_mono-filter-muted);
+  line-height: 0;
+  cursor: pointer;
+  transition:
+    color var(--mono-duration-fast, 150ms) ease,
+    background-color var(--mono-duration-fast, 150ms) ease;
+}
+[mono-filter-icon-btn]:hover,
+[mono-filter-icon-btn]:focus-visible {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  outline: none;
+}
+[mono-filter-icon-btn]:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--_mono-filter-ring) 50%, transparent);
+}
+[mono-filter-icon-btn][mono-danger]:hover,
+[mono-filter-icon-btn][mono-danger]:focus-visible {
+  color: var(--_mono-filter-danger);
+}
+[mono-filter-icon-btn] .mono-icon,
+[mono-filter-icon-btn] > svg {
+  width: var(--_mono-filter-icon);
+  height: var(--_mono-filter-icon);
+}
+
+/* ── Add rule / group links ─────────────────────────────────────────────── */
+[mono-filter-add] {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--_mono-filter-gap) * 2);
+}
+/* basecoat@1.0.2 styles/vega.css .btn[data-variant='link'] — text-primary underline-offset-4 hover:underline */
+[mono-filter-link] {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--_mono-filter-font);
+  color: var(--_mono-filter-accent);
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+[mono-filter-link]:hover {
+  text-decoration: underline;
+}
+[mono-filter-link]:focus-visible {
+  outline: none;
+  border-radius: var(--mono-radius-sm);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--_mono-filter-ring) 50%, transparent);
+}
+
+[mono-filter-empty] {
+  padding: calc(var(--mono-spacing) * 1) 0;
+  font-size: var(--_mono-filter-font);
+  color: var(--_mono-filter-muted);
+}

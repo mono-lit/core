@@ -1,0 +1,8 @@
+# Single source of truth for the Cloudflare Pages deploy.
+# Wrangler reads `name` (the Pages project) and `pages_build_output_dir`
+# natively, so `wrangler pages deploy` needs no flags here or in CI.
+# To rename the project later, change `name` here (and create the matching
+# Direct Upload project in Cloudflare) — nowhere else.
+name = "mono-libs"
+pages_build_output_dir = ".vitepress/dist"
+compatibility_date = "2025-01-01"

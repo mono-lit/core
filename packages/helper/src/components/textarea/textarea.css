@@ -1,0 +1,452 @@
+/* =========================================================================
+   mono-textarea — a port of Basecoat's `.textarea` inside a `.field`
+   (basecoat-css@1.0.2, vega style).
+
+   Styled by ATTRIBUTE, like Basecoat — and the attributes mirror the element's
+   props one for one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-textarea size="sm" color="danger" label="Notes" placeholder="…">
+     <div mono-textarea mono-size="sm" mono-color="danger">
+       <label mono-label>Notes</label>
+       <textarea mono-native placeholder="…"></textarea>
+       <div mono-message-wrap><div mono-message="helper">…</div></div>
+     </div>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-color])` = primary, `:not([mono-variant])` = outlined). The
+   element renders these on its root (both builds) plus the states
+   `mono-disabled` / `mono-readonly` / `mono-required` / `mono-auto-resize` and
+   `mono-validation-state="valid|invalid|warning"`. The old classes
+   (`.mono-textarea.md.primary.outlined`) are still emitted as inert hooks until
+   2.0 but no rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-textarea]                               ≡ .field (flex w-full flex-col gap-3)
+     [mono-textarea] > [mono-label]                ≡ .field > label / .label
+     [mono-native]                                 ≡ .field > textarea / .textarea
+                                                     (field-sizing-content min-h-16 w-full rounded-md
+                                                      border-input bg-transparent px-2.5 py-2 shadow-xs
+                                                      text-base md:text-sm, focus ring-3 ring-ring/50)
+     [mono-message-wrap] > [mono-message="…"]      ≡ .field > p / .field [role='alert']
+     [mono-validation-state="invalid"]             ≡ aria-invalid:border-destructive aria-invalid:ring-destructive/20
+     [mono-validation-state="valid|warning"]       ≡ EXTENSION (the same treatment in --success / --warning)
+     [mono-size="xs|sm|lg|xl|xxl"]                 ≡ EXTENSION (Basecoat sizes only the select; the
+                                                     ladder is --mono-control-height-*)
+     [mono-variant="filled"]                       ≡ EXTENSION (luma/mira/rhea's textarea: bg-input/50, no shadow)
+     [mono-variant="underlined"]                   ≡ EXTENSION (sera's: border-transparent border-b-input,
+                                                     rounded-none px-0, the ring on the bottom edge only)
+     [mono-counter], [mono-footer]                 ≡ EXTENSION (the character counter row)
+
+   A textarea must NOT be --mono-control-height-* tall — it is multi-line — but
+   its metrics DERIVE from that token, or retuning the ladder leaves it behind:
+
+     padY       = (T - L) / 2 - B
+     min-height = ROWS x L + 2*padY + 2*B  =  T + (ROWS - 1) x L
+
+   with T the control height, L one text line (font x line-height) and B the
+   border. The first puts the textarea's FIRST line box at the same offset as an
+   input's single line, so the two start their text on the same baseline side by
+   side; the second reads as "one input tall, plus N-1 lines". ROWS is the only
+   per-size literal. (Upstream's own `min-h-16` is a flat 64px; the derivation is
+   mono's, and `field-sizing: content` still grows the box from there.)
+
+   Specificity contract (same as the pre-port class sheet): a part's RESTING rule
+   is exactly one attribute strong — `:where([mono-textarea]) [mono-native]` =
+   (0,1,0) — so a utility class handed in through `cssClass` wins by source
+   order, while the prop and state rules stay heavier and win over it.
+
+   Inner parts: [mono-label] (+ [mono-required-mark]), [mono-native],
+   [mono-footer] > [mono-message-wrap] > [mono-message="helper|valid|invalid|
+   warning"] / [mono-counter] (+ [mono-near], [mono-over]). The shadow build
+   marks an unassigned slot wrapper [mono-empty].
+
+   FLAVORS set `--mono-textarea-{radius,padding-x-<size>,padding-y-<size>,
+   font-<size>,line-height,ring-width,ring-alpha,gap,resize,bg,border-color,
+   shadow}` and the outline-scoped `--mono-textarea-outline-*`; every fallback
+   here is vega's value
+   (`node scripts/basecoat-styles.mjs --varying "textarea"`).
+   ========================================================================= */
+
+mono-textarea {
+  display: block;
+}
+
+[mono-textarea] {
+  /* ── palette: each slot is a public knob over a Basecoat token ─────────── */
+  --_mono-textarea-text: var(--mono-textarea-color, var(--mono-textarea-text, var(--foreground)));
+  --_mono-textarea-placeholder: var(--mono-textarea-placeholder, var(--muted-foreground));
+  --_mono-textarea-muted: var(--mono-textarea-muted, var(--muted-foreground));
+  /* the `color` prop picks the FOCUS colour; primary is Basecoat's `--ring` */
+  --_mono-textarea-primary: var(--mono-textarea-primary, var(--ring));
+  --_mono-textarea-secondary: var(--mono-textarea-secondary, var(--muted-foreground));
+  --_mono-textarea-success: var(--mono-textarea-success, var(--success));
+  --_mono-textarea-danger: var(--mono-textarea-danger, var(--destructive));
+  --_mono-textarea-warning: var(--mono-textarea-warning, var(--warning));
+  --_mono-textarea-info: var(--mono-textarea-info, var(--info));
+  --_mono-textarea-teal: var(--mono-textarea-teal, var(--teal));
+  --_mono-textarea-purple: var(--mono-textarea-purple, var(--purple));
+  --_mono-textarea-neutral: var(--mono-textarea-neutral, var(--neutral));
+  --_mono-textarea-dark: var(--mono-textarea-dark, var(--dark));
+  --_mono-textarea-valid: var(--mono-textarea-valid, var(--success));
+  --_mono-textarea-invalid: var(--mono-textarea-invalid, var(--destructive));
+
+  /* ── the painted result — three tiers, base = vega's .textarea ─────────── */
+  --_mono-textarea-ring-color: var(--mono-textarea-ring-color, var(--mono-textarea-focus-color, var(--_mono-textarea-ring-color-preset, var(--_mono-textarea-primary))));
+  --_mono-textarea-ring-width: var(--mono-textarea-ring-width, var(--_mono-textarea-ring-width-preset, var(--mono-ring-width)));
+  --_mono-textarea-ring-alpha: var(--mono-textarea-ring-alpha, var(--mono-ring-alpha));
+  --_mono-textarea-border-color: var(--mono-textarea-rest-border, var(--mono-textarea-border-color, var(--_mono-textarea-border-color-preset, var(--input))));
+  --_mono-textarea-side-border-color: var(--_mono-textarea-side-border-color-preset, var(--_mono-textarea-border-color));
+  --_mono-textarea-bg: var(--mono-textarea-bg, var(--mono-textarea-surface, var(--_mono-textarea-bg-preset, var(--mono-mode-surface))));
+  --_mono-textarea-shadow: var(--mono-textarea-shadow, var(--_mono-textarea-shadow-preset, var(--mono-shadow-xs)));
+  --_mono-textarea-border-width: var(--mono-textarea-border-width, var(--mono-border-width));
+  --_mono-textarea-radius: var(--mono-textarea-radius, var(--_mono-textarea-radius-preset, var(--mono-radius-md)));
+
+  /* ── md metrics live on the unqualified root ON PURPOSE: hand-written
+        `<div mono-textarea>` that names no size renders exactly like size="md".
+        basecoat@1.0.2 styles/vega.css .textarea — px-2.5 py-2 text-base md:text-sm ── */
+  --_mono-textarea-height: var(--mono-textarea-height-md, var(--mono-control-height-md));
+  --_mono-textarea-padding-x: var(--mono-textarea-padding-x-md, var(--_mono-textarea-padding-x-preset, calc(var(--mono-spacing) * 2.5)));
+  --_mono-textarea-font-size: var(--mono-textarea-font-md, var(--mono-text-sm));
+  --_mono-textarea-line-height: var(--mono-textarea-line-height, var(--mono-textarea-line-height-md, var(--mono-leading-normal)));
+  --_mono-textarea-rows: var(--mono-textarea-rows, var(--mono-textarea-rows-md, 4));
+
+  /* one text line, and the two derived metrics that hang off it */
+  --_mono-textarea-line: calc(var(--_mono-textarea-font-size) * var(--_mono-textarea-line-height));
+  --_mono-textarea-padding-y: var(
+    --mono-textarea-padding-y,
+    max(0px, calc((var(--_mono-textarea-height) - var(--_mono-textarea-line)) / 2 - var(--_mono-textarea-border-width)))
+  );
+  --_mono-textarea-min-height: var(
+    --mono-textarea-min-height,
+    calc(var(--_mono-textarea-height) + (var(--_mono-textarea-rows) - 1) * var(--_mono-textarea-line))
+  );
+
+  /* basecoat@1.0.2 styles/vega.css .field — flex w-full flex-col gap-3 */
+  display: flex;
+  flex-direction: column;
+  gap: var(--mono-textarea-gap, calc(var(--mono-spacing) * 3));
+  width: 100%;
+  min-width: 0;
+  color: var(--_mono-textarea-text);
+  font-family: inherit;
+}
+
+[mono-textarea],
+:where([mono-textarea]) *,
+:where([mono-textarea]) *::before,
+:where([mono-textarea]) *::after {
+  box-sizing: border-box;
+}
+
+/* The element wraps the footer in an aria-describedby outlet; hand-written markup
+   has no such wrapper. It is a flex child either way, so an EMPTY outlet still
+   paid the root's `gap` and made the element stand taller than the same raw
+   markup. The shadow build always RENDERS the footer and marks it empty, so the
+   test is for a footer that is actually showing. */
+[mono-textarea] > [mono-message-outlet]:not(:has([mono-footer]:not([mono-empty]))) {
+  display: none;
+}
+
+/* the shadow build renders every region and marks the empty ones; the light
+   build renders only what exists. Out-specifies the region rules on purpose —
+   a zero-weight hide would tie with them and lose on source order. */
+[mono-textarea] :is([mono-label], [mono-message], [mono-footer], [mono-counter])[mono-empty] {
+  display: none;
+}
+
+/* =========================================
+   Sizes — EXTENSION: Basecoat sizes only the select, so the ladder is
+   --mono-control-height-* and the derivation above
+   ========================================= */
+
+[mono-textarea][mono-size="xs"] {
+  --_mono-textarea-height: var(--mono-textarea-height-xs, var(--mono-control-height-xs));
+  --_mono-textarea-padding-x: var(--mono-textarea-padding-x-xs, var(--_mono-textarea-padding-x-preset, calc(var(--mono-spacing) * 2)));
+  --_mono-textarea-font-size: var(--mono-textarea-font-xs, var(--mono-text-xs));
+  --_mono-textarea-rows: var(--mono-textarea-rows, var(--mono-textarea-rows-xs, 3));
+}
+
+[mono-textarea][mono-size="sm"] {
+  --_mono-textarea-height: var(--mono-textarea-height-sm, var(--mono-control-height-sm));
+  --_mono-textarea-padding-x: var(--mono-textarea-padding-x-sm, var(--_mono-textarea-padding-x-preset, calc(var(--mono-spacing) * 2.5)));
+  --_mono-textarea-font-size: var(--mono-textarea-font-sm, var(--mono-textarea-font-md, var(--mono-text-sm)));
+  --_mono-textarea-rows: var(--mono-textarea-rows, var(--mono-textarea-rows-sm, 3));
+}
+
+[mono-textarea][mono-size="lg"] {
+  --_mono-textarea-height: var(--mono-textarea-height-lg, var(--mono-control-height-lg));
+  --_mono-textarea-padding-x: var(--mono-textarea-padding-x-lg, var(--_mono-textarea-padding-x-preset, calc(var(--mono-spacing) * 2.5)));
+  --_mono-textarea-font-size: var(--mono-textarea-font-lg, var(--mono-textarea-font-md, var(--mono-text-sm)));
+  --_mono-textarea-rows: var(--mono-textarea-rows, var(--mono-textarea-rows-lg, 4));
+}
+
+[mono-textarea][mono-size="xl"] {
+  --_mono-textarea-height: var(--mono-textarea-height-xl, var(--mono-control-height-xl));
+  --_mono-textarea-padding-x: var(--mono-textarea-padding-x-xl, var(--_mono-textarea-padding-x-preset, calc(var(--mono-spacing) * 3)));
+  --_mono-textarea-font-size: var(--mono-textarea-font-xl, var(--mono-text-base));
+  --_mono-textarea-rows: var(--mono-textarea-rows, var(--mono-textarea-rows-xl, 5));
+}
+
+[mono-textarea][mono-size="xxl"] {
+  --_mono-textarea-height: var(--mono-textarea-height-xxl, var(--mono-control-height-xxl));
+  --_mono-textarea-padding-x: var(--mono-textarea-padding-x-xxl, var(--_mono-textarea-padding-x-preset, calc(var(--mono-spacing) * 3)));
+  --_mono-textarea-font-size: var(--mono-textarea-font-xxl, var(--mono-text-base));
+  --_mono-textarea-rows: var(--mono-textarea-rows, var(--mono-textarea-rows-xxl, 5));
+}
+
+/* =========================================
+   Colours — EXTENSION: the `color` prop is the FOCUS colour, nothing else
+   ========================================= */
+
+[mono-textarea][mono-color="secondary"] {
+  --_mono-textarea-ring-color-preset: var(--_mono-textarea-secondary);
+}
+[mono-textarea][mono-color="success"] {
+  --_mono-textarea-ring-color-preset: var(--_mono-textarea-success);
+}
+[mono-textarea][mono-color="danger"] {
+  --_mono-textarea-ring-color-preset: var(--_mono-textarea-danger);
+}
+[mono-textarea][mono-color="warning"] {
+  --_mono-textarea-ring-color-preset: var(--_mono-textarea-warning);
+}
+[mono-textarea][mono-color="info"] {
+  --_mono-textarea-ring-color-preset: var(--_mono-textarea-info);
+}
+[mono-textarea][mono-color="teal"] {
+  --_mono-textarea-ring-color-preset: var(--_mono-textarea-teal);
+}
+[mono-textarea][mono-color="purple"] {
+  --_mono-textarea-ring-color-preset: var(--_mono-textarea-purple);
+}
+[mono-textarea][mono-color="neutral"] {
+  --_mono-textarea-ring-color-preset: var(--_mono-textarea-neutral);
+}
+[mono-textarea][mono-color="dark"] {
+  --_mono-textarea-ring-color-preset: var(--_mono-textarea-dark);
+}
+
+/* =========================================
+   Label
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .field > label, .label
+   — text-sm leading-snug font-medium */
+:where([mono-textarea]) > [mono-label] {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--mono-spacing) * 1);
+  font-size: var(--mono-textarea-label-font-size, var(--mono-text-sm));
+  line-height: var(--mono-textarea-label-line-height, var(--mono-leading-snug));
+  font-weight: var(--mono-textarea-label-font-weight, var(--mono-label-font-weight, var(--mono-font-weight-medium)));
+  color: var(--mono-textarea-label-color, var(--_mono-textarea-text));
+}
+
+[mono-textarea][mono-validation-state="invalid"] > [mono-label] {
+  color: var(--mono-textarea-label-color, var(--_mono-textarea-invalid));
+}
+
+:where([mono-textarea]) [mono-required-mark] {
+  color: var(--mono-textarea-required-color, var(--destructive));
+}
+
+/* =========================================
+   The field
+   ========================================= */
+
+/* basecoat@1.0.2 components/textarea.css .field > textarea, .textarea
+   — flex field-sizing-content min-h-16 w-full outline-none
+   placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 */
+/* basecoat@1.0.2 styles/vega.css .field > textarea, .textarea
+   — rounded-md border border-input bg-transparent px-2.5 py-2 text-base md:text-sm
+   shadow-xs transition-[color,box-shadow] (dark:bg-input/30 via --mono-mode-surface);
+   mono: `--tw-ring-*` flattened to the ring + shadow slots, and the height is
+   derived from the control step rather than upstream's flat min-h-16 */
+:where([mono-textarea]) [mono-native] {
+  --_mono-textarea-ring: 0 0 #0000;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--_mono-textarea-min-height);
+  padding: var(--_mono-textarea-padding-y) var(--_mono-textarea-padding-x);
+  border: var(--_mono-textarea-border-width) solid var(--_mono-textarea-border-color);
+  border-radius: var(--_mono-textarea-radius);
+  background-color: var(--_mono-textarea-bg);
+  color: var(--_mono-textarea-text);
+  font-family: inherit;
+  font-size: var(--_mono-textarea-font-size);
+  line-height: var(--_mono-textarea-line-height);
+  resize: var(--mono-textarea-resize, vertical);
+  outline: none;
+  box-shadow: var(--_mono-textarea-ring), var(--_mono-textarea-shadow);
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+}
+
+/* Upstream grows the box with `field-sizing: content`, which has no ceiling.
+   mono's `auto-resize` is a JS height instead, BECAUSE it honours `min-rows` and
+   `max-rows` — so this rule must not hand the sizing back to the browser, or the
+   two fight over the height. All the attribute does here is drop the manual grip:
+   a box that resizes itself should not also offer one. */
+[mono-textarea][mono-auto-resize] > [mono-native] {
+  resize: var(--mono-textarea-resize, none);
+}
+
+/* placeholder:text-muted-foreground */
+:where([mono-textarea]) [mono-native]::placeholder {
+  color: var(--_mono-textarea-placeholder);
+  opacity: 1;
+}
+
+/* focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 */
+:where([mono-textarea]) [mono-native]:focus-visible,
+:where([mono-textarea]) [mono-native]:focus {
+  border-color: var(--_mono-textarea-ring-color);
+  --_mono-textarea-ring: 0 0 0 var(--_mono-textarea-ring-width) color-mix(in oklab, var(--_mono-textarea-ring-color) var(--_mono-textarea-ring-alpha), transparent);
+}
+
+/* aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20
+   (dark: /50 and /40, carried by the mode tokens) */
+[mono-textarea][mono-validation-state="invalid"] > [mono-native],
+:where([mono-textarea]) [mono-native][aria-invalid="true"] {
+  --_mono-textarea-border-color: var(--mono-mode-invalid-border);
+  --_mono-textarea-ring: 0 0 0 var(--_mono-textarea-ring-width) var(--mono-mode-invalid-ring);
+}
+
+/* EXTENSION — the same treatment in the success / warning roles */
+[mono-textarea][mono-validation-state="valid"] > [mono-native] {
+  --_mono-textarea-border-color: color-mix(in oklab, var(--_mono-textarea-valid) var(--mono-mode-state-border-alpha), transparent);
+  --_mono-textarea-ring: 0 0 0 var(--_mono-textarea-ring-width) color-mix(in oklab, var(--_mono-textarea-valid) var(--mono-mode-state-ring-alpha), transparent);
+}
+
+[mono-textarea][mono-validation-state="warning"] > [mono-native] {
+  --_mono-textarea-border-color: color-mix(in oklab, var(--_mono-textarea-warning) var(--mono-mode-state-border-alpha), transparent);
+  --_mono-textarea-ring: 0 0 0 var(--_mono-textarea-ring-width) color-mix(in oklab, var(--_mono-textarea-warning) var(--mono-mode-state-ring-alpha), transparent);
+}
+
+/* disabled:cursor-not-allowed disabled:opacity-50 */
+[mono-textarea][mono-disabled] > [mono-native],
+:where([mono-textarea]) [mono-native]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  background-color: var(--mono-textarea-disabled-bg, var(--_mono-textarea-bg));
+}
+
+/* EXTENSION — readonly is legible, not dimmed: a muted surface and no caret */
+[mono-textarea][mono-readonly] > [mono-native],
+:where([mono-textarea]) [mono-native]:read-only:not(:disabled) {
+  background-color: var(--mono-textarea-readonly-bg, var(--muted));
+  cursor: default;
+}
+
+/* =========================================
+   Variants — EXTENSION: the two other looks Basecoat's styles ship
+   ========================================= */
+
+/* `outlined` is the default and IS vega's textarea. The `--mono-textarea-outline-*`
+   knobs are how a FLAVOR restyles this variant alone: writing the shared
+   `--mono-textarea-bg` would repaint `filled` and `underlined` too (the public
+   tier out-ranks a variant's preset), which is exactly what made every style's
+   underlined textarea come out as a filled box. */
+[mono-textarea]:is(:not([mono-variant]), [mono-variant="outlined"]) {
+  --_mono-textarea-bg-preset: var(--mono-textarea-outline-bg);
+  --_mono-textarea-border-color-preset: var(--mono-textarea-outline-border-color);
+  --_mono-textarea-side-border-color-preset: var(--mono-textarea-outline-side-border-color);
+  --_mono-textarea-shadow-preset: var(--mono-textarea-outline-shadow, var(--mono-shadow-xs));
+  --_mono-textarea-radius-preset: var(--mono-textarea-outline-radius);
+  --_mono-textarea-padding-x-preset: var(--mono-textarea-outline-padding-x);
+  --_mono-textarea-ring-width-preset: var(--mono-textarea-outline-ring-width);
+}
+
+/* `filled` ≡ luma / mira / rhea's textarea: a tinted surface, no border, no shadow */
+[mono-textarea][mono-variant="filled"] {
+  --_mono-textarea-bg-preset: var(--mono-textarea-filled-bg, color-mix(in oklab, var(--input) 50%, transparent));
+  --_mono-textarea-border-color-preset: transparent;
+  --_mono-textarea-shadow-preset: 0 0 #0000;
+}
+
+/* `underlined` ≡ sera's: square, the bottom edge only, and the ring rides that
+   edge instead of wrapping the box (never `box-shadow: none` — the resting slot
+   is neutralised so a focus rule can still fill it) */
+[mono-textarea][mono-variant="underlined"] {
+  --_mono-textarea-radius-preset: 0;
+  --_mono-textarea-bg-preset: transparent;
+  /* the bottom edge keeps --_mono-textarea-border-color; only the other three
+     sides are cleared, through the side slot */
+  --_mono-textarea-side-border-color-preset: transparent;
+  --_mono-textarea-shadow-preset: 0 0 #0000;
+  --_mono-textarea-padding-x-preset: 0px;
+  --_mono-textarea-ring-width-preset: 0px;
+}
+
+[mono-textarea][mono-variant="underlined"] > [mono-native],
+[mono-textarea]:is(:not([mono-variant]), [mono-variant="outlined"]) > [mono-native] {
+  border-color: var(--_mono-textarea-side-border-color);
+  border-bottom-color: var(--_mono-textarea-border-color);
+}
+
+[mono-textarea][mono-variant="underlined"] > [mono-native]:is(:focus, :focus-visible) {
+  border-color: var(--_mono-textarea-side-border-color);
+  border-bottom-color: var(--_mono-textarea-ring-color);
+}
+
+/* =========================================
+   Footer — EXTENSION: the message row and the character counter
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .fieldset legend + p, .field > p, .field section > p
+   — text-sm text-muted-foreground leading-normal font-normal */
+:where([mono-textarea]) > [mono-footer] {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: calc(var(--mono-spacing) * 2);
+}
+
+:where([mono-textarea]) [mono-message-wrap] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+:where([mono-textarea]) [mono-message] {
+  font-size: var(--mono-textarea-message-font-size, var(--mono-text-sm));
+  line-height: var(--mono-textarea-message-line-height, var(--mono-leading-normal));
+  color: var(--_mono-textarea-muted);
+}
+
+/* .field [role='alert'] — the invalid message is the destructive one */
+:where([mono-textarea]) [mono-message="invalid"] {
+  color: var(--_mono-textarea-invalid);
+}
+
+:where([mono-textarea]) [mono-message="valid"] {
+  color: var(--_mono-textarea-valid);
+}
+
+:where([mono-textarea]) [mono-message="warning"] {
+  color: var(--_mono-textarea-warning);
+}
+
+:where([mono-textarea]) [mono-counter] {
+  flex: 0 0 auto;
+  font-size: var(--mono-textarea-counter-font-size, var(--mono-text-xs));
+  line-height: var(--mono-leading-normal);
+  font-variant-numeric: tabular-nums;
+  color: var(--_mono-textarea-muted);
+}
+
+:where([mono-textarea]) [mono-counter][mono-near] {
+  color: var(--_mono-textarea-warning);
+}
+
+:where([mono-textarea]) [mono-counter][mono-over] {
+  color: var(--_mono-textarea-invalid);
+  font-weight: var(--mono-font-weight-medium);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([mono-textarea]) [mono-native] {
+    transition: none;
+  }
+}

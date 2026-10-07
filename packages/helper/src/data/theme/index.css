@@ -1,0 +1,40 @@
+/* @mono-lit/helper theme entry.
+   The token layer is GENERATED from presets.json + vendor/basecoat/base/base.css
+   by scripts/theme-build.mjs (`pnpm theme:build`) — see generated/*.css headers.
+     tokens.css   Basecoat / shadcn tokens (oklch, :root + .dark), the Tailwind engine
+                  subset the ported rules read (--mono-*), mono's control scale, and
+                  the --mono-mode-* tokens that carry every dark-mode delta into
+                  shadow roots (selectors cannot cross that boundary; custom
+                  properties can).
+     presets.css  .theme-color-<name> light + dark blocks.
+     legacy.css   the pre-Basecoat --theme-* vocabulary, alive until 3.0 so
+                  un-ported components and consumer CSS keep rendering as before. */
+@import './generated/tokens.css';
+@import './generated/presets.css';
+@import './generated/legacy.css';
+
+/* ONE is the default flavor: its sheet applies at :root (see flavors/one.css).
+   The Basecoat styles are opt-in (ui/theme/<style>.css + class="theme-<style>"). */
+@import './flavors/one.css';
+
+/* Shared baseline for built-in default icons (i-mdi-* iconify masks). Ships
+   UNLAYERED, so it overrides preset-icons' layered 1.2em default; per-component
+   rules (e.g. .mono-date-icon > .mono-icon) override this by specificity.
+   Defaults to the `md` tier; add `.mono-icon-sm` / `.mono-icon-lg` to retier. */
+.mono-icon {
+  display: inline-block;
+  width: var(--mono-icon-md);
+  height: var(--mono-icon-md);
+  color: currentColor;
+  flex-shrink: 0;
+}
+
+.mono-icon-sm {
+  width: var(--mono-icon-sm);
+  height: var(--mono-icon-sm);
+}
+
+.mono-icon-lg {
+  width: var(--mono-icon-lg);
+  height: var(--mono-icon-lg);
+}

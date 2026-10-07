@@ -1,0 +1,451 @@
+/* @unocss-include */
+
+/* =========================================================================
+   mono-nav — the top app bar.
+
+   Basecoat ships NO nav component. basecoat-css@1.0.2 has dialog, drawer,
+   sidebar, tabs, dropdown-menu … and no header bar, so this is an EXTENSION:
+   the structure is mono's own and every VALUE is drawn from the Basecoat token
+   layer and from `.sidebar nav`, which is the other piece of app chrome and the
+   one this bar sits beside. Where a rule has an upstream counterpart it is
+   cited; everything else is ours.
+
+   Styled by ATTRIBUTE, like the rest of the port — and the attributes mirror
+   the element's props one for one, so hand-written markup reads like the Lit /
+   Vue tag:
+
+     <mono-nav density="compact" color="primary" variant="outlined" extension>
+     <header mono-nav mono-density="compact" mono-color="primary"
+             mono-variant="outlined" mono-has-extension role="banner">
+       <div mono-inner>
+         <div mono-start>…</div>
+         <div mono-center>…</div>
+         <div mono-end>…</div>
+       </div>
+       <div mono-extension>…</div>
+     </header>
+
+   An absent attribute is the prop's default (`:not([mono-density])` =
+   comfortable, `:not([mono-color])` = surface, `:not([mono-variant])` =
+   elevated). `sticky` defaults to TRUE, so it is the NEGATIVE that says
+   something: `mono-static` opts a bar out. The old classes
+   (`.mono-nav.comfortable.surface.elevated.sticky`) are still emitted as inert
+   hooks until 2.0 but no rule here reads them.
+
+   Selector map:
+     [mono-nav]            the <header> — the bar, and the var scope
+     [mono-density=…]      EXTENSION (compact / comfortable / default)
+     [mono-color=…]        EXTENSION (ten palette roles, `surface`, `custom`)
+     [mono-variant=…]      EXTENSION (elevated / flat / outlined)
+     [mono-inner]          the bar row
+     [mono-start] / [mono-center] / [mono-end]   the three regions
+     [mono-extension]      the optional second row
+
+   COLOUR. `surface` (the default) leaves the bar unpainted: it takes
+   `--sidebar` / `--sidebar-foreground` / `--sidebar-border`, exactly what
+   upstream gives the sidebar's own chrome. Every other role PAINTS the bar in
+   that role and inks it in the role's `-foreground` token, the way
+   `.btn[data-variant='primary']` does — which is what finally retires the
+   `--*-rgb` triples and the hand-rolled contrast maths the pre-port sheet
+   needed. A literal `color` ("#7c3aed") still arrives inline from the component
+   (`composables/color.ts`) as `mono-color="custom"`.
+
+   NO GRADIENTS, NO BLUR. The pre-port `surface` bar was a 96%-opaque
+   `backdrop-filter: blur(12px)` pane and `elevated` was an accent-tinted glow.
+   Both are gone: the bar is opaque and `elevated` is `--mono-shadow-sm`.
+   `--mono-nav-backdrop-filter` brings the blur back for a page that wants it.
+
+   DARK MODE comes free — every colour here resolves through a Basecoat token
+   that already flips, and the alphas are mode-independent. No `.dark` rule can
+   live in component CSS anyway: a selector crosses neither the custom-element
+   host nor the shadow boundary.
+
+   FLAVORS set `--mono-nav-{bar-height,pad-x,gap,extension-height,radius,shadow,
+   font-size,…}` (+ the per-density forms). Every fallback here is the token
+   layer's own value.
+   ========================================================================= */
+
+mono-nav {
+  display: block;
+}
+
+/* =========================================
+   Root — the bar
+   ========================================= */
+
+[mono-nav] {
+  /* ── the ten roles, each a public knob over a Basecoat token ───────────── */
+  --_mono-nav-primary: var(--mono-nav-primary, var(--primary));
+  --_mono-nav-secondary: var(--mono-nav-secondary, var(--secondary-foreground));
+  --_mono-nav-success: var(--mono-nav-success, var(--success));
+  --_mono-nav-danger: var(--mono-nav-danger, var(--destructive));
+  --_mono-nav-warning: var(--mono-nav-warning, var(--warning));
+  --_mono-nav-info: var(--mono-nav-info, var(--info));
+  --_mono-nav-teal: var(--mono-nav-teal, var(--teal));
+  --_mono-nav-purple: var(--mono-nav-purple, var(--purple));
+  --_mono-nav-neutral: var(--mono-nav-neutral, var(--neutral));
+  --_mono-nav-dark: var(--mono-nav-dark, var(--dark));
+
+  /* the colour in play — `primary` unless a [mono-color] rule re-points it */
+  --_mono-nav-accent: var(--mono-nav-accent, var(--_mono-nav-accent-preset, var(--_mono-nav-primary)));
+  /* Ink for anything painted IN the accent. Each role points this at its own
+     `-foreground` token, so a light role (warning, neutral) gets readable ink
+     without a luminance calculation; a literal colour gets one written inline
+     by the component. */
+  --_mono-nav-on-accent: var(--mono-nav-on-accent, var(--_mono-nav-on-accent-preset, var(--primary-foreground)));
+
+  /* ── the unpainted surface ───────────────────────────────────────────────
+     basecoat@1.0.2 styles/vega.css .sidebar nav — bg-sidebar text-sidebar-foreground
+     `--sidebar` IS `--card` in the token layer, so this is the card's surface
+     under the name the one piece of upstream chrome actually uses. */
+  --_mono-nav-surface: var(--mono-nav-surface, var(--sidebar));
+  /* the `outlined` variant's bottom rule — a nav idiom with no card counterpart,
+     so it takes the card's ring colour rather than inventing one */
+  --_mono-nav-border: var(--mono-nav-border, var(--_mono-nav-ring-color));
+
+  --_mono-nav-bg: var(--mono-nav-bg, var(--_mono-nav-bg-preset, var(--_mono-nav-surface)));
+  --_mono-nav-text: var(--mono-nav-text, var(--_mono-nav-text-preset, var(--sidebar-foreground)));
+  /* basecoat@1.0.2 styles/vega.css .sidebar nav h3 — text-sidebar-foreground/70 …:
+     upstream's muted chrome ink is the bar ink at 70%, not a separate token. */
+  --_mono-nav-text-soft: var(--mono-nav-text-soft, var(--_mono-nav-text-soft-preset, color-mix(in oklab, var(--_mono-nav-text) 70%, transparent)));
+  /* basecoat@1.0.2 styles/vega.css .sidebar nav [role=separator] — border-sidebar-border mx-2 */
+  --_mono-nav-border-lite: var(--mono-nav-border-lite, var(--_mono-nav-border-lite-preset, var(--sidebar-border)));
+
+  /* ── comfortable metrics live on the unqualified root ON PURPOSE ───────── */
+  --_mono-nav-height: var(--mono-nav-bar-height, var(--_mono-nav-height-preset, var(--mono-nav-bar-height-comfortable, calc(var(--mono-spacing) * 14))));
+  --_mono-nav-extension-height: var(--mono-nav-extension-height, var(--_mono-nav-extension-height-preset, var(--mono-nav-extension-height-comfortable, calc(var(--mono-spacing) * 11))));
+  /* the card's own gutter — basecoat@1.0.2 styles/vega.css .card > header — gap-1 rounded-t-xl px-6 …
+     The compact and default steps SCALE from this one, so a flavor moves all
+     three gutters by setting `--mono-nav-pad-x-comfortable` alone. */
+  --_mono-nav-pad-unit: var(--mono-nav-pad-x-comfortable, calc(var(--mono-spacing) * 6));
+  --_mono-nav-pad-x: var(--mono-nav-pad-x, var(--_mono-nav-pad-x-preset, var(--_mono-nav-pad-unit)));
+  --_mono-nav-gap: var(--mono-nav-gap, var(--_mono-nav-gap-preset, var(--mono-nav-gap-comfortable, calc(var(--mono-spacing) * 3))));
+  --_mono-nav-font: var(--mono-nav-font, var(--_mono-nav-font-preset, var(--mono-nav-font-comfortable, var(--mono-text-sm))));
+  --_mono-nav-extension-font: var(--mono-nav-extension-font, var(--_mono-nav-extension-font-preset, var(--mono-nav-extension-font-comfortable, var(--mono-text-sm))));
+
+  /* ── chrome — THE NAV IS A CARD ─────────────────────────────────────────
+     basecoat@1.0.2 styles/vega.css .card — ring-foreground/10 bg-card
+     text-card-foreground overflow-hidden rounded-xl text-sm shadow-xs ring-1 …
+
+     Basecoat has no nav, but it has a wide rectangular surface with an edge and
+     an elevation, and that is exactly what a top bar is. So the bar's chrome
+     tracks `.card` value for value — radius, ring, shadow, gutter and type —
+     and every flavor's nav delta is its CARD delta (sera square and roomy, maia
+     2xl, luma 4xl with shadow-md, mira lg, lyra square and tight, rhea 3xl).
+     Without this the eight styles all painted the same bar, which was the bug.
+
+     The ring is drawn INSIDE the border box, as card.css draws it: an outside
+     ring is the first pixel lost to any ancestor that clips, and a bar is
+     usually flush against one. A full-bleed bar that wants no edge at all sets
+     `--mono-nav-ring-width: 0`. */
+  --_mono-nav-radius: var(--mono-nav-radius, var(--mono-radius-xl));
+  --_mono-nav-ring-color: var(--mono-nav-ring-color, color-mix(in oklab, var(--foreground) 10%, transparent));
+  --_mono-nav-ring-width: var(--mono-nav-ring-width, var(--mono-border-width));
+  --_mono-nav-ring: inset 0 0 0 var(--_mono-nav-ring-width) var(--_mono-nav-ring-color);
+  --_mono-nav-shadow: var(--mono-nav-shadow, var(--mono-shadow-xs));
+  --_mono-nav-border-width: var(--mono-nav-border-width, var(--mono-border-width));
+  --_mono-nav-backdrop-filter: var(--mono-nav-backdrop-filter, none);
+  --_mono-nav-z: var(--mono-nav-z, 30);
+
+  display: block;
+  width: 100%;
+  font-family: inherit;
+  font-size: var(--_mono-nav-font);
+  color: var(--_mono-nav-text);
+  background: var(--_mono-nav-bg);
+  border-radius: var(--_mono-nav-radius);
+  border-bottom: var(--_mono-nav-border-width) solid transparent;
+  backdrop-filter: var(--_mono-nav-backdrop-filter);
+  -webkit-backdrop-filter: var(--_mono-nav-backdrop-filter);
+  z-index: var(--_mono-nav-z);
+
+  transition:
+    background-color var(--mono-duration) var(--mono-ease),
+    box-shadow var(--mono-duration) var(--mono-ease),
+    border-color var(--mono-duration) var(--mono-ease);
+}
+
+[mono-nav],
+:where([mono-nav]) *,
+:where([mono-nav]) *::before,
+:where([mono-nav]) *::after {
+  box-sizing: border-box;
+}
+
+/* =========================================
+   Density — EXTENSION: the bar's vertical rhythm
+   ========================================= */
+
+[mono-nav][mono-density="compact"] {
+  --_mono-nav-height-preset: var(--mono-nav-bar-height-compact, calc(var(--mono-spacing) * 12));
+  --_mono-nav-extension-height-preset: var(--mono-nav-extension-height-compact, calc(var(--mono-spacing) * 9));
+  --_mono-nav-pad-x-preset: var(--mono-nav-pad-x-compact, calc(var(--_mono-nav-pad-unit) * 0.6667));
+  --_mono-nav-gap-preset: var(--mono-nav-gap-compact, calc(var(--mono-spacing) * 2));
+  --_mono-nav-font-preset: var(--mono-nav-font-compact, var(--mono-text-xs));
+  --_mono-nav-extension-font-preset: var(--mono-nav-extension-font-compact, var(--mono-text-xs));
+}
+
+[mono-nav][mono-density="default"] {
+  --_mono-nav-height-preset: var(--mono-nav-bar-height-default, calc(var(--mono-spacing) * 16));
+  --_mono-nav-extension-height-preset: var(--mono-nav-extension-height-default, calc(var(--mono-spacing) * 12));
+  --_mono-nav-pad-x-preset: var(--mono-nav-pad-x-default, calc(var(--_mono-nav-pad-unit) * 1.3333));
+  --_mono-nav-gap-preset: var(--mono-nav-gap-default, calc(var(--mono-spacing) * 3.5));
+  --_mono-nav-font-preset: var(--mono-nav-font-default, var(--mono-text-base));
+  --_mono-nav-extension-font-preset: var(--mono-nav-extension-font-default, var(--mono-text-sm));
+}
+
+/* =========================================
+   Colours — EXTENSION: `surface` is the bar unpainted, every role paints it
+   ========================================= */
+
+[mono-nav][mono-color="primary"] {
+  --_mono-nav-accent-preset: var(--_mono-nav-primary);
+  --_mono-nav-on-accent-preset: var(--primary-foreground);
+}
+
+[mono-nav][mono-color="secondary"] {
+  --_mono-nav-accent-preset: var(--_mono-nav-secondary);
+  --_mono-nav-on-accent-preset: var(--secondary);
+}
+
+[mono-nav][mono-color="success"] {
+  --_mono-nav-accent-preset: var(--_mono-nav-success);
+  --_mono-nav-on-accent-preset: var(--success-foreground);
+}
+
+[mono-nav][mono-color="danger"] {
+  --_mono-nav-accent-preset: var(--_mono-nav-danger);
+  --_mono-nav-on-accent-preset: var(--destructive-foreground);
+}
+
+[mono-nav][mono-color="warning"] {
+  --_mono-nav-accent-preset: var(--_mono-nav-warning);
+  --_mono-nav-on-accent-preset: var(--warning-foreground);
+}
+
+[mono-nav][mono-color="info"] {
+  --_mono-nav-accent-preset: var(--_mono-nav-info);
+  --_mono-nav-on-accent-preset: var(--info-foreground);
+}
+
+[mono-nav][mono-color="teal"] {
+  --_mono-nav-accent-preset: var(--_mono-nav-teal);
+  --_mono-nav-on-accent-preset: var(--teal-foreground);
+}
+
+[mono-nav][mono-color="purple"] {
+  --_mono-nav-accent-preset: var(--_mono-nav-purple);
+  --_mono-nav-on-accent-preset: var(--purple-foreground);
+}
+
+[mono-nav][mono-color="neutral"] {
+  --_mono-nav-accent-preset: var(--_mono-nav-neutral);
+  --_mono-nav-on-accent-preset: var(--neutral-foreground);
+}
+
+[mono-nav][mono-color="dark"] {
+  --_mono-nav-accent-preset: var(--_mono-nav-dark);
+  --_mono-nav-on-accent-preset: var(--dark-foreground);
+}
+
+/* A painted bar takes the role as its fill and the role's `-foreground` as its
+   ink — the `.btn[data-variant='primary']` pattern, one level up. Every
+   foreground on the bar is then mixed FROM that ink rather than from a literal
+   white, so `warning` and `neutral` stay readable. `custom` is the marker for a
+   literal `color`; its accent and ink arrive inline from the component. */
+[mono-nav]:is(
+    [mono-color="primary"],
+    [mono-color="secondary"],
+    [mono-color="success"],
+    [mono-color="danger"],
+    [mono-color="warning"],
+    [mono-color="info"],
+    [mono-color="teal"],
+    [mono-color="purple"],
+    [mono-color="neutral"],
+    [mono-color="dark"],
+    [mono-color="custom"]
+  ) {
+  --_mono-nav-bg-preset: var(--_mono-nav-accent);
+  --_mono-nav-text-preset: var(--_mono-nav-on-accent);
+  --_mono-nav-text-soft-preset: color-mix(in oklab, var(--_mono-nav-on-accent) 70%, transparent);
+  --_mono-nav-border-lite-preset: color-mix(in oklab, var(--_mono-nav-on-accent) 20%, transparent);
+}
+
+/* =========================================
+   Variants
+   ========================================= */
+
+/* `elevated` is the default, so the unqualified root carries it — and it is the
+   card exactly: the inset ring AND the elevation, in that order. */
+[mono-nav]:is(:not([mono-variant]), [mono-variant="elevated"]) {
+  box-shadow: var(--_mono-nav-ring), var(--_mono-nav-shadow);
+}
+
+/* `flat` drops both. */
+[mono-nav][mono-variant="flat"] {
+  box-shadow: none;
+  border-bottom-color: transparent;
+}
+
+/* `outlined` trades the elevation for a bottom rule — the nav idiom, and the
+   one piece of its chrome the card has no counterpart for. The ring stays, so
+   an outlined bar still reads as the same surface. */
+[mono-nav][mono-variant="outlined"] {
+  box-shadow: var(--_mono-nav-ring);
+  border-bottom-color: var(--_mono-nav-border);
+}
+
+/* =========================================
+   Sticky
+   -----------------------------------------------------------------------------
+   `sticky` is ON by default, so the attribute that says something is the
+   negative. In the light build the host `<mono-nav>` is what sits in the parent
+   layout flow and the inner `<header>` only fills it, so the host is what has to
+   stick — a sticky inner header has no scroll distance inside a host that
+   shrink-wraps it (which is also why leaving the rule on both is harmless). In
+   hand-written markup the `<header>` IS the element in flow, and the same rule
+   does the work.
+
+   The host reflects the prop (`converter` empty-attr === true, missing ===
+   false), so `[sticky]` is the right selector there.
+   ========================================= */
+
+mono-nav[sticky],
+[mono-nav]:not([mono-static]) {
+  position: sticky;
+  top: 0;
+  z-index: var(--mono-nav-z, 30);
+}
+
+[mono-nav][mono-static] {
+  position: static;
+}
+
+/* =========================================
+   The bar row
+   ========================================= */
+
+:where([mono-nav]) > [mono-inner] {
+  display: flex;
+  align-items: center;
+  gap: var(--_mono-nav-gap);
+  padding: 0 var(--_mono-nav-pad-x);
+  height: var(--_mono-nav-height);
+  min-height: var(--_mono-nav-height);
+  width: 100%;
+}
+
+:where([mono-nav] > [mono-inner]) > [mono-start] {
+  display: flex;
+  align-items: center;
+  gap: var(--_mono-nav-gap);
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+:where([mono-nav] > [mono-inner]) > [mono-center] {
+  display: flex;
+  align-items: center;
+  gap: var(--_mono-nav-gap);
+  flex: 1;
+  min-width: 0;
+}
+
+/* `margin-left: auto` keeps the end region at the trailing edge even when the
+   center is empty and collapsed. */
+:where([mono-nav] > [mono-inner]) > [mono-end] {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--_mono-nav-gap) * 0.7);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* An empty region is NOT hidden.
+
+   `:empty` cannot see across a shadow boundary: in the shadow build each region
+   holds a <slot> ELEMENT, so the region is never `:empty` whether or not anything
+   is assigned to it, and a <slot>'s own children are its fallback content rather
+   than the assigned nodes — there is no selector for "nothing was slotted here".
+   The light build WAS `:empty` in that case, so a bar with no center content laid
+   out with one flex gap in the light build and two in the shadow one: 12px apart
+   at max-content width, which is what a shrink-to-fit demo shows.
+
+   Leaving every region in place is what makes the two builds agree. It costs
+   nothing at a normal full-width bar — the center is `flex: 1` and eats the slack
+   either way, and the end region is pinned by its own `margin-left: auto`. */
+
+/* =========================================
+   Extension row
+   ========================================= */
+
+:where([mono-nav]) > [mono-extension] {
+  display: flex;
+  align-items: center;
+  gap: var(--_mono-nav-gap);
+  padding: 0 var(--_mono-nav-pad-x);
+  min-height: var(--_mono-nav-extension-height);
+  border-top: var(--_mono-nav-border-width) solid var(--_mono-nav-border-lite);
+  font-size: var(--_mono-nav-extension-font);
+}
+
+/* The element always renders the row so its slot target is stable; the root
+   attribute is what turns it on. Hand-written markup that simply omits the row
+   needs neither. */
+[mono-nav]:not([mono-has-extension]) > [mono-extension] {
+  display: none;
+}
+
+/* A slotted control inherits the bar's face, not the UA's. */
+[mono-nav] :is(button, input, select, textarea) {
+  font-family: inherit;
+}
+
+/* =========================================
+   Responsive — a wide bar steps down a density on a narrow screen
+   ========================================= */
+
+@media (max-width: 639.98px) {
+  [mono-nav][mono-density="default"] {
+    --_mono-nav-height-preset: calc(var(--mono-spacing) * 14);
+    --_mono-nav-pad-x-preset: calc(var(--mono-spacing) * 4);
+    --_mono-nav-gap-preset: calc(var(--mono-spacing) * 2.5);
+  }
+
+  [mono-nav]:not([mono-density]) {
+    --_mono-nav-height-preset: calc(var(--mono-spacing) * 12);
+    --_mono-nav-pad-x-preset: calc(var(--mono-spacing) * 3.5);
+    --_mono-nav-gap-preset: calc(var(--mono-spacing) * 2);
+  }
+}
+
+/* =========================================
+   Layout helper
+   -----------------------------------------------------------------------------
+   Consumers wrap their main content in this to pad around the nav (and the
+   sidebar). The vars are written on `:root` by mono-nav and mono-sidebar
+   themselves. Kept as a CLASS — it is a consumer-applied utility, not a part of
+   this component — with the attribute form accepted for markup that would
+   rather stay attributes all the way down.
+   ========================================= */
+
+.mono-layout-content,
+[mono-layout-content] {
+  padding-top: var(--mono-nav-height, 0);
+  padding-left: var(--mono-sidebar-left-width, 0);
+  padding-right: var(--mono-sidebar-right-width, 0);
+  min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
+}
+
+/* =========================================
+   Reduced motion
+   ========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  [mono-nav] {
+    transition: none;
+  }
+}

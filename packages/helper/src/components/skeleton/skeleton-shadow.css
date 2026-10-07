@@ -1,0 +1,194 @@
+/*
+ * Shadow-only companion of skeleton.css (appended by `toShadowCss()`, never in the
+ * global sheet).
+ *
+ * phantom-ui hides the content it measures with ONE stylesheet it injects into
+ * `document.head` (`#phantom-ui-loading-styles`: text made transparent, media and
+ * buttons faded, pointer events off). A `<phantom-ui>` rendered INSIDE a shadow root
+ * cannot be reached by that sheet, so a shadow element with a manual `pending` would
+ * shimmer over still-visible text. These are the same rules (phantom ships them as its
+ * `ssr.css` too), scoped to our wrapper, so the shadow build hides what the light build
+ * hides.
+ */
+
+phantom-ui[mono-skeleton][loading]:not([mode="overlay"]) * {
+  -webkit-text-fill-color: transparent !important;
+  pointer-events: none;
+  user-select: none;
+}
+
+phantom-ui[mono-skeleton][loading]:not([mode="overlay"]) :is(img, svg, video, canvas, button, [role="button"]) {
+  opacity: 0 !important;
+}
+
+phantom-ui[mono-skeleton][loading]:not([mode="overlay"]) [data-shimmer-ignore],
+phantom-ui[mono-skeleton][loading]:not([mode="overlay"]) [data-shimmer-ignore] * {
+  -webkit-text-fill-color: initial !important;
+  pointer-events: auto;
+  user-select: auto;
+}
+
+phantom-ui[mono-skeleton][loading]:not([mode="overlay"]) [data-shimmer-ignore] :is(img, svg, video, canvas, button, [role="button"]) {
+  opacity: 1 !important;
+}
+
+/* The `mono-pending` attribute on a SHADOW host. The global sheet's `[mono-pending]` rules do
+   not reach a host from inside its own root, so the same paint is restated as `:host(...)`.
+   `[pending]` (the prop's own attribute, present in server HTML) counts too, so a
+   server-rendered `<mono-shadow-x pending>` is a skeleton before hydration. */
+:host([mono-pending]:not([mono-pending="false"]):not([mono-pending-covered])),
+:host([pending]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered])) {
+  /* phantom-ui's three knobs, resolved from the SAME mono tokens the wrapper above
+     hands to phantom — so this paint and phantom's measured blocks are literally the
+     same colours, the same gradient and the same clock. */
+  --shimmer-bg: var(--mono-skeleton-bg, var(--mono-mode-surface-hover, var(--muted)));
+  --shimmer-color: var(
+    --mono-skeleton-color,
+    color-mix(in oklab, var(--mono-mode-surface-strong, var(--foreground)) 22%, transparent)
+  );
+  --shimmer-duration: var(--mono-skeleton-duration, 1.5s);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: var(--mono-skeleton-radius, 4px);
+  pointer-events: none;
+  user-select: none;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  caret-color: transparent;
+}
+
+:host([mono-pending]:not([mono-pending-mode="overlay"]):not([mono-pending="false"]):not([mono-pending-covered])),
+:host([pending]:not([mono-pending-mode="overlay"]):not([pending="false"]):not([pending="auto"]):not([mono-pending-covered])) {
+  background: var(--shimmer-bg);
+  background-clip: padding-box;
+}
+
+:host([mono-pending]:not([mono-pending-mode="overlay"]):not([mono-pending="false"]):not([mono-pending-covered])) > *,
+:host([mono-pending]:not([mono-pending-mode="overlay"]):not([mono-pending="false"]):not([mono-pending-covered])) slot,
+:host([pending]:not([mono-pending-mode="overlay"]):not([pending="false"]):not([pending="auto"]):not([mono-pending-covered])) > *,
+:host([pending]:not([mono-pending-mode="overlay"]):not([pending="false"]):not([pending="auto"]):not([mono-pending-covered])) slot {
+  visibility: hidden;
+}
+/* The `slot` selectors cover SLOTTED content (a sidebar's menu list, a modal's body):
+   `:host(...) > *` reaches only the shadow root's own children, and `:host(...)::slotted(*)`
+   — the obvious spelling — is INVALID in Chrome (the `:host()` + `::slotted()` combination
+   matches nothing; verified against 1234). Hiding the SLOT itself works: visibility follows
+   the FLAT tree, so everything the slot renders — slotted nodes and fallback alike — hides. */
+
+:host([mono-pending][mono-pending-mode="overlay"]:not([mono-pending="false"]):not([mono-pending-covered])),
+:host([pending][mono-pending-mode="overlay"]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered])) {
+  --shimmer-bg: transparent;
+  -webkit-text-fill-color: initial !important;
+  color: inherit !important;
+}
+
+:host([mono-pending][mono-pending-mode="overlay"]:not([mono-pending="false"]):not([mono-pending-covered])) > *,
+:host([mono-pending][mono-pending-mode="overlay"]:not([mono-pending="false"]):not([mono-pending-covered])) slot,
+:host([pending][mono-pending-mode="overlay"]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered])) > *,
+:host([pending][mono-pending-mode="overlay"]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered])) slot {
+  opacity: var(--phantom-content-opacity, 0.5);
+  transition: opacity 0.2s ease-out;
+}
+
+:host([mono-pending]:not([mono-pending="false"]):not([mono-pending-covered]))::after,
+:host([pending]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered]))::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--shimmer-bg) 30%,
+    var(--shimmer-color) 50%,
+    var(--shimmer-bg) 70%
+  );
+  background-size: 200% 100%;
+  animation: mono-shimmer-horizontal var(--shimmer-duration) linear infinite;
+}
+
+:host([mono-pending][mono-pending-animation="pulse"]:not([mono-pending="false"]):not([mono-pending-covered])),
+:host([pending][mono-pending-animation="pulse"]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered])) {
+  animation: mono-phantom-pulse var(--shimmer-duration) ease-in-out infinite;
+}
+
+:host([mono-pending][mono-pending-animation="breathe"]:not([mono-pending="false"]):not([mono-pending-covered])),
+:host([pending][mono-pending-animation="breathe"]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered])) {
+  animation: mono-phantom-breathe var(--shimmer-duration) ease-in-out infinite;
+}
+
+:host([mono-pending][mono-pending-animation="pulse"]:not([mono-pending="false"]):not([mono-pending-covered]))::after,
+:host([pending][mono-pending-animation="pulse"]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered]))::after,
+:host([mono-pending][mono-pending-animation="breathe"]:not([mono-pending="false"]):not([mono-pending-covered]))::after,
+:host([pending][mono-pending-animation="breathe"]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered]))::after,
+:host([mono-pending][mono-pending-animation="solid"]:not([mono-pending="false"]):not([mono-pending-covered]))::after,
+:host([pending][mono-pending-animation="solid"]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered]))::after {
+  display: none;
+}
+
+:host([mono-pending][mono-pending-mode="overlay"][mono-pending-animation="pulse"]:not([mono-pending="false"]):not([mono-pending-covered])),
+:host([pending][mono-pending-mode="overlay"][mono-pending-animation="pulse"]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered])),
+:host([mono-pending][mono-pending-mode="overlay"][mono-pending-animation="breathe"]:not([mono-pending="false"]):not([mono-pending-covered])),
+:host([pending][mono-pending-mode="overlay"][mono-pending-animation="breathe"]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered])) {
+  animation: none;
+}
+
+:host([mono-pending][mono-pending-mode="overlay"][mono-pending-animation="pulse"]:not([mono-pending="false"]):not([mono-pending-covered]))::after,
+:host([pending][mono-pending-mode="overlay"][mono-pending-animation="pulse"]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered]))::after,
+:host([mono-pending][mono-pending-mode="overlay"][mono-pending-animation="breathe"]:not([mono-pending="false"]):not([mono-pending-covered]))::after,
+:host([pending][mono-pending-mode="overlay"][mono-pending-animation="breathe"]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered]))::after,
+:host([mono-pending][mono-pending-mode="overlay"][mono-pending-animation="solid"]:not([mono-pending="false"]):not([mono-pending-covered]))::after,
+:host([pending][mono-pending-mode="overlay"][mono-pending-animation="solid"]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered]))::after {
+  display: block;
+  animation: none;
+  background: var(--shimmer-color);
+}
+
+:host([mono-pending][mono-pending-mode="overlay"][mono-pending-animation="pulse"]:not([mono-pending="false"]):not([mono-pending-covered]))::after,
+:host([pending][mono-pending-mode="overlay"][mono-pending-animation="pulse"]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered]))::after {
+  animation: mono-phantom-pulse var(--shimmer-duration) ease-in-out infinite;
+}
+
+:host([mono-pending][mono-pending-mode="overlay"][mono-pending-animation="breathe"]:not([mono-pending="false"]):not([mono-pending-covered]))::after,
+:host([pending][mono-pending-mode="overlay"][mono-pending-animation="breathe"]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered]))::after {
+  animation: mono-phantom-breathe var(--shimmer-duration) ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host([mono-pending]:not([mono-pending="false"]):not([mono-pending-covered])),
+  :host([pending]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered])),
+  :host([mono-pending]:not([mono-pending="false"]):not([mono-pending-covered]))::after,
+  :host([pending]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered]))::after {
+    animation: none;
+  }
+
+  :host([mono-pending]:not([mono-pending-mode="overlay"]):not([mono-pending="false"]):not([mono-pending-covered]))::after,
+  :host([pending]:not([mono-pending-mode="overlay"]):not([pending="false"]):not([pending="auto"]):not([mono-pending-covered]))::after {
+    display: none;
+  }
+
+  :host([mono-pending][mono-pending-mode="overlay"]:not([mono-pending="false"]):not([mono-pending-covered]))::after,
+  :host([pending][mono-pending-mode="overlay"]:not([pending="false"]):not([pending="auto"]):not([mono-pending-covered]))::after {
+    display: block;
+    background: var(--shimmer-color);
+  }
+}
+
+/* The keyframes are per root: a shadow sheet cannot see the global sheet's. Same
+   definitions as skeleton.css (phantom-ui's `shimmer-horizontal` / `phantom-pulse` /
+   `phantom-breathe`). */
+@keyframes mono-shimmer-horizontal {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes mono-phantom-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes mono-phantom-breathe {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.02); }
+}

@@ -1,0 +1,195 @@
+/* ============================================================
+   Basecoat "nova" style (basecoat-css@1.0.2 styles/nova.css) as a
+   @mono-lit/helper flavor.  Compact, rounded-lg.
+
+   Basecoat is the source of truth. A style never touches tokens or fonts —
+   it is a per-component set of metrics — so everything here is a knob a
+   ported component reads, inherited through the shadow boundary. Vega is
+   the default (its values are baked into the component CSS as fallbacks);
+   this sheet is nova's DELTA against vega, read off
+   `node scripts/basecoat-styles.mjs --varying "<selector>"`.
+
+   Deltas: one step shorter ladder (h-7 / h-8 / h-9), rounded-lg controls with looser xs/sm clamps, a 0.8rem sm label, no shadow on the outline surface.
+
+   Usage:  import "@mono-lit/helper/ui/theme/nova.css"  then add
+           class="theme-nova" on <html> (or any ancestor). Composes with a
+           .theme-color-* preset; dark mode follows html.dark as usual.
+
+   Ported components carried here: button, input, select, date, tag-input, checkbox, radio, switch, card, textarea, file-upload, chip, dropdown, button-dropdown, accordion, tabs, modal, drawer, nav, breadcrumb, menu, sidebar, table.
+   Every component is ported. dropdown-table, filter and rich-text-editor are
+   EXTENSIONS that read the ported components' public knobs (tag-input's, input's,
+   button's, textarea's, the select panel's) and carry nothing here on purpose;
+   chart reads the page tokens (--chart-1…5, --border, --foreground, --popover) directly.
+   ============================================================ */
+
+.theme-nova {
+  /* control ladder — .btn / .input / .select: sm h-7, default h-8, lg h-9 (xl/xxl continue the grid) */
+  --mono-control-height-xs: 1.5rem;
+  --mono-control-height-sm: 1.75rem;
+  --mono-control-height-md: 2rem;
+  --mono-control-height-lg: 2.25rem;
+  --mono-control-height-xl: 2.5rem;
+  --mono-control-height-xxl: 2.75rem;
+
+  /* button — .btn rounded-lg; xs rounded-[min(var(--radius-md),10px)]; sm h-7 text-[0.8rem]
+     rounded-[min(var(--radius-md),12px)] svg size-3.5; outline: no shadow-xs */
+  --mono-button-md-radius: var(--mono-radius-lg);
+  --mono-button-xs-radius: min(var(--mono-radius-md), 10px);
+  --mono-button-sm-radius: min(var(--mono-radius-md), 12px);
+  --mono-button-sm-font-size: 0.8rem;
+  --mono-button-sm-icon-size: 0.875rem;
+  --mono-button-outline-shadow: 0 0 #0000;
+
+  /* input — .input-group h-8 rounded-lg, no shadow-xs, disabled:bg-input/50
+     (dark:bg-input/80); .field gap-2; the affix icon button rounded-[calc(var(--radius)-3px)] */
+  --mono-input-outline-radius: var(--mono-radius-lg);
+  --mono-input-outline-shadow: 0 0 #0000;
+  --mono-input-disabled-bg: color-mix(in oklab, var(--input) 50%, transparent);
+  --mono-input-gap: calc(var(--mono-spacing) * 2);
+  --mono-input-clear-radius: calc(var(--radius) - 3px);
+
+  /* select — .select > button h-8 rounded-lg (sm rounded-[min(var(--radius-md),10px)]),
+     no shadow-xs; [data-popover] rounded-lg; [role=option] gap-1.5 rounded-md py-1 ps-1.5;
+     [role=heading] px-1.5 py-1; .field gap-2 */
+  --mono-select-outline-radius: var(--mono-radius-lg);
+  --mono-select-radius-sm: min(var(--mono-radius-md), 10px);
+  --mono-select-outline-shadow: 0 0 #0000;
+  --mono-select-gap: calc(var(--mono-spacing) * 2);
+  --mono-select-dropdown-radius: var(--mono-radius-lg);
+  --mono-select-option-radius: var(--mono-radius-md);
+  --mono-select-option-gap: calc(var(--mono-spacing) * 1.5);
+  --mono-select-option-padding-y: var(--mono-spacing);
+  --mono-select-option-padding-x: calc(var(--mono-spacing) * 1.5);
+  --mono-select-group-padding-x: calc(var(--mono-spacing) * 1.5);
+  --mono-select-group-padding-y: var(--mono-spacing);
+  --mono-select-clear-radius: calc(var(--radius) - 3px);
+
+  /* date — the input's box (see above) + [data-popover] rounded-lg for the calendar */
+  --mono-date-outline-radius: var(--mono-radius-lg);
+  --mono-date-outline-shadow: 0 0 #0000;
+  --mono-date-disabled-bg: color-mix(in oklab, var(--input) 50%, transparent);
+  --mono-date-gap: calc(var(--mono-spacing) * 2);
+  --mono-date-clear-radius: calc(var(--radius) - 3px);
+  --mono-date-calendar-radius: var(--mono-radius-lg);
+
+  /* tag-input — .combobox-chips min-h-8 gap-1 rounded-lg px-1 py-1, no shadow-xs;
+     .combobox-chip h-5.25; [data-popover] rounded-lg; options as the select's */
+  --mono-tag-input-outline-radius: var(--mono-radius-lg);
+  --mono-tag-input-outline-shadow: 0 0 #0000;
+  --mono-tag-input-chip-gap: var(--mono-spacing);
+  --mono-tag-input-padding-x: var(--mono-spacing);
+  --mono-tag-input-padding-y: var(--mono-spacing);
+  --mono-tag-input-chip-height-md: calc(var(--mono-spacing) * 5.25);
+  --mono-tag-input-gap: calc(var(--mono-spacing) * 2);
+  --mono-tag-input-dropdown-radius: var(--mono-radius-lg);
+  --mono-tag-input-option-radius: var(--mono-radius-md);
+  --mono-tag-input-option-gap: calc(var(--mono-spacing) * 1.5);
+  --mono-tag-input-option-padding-y: var(--mono-spacing);
+  --mono-tag-input-option-padding-x: calc(var(--mono-spacing) * 1.5);
+  --mono-tag-input-clear-radius: calc(var(--radius) - 3px);
+
+  /* checkbox — .input[type='checkbox'] transition-colors, no shadow-xs */
+  --mono-checkbox-shadow: 0 0 #0000;
+
+  /* switch — [role='switch'] no shadow-xs */
+  --mono-switch-shadow: 0 0 #0000;
+
+  /* alert — .alert px-2.5 py-2 has-[>svg]:gap-x-2 (sizes scale from md) */
+  --mono-alert-padding-x: calc(var(--mono-spacing) * 2.5);
+  --mono-alert-padding-y: calc(var(--mono-spacing) * 2);
+  --mono-alert-icon-gap: calc(var(--mono-spacing) * 2);
+  /* card — .card gap-4 py-4 (px-4), no shadow-xs, title leading-snug */
+  --mono-card-padding-md: calc(var(--mono-spacing) * 4);
+  --mono-card-gap-md: calc(var(--mono-spacing) * 4);
+  --mono-card-padding-sm: calc(var(--mono-spacing) * 3);
+  --mono-card-gap-sm: calc(var(--mono-spacing) * 3);
+  --mono-card-shadow: 0 0 #0000;
+
+  /* textarea — .textarea rounded-lg, no shadow-xs, disabled:bg-input/50 */
+  --mono-textarea-outline-radius: var(--mono-radius-lg);
+  --mono-textarea-outline-shadow: 0 0 #0000;
+  --mono-textarea-disabled-bg: color-mix(in oklab, var(--input) 50%, transparent);
+
+  /* file-upload — .empty rounded-xl p-6 with a size-8 figure (size-4 glyph) and a
+     text-sm heading; .item rounded-lg */
+  --mono-file-upload-radius: var(--mono-radius-xl);
+  --mono-file-upload-dropzone-padding: calc(var(--mono-spacing) * 6);
+  --mono-file-upload-icon-size: calc(var(--mono-spacing) * 8);
+  --mono-file-upload-icon-glyph-size: calc(var(--mono-spacing) * 4);
+  --mono-file-upload-title-font-size: var(--mono-text-sm);
+  --mono-file-upload-title-line-height: var(--mono-leading-snug);
+  --mono-file-upload-item-radius: var(--mono-radius-lg);
+
+  /* card — .card gap-4 py-4 (px-4), no shadow-xs, title leading-snug */
+  --mono-card-padding-md: calc(var(--mono-spacing) * 4);
+  --mono-card-gap-md: calc(var(--mono-spacing) * 4);
+  --mono-card-padding-sm: calc(var(--mono-spacing) * 3);
+  --mono-card-gap-sm: calc(var(--mono-spacing) * 3);
+  --mono-card-shadow: 0 0 #0000;
+
+  /* dropdown — [data-popover] gap-2.5 rounded-lg p-2.5 */
+  --mono-dropdown-radius-md: var(--mono-radius-lg);
+  --mono-dropdown-pad-x-md: calc(var(--mono-spacing) * 2.5);
+  --mono-dropdown-pad-y-md: calc(var(--mono-spacing) * 2.5);
+  --mono-dropdown-gap-md: calc(var(--mono-spacing) * 2.5);
+  /* button-dropdown — .dropdown-menu > [data-popover] rounded-lg;
+     [role='menuitem'] gap-1.5 rounded-md px-1.5 py-1 */
+  --mono-button-dropdown-radius-md: var(--mono-radius-lg);
+  --mono-button-dropdown-item-radius: var(--mono-radius-md);
+  /* accordion — summary rounded-lg py-2.5; body pb-2.5 */
+  --mono-accordion-radius-md: var(--mono-radius-lg);
+  --mono-accordion-pad-y-md: calc(var(--mono-spacing) * 2.5);
+  /* the rest of the vertical ladder around that tighter md (the component's own
+     sm, py-3, would be taller than this md) */
+  --mono-accordion-pad-y-xs: calc(var(--mono-spacing) * 1.5);
+  --mono-accordion-pad-y-sm: calc(var(--mono-spacing) * 2);
+  --mono-accordion-pad-y-lg: calc(var(--mono-spacing) * 3.5);
+  --mono-accordion-pad-y-xl: calc(var(--mono-spacing) * 4);
+  --mono-accordion-pad-y-xxl: calc(var(--mono-spacing) * 4.5);
+  /* tabs — tablist h-8; tab px-1.5 py-0.5; icon side ps-1/pe-1 */
+  --mono-tabs-height-md: var(--mono-control-height-sm);
+  --mono-tabs-tab-pad-x-md: calc(var(--mono-spacing) * 1.5);
+  --mono-tabs-tab-pad-y-md: calc(var(--mono-spacing) * 0.5);
+  --mono-tabs-tab-icon-pad: var(--mono-spacing);
+  /* modal — .dialog > * gap-4 p-4 sm:max-w-sm; h2 text-base; footer is a BAR
+     (bg-muted/50 -mx-4 -mb-4 rounded-b-xl border-t p-4) */
+  --mono-modal-pad-md: calc(var(--mono-spacing) * 4);
+  --mono-modal-gap-md: calc(var(--mono-spacing) * 4);
+  --mono-modal-width: min(calc(100% - 2rem), var(--mono-container-sm));
+  --mono-modal-title-font-md: var(--mono-text-base);
+  --mono-modal-footer-bg: color-mix(in oklab, var(--muted) 50%, transparent);
+  --mono-modal-footer-border: var(--border);
+  --mono-modal-footer-border-width: var(--mono-border-width);
+  --mono-modal-footer-pad: calc(var(--mono-spacing) * 4);
+  --mono-modal-footer-margin: 0 calc(var(--mono-spacing) * -4) calc(var(--mono-spacing) * -4);
+  --mono-modal-footer-radius: var(--mono-radius-xl);
+  /* drawer — the panel, the backdrop and the sides are all vega; only the
+     header loses its `md:` step (gap-0.5 at every width) */
+  --mono-drawer-header-gap-md: calc(var(--mono-spacing) * 0.5);
+  /* nav — EXTENSION, and the nav IS a card (see nav.css): nova's card drops
+     the shadow and tightens to p-4, so its bar does the same */
+  --mono-nav-shadow: 0 0 #0000;
+  --mono-nav-pad-x-comfortable: calc(var(--mono-spacing) * 4);
+  --mono-nav-bar-height-comfortable: calc(var(--mono-spacing) * 12);
+  --mono-nav-extension-height-comfortable: calc(var(--mono-spacing) * 9);
+  --mono-nav-gap-comfortable: calc(var(--mono-spacing) * 2.5);
+  /* breadcrumb — .breadcrumb > ol drops the sm: step (gap-1.5 at every width)
+     and li goes gap-1; nova's chrome label and badge are both vega's */
+  --mono-breadcrumb-gap-wide-md: calc(var(--mono-spacing) * 1.5);
+  --mono-breadcrumb-gap-md: var(--mono-spacing);
+  /* menu — .sidebar nav > section > [role=group] > ul gap-0, > section gap-0 */
+  --mono-menu-gap-comfortable: 0px;
+  /* sidebar — nova flattens the shell's own gap too */
+  --mono-sidebar-gap-comfortable: 0px;
+  /* table — nova flattens the frame, as it does every other surface */
+  --mono-table-radius: 0;
+  /* [data-popover] — the portaled filter / menu / suggestion panels */
+  --mono-table-panel-radius: var(--mono-radius-lg);
+}
+
+/* dark: the same knobs, Basecoat's dark: twins */
+:is(html, body, .mono-theme).dark .theme-nova,
+.theme-nova:is(html, body, .mono-theme).dark {
+  --mono-input-disabled-bg: color-mix(in oklab, var(--input) 80%, transparent);
+  --mono-date-disabled-bg: color-mix(in oklab, var(--input) 80%, transparent);
+}

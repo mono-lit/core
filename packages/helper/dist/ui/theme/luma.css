@@ -1,0 +1,743 @@
+/* ============================================================
+   The vega base — prepended to every Basecoat-style flavor at build time
+   (vite.config.ts `mono-emit-flavor-themes` replaces `luma` with the
+   flavor's name; `ui/theme/vega.css` is this block alone).
+
+   ONE is @mono-lit/helper's DEFAULT flavor: `flavors/one.css` is imported by
+   index.css on `:root`, so its font, radius ladder, shadows and ring are what
+   a page starts with. A Basecoat style is a delta against vega, so before a
+   style's own knobs apply, this resets everything ONE changed back to
+   Basecoat's vega values (the same values the component CSS uses as
+   fallbacks). Not a source of truth — every value here is vega's, as
+   generated in src/data/theme/generated/tokens.css.
+   ============================================================ */
+.theme-luma {
+  font-family: var(--font-sans);
+  /* vega's own family; an imported font sheet (@mono-lit/helper/ui/font/*.css) sets
+     --mono-font-sans on :root and wins here, whichever theme is active */
+  --font-sans: var(--mono-font-sans, "Geist Sans", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");
+
+  --radius: 0.625rem;
+  --mono-radius-sm: calc(var(--radius) - 4px);
+  --mono-radius-md: calc(var(--radius) - 2px);
+  --mono-radius-lg: var(--radius);
+  --mono-radius-xl: calc(var(--radius) + 4px);
+  --mono-radius-2xl: 1rem;
+
+  --mono-shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --mono-shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --mono-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --mono-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --mono-shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+  --mono-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --mono-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --mono-duration: 150ms;
+  --mono-duration-fast: 100ms;
+  --mono-duration-slow: 200ms;
+
+  --mono-font-weight-normal: 400;
+  --mono-font-weight-medium: 500;
+  --mono-font-weight-semibold: 600;
+  --mono-font-weight-bold: 700;
+  --mono-label-font-weight: 500;
+  --mono-title-font-weight: 500;
+
+  --mono-border-width: 1px;
+  --mono-ring-width: 3px;
+  --mono-ring-alpha: 50%;
+  --mono-ring-color: color-mix(in oklab, var(--ring) var(--mono-ring-alpha), transparent);
+
+  /* ONE's public component knobs, neutralised: `initial` makes a custom
+     property guaranteed-invalid, so the component's own var() fallback — the
+     vega value — applies. Add a line here for every knob one.css sets. */
+  --mono-button-font-weight: initial;
+  --mono-button-text-transform: initial;
+  --mono-button-letter-spacing: initial;
+  --mono-button-md-radius: initial;
+  --mono-button-xs-radius: initial;
+  --mono-button-sm-radius: initial;
+  --mono-button-md-padding-inline: initial;
+  --mono-button-md-icon-padding: initial;
+  --mono-button-sm-padding-inline: initial;
+  --mono-button-sm-icon-padding: initial;
+  --mono-button-lg-padding-inline: initial;
+  --mono-button-lg-icon-padding: initial;
+  --mono-button-outline-shadow: initial;
+
+  /* dropdown-font */
+  --mono-dropdown-font-lg: initial;
+  --mono-dropdown-font-md: initial;
+  --mono-dropdown-font-sm: initial;
+  --mono-dropdown-font-xl: initial;
+  --mono-dropdown-font-xs: initial;
+  --mono-dropdown-font-xxl: initial;
+
+  /* dropdown-max */
+  --mono-dropdown-max-width-lg: initial;
+  --mono-dropdown-max-width-md: initial;
+  --mono-dropdown-max-width-sm: initial;
+  --mono-dropdown-max-width-xl: initial;
+  --mono-dropdown-max-width-xs: initial;
+  --mono-dropdown-max-width-xxl: initial;
+
+  /* dropdown-min */
+  --mono-dropdown-min-width-lg: initial;
+  --mono-dropdown-min-width-md: initial;
+  --mono-dropdown-min-width-sm: initial;
+  --mono-dropdown-min-width-xl: initial;
+  --mono-dropdown-min-width-xs: initial;
+  --mono-dropdown-min-width-xxl: initial;
+
+  /* dropdown-pad */
+  --mono-dropdown-pad-x-lg: initial;
+  --mono-dropdown-pad-x-md: initial;
+  --mono-dropdown-pad-x-sm: initial;
+  --mono-dropdown-pad-x-xl: initial;
+  --mono-dropdown-pad-x-xs: initial;
+  --mono-dropdown-pad-x-xxl: initial;
+  --mono-dropdown-pad-y-lg: initial;
+  --mono-dropdown-pad-y-md: initial;
+  --mono-dropdown-pad-y-sm: initial;
+  --mono-dropdown-pad-y-xl: initial;
+  --mono-dropdown-pad-y-xs: initial;
+  --mono-dropdown-pad-y-xxl: initial;
+
+  /* dropdown-radius */
+  --mono-dropdown-radius: initial;
+
+  /* dropdown-shadow */
+  --mono-dropdown-shadow: initial;
+
+  /* modal */
+  --mono-modal-body-font-md: initial;
+  --mono-modal-body-line-height: initial;
+  --mono-modal-close-glyph: initial;
+  --mono-modal-close-size-md: initial;
+  --mono-modal-footer-gap-md: initial;
+  --mono-modal-gap-md: initial;
+  --mono-modal-header-gap-md: initial;
+  --mono-modal-overlay-backdrop-filter: initial;
+  --mono-modal-overlay-bg: initial;
+  --mono-modal-pad-md: initial;
+  --mono-modal-radius: initial;
+  --mono-modal-shadow: initial;
+  --mono-modal-title-font-md: initial;
+  --mono-modal-title-weight: initial;
+  --mono-modal-width: initial;
+
+  /* drawer */
+  --mono-drawer-body-font-md: initial;
+  --mono-drawer-body-line-height: initial;
+  --mono-drawer-close-glyph: initial;
+  --mono-drawer-close-radius: initial;
+  --mono-drawer-close-size-md: initial;
+  --mono-drawer-duration: initial;
+  --mono-drawer-ease: initial;
+  --mono-drawer-footer-align: initial;
+  --mono-drawer-footer-direction: initial;
+  --mono-drawer-footer-gap-md: initial;
+  --mono-drawer-footer-justify: initial;
+  --mono-drawer-header-gap-md: initial;
+  --mono-drawer-height: initial;
+  --mono-drawer-overlay-backdrop-filter: initial;
+  --mono-drawer-overlay-bg: initial;
+  --mono-drawer-pad-md: initial;
+  --mono-drawer-radius: initial;
+  --mono-drawer-shadow: initial;
+  --mono-drawer-title-font-md: initial;
+  --mono-drawer-title-line-height: initial;
+  --mono-drawer-title-tracking: initial;
+  --mono-drawer-title-weight: initial;
+  --mono-drawer-width: initial;
+
+  /* nav */
+  --mono-nav-border-lite: initial;
+  --mono-nav-pad-x-comfortable: initial;
+  --mono-nav-radius: initial;
+  --mono-nav-ring-color: initial;
+  --mono-nav-shadow: initial;
+  --mono-nav-text-soft: initial;
+
+  /* breadcrumb */
+  --mono-breadcrumb-contained-pad-x: initial;
+  --mono-breadcrumb-contained-pad-y: initial;
+  --mono-breadcrumb-current-tracking: initial;
+  --mono-breadcrumb-current-transform: initial;
+  --mono-breadcrumb-current-weight: initial;
+  --mono-breadcrumb-font-md: initial;
+  --mono-breadcrumb-font-weight: initial;
+  --mono-breadcrumb-gap-md: initial;
+  --mono-breadcrumb-gap-wide-md: initial;
+  --mono-breadcrumb-icon-size-md: initial;
+  --mono-breadcrumb-pad-x: initial;
+  --mono-breadcrumb-pad-y: initial;
+  --mono-breadcrumb-radius-md: initial;
+  --mono-breadcrumb-sep-font-md: initial;
+
+  /* menu */
+  --mono-menu-active-weight: initial;
+  --mono-menu-font-comfortable: initial;
+  --mono-menu-gap-comfortable: initial;
+  --mono-menu-height-comfortable: initial;
+  --mono-menu-icon-size-comfortable: initial;
+  --mono-menu-pad-x-comfortable: initial;
+  --mono-menu-pad-y-comfortable: initial;
+  --mono-menu-radius-comfortable: initial;
+  --mono-menu-subheader-pad-x: initial;
+  --mono-menu-subheader-radius: initial;
+  --mono-menu-subheader-tracking: initial;
+  --mono-menu-subheader-transform: initial;
+  --mono-menu-subheader-weight: initial;
+  /* ONE paints the menu's hover itself and re-tints its active pill; a Basecoat
+     flavour wants upstream's `--sidebar-accent` wash and the shared tint. */
+  --mono-menu-hover-bg: initial;
+  --mono-menu-hover-border-color: initial;
+  --_mono-menu-active-tint-preset: initial;
+
+  /* sidebar — ONE's shell signature is a deep brand-primary slab with muted
+     white ink, written to the `-preset` tier so the `color` prop can still beat
+     it. That tier is neutral ground the flavour layer has to clear too: left
+     standing, every Basecoat flavour rendered the same navy slab instead of
+     upstream's `--sidebar` / `--sidebar-foreground`, in light AND in dark. */
+  --_mono-sidebar-surface-preset: initial;
+  --_mono-sidebar-bg-preset: initial;
+  --_mono-sidebar-text-preset: initial;
+  --_mono-sidebar-text-soft-preset: initial;
+  --_mono-sidebar-border-preset: initial;
+  --_mono-sidebar-border-lite-preset: initial;
+  --_mono-sidebar-accent-preset: initial;
+  --mono-sidebar-surface-soft: initial;
+  --mono-sidebar-gap-comfortable: initial;
+
+  /* table */
+  --mono-table-surface: initial;
+  --mono-table-zebra: initial;
+  --mono-table-border-lite: initial;
+  --mono-table-head-bg: initial;
+  --mono-table-group-bg: initial;
+  --mono-table-group-hover-bg: initial;
+  --mono-table-soft: initial;
+  --mono-table-foot-bg: initial;
+  --mono-table-cell-font: initial;
+  --mono-table-ink-mid: initial;
+  --mono-table-th-height: initial;
+  --mono-table-th-pad-x: initial;
+  --mono-table-th-font: initial;
+  --mono-table-th-weight: initial;
+  --mono-table-th-color: initial;
+  --mono-table-th-transform: initial;
+  --mono-table-th-tracking: initial;
+  --mono-table-cell-pad: initial;
+  --mono-table-font: initial;
+  --mono-table-line-height: initial;
+  --mono-table-radius: initial;
+  --mono-table-panel-radius: initial;
+  --mono-table-panel-shadow: initial;
+  --mono-table-panel-ring: initial;
+  --mono-table-panel-bg: initial;
+  --mono-table-panel-color: initial;
+  --mono-sidebar-pad-x-comfortable: initial;
+  --mono-sidebar-pad-y-comfortable: initial;
+  --mono-sidebar-radius: initial;
+  --mono-sidebar-shadow: initial;
+  --mono-sidebar-width: initial;
+
+  /* tabs */
+  --mono-tabs-badge-font: initial;
+  --mono-tabs-badge-size: initial;
+  --mono-tabs-font-weight: initial;
+  --mono-tabs-height-md: initial;
+  --mono-tabs-icon-size-md: initial;
+  --mono-tabs-line-offset: initial;
+  --mono-tabs-line-size: initial;
+  --mono-tabs-line-track-color: initial;
+  --mono-tabs-line-track-size: initial;
+  --mono-tabs-padding-md: initial;
+  --mono-tabs-radius-md: initial;
+  --mono-tabs-tab-font-md: initial;
+  --mono-tabs-tab-gap-md: initial;
+  --mono-tabs-tab-pad-x-md: initial;
+  --mono-tabs-tab-pad-y-md: initial;
+  --mono-tabs-tab-radius-md: initial;
+  --mono-tabs-text-transform: initial;
+
+  /* accordion */
+  --mono-accordion-arrow-size: initial;
+  --mono-accordion-body-color: initial;
+  --mono-accordion-body-font-md: initial;
+  --mono-accordion-body-line-height: initial;
+  --mono-accordion-description-font: initial;
+  --mono-accordion-gap: initial;
+  --mono-accordion-group-gap: initial;
+  --mono-accordion-head-hover-tint: initial;
+  --mono-accordion-open-bg: initial;
+  --mono-accordion-open-border-color: initial;
+  --mono-accordion-open-shadow: initial;
+  --mono-accordion-pad-x-md: initial;
+  --mono-accordion-pad-y-md: initial;
+  /* ONE's full size ladder (see flavors/one.css) */
+  --mono-accordion-pad-x-xs: initial;
+  --mono-accordion-pad-y-xs: initial;
+  --mono-accordion-pad-x-sm: initial;
+  --mono-accordion-pad-y-sm: initial;
+  --mono-accordion-pad-x-lg: initial;
+  --mono-accordion-pad-y-lg: initial;
+  --mono-accordion-pad-x-xl: initial;
+  --mono-accordion-pad-y-xl: initial;
+  --mono-accordion-pad-x-xxl: initial;
+  --mono-accordion-pad-y-xxl: initial;
+  --mono-accordion-title-font-xs: initial;
+  --mono-accordion-title-font-sm: initial;
+  --mono-accordion-title-font-lg: initial;
+  --mono-accordion-title-font-xl: initial;
+  --mono-accordion-title-font-xxl: initial;
+  --mono-accordion-body-font-xs: initial;
+  --mono-accordion-body-font-sm: initial;
+  --mono-accordion-body-font-lg: initial;
+  --mono-accordion-body-font-xl: initial;
+  --mono-accordion-body-font-xxl: initial;
+  --mono-accordion-radius: initial;
+  --mono-accordion-shadow: initial;
+  --mono-accordion-title-font-md: initial;
+  --mono-accordion-title-hover-decoration: initial;
+  --mono-accordion-title-weight: initial;
+
+  /* button-dropdown */
+  --mono-button-dropdown-gap: initial;
+  --mono-button-dropdown-item-base-hover-bg: initial;
+  --mono-button-dropdown-item-base-hover-color: initial;
+  --mono-button-dropdown-item-radius: initial;
+  --mono-button-dropdown-list-gap: initial;
+  --mono-button-dropdown-min-width: initial;
+  --mono-button-dropdown-padding: initial;
+  --mono-button-dropdown-radius: initial;
+  --mono-button-dropdown-ring-color: initial;
+  --mono-button-dropdown-shadow: initial;
+  --mono-button-dropdown-text: initial;
+
+  /* chip */
+  --mono-chip-dot-size: initial;
+  --mono-chip-font-size-lg: initial;
+  --mono-chip-font-size-md: initial;
+  --mono-chip-font-size-sm: initial;
+  --mono-chip-font-size-xl: initial;
+  --mono-chip-font-size-xs: initial;
+  --mono-chip-font-size-xxl: initial;
+  --mono-chip-gap-lg: initial;
+  --mono-chip-gap-md: initial;
+  --mono-chip-gap-sm: initial;
+  --mono-chip-gap-xl: initial;
+  --mono-chip-gap-xs: initial;
+  --mono-chip-gap-xxl: initial;
+  --mono-chip-glyph-size-lg: initial;
+  --mono-chip-glyph-size-md: initial;
+  --mono-chip-glyph-size-sm: initial;
+  --mono-chip-glyph-size-xl: initial;
+  --mono-chip-glyph-size-xs: initial;
+  --mono-chip-glyph-size-xxl: initial;
+  --mono-chip-height-lg: initial;
+  --mono-chip-height-md: initial;
+  --mono-chip-height-sm: initial;
+  --mono-chip-height-xl: initial;
+  --mono-chip-height-xs: initial;
+  --mono-chip-height-xxl: initial;
+  --mono-chip-padding-x-lg: initial;
+  --mono-chip-padding-x-md: initial;
+  --mono-chip-padding-x-sm: initial;
+  --mono-chip-padding-x-xl: initial;
+  --mono-chip-padding-x-xs: initial;
+  --mono-chip-padding-x-xxl: initial;
+  /* the radius is written at the PRESET tier because the `rounded` prop drives
+     the same value — a flavor setting the public `--mono-chip-radius` would
+     out-rank the prop and freeze every chip at one shape */
+  --_mono-chip-radius-preset: initial;
+  --mono-chip-soft-bg: initial;
+  --mono-chip-soft-border-color: initial;
+
+  /* alert (what one.css sets) */
+  --mono-alert-radius: initial;
+  --mono-alert-padding-x: initial;
+  --mono-alert-padding-y: initial;
+  --mono-alert-font-size: initial;
+  --mono-alert-title-weight: initial;
+  --mono-alert-subtitle-font-size: initial;
+
+  /* card */
+  --mono-card-actions-gap-md: initial;
+  --mono-card-gap-lg: initial;
+  --mono-card-gap-md: initial;
+  --mono-card-gap-sm: initial;
+  --mono-card-gap-xl: initial;
+  --mono-card-gap-xs: initial;
+  --mono-card-gap-xxl: initial;
+  --mono-card-header-gap-md: initial;
+  --mono-card-padding-lg: initial;
+  --mono-card-padding-md: initial;
+  --mono-card-padding-sm: initial;
+  --mono-card-padding-xl: initial;
+  --mono-card-padding-xs: initial;
+  --mono-card-padding-xxl: initial;
+  /* ONE writes the card radius at the PRESET tier (the `rounded` prop drives
+     the public knob, so a flavor that set it would out-rank the prop). That
+     tier is a private, but it is still a declaration ONE makes on :root, so it
+     needs the same twin as every public knob — without it vega and nova, the
+     two flavors that do not set a card radius of their own, inherited ONE's
+     rounded-lg where upstream .card is rounded-xl. */
+  --_mono-card-radius-preset: initial;
+  --mono-card-ring-color: initial;
+  --mono-card-shadow-elevated: initial;
+  --mono-card-subtitle-font-lg: initial;
+  --mono-card-subtitle-font-md: initial;
+  --mono-card-subtitle-font-sm: initial;
+  --mono-card-subtitle-font-xl: initial;
+  --mono-card-subtitle-font-xs: initial;
+  --mono-card-subtitle-font-xxl: initial;
+  --mono-card-subtitle-line-height: initial;
+  --mono-card-title-font-lg: initial;
+  --mono-card-title-font-md: initial;
+  --mono-card-title-font-sm: initial;
+  --mono-card-title-font-weight: initial;
+  --mono-card-title-font-xl: initial;
+  --mono-card-title-font-xs: initial;
+  --mono-card-title-font-xxl: initial;
+  --mono-card-title-line-height: initial;
+
+  /* file-upload */
+  --mono-file-upload-border-width: initial;
+  --mono-file-upload-dropzone-bg: initial;
+  --mono-file-upload-dropzone-gap: initial;
+  --mono-file-upload-dropzone-padding: initial;
+  --mono-file-upload-gap: initial;
+  --mono-file-upload-icon-bg: initial;
+  --mono-file-upload-icon-color: initial;
+  --mono-file-upload-icon-glyph-size: initial;
+  --mono-file-upload-icon-offset: initial;
+  --mono-file-upload-icon-radius: initial;
+  --mono-file-upload-icon-size: initial;
+  --mono-file-upload-item-bg: initial;
+  --mono-file-upload-item-border-color: initial;
+  --mono-file-upload-item-gap: initial;
+  --mono-file-upload-item-padding-x: initial;
+  --mono-file-upload-item-padding-y: initial;
+  --mono-file-upload-item-radius: initial;
+  --mono-file-upload-label-font-weight: initial;
+  --mono-file-upload-list-gap: initial;
+  --mono-file-upload-message-color: initial;
+  --mono-file-upload-message-font-size: initial;
+  --mono-file-upload-message-line-height: initial;
+  --mono-file-upload-meta-color: initial;
+  --mono-file-upload-meta-font-size: initial;
+  --mono-file-upload-meta-line-height: initial;
+  --mono-file-upload-name-font-size: initial;
+  --mono-file-upload-name-font-weight: initial;
+  --mono-file-upload-name-line-height: initial;
+  --mono-file-upload-radius: initial;
+  --mono-file-upload-remove-radius: initial;
+  --mono-file-upload-remove-size: initial;
+  --mono-file-upload-subtext-color: initial;
+  --mono-file-upload-subtext-font-size: initial;
+  --mono-file-upload-subtext-line-height: initial;
+  --mono-file-upload-thumb-bg: initial;
+  --mono-file-upload-thumb-color: initial;
+  --mono-file-upload-thumb-radius: initial;
+  --mono-file-upload-thumb-size: initial;
+  --mono-file-upload-title-font-size: initial;
+  --mono-file-upload-title-font-weight: initial;
+  --mono-file-upload-title-line-height: initial;
+  --mono-file-upload-title-tracking: initial;
+
+  /* chip */
+  --mono-chip-font-weight: initial;
+
+  /* switch */
+  --mono-switch-thumb-shadow: initial;
+
+  /* textarea */
+  --mono-textarea-rows-lg: initial;
+  --mono-textarea-rows-md: initial;
+
+  --mono-control-height-xs: 1.5rem;
+  --mono-control-height-sm: 2rem;
+  --mono-control-height-md: 2.25rem;
+  --mono-control-height-lg: 2.5rem;
+  --mono-control-height-xl: 2.75rem;
+  --mono-control-height-xxl: 3rem;
+}
+
+/* ============================================================
+   Basecoat "luma" style (basecoat-css@1.0.2 styles/luma.css) as a
+   @mono-lit/helper flavor.  Pill-shaped, soft.
+
+   Basecoat is the source of truth. A style never touches tokens or fonts —
+   it is a per-component set of metrics — so everything here is a knob a
+   ported component reads, inherited through the shadow boundary. Vega is
+   the default (its values are baked into the component CSS as fallbacks);
+   this sheet is luma's DELTA against vega, read off
+   `node scripts/basecoat-styles.mjs --varying "<selector>"`.
+
+   Deltas: rounded-4xl (pill) at every size, wider padding, a 30% focus ring, no shadow on the outline surface (transparent in dark mode).
+
+   Usage:  import "@mono-lit/helper/ui/theme/luma.css"  then add
+           class="theme-luma" on <html> (or any ancestor). Composes with a
+           .theme-color-* preset; dark mode follows html.dark as usual.
+
+   Ported components carried here: button, input, select, date, tag-input, checkbox, radio, switch, card, textarea, file-upload, chip, dropdown, button-dropdown, accordion, tabs, modal, drawer, nav, breadcrumb, menu, sidebar, table.
+   Every component is ported. dropdown-table, filter and rich-text-editor are
+   EXTENSIONS that read the ported components' public knobs (tag-input's, input's,
+   button's, textarea's, the select panel's) and carry nothing here on purpose;
+   chart reads the page tokens (--chart-1…5, --border, --foreground, --popover) directly.
+   ============================================================ */
+
+.theme-luma {
+  /* control ladder — same as vega (h-8 / h-9 / h-10) */
+
+  /* focus-visible:ring-ring/30 */
+  --mono-ring-alpha: 30%;
+
+  /* button — .btn rounded-4xl (no xs/sm clamp); default px-3 (icon side 2.5);
+     xs px-2.5 (2); sm px-3 (2); lg px-4 (3); outline: no shadow-xs,
+     dark:bg-transparent dark:hover:bg-input/30 */
+  --mono-button-md-radius: var(--mono-radius-4xl);
+  --mono-button-xs-radius: var(--mono-radius-4xl);
+  --mono-button-sm-radius: var(--mono-radius-4xl);
+  --mono-button-md-padding-inline: calc(var(--mono-spacing) * 3);
+  --mono-button-md-icon-padding: calc(var(--mono-spacing) * 2.5);
+  --mono-button-xs-padding-inline: calc(var(--mono-spacing) * 2.5);
+  --mono-button-xs-icon-padding: calc(var(--mono-spacing) * 2);
+  --mono-button-sm-padding-inline: calc(var(--mono-spacing) * 3);
+  --mono-button-sm-icon-padding: calc(var(--mono-spacing) * 2);
+  --mono-button-lg-padding-inline: calc(var(--mono-spacing) * 4);
+  --mono-button-lg-icon-padding: calc(var(--mono-spacing) * 3);
+  --mono-button-xl-padding-inline: calc(var(--mono-spacing) * 5);
+  --mono-button-xl-icon-padding: calc(var(--mono-spacing) * 4);
+  --mono-button-xxl-padding-inline: calc(var(--mono-spacing) * 6);
+  --mono-button-xxl-icon-padding: calc(var(--mono-spacing) * 5);
+  --mono-button-outline-shadow: 0 0 #0000;
+
+  /* input — .input-group rounded-4xl border-transparent bg-input/50 (both modes),
+     no shadow-xs, ring-ring/30; > input px-3; affixes ps-3 / pe-3; the affix icon
+     button rounded-xl */
+  --mono-input-outline-radius: var(--mono-radius-4xl);
+  --mono-input-outline-border-color: transparent;
+  --mono-input-outline-bg: color-mix(in oklab, var(--input) 50%, transparent);
+  --mono-input-outline-shadow: 0 0 #0000;
+  --mono-input-outline-padding-x: calc(var(--mono-spacing) * 3);
+  --mono-input-outline-affix-padding: calc(var(--mono-spacing) * 3);
+  --mono-input-clear-radius: var(--mono-radius-xl);
+
+  /* select — .select > button rounded-3xl border-transparent bg-input/50 (both
+     modes, no hover) px-3, no shadow-xs, ring-ring/30; [data-popover] rounded-3xl
+     shadow-lg ring-foreground/5 (dark /10) p-1.5; [role=option] gap-2.5 rounded-2xl
+     py-2 ps-3 font-medium; [role=heading] px-3 py-2.5 */
+  --mono-select-outline-radius: var(--mono-radius-3xl);
+  --mono-select-outline-border-color: transparent;
+  --mono-select-outline-bg: color-mix(in oklab, var(--input) 50%, transparent);
+  --mono-select-outline-hover-bg: color-mix(in oklab, var(--input) 50%, transparent);
+  --mono-select-outline-shadow: 0 0 #0000;
+  --mono-select-outline-padding-x: calc(var(--mono-spacing) * 3);
+  --mono-select-dropdown-radius: var(--mono-radius-3xl);
+  /* basecoat@1.0.2 styles/luma.css [data-tooltip]::before — rounded-xl (every tooltip's corner: SunEditor's, and any of mono's) */
+  --mono-tooltip-radius: var(--mono-radius-xl);
+  --mono-select-dropdown-shadow: var(--mono-shadow-lg);
+  --mono-select-dropdown-ring: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent);
+  --mono-select-dropdown-padding: calc(var(--mono-spacing) * 1.5);
+  --mono-select-option-radius: var(--mono-radius-2xl);
+  --mono-select-option-gap: calc(var(--mono-spacing) * 2.5);
+  --mono-select-option-padding-y: calc(var(--mono-spacing) * 2);
+  --mono-select-option-padding-x: calc(var(--mono-spacing) * 3);
+  --mono-select-option-font-weight: var(--mono-font-weight-medium);
+  --mono-select-group-padding-x: calc(var(--mono-spacing) * 3);
+  --mono-select-group-padding-y: calc(var(--mono-spacing) * 2.5);
+  --mono-select-clear-radius: var(--mono-radius-xl);
+
+  /* date — the input's box + [data-popover] rounded-3xl shadow-lg ring-foreground/5 (dark /10) */
+  --mono-date-outline-radius: var(--mono-radius-4xl);
+  --mono-date-outline-border-color: transparent;
+  --mono-date-outline-bg: color-mix(in oklab, var(--input) 50%, transparent);
+  --mono-date-outline-shadow: 0 0 #0000;
+  --mono-date-outline-padding-x: calc(var(--mono-spacing) * 3);
+  --mono-date-outline-affix-padding: calc(var(--mono-spacing) * 3);
+  --mono-date-clear-radius: var(--mono-radius-xl);
+  --mono-date-calendar-radius: var(--mono-radius-3xl);
+  --mono-date-calendar-shadow: var(--mono-shadow-lg);
+  --mono-date-calendar-ring: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent);
+  --mono-date-calendar-day-radius: var(--mono-radius-2xl);
+
+  /* tag-input — .combobox-chips rounded-3xl border-transparent bg-input/50 (both
+     modes), no shadow-xs, ring-ring/30; .combobox-chip rounded-3xl bg-input
+     (dark:bg-input/60) px-2; [data-popover] rounded-3xl shadow-lg ring-foreground/5
+     (dark /10) p-1.5; options gap-2.5 rounded-2xl py-2 ps-3 font-medium */
+  --mono-tag-input-outline-radius: var(--mono-radius-3xl);
+  --mono-tag-input-outline-border-color: transparent;
+  --mono-tag-input-outline-bg: color-mix(in oklab, var(--input) 50%, transparent);
+  --mono-tag-input-outline-shadow: 0 0 #0000;
+  --mono-tag-input-chip-radius: var(--mono-radius-3xl);
+  --mono-tag-input-chip-bg: var(--input);
+  --mono-tag-input-chip-padding-x: calc(var(--mono-spacing) * 2);
+  --mono-tag-input-dropdown-radius: var(--mono-radius-3xl);
+  --mono-tag-input-dropdown-shadow: var(--mono-shadow-lg);
+  --mono-tag-input-dropdown-ring: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent);
+  --mono-tag-input-dropdown-padding: calc(var(--mono-spacing) * 1.5);
+  --mono-tag-input-option-radius: var(--mono-radius-2xl);
+  --mono-tag-input-option-gap: calc(var(--mono-spacing) * 2.5);
+  --mono-tag-input-option-padding-y: calc(var(--mono-spacing) * 2);
+  --mono-tag-input-option-padding-x: calc(var(--mono-spacing) * 3);
+  --mono-tag-input-option-font-weight: var(--mono-font-weight-medium);
+  --mono-tag-input-group-padding-x: calc(var(--mono-spacing) * 3);
+  --mono-tag-input-group-padding-y: calc(var(--mono-spacing) * 2.5);
+  --mono-tag-input-clear-radius: var(--mono-radius-xl);
+
+  /* checkbox — .input[type='checkbox'] bg-input/90 border-transparent rounded-[5px], ring-ring/30 */
+  --mono-checkbox-bg: color-mix(in oklab, var(--input) 90%, transparent);
+  --mono-checkbox-border-color: transparent;
+  --mono-checkbox-radius: 5px;
+  --mono-checkbox-shadow: 0 0 #0000;
+
+  /* radio — .input[type='radio'] bg-input/90 border-transparent, ring-ring/30 */
+  --mono-radio-bg: color-mix(in oklab, var(--input) 90%, transparent);
+  --mono-radio-border-color: transparent;
+
+  /* switch — [role='switch'] h-5 w-11, border-2 not-checked:border-transparent
+     checked:border-primary, not-checked:bg-input/90, ring-ring/30 */
+  --mono-switch-shadow: 0 0 #0000;
+  --mono-switch-track-height-md: calc(var(--mono-spacing) * 5);
+  --mono-switch-track-ratio: 2.2;
+  --mono-switch-border-width: 2px;
+  --mono-switch-checked-border-color: currentColor;
+  --mono-switch-track-off: color-mix(in oklab, var(--input) 90%, transparent);
+  /* :before h-4 w-6 shadow-sm — a PILL thumb, not a circle */
+  --mono-switch-thumb-ratio: 0.8;
+  --mono-switch-thumb-width-ratio: 1.2;
+  --mono-switch-thumb-shadow: var(--mono-shadow-sm);
+
+  /* alert — .alert rounded-2xl */
+  --mono-alert-radius: var(--mono-radius-2xl);
+  /* card — .card rounded-4xl shadow-md, ring-foreground/5, header gap-1.5 */
+  --_mono-card-radius-preset: var(--mono-radius-4xl);
+  --mono-card-shadow: var(--mono-shadow-md);
+  --mono-card-ring-color: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --mono-card-header-gap-md: calc(var(--mono-spacing) * 1.5);
+
+  /* textarea — .textarea bg-input/50 border-transparent rounded-2xl px-3 py-3
+     resize-none, ring-ring/30 */
+  --mono-textarea-outline-radius: var(--mono-radius-2xl);
+  --mono-textarea-outline-bg: color-mix(in oklab, var(--input) 50%, transparent);
+  --mono-textarea-outline-border-color: transparent;
+  --mono-textarea-outline-shadow: 0 0 #0000;
+  --mono-textarea-outline-padding-x: calc(var(--mono-spacing) * 3);
+  --mono-textarea-resize: none;
+
+  /* file-upload — .empty rounded-2xl with a rounded-xl figure and a size-5 glyph;
+     .item rounded-2xl with gap-3.5 px-3.5 py-3 rows and a rounded-xl image figure */
+  --mono-file-upload-radius: var(--mono-radius-2xl);
+  --mono-file-upload-icon-radius: var(--mono-radius-xl);
+  --mono-file-upload-icon-glyph-size: calc(var(--mono-spacing) * 5);
+  --mono-file-upload-item-radius: var(--mono-radius-2xl);
+  --mono-file-upload-item-gap: calc(var(--mono-spacing) * 3.5);
+  --mono-file-upload-item-padding-x: calc(var(--mono-spacing) * 3.5);
+  --mono-file-upload-item-padding-y: calc(var(--mono-spacing) * 3);
+  --mono-file-upload-thumb-radius: var(--mono-radius-xl);
+
+  /* card — .card rounded-4xl shadow-md, ring-foreground/5, header gap-1.5 */
+  --mono-card-radius: var(--mono-radius-4xl);
+  --mono-card-shadow: var(--mono-shadow-md);
+  --mono-card-ring-color: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --mono-card-header-gap-md: calc(var(--mono-spacing) * 1.5);
+
+  /* chip — .badge rounded-3xl */
+  /* the radius is written at the PRESET tier because the `rounded` prop drives
+     the same value — a flavor setting the public `--mono-chip-radius` would
+     out-rank the prop and freeze every chip at one shape */
+  --_mono-chip-radius-preset: var(--mono-radius-3xl);
+
+  /* dropdown — [data-popover] ring-foreground/5 (dark /10) rounded-3xl shadow-lg */
+  --mono-dropdown-radius-md: var(--mono-radius-3xl);
+  --mono-dropdown-ring-base: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --mono-dropdown-shadow: var(--mono-shadow-lg);
+  /* button-dropdown — [data-popover] ring-foreground/5 (dark /10) min-w-48 rounded-3xl p-1.5 shadow-lg;
+     [role='menuitem'] gap-2.5 rounded-2xl px-3 py-2 font-medium */
+  --mono-button-dropdown-radius-md: var(--mono-radius-3xl);
+  --mono-button-dropdown-ring-color: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --mono-button-dropdown-shadow: var(--mono-shadow-lg);
+  --mono-button-dropdown-padding-md: calc(var(--mono-spacing) * 1.5);
+  --mono-button-dropdown-min-width-md: 12rem;
+  --mono-button-dropdown-item-radius: var(--mono-radius-2xl);
+  /* accordion — .accordion overflow-hidden rounded-2xl border; details open:bg-muted/50;
+     summary gap-6 p-4; body px-4 */
+  --mono-accordion-radius-md: var(--mono-radius-2xl);
+  --mono-accordion-gap: calc(var(--mono-spacing) * 6);
+  --mono-accordion-open-bg: color-mix(in oklab, var(--muted) 50%, var(--card));
+  --mono-accordion-group-radius: var(--mono-radius-2xl);
+  --mono-accordion-group-border-width: var(--mono-border-width);
+  /* tabs — tablist rounded-full p-1 (vertical rounded-2xl); tab gap-2 rounded-full px-3 */
+  --mono-tabs-radius-md: var(--mono-radius-full);
+  --mono-tabs-padding-md: calc(var(--mono-spacing) * 1);
+  --mono-tabs-tab-radius-md: var(--mono-radius-full);
+  --mono-tabs-tab-pad-x-md: calc(var(--mono-spacing) * 3);
+  --mono-tabs-tab-gap-md: calc(var(--mono-spacing) * 2);
+  --mono-tabs-tab-icon-pad: calc(var(--mono-spacing) * 2);
+  /* modal — .dialog > * ring-foreground/5 rounded-4xl shadow-xl; backdrop
+     bg-black/30 backdrop-blur-sm; header gap-1.5; h2 text-base; close bg-secondary */
+  --mono-modal-radius-md: var(--mono-radius-4xl);
+  --mono-modal-ring-color: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --mono-modal-shadow: var(--mono-shadow-xl);
+  --mono-modal-header-gap-md: calc(var(--mono-spacing) * 1.5);
+  --mono-modal-title-font-md: var(--mono-text-base);
+  --mono-modal-overlay-bg: color-mix(in oklab, black 30%, transparent);
+  --mono-modal-overlay-backdrop-filter: blur(8px);
+  --mono-modal-close-bg: var(--secondary);
+  /* drawer — an INSET CARD at rounded-4xl with before:shadow-xl; backdrop
+     bg-black/30 backdrop-blur-sm. Header and title are vega's. */
+  --mono-drawer-overlay-bg: color-mix(in oklab, black 30%, transparent);
+  --mono-drawer-overlay-backdrop-filter: blur(8px);
+  --mono-drawer-inset: calc(var(--mono-spacing) * 2);
+  --mono-drawer-panel-pad: calc(var(--mono-spacing) * 4);
+  --mono-drawer-inset-radius: var(--mono-radius-4xl);
+  --mono-drawer-inset-border-width: var(--mono-border-width);
+  --mono-drawer-shadow: var(--mono-shadow-xl);
+  /* nav — EXTENSION, and the nav IS a card (see nav.css): luma's card is the
+     pill — rounded-4xl, shadow-md, and a fainter ring */
+  --mono-nav-radius: var(--mono-radius-4xl);
+  --mono-nav-shadow: var(--mono-shadow-md);
+  --mono-nav-ring-color: color-mix(in oklab, var(--foreground) 5%, transparent);
+  /* breadcrumb — .breadcrumb = vega, but luma rounds every chrome row to
+     rounded-xl with a px-3 gutter, and its badge is rounded-3xl */
+  --mono-breadcrumb-badge-radius: var(--mono-radius-3xl);
+  --mono-breadcrumb-radius-md: var(--mono-radius-xl);
+  --mono-breadcrumb-contained-pad-x: calc(var(--mono-spacing) * 3);
+  --mono-breadcrumb-contained-pad-y: calc(var(--mono-spacing) * 1.5);
+  /* menu — .sidebar nav li > a rounded-xl px-3 py-2 h-9; h3 rounded-xl px-3;
+     ul gap-0.5 */
+  --mono-menu-radius-comfortable: var(--mono-radius-xl);
+  --mono-menu-pad-x-comfortable: calc(var(--mono-spacing) * 3);
+  --mono-menu-pad-y-comfortable: calc(var(--mono-spacing) * 2);
+  --mono-menu-height-comfortable: calc(var(--mono-spacing) * 9);
+  --mono-menu-gap-comfortable: calc(var(--mono-spacing) * 0.5);
+  --mono-menu-subheader-radius: var(--mono-radius-xl);
+  --mono-menu-subheader-pad-x: calc(var(--mono-spacing) * 3);
+  /* sidebar */
+  --mono-sidebar-radius: var(--mono-radius-xl);
+  /* table — .table th h-12 px-3, .table td p-3 */
+  --mono-table-th-height: calc(var(--mono-spacing) * 12);
+  --mono-table-th-pad-x: calc(var(--mono-spacing) * 3);
+  --mono-table-cell-pad: calc(var(--mono-spacing) * 3);
+  --mono-table-radius: var(--mono-radius-xl);
+  /* [data-popover] — the portaled filter / menu / suggestion panels */
+  --mono-table-panel-radius: var(--mono-radius-3xl);
+  --mono-table-panel-shadow: var(--mono-shadow-lg);
+  --mono-table-panel-ring: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent);
+}
+
+:is(html, body, .mono-theme).dark .theme-luma,
+.theme-luma:is(html, body, .mono-theme).dark {
+  --mono-modal-ring-color: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --mono-button-dropdown-ring-color: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --mono-dropdown-ring-base: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --mono-button-outline-bg: transparent;
+  --mono-button-outline-hover-bg: color-mix(in oklab, var(--input) 30%, transparent);
+  --mono-select-dropdown-ring: 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent);
+  --mono-date-calendar-ring: 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent);
+  --mono-tag-input-chip-bg: color-mix(in oklab, var(--input) 60%, transparent);
+  --mono-tag-input-dropdown-ring: 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent);
+}

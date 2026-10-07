@@ -1,0 +1,82 @@
+/*
+ * Client-only loading skeleton. The `mono-client-only` Vite plugin injects a
+ * flex container of gray "bars" as the <ClientOnly> fallback:
+ *
+ *   client-skeleton-type   'col' (default) | 'row'
+ *   client-skeleton-bar    utility classes applied to EACH bar (e.g. "w-full h-20")
+ *   client-skeleton-count  number of bars (default 5)
+ *   client-skeleton-class  utility classes applied to the container
+ *
+ * Layout (7px gap between bars):
+ *   col — vertical; bars stretch full width unless `client-skeleton-bar` sets one
+ *   row — horizontal; bar size comes from `client-skeleton-bar`
+ *
+ * Shipped in `@mono-lit/helper/ui/index.css` (via src/entries/index.css), so any
+ * consumer of that stylesheet gets the skeleton styling automatically.
+ */
+
+.mono-client-skeleton {
+  display: flex;
+  gap: 7px;
+}
+
+.mono-client-skeleton--col {
+  flex-direction: column;
+}
+
+.mono-client-skeleton--row {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+/* A single loading bar. Colours come from the theme tokens (same hooks as the automatic
+   `pending` skeleton, see components/skeleton/skeleton.css), so the fallback follows
+   every flavor and `.dark` instead of a hard-coded light gray. */
+.mono-client-skeleton-bar {
+  position: relative;
+  flex: none;
+  overflow: hidden;
+  isolation: isolate;
+
+  --shimmer-bg: var(--mono-skeleton-bg, var(--mono-mode-surface-hover, var(--muted, rgb(226 232 240))));
+  --shimmer-color: var(
+    --mono-skeleton-color,
+    color-mix(in oklab, var(--mono-mode-surface-strong, var(--foreground, #000)) 22%, transparent)
+  );
+  --shimmer-duration: var(--mono-skeleton-duration, 1.5s);
+
+  border-radius: var(--mono-skeleton-radius, 4px);
+  background: var(--shimmer-bg);
+}
+
+/* Default size: full width, 30px tall. Wrapped in :where() so it has ZERO
+   specificity — any `client-skeleton-bar` utility (e.g. w-40, h-8) overrides it. */
+:where(.mono-client-skeleton-bar) {
+  width: 100%;
+  height: 30px;
+}
+
+/* Shimmer sweep — phantom-ui's `.shimmer-block::after`, so a <ClientOnly> fallback bar
+   and the automatic `pending` skeleton read as one and the same placeholder. */
+.mono-client-skeleton-bar::before {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+
+  content: "";
+
+  background: linear-gradient(
+    90deg,
+    var(--shimmer-bg) 30%,
+    var(--shimmer-color) 50%,
+    var(--shimmer-bg) 70%
+  );
+  background-size: 200% 100%;
+  animation: mono-shimmer-horizontal var(--shimmer-duration) linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mono-client-skeleton-bar::before {
+    display: none;
+  }
+}

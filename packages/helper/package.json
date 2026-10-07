@@ -1,0 +1,392 @@
+{
+    "name": "@mono-lit/helper",
+    "version": "0.0.1",
+    "type": "module",
+    "files": [
+        "dist"
+    ],
+    "types": "./dist/src/entries/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/src/entries/index.d.ts",
+            "node": "./dist/index.node.js",
+            "import": "./dist/index.js"
+        },
+        "./search": {
+            "types": "./dist/src/entries/search.d.ts",
+            "import": "./dist/search.js"
+        },
+        "./tooltip": {
+            "types": "./dist/src/components/tooltip/index.d.ts",
+            "import": "./dist/tooltip.js"
+        },
+        "./vue": {
+            "types": "./dist/vue.d.ts"
+        },
+        "./vite": {
+            "types": "./dist/src/vite/index.d.ts",
+            "import": "./dist/vite.js"
+        },
+        "./nuxt": {
+            "types": "./dist/src/nuxt/index.d.ts",
+            "import": "./dist/nuxt.js"
+        },
+        "./export": {
+            "types": "./dist/src/export/index.d.ts",
+            "import": "./dist/export.js"
+        },
+        "./import": {
+            "types": "./dist/src/import/index.d.ts",
+            "import": "./dist/import.js"
+        },
+        "./index.css": "./dist/ui/index.css",
+        "./ui/index.css": "./dist/ui/index.css",
+        "./ui/theme/vega.css": "./dist/ui/theme/vega.css",
+        "./ui/theme/nova.css": "./dist/ui/theme/nova.css",
+        "./ui/theme/maia.css": "./dist/ui/theme/maia.css",
+        "./ui/theme/lyra.css": "./dist/ui/theme/lyra.css",
+        "./ui/theme/mira.css": "./dist/ui/theme/mira.css",
+        "./ui/theme/luma.css": "./dist/ui/theme/luma.css",
+        "./ui/theme/sera.css": "./dist/ui/theme/sera.css",
+        "./ui/theme/rhea.css": "./dist/ui/theme/rhea.css",
+        "./ui/theme/one.css": "./dist/ui/theme/one.css",
+        "./ui/theme/tokens.css": "./dist/ui/theme/tokens.css",
+        "./ui/theme/legacy.css": "./dist/ui/theme/legacy.css",
+        "./ui/font/*": "./dist/ui/font/*",
+        "./ui/accordion": {
+            "types": "./dist/src/components/accordion/index.d.ts",
+            "import": "./dist/ui/accordion.js"
+        },
+        "./ui/button": {
+            "types": "./dist/src/components/button/index.d.ts",
+            "import": "./dist/ui/button.js"
+        },
+        "./ui/button-dropdown": {
+            "types": "./dist/src/components/button/index.button-dropdown.d.ts",
+            "import": "./dist/ui/button-dropdown.js"
+        },
+        "./ui/shadow/button-dropdown": {
+            "types": "./dist/src/components/button/index.button-dropdown.shadow.d.ts",
+            "import": "./dist/ui/shadow/button-dropdown.js"
+        },
+        "./ui/chip": {
+            "types": "./dist/src/components/chip/index.d.ts",
+            "import": "./dist/ui/chip.js"
+        },
+        "./ui/breadcrumb": {
+            "types": "./dist/src/components/breadcrumb/index.d.ts",
+            "import": "./dist/ui/breadcrumb.js"
+        },
+        "./ui/chart": {
+            "types": "./dist/src/components/chart/index.d.ts",
+            "import": "./dist/ui/chart.js"
+        },
+        "./ui/alert": {
+            "types": "./dist/src/components/alert/index.d.ts",
+            "import": "./dist/ui/alert.js"
+        },
+        "./ui/card": {
+            "types": "./dist/src/components/card/index.d.ts",
+            "import": "./dist/ui/card.js"
+        },
+        "./ui/switch": {
+            "types": "./dist/src/components/switch/index.d.ts",
+            "import": "./dist/ui/switch.js"
+        },
+        "./ui/checkbox": {
+            "types": "./dist/src/components/checkbox/index.d.ts",
+            "import": "./dist/ui/checkbox.js"
+        },
+        "./ui/drawer": {
+            "types": "./dist/src/components/drawer/index.d.ts",
+            "import": "./dist/ui/drawer.js"
+        },
+        "./ui/dropdown": {
+            "types": "./dist/src/components/dropdown/index.d.ts",
+            "import": "./dist/ui/dropdown.js"
+        },
+        "./ui/radio": {
+            "types": "./dist/src/components/radio/index.d.ts",
+            "import": "./dist/ui/radio.js"
+        },
+        "./ui/input": {
+            "types": "./dist/src/components/input/index.d.ts",
+            "import": "./dist/ui/input.js"
+        },
+        "./ui/date": {
+            "types": "./dist/src/components/date/index.d.ts",
+            "import": "./dist/ui/date.js"
+        },
+        "./ui/menu": {
+            "types": "./dist/src/components/menu/index.d.ts",
+            "import": "./dist/ui/menu.js"
+        },
+        "./ui/select": {
+            "types": "./dist/src/components/select/index.d.ts",
+            "import": "./dist/ui/select.js"
+        },
+        "./ui/sidebar": {
+            "types": "./dist/src/components/sidebar/index.d.ts",
+            "import": "./dist/ui/sidebar.js"
+        },
+        "./ui/textarea": {
+            "types": "./dist/src/components/textarea/index.d.ts",
+            "import": "./dist/ui/textarea.js"
+        },
+        "./ui/rich-text-editor": {
+            "types": "./dist/src/components/rich-text-editor/index.d.ts",
+            "import": "./dist/ui/rich-text-editor.js"
+        },
+        "./ui/file-upload": {
+            "types": "./dist/src/components/file-upload/index.d.ts",
+            "import": "./dist/ui/file-upload.js"
+        },
+        "./ui/tag-input": {
+            "types": "./dist/src/components/tag-input/index.d.ts",
+            "import": "./dist/ui/tag-input.js"
+        },
+        "./ui/tabs": {
+            "types": "./dist/src/components/tabs/index.d.ts",
+            "import": "./dist/ui/tabs.js"
+        },
+        "./ui/modal": {
+            "types": "./dist/src/components/modal/index.d.ts",
+            "import": "./dist/ui/modal.js"
+        },
+        "./ui/nav": {
+            "types": "./dist/src/components/nav/index.d.ts",
+            "import": "./dist/ui/nav.js"
+        },
+        "./ui/form": {
+            "types": "./dist/src/components/form/index.d.ts",
+            "import": "./dist/ui/form.js"
+        },
+        "./ui/table": {
+            "types": "./dist/src/components/table/index.d.ts",
+            "import": "./dist/ui/table.js"
+        },
+        "./ui/dropdown-table": {
+            "types": "./dist/src/components/dropdown-table/index.d.ts",
+            "import": "./dist/ui/dropdown-table.js"
+        },
+        "./ui/shadow/dropdown-table": {
+            "types": "./dist/src/components/dropdown-table/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/dropdown-table.js"
+        },
+        "./ui/filter": {
+            "types": "./dist/src/components/filter/index.d.ts",
+            "import": "./dist/ui/filter.js"
+        },
+        "./ui/shadow/filter": {
+            "types": "./dist/src/components/filter/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/filter.js"
+        },
+        "./ui/shadow/accordion": {
+            "types": "./dist/src/components/accordion/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/accordion.js"
+        },
+        "./ui/shadow/breadcrumb": {
+            "types": "./dist/src/components/breadcrumb/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/breadcrumb.js"
+        },
+        "./ui/shadow/nav": {
+            "types": "./dist/src/components/nav/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/nav.js"
+        },
+        "./ui/shadow/input": {
+            "types": "./dist/src/components/input/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/input.js"
+        },
+        "./ui/shadow/dropdown": {
+            "types": "./dist/src/components/dropdown/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/dropdown.js"
+        },
+        "./ui/shadow/sidebar": {
+            "types": "./dist/src/components/sidebar/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/sidebar.js"
+        },
+        "./ui/shadow/menu": {
+            "types": "./dist/src/components/menu/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/menu.js"
+        },
+        "./ui/shadow/table": {
+            "types": "./dist/src/components/table/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/table.js"
+        },
+        "./ui/shadow/chart": {
+            "types": "./dist/src/components/chart/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/chart.js"
+        },
+        "./ui/shadow/alert": {
+            "types": "./dist/src/components/alert/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/alert.js"
+        },
+        "./ui/shadow/card": {
+            "types": "./dist/src/components/card/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/card.js"
+        },
+        "./ui/shadow/button": {
+            "types": "./dist/src/components/button/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/button.js"
+        },
+        "./ui/shadow/chip": {
+            "types": "./dist/src/components/chip/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/chip.js"
+        },
+        "./ui/shadow/tabs": {
+            "types": "./dist/src/components/tabs/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/tabs.js"
+        },
+        "./ui/shadow/checkbox": {
+            "types": "./dist/src/components/checkbox/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/checkbox.js"
+        },
+        "./ui/shadow/file-upload": {
+            "types": "./dist/src/components/file-upload/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/file-upload.js"
+        },
+        "./ui/shadow/radio": {
+            "types": "./dist/src/components/radio/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/radio.js"
+        },
+        "./ui/shadow/select": {
+            "types": "./dist/src/components/select/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/select.js"
+        },
+        "./ui/shadow/switch": {
+            "types": "./dist/src/components/switch/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/switch.js"
+        },
+        "./ui/shadow/tag-input": {
+            "types": "./dist/src/components/tag-input/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/tag-input.js"
+        },
+        "./ui/shadow/textarea": {
+            "types": "./dist/src/components/textarea/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/textarea.js"
+        },
+        "./ui/shadow/rich-text-editor": {
+            "types": "./dist/src/components/rich-text-editor/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/rich-text-editor.js"
+        },
+        "./ui/shadow/modal": {
+            "types": "./dist/src/components/modal/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/modal.js"
+        },
+        "./ui/shadow/drawer": {
+            "types": "./dist/src/components/drawer/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/drawer.js"
+        },
+        "./ui/shadow/date": {
+            "types": "./dist/src/components/date/index.shadow.d.ts",
+            "import": "./dist/ui/shadow/date.js"
+        }
+    },
+    "scripts": {
+        "dev": "dotenv -e .env.dev vite",
+        "build": "cross-env NODE_ENV=production vite build && cross-env NODE_ENV=production vite build --config vite.shadow.config.ts && node scripts/gen-vue-types.mjs",
+        "prepack": "pnpm build",
+        "gen:vue-types": "node scripts/gen-vue-types.mjs",
+        "test:perf": "node tests/perf/run.mjs",
+        "basecoat:sync": "node scripts/basecoat-sync.mjs",
+        "basecoat:check": "node scripts/basecoat-sync.mjs --check",
+        "glyphs:build": "node scripts/mdi-glyphs.mjs",
+        "glyphs:check": "node scripts/mdi-glyphs.mjs --check",
+        "theme:build": "node scripts/theme-build.mjs",
+        "theme:check": "node scripts/theme-build.mjs --check"
+    },
+    "publishConfig": {
+        "registry": "https://mono-libs.netlify.app/npm/"
+    },
+    "devDependencies": {
+        "@floating-ui/core": "1.8.0",
+        "@floating-ui/dom": "1.8.0",
+        "@iconify/json": "2.2.505",
+        "@nuxt/kit": "4.5.0",
+        "@nuxt/schema": "4.5.0",
+        "@unocss/preset-web-fonts": "66.7.0",
+        "basecoat-css": "1.0.2",
+        "chart.js": "4.5.1",
+        "cross-env": "10.1.0",
+        "dotenv": "^17.4.2",
+        "dotenv-cli": "^11.0.0",
+        "exceljs": "4.4.0",
+        "handlebars": "4.7.9",
+        "@mono-lit/devextreme": "workspace:*",
+        "@mono-lit/utility": "workspace:*",
+        "postcss": "^8.5.6",
+        "suneditor": "3.3.3",
+        "typescript": "6.0.3",
+        "unocss": "66.7.0",
+        "unocss-preset-theme": "0.14.1",
+        "vite": "8.0.16",
+        "vite-plugin-dts": "5.0.2",
+        "vite-plugin-html-inject": "1.1.2",
+        "vite-plugin-static-copy": "4.1.0",
+        "vue": "3.5.33"
+    },
+    "dependencies": {
+        "@lit-labs/ssr": "3.2.2",
+        "@types/mdast": "^4.0.4",
+        "@vue/compiler-dom": "3.5.38",
+        "@vue/compiler-sfc": "3.5.38",
+        "flatpickr": "4.6.13",
+        "jexl": "^2.3.0",
+        "lit": "3.3.3",
+        "magic-string": "^0.30.21",
+        "nuxt-ssr-lit": "1.6.33",
+        "p-debounce": "^5.1.0",
+        "p-throttle": "^8.1.0",
+        "remark": "^15.0.1",
+        "remark-gfm": "^4.0.1",
+        "unist-util-visit": "^5.1.0"
+    },
+    "peerDependencies": {
+        "@floating-ui/core": "^1.7.0",
+        "@floating-ui/dom": "^1.7.0",
+        "@nuxt/kit": ">=3",
+        "chart.js": "4.5.1",
+        "exceljs": ">=4",
+        "handlebars": ">=4",
+        "@mono-lit/utility": "*",
+        "suneditor": "^3.3.3",
+        "vite": ">=5",
+        "vue": ">=3.3",
+        "@aejkatappaja/phantom-ui": "^1.6.0"
+    },
+    "peerDependenciesMeta": {
+        "vue": {
+            "optional": true
+        },
+        "chart.js": {
+            "optional": true
+        },
+        "@nuxt/kit": {
+            "optional": true
+        },
+        "exceljs": {
+            "optional": true
+        },
+        "handlebars": {
+            "optional": true
+        },
+        "vite": {
+            "optional": true
+        },
+        "@mono-lit/utility": {
+            "optional": true
+        },
+        "suneditor": {
+            "optional": true
+        },
+        "@floating-ui/core": {
+            "optional": true
+        },
+        "@floating-ui/dom": {
+            "optional": true
+        },
+        "@aejkatappaja/phantom-ui": {
+            "optional": true
+        }
+    }
+}

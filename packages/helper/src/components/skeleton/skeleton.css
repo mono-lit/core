@@ -1,0 +1,242 @@
+/*
+ * The automatic skeleton (`pending`, see src/composables/mono-skeleton.ts).
+ *
+ * Every mono element that renders wrapped draws `<phantom-ui mono-skeleton>` around its
+ * content and only toggles `loading`. phantom-ui (the optional peer
+ * `@aejkatappaja/phantom-ui`) measures the element's real DOM and overlays shimmer
+ * blocks; these rules make that overlay FOLLOW THE MONO THEME and cost nothing while
+ * idle.
+ *
+ * Shipped in `@mono-lit/helper/ui/index.css` (via src/entries/index.css) and appended to
+ * every shadow sheet by `toShadowCss()` — a shadow root never sees the global sheet.
+ *
+ * Theming hooks (set anywhere above the element, or on it):
+ *   --mono-skeleton-bg        block colour        (default: the theme's muted surface)
+ *   --mono-skeleton-color     sweep colour        (default: a translucent foreground wash)
+ *   --mono-skeleton-duration  cycle length        (default 1.5s)
+ *   --mono-skeleton-radius    the wrapper's frame (default: the theme radius)
+ * All defaults resolve from the theme tokens, which already change per flavor and under
+ * `.dark` — so there is no separate dark block here, and no colour is hard-coded.
+ */
+
+phantom-ui[mono-skeleton] {
+  /* phantom reads these three on its host; declaring them on the element (document
+     level) beats its `:host` defaults, and they inherit into its shadow overlay. */
+  --shimmer-bg: var(--mono-skeleton-bg, var(--mono-mode-surface-hover, var(--muted)));
+  --shimmer-color: var(
+    --mono-skeleton-color,
+    color-mix(in oklab, var(--mono-mode-surface-strong, var(--foreground)) 22%, transparent)
+  );
+  --shimmer-duration: var(--mono-skeleton-duration, 1.5s);
+
+  /* The wrapper only exists while loading (see mono-pending.ts); should one ever sit idle,
+     it is not a box at all — phantom's own `:host { display: block; position: relative;
+     overflow: hidden }` would otherwise turn an inline control into a block. */
+  display: contents;
+}
+
+/* LOADING: become the box phantom measures against — the host's content size. */
+phantom-ui[mono-skeleton][loading] {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  max-width: 100%;
+  border-radius: var(--mono-skeleton-radius, var(--mono-radius-md, var(--radius)));
+}
+
+/* Inline hosts keep their inline flow while loading (button.css etc. set the host to
+   inline-block / inline-flex; a block wrapper inside would break the line). */
+:is(mono-button, mono-chip, mono-checkbox, mono-radio, mono-switch, mono-dropdown, mono-status-dot)
+  > phantom-ui[mono-skeleton][loading] {
+  display: inline-block;
+  vertical-align: middle;
+  width: 100%;
+}
+
+:is(mono-button-dropdown, mono-table-detail, mono-table-checkbox)
+  > phantom-ui[mono-skeleton][loading] {
+  display: inline-flex;
+}
+
+/* NESTED pending (a card still loading around a table still loading): the OUTER
+   skeleton is the one the user sees; the inner one goes transparent rather than
+   shimmering through it. The vars inherit into phantom's shadow overlay. */
+phantom-ui[mono-skeleton][loading] phantom-ui[mono-skeleton][loading] {
+  --shimmer-color: transparent;
+  --shimmer-bg: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  phantom-ui[mono-skeleton] {
+    --shimmer-duration: 0s;
+  }
+}
+
+/* ── CSS-only skeleton: the `mono-pending` attribute ──────────────────────────
+   The JS-free half of the feature, for everything that has to look like a skeleton
+   BEFORE any script runs or where phantom-ui has nothing to measure: server HTML,
+   the hydration window, a plain `<div mono-pending>` bar. One vocabulary with the
+   component prop / phantom options:
+
+     <div mono-pending style="height:2rem"></div>
+     <div mono-pending mono-pending-animation="pulse" mono-pending-mode="skeleton">…</div>
+
+   `mono-pending-animation`  shimmer (default) | pulse | breathe | solid
+   `mono-pending-mode`       skeleton (default: the element becomes one block, its
+                             content hidden) | overlay (content stays, dimmed, swept)
+
+   The mono elements set these on their HOST while `pending` resolves true, so an
+   element paints as a block the instant it exists; once phantom-ui is defined the
+   element also carries `mono-pending-covered` and this paint steps aside for
+   phantom's measured blocks. Without phantom-ui this IS the skeleton. */
+
+/* Every rule below mirrors phantom-ui's own stylesheet for its `.shimmer-block` (1.6.x:
+   `.shimmer-block { background: var(--shimmer-bg) }`, its `::after` sweep, the
+   `animation="pulse|breathe|solid"` variants, `mode="overlay"` and the reduced-motion
+   fallback) — one block per host instead of one per measured leaf, but the same look. */
+[mono-pending]:not([mono-pending="false"]):not([mono-pending-covered]) {
+  /* phantom-ui's three knobs, resolved from the SAME mono tokens the wrapper above
+     hands to phantom — so this paint and phantom's measured blocks are literally the
+     same colours, the same gradient and the same clock. */
+  --shimmer-bg: var(--mono-skeleton-bg, var(--mono-mode-surface-hover, var(--muted)));
+  --shimmer-color: var(
+    --mono-skeleton-color,
+    color-mix(in oklab, var(--mono-mode-surface-strong, var(--foreground)) 22%, transparent)
+  );
+  --shimmer-duration: var(--mono-skeleton-duration, 1.5s);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  /* phantom's `fallbackRadius` (4px) — the radius a measured leaf gets when it has none */
+  border-radius: var(--mono-skeleton-radius, 4px);
+  pointer-events: none;
+  user-select: none;
+  /* phantom hides text with -webkit-text-fill-color (see its #phantom-ui-loading-styles) */
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  caret-color: transparent;
+}
+
+/* skeleton mode (the default): the block — `.shimmer-block { background: var(--shimmer-bg) }` */
+[mono-pending]:not([mono-pending="false"]):not([mono-pending-covered]):not([mono-pending-mode="overlay"]) {
+  background: var(--shimmer-bg);
+  background-clip: padding-box;
+}
+
+[mono-pending]:not([mono-pending="false"]):not([mono-pending-covered]):not([mono-pending-mode="overlay"]) > * {
+  visibility: hidden;
+}
+
+/* overlay mode — `:host([mode="overlay"]) { --shimmer-bg: transparent }` + the content stays,
+   dimmed: `::slotted(*) { opacity: var(--phantom-content-opacity, 0.5); transition: opacity 0.2s ease-out }` */
+[mono-pending][mono-pending-mode="overlay"]:not([mono-pending="false"]):not([mono-pending-covered]) {
+  --shimmer-bg: transparent;
+  -webkit-text-fill-color: initial !important;
+  color: inherit !important;
+}
+
+[mono-pending][mono-pending-mode="overlay"]:not([mono-pending="false"]):not([mono-pending-covered]) > * {
+  opacity: var(--phantom-content-opacity, 0.5);
+  transition: opacity 0.2s ease-out;
+}
+
+/* the sweep — `.shimmer-block::after`, verbatim */
+[mono-pending]:not([mono-pending="false"]):not([mono-pending-covered])::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--shimmer-bg) 30%,
+    var(--shimmer-color) 50%,
+    var(--shimmer-bg) 70%
+  );
+  background-size: 200% 100%;
+  animation: mono-shimmer-horizontal var(--shimmer-duration) linear infinite;
+}
+
+@keyframes mono-shimmer-horizontal {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* pulse / breathe animate the BLOCK itself and drop the sweep; solid only drops the sweep */
+[mono-pending][mono-pending-animation="pulse"]:not([mono-pending="false"]):not([mono-pending-covered]) {
+  animation: mono-phantom-pulse var(--shimmer-duration) ease-in-out infinite;
+}
+
+[mono-pending][mono-pending-animation="breathe"]:not([mono-pending="false"]):not([mono-pending-covered]) {
+  animation: mono-phantom-breathe var(--shimmer-duration) ease-in-out infinite;
+}
+
+[mono-pending][mono-pending-animation="pulse"]:not([mono-pending="false"]):not([mono-pending-covered])::after,
+[mono-pending][mono-pending-animation="breathe"]:not([mono-pending="false"]):not([mono-pending-covered])::after,
+[mono-pending][mono-pending-animation="solid"]:not([mono-pending="false"]):not([mono-pending-covered])::after {
+  display: none;
+}
+
+@keyframes mono-phantom-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes mono-phantom-breathe {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+
+/* overlay + pulse/breathe/solid: phantom keeps a flat veil (`background: var(--shimmer-color)`)
+   so the refresh still shows; pulse/breathe animate that veil, not the content under it */
+[mono-pending][mono-pending-mode="overlay"][mono-pending-animation="pulse"]:not([mono-pending="false"]):not([mono-pending-covered]),
+[mono-pending][mono-pending-mode="overlay"][mono-pending-animation="breathe"]:not([mono-pending="false"]):not([mono-pending-covered]) {
+  animation: none;
+}
+
+[mono-pending][mono-pending-mode="overlay"][mono-pending-animation="pulse"]:not([mono-pending="false"]):not([mono-pending-covered])::after,
+[mono-pending][mono-pending-mode="overlay"][mono-pending-animation="breathe"]:not([mono-pending="false"]):not([mono-pending-covered])::after,
+[mono-pending][mono-pending-mode="overlay"][mono-pending-animation="solid"]:not([mono-pending="false"]):not([mono-pending-covered])::after {
+  display: block;
+  animation: none;
+  background: var(--shimmer-color);
+}
+
+[mono-pending][mono-pending-mode="overlay"][mono-pending-animation="pulse"]:not([mono-pending="false"]):not([mono-pending-covered])::after {
+  animation: mono-phantom-pulse var(--shimmer-duration) ease-in-out infinite;
+}
+
+[mono-pending][mono-pending-mode="overlay"][mono-pending-animation="breathe"]:not([mono-pending="false"]):not([mono-pending-covered])::after {
+  animation: mono-phantom-breathe var(--shimmer-duration) ease-in-out infinite;
+}
+
+/* reduced motion — phantom degrades every mode to the static solid block; overlay keeps
+   its veil, held still */
+@media (prefers-reduced-motion: reduce) {
+  [mono-pending]:not([mono-pending="false"]):not([mono-pending-covered]),
+  [mono-pending]:not([mono-pending="false"]):not([mono-pending-covered])::after {
+    animation: none;
+  }
+
+  [mono-pending]:not([mono-pending="false"]):not([mono-pending-covered]):not([mono-pending-mode="overlay"])::after {
+    display: none;
+  }
+
+  [mono-pending][mono-pending-mode="overlay"]:not([mono-pending="false"]):not([mono-pending-covered])::after {
+    display: block;
+    background: var(--shimmer-color);
+  }
+}
+
+/* NESTED blocks (a held input inside a held card): the outer block already hides them
+   (`visibility: hidden` on its children), so they must not each run their own animated
+   `::after` — on a page with dozens of controls that is dozens of composited sweeps for
+   nothing, and it is what made a page switch feel heavy. Inner ones go flat. */
+[mono-pending]:not([mono-pending="false"]):not([mono-pending-covered]) [mono-pending]::after {
+  display: none;
+}
+
+[mono-pending]:not([mono-pending="false"]):not([mono-pending-covered]) [mono-pending] {
+  animation: none;
+}

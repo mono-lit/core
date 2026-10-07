@@ -1,0 +1,38 @@
+# Ignore Node.js dependencies
+node_modules/
+.pnpm-store/
+.yarn/
+.vite/
+.esbuild/
+lib/
+out/
+coverage/
+
+# Logs and temp files
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# Ignore IDE settings
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Ignore TypeScript build info
+*.tsbuildinfo
+
+
+
+# Ignore environment files
+.env
+.env.local
+.env.*.local
+
+.netlify/
+
+# Local linked worktrees
+.worktrees/
+
+packages/data

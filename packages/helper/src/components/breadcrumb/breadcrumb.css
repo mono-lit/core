@@ -1,0 +1,679 @@
+/* @unocss-include */
+
+/* =========================================================================
+   mono-breadcrumb — a port of Basecoat's `.breadcrumb` (basecoat-css@1.0.2,
+   vega style).
+
+   Styled by ATTRIBUTE, like Basecoat — and the attributes mirror the element's
+   props one for one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-breadcrumb size="lg" color="success" variant="contained" truncate>
+     <nav mono-breadcrumb mono-size="lg" mono-color="success"
+          mono-variant="contained" mono-truncate aria-label="Breadcrumb">
+       <ol mono-list>
+         <li mono-item>
+           <a mono-action href="/">
+             <span mono-icon>…</span>
+             <span mono-content><span mono-title>Home</span></span>
+             <span mono-badge="info">3</span>
+           </a>
+         </li>
+         <li mono-separator aria-hidden="true">›</li>
+         <li mono-item mono-current aria-current="page">
+           <span mono-action><span mono-content><span mono-title>Now</span></span></span>
+         </li>
+       </ol>
+     </nav>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-color])` = primary, `:not([mono-variant])` = default). The old
+   classes (`.mono-breadcrumb.md.primary.default`) are still emitted as inert
+   hooks until 2.0 but no rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-breadcrumb]      ≡ .breadcrumb (the <nav>) — a var scope
+     [mono-list]            ≡ .breadcrumb > ol (m-0 flex list-none flex-wrap
+                              items-center p-0 break-words, text-muted-foreground
+                              gap-1.5 text-sm sm:gap-2.5)
+     [mono-item]            ≡ .breadcrumb li (inline-flex items-center gap-1.5)
+     [mono-separator]       ≡ .breadcrumb li[aria-hidden='true'] (select-none),
+                              its glyph ≡ li[aria-hidden='true'] > svg (size-3.5)
+     [mono-action]          ≡ .breadcrumb a (rounded-sm outline-none
+                              focus-visible:ring-[3px] focus-visible:ring-ring/50,
+                              transition-colors hover:text-foreground)
+     [mono-current]         ≡ .breadcrumb [aria-current='page'] (font-normal
+                              text-foreground, cursor-default)
+     [mono-icon]            ≡ .breadcrumb li > span[aria-hidden='true']
+                              (flex items-center justify-center size-5,
+                              [&>svg]:size-4)
+     [mono-badge]           ≡ .badge — EXTENSION here (upstream's breadcrumb has
+                              none), so it borrows the badge's own shape
+     [mono-content]/[mono-title]   ≡ EXTENSION (upstream puts the label straight
+                              in the <a>; mono wraps it so `truncate` has
+                              something to clamp)
+     [mono-variant=…]       ≡ EXTENSION (upstream ships one breadcrumb)
+
+   THE DEFAULT VARIANT IS NOW BARE TEXT. Upstream's breadcrumb links carry no
+   padding, no background and no border — `rounded-sm` exists only so the focus
+   ring has a shape. The pre-port default padded every segment into a 5px-radius
+   chip. `contained` is where that look lives now; `--mono-breadcrumb-pad-x`/`-y`
+   are still the knobs, they just start at 0.
+
+   COLOUR IS A DEVIATION. Upstream inks hover and the current segment in
+   `--foreground`. mono's breadcrumb has a `color` prop, so it inks them in the
+   ROLE instead — and `color="surface"` resolves the accent back to
+   `--foreground`, which is upstream exactly.
+
+   NO GRADIENTS. The contained variant's current segment was a two-stop gradient
+   with a coloured glow; it is now the flat role fill on the role's own
+   `-foreground`, the way `.btn[data-variant='primary']` is.
+
+   DARK MODE comes free — every colour resolves through a Basecoat token that
+   already flips. A selector crosses neither the custom-element host nor the
+   shadow boundary, so no `.dark` rule can live in component CSS.
+
+   FLAVORS set `--mono-breadcrumb-{gap,font,icon-size,sep-*,radius,badge-*}`
+   (+ the per-size forms); every fallback here is vega's value
+   (`node scripts/basecoat-styles.mjs --varying ".breadcrumb > ol"`).
+   ========================================================================= */
+
+mono-breadcrumb {
+  display: block;
+}
+
+/* A composed child list renders its <li>s straight into the parent's <ol>. */
+mono-breadcrumb-list {
+  display: contents;
+}
+
+/* =========================================
+   Root — the var scope
+   ========================================= */
+
+[mono-breadcrumb] {
+  /* ── the roles, each a public knob over a Basecoat token ────────────────── */
+  --_mono-breadcrumb-primary: var(--mono-breadcrumb-primary, var(--primary));
+  --_mono-breadcrumb-secondary: var(--mono-breadcrumb-secondary, var(--secondary-foreground));
+  --_mono-breadcrumb-success: var(--mono-breadcrumb-success, var(--success));
+  --_mono-breadcrumb-danger: var(--mono-breadcrumb-danger, var(--destructive));
+  --_mono-breadcrumb-warning: var(--mono-breadcrumb-warning, var(--warning));
+  --_mono-breadcrumb-info: var(--mono-breadcrumb-info, var(--info));
+  --_mono-breadcrumb-teal: var(--mono-breadcrumb-teal, var(--teal));
+  --_mono-breadcrumb-purple: var(--mono-breadcrumb-purple, var(--purple));
+  --_mono-breadcrumb-neutral: var(--mono-breadcrumb-neutral, var(--neutral));
+  --_mono-breadcrumb-dark: var(--mono-breadcrumb-dark, var(--dark));
+
+  /* The colour in play. DEVIATION: upstream inks hover and the current segment
+     in `--foreground`; `color="surface"` is that exactly. */
+  --_mono-breadcrumb-accent: var(--mono-breadcrumb-accent, var(--_mono-breadcrumb-accent-preset, var(--_mono-breadcrumb-primary)));
+  --_mono-breadcrumb-on-accent: var(--mono-breadcrumb-on-accent, var(--_mono-breadcrumb-on-accent-preset, var(--primary-foreground)));
+
+  /* ── ink ────────────────────────────────────────────────────────────────
+     basecoat@1.0.2 styles/vega.css .breadcrumb > ol — text-muted-foreground gap-1.5 text-sm sm:gap-2.5
+     basecoat@1.0.2 styles/vega.css .breadcrumb [aria-current='page'] — font-normal text-foreground */
+  --_mono-breadcrumb-text: var(--mono-breadcrumb-text, var(--muted-foreground));
+  --_mono-breadcrumb-text-strong: var(--mono-breadcrumb-text-strong, var(--foreground));
+  --_mono-breadcrumb-sep-color: var(--mono-breadcrumb-sep-color, var(--_mono-breadcrumb-text));
+  --_mono-breadcrumb-surface: var(--mono-breadcrumb-surface, var(--background));
+  --_mono-breadcrumb-border: var(--mono-breadcrumb-border, var(--border));
+
+  /* ── md metrics live on the unqualified root ON PURPOSE ──────────────────
+     `gap-1.5` is the mobile step; `sm:gap-2.5` widens it (see the @media below). */
+  --_mono-breadcrumb-gap: var(--mono-breadcrumb-gap, var(--_mono-breadcrumb-gap-preset, var(--mono-breadcrumb-gap-md, calc(var(--mono-spacing) * 1.5))));
+  --_mono-breadcrumb-gap-wide: var(--mono-breadcrumb-gap-wide, var(--_mono-breadcrumb-gap-wide-preset, var(--mono-breadcrumb-gap-wide-md, calc(var(--mono-spacing) * 2.5))));
+  --_mono-breadcrumb-font: var(--mono-breadcrumb-font, var(--_mono-breadcrumb-font-preset, var(--mono-breadcrumb-font-md, var(--mono-text-sm))));
+  --_mono-breadcrumb-line-height: var(--mono-breadcrumb-line-height, var(--_mono-breadcrumb-line-height-preset, var(--mono-breadcrumb-line-height-md, var(--mono-text-sm--lh))));
+  --_mono-breadcrumb-font-weight: var(--mono-breadcrumb-font-weight, var(--mono-font-weight-normal));
+  /* basecoat@1.0.2 styles/vega.css .breadcrumb [aria-current='page'] — font-normal text-foreground:
+     upstream does NOT bold the current segment. ONE restores the bold it had. */
+  --_mono-breadcrumb-current-weight: var(--mono-breadcrumb-current-weight, var(--mono-font-weight-normal));
+  /* basecoat@1.0.2 styles/vega.css .sidebar nav h3 — text-sidebar-foreground/70 ring-sidebar-ring h-8 rounded-md px-2 text-xs font-medium focus-visible:ring-2 [&>svg]:size-4 transition-[margin,opacity] duration-200 ease-linear
+     A breadcrumb's current crumb is the page's own label, and each flavor has a
+     house style for one — sera sets its chrome headings uppercase +
+     tracking-wider + semibold, and this is what lets it say so. */
+  --_mono-breadcrumb-current-transform: var(--mono-breadcrumb-current-transform, none);
+  --_mono-breadcrumb-current-tracking: var(--mono-breadcrumb-current-tracking, normal);
+  /* basecoat@1.0.2 styles/vega.css .breadcrumb li > span[aria-hidden='true'] — size-5 [&>svg]:size-4 */
+  --_mono-breadcrumb-icon-size: var(--mono-breadcrumb-icon-size, var(--_mono-breadcrumb-icon-size-preset, var(--mono-breadcrumb-icon-size-md, calc(var(--mono-spacing) * 4))));
+  /* basecoat@1.0.2 styles/vega.css .breadcrumb li[aria-hidden='true'] > svg — size-3.5 */
+  --_mono-breadcrumb-sep-size: var(--mono-breadcrumb-sep-size, var(--_mono-breadcrumb-sep-size-preset, var(--mono-breadcrumb-sep-size-md, calc(var(--mono-spacing) * 3.5))));
+  --_mono-breadcrumb-sep-font: var(--mono-breadcrumb-sep-font, var(--_mono-breadcrumb-sep-font-preset, var(--mono-breadcrumb-sep-font-md, var(--mono-text-sm))));
+
+  /* ── the action box. Upstream's <a> is BARE — `rounded-sm` is only there to
+     shape the focus ring — so the padding starts at 0 and `contained` /
+     `underlined` are what turn it into a chip. ───────────────────────────── */
+  --_mono-breadcrumb-pad-x: var(--mono-breadcrumb-pad-x, var(--_mono-breadcrumb-pad-x-preset, 0px));
+  --_mono-breadcrumb-pad-y: var(--mono-breadcrumb-pad-y, var(--_mono-breadcrumb-pad-y-preset, 0px));
+  --_mono-breadcrumb-radius: var(--mono-breadcrumb-radius, var(--_mono-breadcrumb-radius-preset, var(--mono-breadcrumb-radius-md, var(--mono-radius-sm))));
+  --_mono-breadcrumb-border-width: var(--mono-breadcrumb-border-width, var(--mono-border-width));
+
+  /* ── the badge — EXTENSION, borrowing `.badge`'s shape ───────────────────
+     basecoat@1.0.2 styles/vega.css .badge — h-5 gap-1 rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium transition-all [&>svg]:size-3! */
+  --_mono-breadcrumb-badge-height: var(--mono-breadcrumb-badge-height, calc(var(--mono-spacing) * 5));
+  --_mono-breadcrumb-badge-pad-x: var(--mono-breadcrumb-badge-pad-x, calc(var(--mono-spacing) * 2));
+  --_mono-breadcrumb-badge-radius: var(--mono-breadcrumb-badge-radius, var(--mono-radius-4xl));
+  --_mono-breadcrumb-badge-font: var(--mono-breadcrumb-badge-font, var(--mono-text-xs));
+  --_mono-breadcrumb-badge-weight: var(--mono-breadcrumb-badge-weight, var(--mono-font-weight-medium));
+  --_mono-breadcrumb-badge-bg: var(--mono-breadcrumb-badge-bg, var(--secondary));
+  --_mono-breadcrumb-badge-color: var(--mono-breadcrumb-badge-color, var(--secondary-foreground));
+
+  display: block;
+  width: 100%;
+  font-family: inherit;
+  color: var(--_mono-breadcrumb-text);
+}
+
+[mono-breadcrumb],
+:where([mono-breadcrumb]) *,
+:where([mono-breadcrumb]) *::before,
+:where([mono-breadcrumb]) *::after {
+  box-sizing: border-box;
+}
+
+/* =========================================
+   Sizes — EXTENSION: upstream ships one breadcrumb
+   ========================================= */
+
+[mono-breadcrumb][mono-size="xs"] {
+  --_mono-breadcrumb-gap-preset: var(--mono-breadcrumb-gap-xs, var(--mono-spacing));
+  --_mono-breadcrumb-gap-wide-preset: var(--mono-breadcrumb-gap-wide-xs, calc(var(--mono-spacing) * 1.5));
+  --_mono-breadcrumb-font-preset: var(--mono-breadcrumb-font-xs, var(--mono-text-xs));
+  --_mono-breadcrumb-line-height-preset: var(--mono-text-xs--lh);
+  --_mono-breadcrumb-icon-size-preset: var(--mono-breadcrumb-icon-size-xs, calc(var(--mono-spacing) * 3));
+  --_mono-breadcrumb-sep-size-preset: var(--mono-breadcrumb-sep-size-xs, calc(var(--mono-spacing) * 2.5));
+  --_mono-breadcrumb-sep-font-preset: var(--mono-breadcrumb-sep-font-xs, var(--mono-text-xs));
+  --_mono-breadcrumb-radius-preset: var(--mono-breadcrumb-radius-xs, var(--mono-radius-sm));
+}
+
+[mono-breadcrumb][mono-size="sm"] {
+  --_mono-breadcrumb-gap-preset: var(--mono-breadcrumb-gap-sm, var(--mono-spacing));
+  --_mono-breadcrumb-gap-wide-preset: var(--mono-breadcrumb-gap-wide-sm, calc(var(--mono-spacing) * 2));
+  --_mono-breadcrumb-font-preset: var(--mono-breadcrumb-font-sm, var(--mono-text-xs));
+  --_mono-breadcrumb-line-height-preset: var(--mono-text-xs--lh);
+  --_mono-breadcrumb-icon-size-preset: var(--mono-breadcrumb-icon-size-sm, calc(var(--mono-spacing) * 3.5));
+  --_mono-breadcrumb-sep-size-preset: var(--mono-breadcrumb-sep-size-sm, calc(var(--mono-spacing) * 3));
+  --_mono-breadcrumb-sep-font-preset: var(--mono-breadcrumb-sep-font-sm, var(--mono-text-xs));
+  --_mono-breadcrumb-radius-preset: var(--mono-breadcrumb-radius-sm, var(--mono-radius-sm));
+}
+
+[mono-breadcrumb][mono-size="lg"] {
+  --_mono-breadcrumb-gap-preset: var(--mono-breadcrumb-gap-lg, calc(var(--mono-spacing) * 2));
+  --_mono-breadcrumb-gap-wide-preset: var(--mono-breadcrumb-gap-wide-lg, calc(var(--mono-spacing) * 3));
+  --_mono-breadcrumb-font-preset: var(--mono-breadcrumb-font-lg, var(--mono-text-base));
+  --_mono-breadcrumb-line-height-preset: var(--mono-text-base--lh);
+  --_mono-breadcrumb-icon-size-preset: var(--mono-breadcrumb-icon-size-lg, calc(var(--mono-spacing) * 4.5));
+  --_mono-breadcrumb-sep-size-preset: var(--mono-breadcrumb-sep-size-lg, calc(var(--mono-spacing) * 4));
+  --_mono-breadcrumb-sep-font-preset: var(--mono-breadcrumb-sep-font-lg, var(--mono-text-base));
+  --_mono-breadcrumb-radius-preset: var(--mono-breadcrumb-radius-lg, var(--mono-radius-md));
+}
+
+[mono-breadcrumb][mono-size="xl"] {
+  --_mono-breadcrumb-gap-preset: var(--mono-breadcrumb-gap-xl, calc(var(--mono-spacing) * 2.5));
+  --_mono-breadcrumb-gap-wide-preset: var(--mono-breadcrumb-gap-wide-xl, calc(var(--mono-spacing) * 3.5));
+  --_mono-breadcrumb-font-preset: var(--mono-breadcrumb-font-xl, var(--mono-text-lg));
+  --_mono-breadcrumb-line-height-preset: var(--mono-text-lg--lh);
+  --_mono-breadcrumb-icon-size-preset: var(--mono-breadcrumb-icon-size-xl, calc(var(--mono-spacing) * 5));
+  --_mono-breadcrumb-sep-size-preset: var(--mono-breadcrumb-sep-size-xl, calc(var(--mono-spacing) * 4.5));
+  --_mono-breadcrumb-sep-font-preset: var(--mono-breadcrumb-sep-font-xl, var(--mono-text-lg));
+  --_mono-breadcrumb-radius-preset: var(--mono-breadcrumb-radius-xl, var(--mono-radius-md));
+}
+
+[mono-breadcrumb][mono-size="xxl"] {
+  --_mono-breadcrumb-gap-preset: var(--mono-breadcrumb-gap-xxl, calc(var(--mono-spacing) * 3));
+  --_mono-breadcrumb-gap-wide-preset: var(--mono-breadcrumb-gap-wide-xxl, calc(var(--mono-spacing) * 4));
+  --_mono-breadcrumb-font-preset: var(--mono-breadcrumb-font-xxl, var(--mono-text-xl));
+  --_mono-breadcrumb-line-height-preset: var(--mono-text-xl--lh);
+  --_mono-breadcrumb-icon-size-preset: var(--mono-breadcrumb-icon-size-xxl, calc(var(--mono-spacing) * 6));
+  --_mono-breadcrumb-sep-size-preset: var(--mono-breadcrumb-sep-size-xxl, calc(var(--mono-spacing) * 5));
+  --_mono-breadcrumb-sep-font-preset: var(--mono-breadcrumb-sep-font-xxl, var(--mono-text-xl));
+  --_mono-breadcrumb-radius-preset: var(--mono-breadcrumb-radius-xxl, var(--mono-radius-lg));
+}
+
+/* =========================================
+   Colours — EXTENSION, and the one deviation from upstream's ink
+   ========================================= */
+
+[mono-breadcrumb][mono-color="primary"] {
+  --_mono-breadcrumb-accent-preset: var(--_mono-breadcrumb-primary);
+  --_mono-breadcrumb-on-accent-preset: var(--primary-foreground);
+}
+
+[mono-breadcrumb][mono-color="secondary"] {
+  --_mono-breadcrumb-accent-preset: var(--_mono-breadcrumb-secondary);
+  --_mono-breadcrumb-on-accent-preset: var(--secondary);
+}
+
+[mono-breadcrumb][mono-color="success"] {
+  --_mono-breadcrumb-accent-preset: var(--_mono-breadcrumb-success);
+  --_mono-breadcrumb-on-accent-preset: var(--success-foreground);
+}
+
+[mono-breadcrumb][mono-color="danger"] {
+  --_mono-breadcrumb-accent-preset: var(--_mono-breadcrumb-danger);
+  --_mono-breadcrumb-on-accent-preset: var(--destructive-foreground);
+}
+
+[mono-breadcrumb][mono-color="warning"] {
+  --_mono-breadcrumb-accent-preset: var(--_mono-breadcrumb-warning);
+  --_mono-breadcrumb-on-accent-preset: var(--warning-foreground);
+}
+
+[mono-breadcrumb][mono-color="info"] {
+  --_mono-breadcrumb-accent-preset: var(--_mono-breadcrumb-info);
+  --_mono-breadcrumb-on-accent-preset: var(--info-foreground);
+}
+[mono-breadcrumb][mono-color="teal"] {
+  --_mono-breadcrumb-accent-preset: var(--_mono-breadcrumb-teal);
+  --_mono-breadcrumb-on-accent-preset: var(--teal-foreground);
+}
+[mono-breadcrumb][mono-color="purple"] {
+  --_mono-breadcrumb-accent-preset: var(--_mono-breadcrumb-purple);
+  --_mono-breadcrumb-on-accent-preset: var(--purple-foreground);
+}
+[mono-breadcrumb][mono-color="neutral"] {
+  --_mono-breadcrumb-accent-preset: var(--_mono-breadcrumb-neutral);
+  --_mono-breadcrumb-on-accent-preset: var(--neutral-foreground);
+}
+[mono-breadcrumb][mono-color="dark"] {
+  --_mono-breadcrumb-accent-preset: var(--_mono-breadcrumb-dark);
+  --_mono-breadcrumb-on-accent-preset: var(--dark-foreground);
+}
+
+/* `surface` is upstream's own ink: hover and the current segment go to
+   `--foreground` and nothing is branded. */
+[mono-breadcrumb][mono-color="surface"] {
+  --_mono-breadcrumb-accent-preset: var(--_mono-breadcrumb-text-strong);
+  --_mono-breadcrumb-on-accent-preset: var(--background);
+}
+
+/* =========================================
+   The list
+   ========================================= */
+
+/* basecoat@1.0.2 components/breadcrumb.css .breadcrumb > ol — m-0 flex list-none flex-wrap items-center p-0 break-words */
+/* basecoat@1.0.2 styles/vega.css .breadcrumb > ol — text-muted-foreground gap-1.5 text-sm sm:gap-2.5
+   The selector carries the root on purpose: `.vp-doc ul, .vp-doc ol` is (0,1,1)
+   and would otherwise inject the left padding that breaks a flush breadcrumb. */
+:where([mono-breadcrumb]) [mono-list] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--_mono-breadcrumb-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+  overflow-wrap: break-word;
+  font-size: var(--_mono-breadcrumb-font);
+  line-height: var(--_mono-breadcrumb-line-height);
+}
+
+/* `sm:gap-2.5` — the row breathes once there is room for it. */
+@media (min-width: 640px) {
+  :where([mono-breadcrumb]) [mono-list] {
+    gap: var(--_mono-breadcrumb-gap-wide);
+  }
+}
+
+/* `truncate` CLAMPS, it does not force one line. Forcing `nowrap` meant the
+   row either overflowed its container or — once the crumbs were allowed to
+   shrink — squeezed short labels that had room, so `Dashboard` came out as
+   `Dash…` next to a half-empty row. Wrapping keeps every label at its clamp and
+   breaks the line instead. */
+
+/* VitePress puts `margin-top: 8px` on `li + li` and `margin-bottom: .5em` on
+   every `li`; either one stops the separators centring with the actions. */
+:where([mono-breadcrumb]) [mono-list] :is([mono-item], [mono-separator]) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A composed child list renders a separator BEFORE each of its items, since it
+   cannot know whether it is the first sibling. The very first one is dropped. */
+[mono-list] > mono-breadcrumb-list:first-child > [mono-separator]:first-child {
+  display: none;
+}
+
+/* =========================================
+   Item
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .breadcrumb li — gap-1.5 */
+/* basecoat@1.0.2 components/breadcrumb.css .breadcrumb li — inline-flex items-center */
+:where([mono-breadcrumb]) [mono-item] {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: var(--_mono-breadcrumb-gap);
+  min-width: 0;
+}
+
+/* =========================================
+   Action — the segment itself
+   ========================================= */
+
+/* basecoat@1.0.2 components/breadcrumb.css .breadcrumb a — rounded-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 */
+/* basecoat@1.0.2 styles/vega.css .breadcrumb a — transition-colors hover:text-foreground
+   DEVIATION: upstream's <a> is bare text. The padding and the border are kept as
+   knobs at 0 so `contained` / `underlined` — and a consumer — can turn the
+   segment into a chip without a second rule. */
+:where([mono-breadcrumb]) [mono-action] {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--_mono-breadcrumb-gap);
+  padding: var(--_mono-breadcrumb-pad-y) var(--_mono-breadcrumb-pad-x);
+  border: var(--_mono-breadcrumb-border-width) solid transparent;
+  border-radius: var(--_mono-breadcrumb-radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--_mono-breadcrumb-font-weight);
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  outline: none;
+  transition:
+    color var(--mono-duration) var(--mono-ease),
+    background-color var(--mono-duration) var(--mono-ease),
+    border-color var(--mono-duration) var(--mono-ease);
+}
+
+:where([mono-breadcrumb]) :is(a, button)[mono-action] {
+  cursor: pointer;
+}
+
+:where([mono-breadcrumb]) span[mono-action] {
+  cursor: default;
+}
+
+/* VitePress's `.vp-doc a` (0,1,1) underlines and re-inks every link, and adds an
+   external-link glyph on `target="_blank"`. The current segment renders as a
+   <span>, so it is never reached. */
+[mono-breadcrumb] a[mono-action] {
+  text-decoration: none;
+  color: inherit;
+  font-weight: var(--_mono-breadcrumb-font-weight);
+}
+
+[mono-breadcrumb] a[mono-action]::after {
+  display: none !important;
+}
+
+@media (hover: hover) {
+  [mono-breadcrumb] :is(a, button)[mono-action]:hover {
+    color: var(--_mono-breadcrumb-accent);
+  }
+}
+
+/* `focus-visible:ring-[3px] focus-visible:ring-ring/50` */
+[mono-breadcrumb] [mono-action]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 var(--mono-ring-width-lg, 3px)
+    color-mix(in oklab, var(--ring) 50%, transparent);
+}
+
+/* basecoat@1.0.2 styles/vega.css .breadcrumb [aria-current='page'] — font-normal text-foreground */
+/* basecoat@1.0.2 components/breadcrumb.css .breadcrumb [aria-current='page'] — cursor-default */
+[mono-breadcrumb] [mono-item][mono-current] > [mono-action] {
+  color: var(--_mono-breadcrumb-accent);
+  font-weight: var(--_mono-breadcrumb-current-weight);
+  text-transform: var(--_mono-breadcrumb-current-transform);
+  letter-spacing: var(--_mono-breadcrumb-current-tracking);
+  cursor: default;
+}
+
+[mono-breadcrumb] [mono-item][mono-disabled] > [mono-action],
+[mono-breadcrumb] [mono-action]:disabled,
+[mono-breadcrumb][mono-disabled] [mono-action] {
+  opacity: var(--mono-disabled-opacity, 0.5);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* =========================================
+   Variant: contained — EXTENSION, the pre-port chip
+   ========================================= */
+
+[mono-breadcrumb][mono-variant="contained"] {
+  --_mono-breadcrumb-pad-x-preset: var(--mono-breadcrumb-contained-pad-x, calc(var(--mono-spacing) * 2));
+  --_mono-breadcrumb-pad-y-preset: var(--mono-breadcrumb-contained-pad-y, calc(var(--mono-spacing) * 1));
+}
+
+[mono-breadcrumb][mono-variant="contained"] [mono-action] {
+  background: var(--_mono-breadcrumb-surface);
+  border-color: var(--_mono-breadcrumb-border);
+}
+
+@media (hover: hover) {
+  [mono-breadcrumb][mono-variant="contained"] :is(a, button)[mono-action]:hover {
+    background: color-mix(in oklab, var(--_mono-breadcrumb-accent) var(--mono-mode-tint), transparent);
+    border-color: color-mix(in oklab, var(--_mono-breadcrumb-accent) var(--mono-mode-checked-border), transparent);
+  }
+}
+
+/* The flat role fill, not the old gradient-and-glow. */
+[mono-breadcrumb][mono-variant="contained"] [mono-item][mono-current] > [mono-action] {
+  background: var(--_mono-breadcrumb-accent);
+  border-color: transparent;
+  color: var(--_mono-breadcrumb-on-accent);
+}
+
+[mono-breadcrumb][mono-variant="contained"] [mono-item][mono-current] > [mono-action] [mono-badge] {
+  background: color-mix(in oklab, var(--_mono-breadcrumb-on-accent) 22%, transparent);
+  color: var(--_mono-breadcrumb-on-accent);
+}
+
+/* =========================================
+   Variant: underlined — EXTENSION
+   ========================================= */
+
+[mono-breadcrumb][mono-variant="underlined"] [mono-action] {
+  border-radius: 0;
+  border-bottom-color: transparent;
+}
+
+@media (hover: hover) {
+  [mono-breadcrumb][mono-variant="underlined"] :is(a, button)[mono-action]:hover {
+    border-bottom-color: color-mix(in oklab, var(--_mono-breadcrumb-accent) var(--mono-mode-checked-border), transparent);
+  }
+}
+
+[mono-breadcrumb][mono-variant="underlined"] [mono-item][mono-current] > [mono-action] {
+  border-bottom-color: var(--_mono-breadcrumb-accent);
+}
+
+/* =========================================
+   Icon
+   ========================================= */
+
+/* basecoat@1.0.2 components/breadcrumb.css .breadcrumb li > span[aria-hidden='true'] — flex items-center justify-center */
+/* basecoat@1.0.2 styles/vega.css .breadcrumb li > span[aria-hidden='true'] — size-5 [&>svg]:size-4 */
+:where([mono-breadcrumb]) [mono-icon] {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-breadcrumb-icon-size);
+  height: var(--_mono-breadcrumb-icon-size);
+  font-size: var(--_mono-breadcrumb-icon-size);
+  line-height: 1;
+}
+
+/* Three shapes end up inside the box and all must fill it:
+     shadow build, user-slotted → <slot> → ::slotted(svg)
+     light build, user-slotted  → <span data-mono-slot="icon-<id>"> → svg
+     inline `item.icon` markup  → a direct child svg
+   The light placeholder is the subtle one: it parks the captured child, so the
+   SVG is a GRANDchild and a `> svg` rule misses it entirely. */
+[mono-icon] > svg,
+[mono-icon] > [data-mono-slot] > svg,
+[mono-icon] slot::slotted(svg) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The placeholder must not become a 0-width flex item between the box and the
+   SVG — `display: contents` drops it from layout so the SVG sizes against the
+   box instead of against a zero-width parent. */
+[mono-icon] > [data-mono-slot] {
+  display: contents;
+}
+
+/* Class + attribute = specificity (0,2,0), deliberately. UnoCSS's `i-…`
+   utilities set `width`/`height: 1.2em` (presetIcons `scale: 1.2`) at (0,1,0)
+   and their sheet loads AFTER this one, so a single selector loses and the glyph
+   overflows its box. Two selectors win regardless of sheet order — and it is the
+   only thing that works for the SHADOW build, where this span is a LIGHT-DOM
+   child of the host that no shadow-scoped selector can reach.
+   Scoped to the breadcrumb: its OWN class (every build sets it on the span — the
+   shadow build's span is a light-DOM child of the host, outside [mono-breadcrumb])
+   OR anything inside a [mono-breadcrumb] root (raw CSS markup writes a bare
+   `<span mono-glyph class="i-…">`). Still (0,2,0): `:is()` weighs its heaviest
+   argument. A bare `[mono-glyph][mono-glyph]` is global and stretched every other
+   component's `[mono-glyph]` to 100% — the accordion's icon chip filled its header. */
+:is(.mono-breadcrumb-iconify, [mono-breadcrumb] *)[mono-glyph] {
+  display: inline-block;
+  width: 100%;
+  height: 100%;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+/* =========================================
+   Content / title
+   ========================================= */
+
+:where([mono-breadcrumb]) [mono-content] {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+:where([mono-breadcrumb]) [mono-title] {
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  line-height: inherit;
+}
+
+/* A flex item's `min-width` is `auto` — its content — so without this the
+   crumbs could not shrink past their clamp and the row simply overflowed its
+   container (measured: 543px of crumbs in a 512px box). Letting the chain go to
+   zero turns the clamp into a CEILING: a crumb takes at most `truncate-width`,
+   and less when the row is tight. */
+[mono-breadcrumb][mono-truncate] :is([mono-item], [mono-action], [mono-content]) {
+  min-width: 0;
+}
+
+[mono-breadcrumb][mono-truncate] [mono-title] {
+  display: block;
+  max-width: var(--mono-breadcrumb-truncate-width, 12ch);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[mono-breadcrumb][mono-truncate] [mono-item][mono-current] [mono-title] {
+  max-width: var(--mono-breadcrumb-truncate-width-current, 18ch);
+}
+
+/* =========================================
+   Badge — EXTENSION, borrowing `.badge`'s shape
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .badge — h-5 gap-1 rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium transition-all [&>svg]:size-3! */
+:where([mono-breadcrumb]) [mono-badge] {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mono-spacing);
+  height: var(--_mono-breadcrumb-badge-height);
+  padding: 0 var(--_mono-breadcrumb-badge-pad-x);
+  border: var(--mono-border-width) solid transparent;
+  border-radius: var(--_mono-breadcrumb-badge-radius);
+  font-size: var(--_mono-breadcrumb-badge-font);
+  font-weight: var(--_mono-breadcrumb-badge-weight);
+  line-height: 1;
+  background: var(--_mono-breadcrumb-badge-bg);
+  color: var(--_mono-breadcrumb-badge-color);
+}
+
+/* The roles ink the pill tonally — the same wash the ported chip and menu use. */
+[mono-breadcrumb] [mono-badge="primary"] {
+  background: color-mix(in oklab, var(--_mono-breadcrumb-primary) var(--mono-mode-tint), transparent);
+  color: var(--_mono-breadcrumb-primary);
+}
+
+[mono-breadcrumb] [mono-badge="success"] {
+  background: color-mix(in oklab, var(--_mono-breadcrumb-success) var(--mono-mode-tint), transparent);
+  color: var(--_mono-breadcrumb-success);
+}
+
+[mono-breadcrumb] [mono-badge="danger"] {
+  background: color-mix(in oklab, var(--_mono-breadcrumb-danger) var(--mono-mode-tint), transparent);
+  color: var(--_mono-breadcrumb-danger);
+}
+
+[mono-breadcrumb] [mono-badge="warning"] {
+  background: color-mix(in oklab, var(--_mono-breadcrumb-warning) var(--mono-mode-tint), transparent);
+  color: var(--_mono-breadcrumb-warning);
+}
+
+[mono-breadcrumb] [mono-badge="info"] {
+  background: color-mix(in oklab, var(--_mono-breadcrumb-info) var(--mono-mode-tint), transparent);
+  color: var(--_mono-breadcrumb-info);
+}
+
+/* =========================================
+   Separator
+   ========================================= */
+
+/* basecoat@1.0.2 components/breadcrumb.css .breadcrumb li[aria-hidden='true'] — select-none */
+:where([mono-breadcrumb]) [mono-separator] {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  /* Upstream's separator is an SVG at `size-3.5`, so the slot between two
+     crumbs is 14px wide whatever is in it. A text glyph like `›` is barely 4px,
+     which — on a flavor with a tight gap — left the labels all but touching.
+     Reserving the same box is what keeps the row legible either way. */
+  min-width: var(--_mono-breadcrumb-sep-size);
+  font-size: var(--_mono-breadcrumb-sep-font);
+  line-height: 1;
+  color: var(--_mono-breadcrumb-sep-color);
+  user-select: none;
+}
+
+/* basecoat@1.0.2 styles/vega.css .breadcrumb li[aria-hidden='true'] > svg — size-3.5 */
+[mono-separator] > svg,
+[mono-separator] > [data-mono-slot] > svg,
+[mono-separator] slot::slotted(svg) {
+  display: block;
+  width: var(--_mono-breadcrumb-sep-size);
+  height: var(--_mono-breadcrumb-sep-size);
+}
+
+[mono-separator] > [data-mono-slot] {
+  display: contents;
+}
+
+/* basecoat@1.0.2 components/breadcrumb.css .breadcrumb [data-rtl-flip] — rtl:rotate-180 */
+[dir="rtl"] [mono-breadcrumb] [mono-separator] > svg {
+  rotate: 180deg;
+}
+
+/* =========================================
+   Reduced motion
+   ========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  [mono-breadcrumb] [mono-action] {
+    transition: none;
+  }
+}

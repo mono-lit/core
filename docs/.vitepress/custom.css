@@ -1,0 +1,25 @@
+/* keep VitePress markdown table behavior, but restore native table behavior for mono-table */
+.vp-doc table.mono-table {
+  display: table;
+  width: 100%;
+  margin: 0;
+  overflow: visible;
+  border-collapse: collapse;
+}
+
+.vp-doc table.mono-table thead {
+  display: table-header-group;
+}
+
+.vp-doc table.mono-table tbody {
+  display: table-row-group;
+}
+
+.vp-doc table.mono-table tr {
+  display: table-row;
+}
+
+.vp-doc table.mono-table th,
+.vp-doc table.mono-table td {
+  display: table-cell;
+}

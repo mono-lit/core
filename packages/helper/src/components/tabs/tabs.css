@@ -1,0 +1,534 @@
+/* @unocss-include */
+
+/* =========================================================================
+   mono-tabs — a port of Basecoat's `.tabs` (basecoat-css@1.0.2, vega style).
+
+   Styled by ATTRIBUTE, like Basecoat — and the attributes mirror the element's
+   props one for one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-tabs size="lg" color="success" variant="pill" model-value="a">
+     <div mono-tabs mono-size="lg" mono-color="success" mono-variant="pill"
+          role="tablist" aria-orientation="horizontal">
+       <button mono-tab type="button" role="tab" aria-selected="true">
+         <span mono-icon>…</span>
+         <span mono-label>Overview</span>
+         <span mono-badge>3</span>
+       </button>
+     </div>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-color])` = primary, `:not([mono-variant])` = underline). The
+   element writes them on its root — the host in the light build, an inner root
+   in the shadow one — plus `mono-disabled`. The old classes
+   (`.mono-tabs.md.primary.variant-pill`, `.mono-tabs-tab.on`) are still emitted
+   as inert hooks until 2.0 but no rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-tabs]                     ≡ .tabs > [role='tablist'] (inline-flex w-fit
+                                       items-center justify-center rounded-lg
+                                       p-[3px] h-9, bg-muted unless line)
+                                       — DEVIATION: this element renders the STRIP
+                                       only, never the panels, so there is no
+                                       `.tabs` wrapper. Its job — the flex
+                                       direction and the `gap-2` to the panel —
+                                       belongs to the consumer's own layout.
+     [mono-variant="pill"]           ≡ the DEFAULT tablist (upstream has no name
+                                       for it; ours is `pill`)
+     [mono-variant="underline"]      ≡ [data-variant='line'] (gap-1 rounded-none
+                                       bg-transparent, selected via the ::after bar)
+     [mono-variant="ghost"]          ≡ EXTENSION
+     [aria-orientation="vertical"]   ≡ [aria-orientation='vertical'] (h-fit
+                                       flex-col; tabs w-full justify-start)
+     [mono-tab]                      ≡ > [role='tab'] (relative inline-flex flex-1
+                                       items-center justify-center whitespace-nowrap
+                                       gap-1.5 rounded-md border border-transparent
+                                       px-2 py-1 text-sm font-medium, ink
+                                       foreground/60 → foreground on hover)
+     [mono-tab][aria-selected=true]  ≡ [role='tab'][aria-selected='true'] — the
+                                       pill fill (bg-background shadow-sm, dark
+                                       border-input bg-input/30) or the line bar
+     [mono-tab]::after               ≡ the `after:` bar the line variant reveals
+                                       (inset-x-0 bottom-[-5px] h-0.5 bg-foreground)
+     [mono-icon]                     ≡ [&_svg:not([class*='size-'])]:size-4, plus
+                                       upstream's ps-1.5 / pe-1.5 when a tab leads
+                                       or trails with one
+     [mono-label]                    ≡ the tab's own text
+     [mono-badge]                    ≡ EXTENSION
+     [mono-size]/[mono-color]        ≡ EXTENSION (upstream ships one size, no colour)
+
+   PART NAMES ARE PATH-SCOPED. `[mono-icon]`, `[mono-label]` and `[mono-badge]`
+   are also button's, input's and card's part names, so every rule here is
+   written as a child path from the root — `:where([mono-tabs] > [mono-tab]) >
+   [mono-label]`. The `:where()` keeps that at (0,1,0), the weight a
+   one-attribute rule would have, so a `cssClass` utility still wins by source
+   order.
+
+   STATE IS ARIA, not a class. `aria-selected` and `disabled` are what the
+   element already renders and what upstream keys on, so the port needs no
+   `mono-selected` of its own — and hand-written markup that is accessible is
+   styled correctly by construction.
+
+   FLAVORS set `--mono-tabs-{radius,padding,height,gap,tab-radius,tab-pad-x,
+   tab-pad-y,tab-font,tab-gap,tab-font-weight,tab-text-transform,
+   tab-letter-spacing,icon-size}`; every fallback here is vega's value
+   (`node scripts/basecoat-styles.mjs --varying "tabs"` prints the matrix).
+   ========================================================================= */
+
+mono-tabs {
+  display: block;
+}
+
+/* =========================================
+   Root — the tablist
+   ========================================= */
+
+/* basecoat@1.0.2 components/tabs.css .tabs >> > [role='tablist'] — text-muted-foreground
+   inline-flex w-fit items-center justify-center */
+/* basecoat@1.0.2 styles/vega.css .tabs > [role='tablist'] — rounded-lg p-[3px] h-9 */
+[mono-tabs] {
+  /* ── the six roles, each a public knob over a Basecoat token ───────────── */
+  --_mono-tabs-primary: var(--mono-tabs-primary, var(--primary));
+  --_mono-tabs-secondary: var(--mono-tabs-secondary, var(--secondary-foreground));
+  --_mono-tabs-success: var(--mono-tabs-success, var(--success));
+  --_mono-tabs-danger: var(--mono-tabs-danger, var(--destructive));
+  --_mono-tabs-warning: var(--mono-tabs-warning, var(--warning));
+  --_mono-tabs-info: var(--mono-tabs-info, var(--info));
+  --_mono-tabs-teal: var(--mono-tabs-teal, var(--teal));
+  --_mono-tabs-purple: var(--mono-tabs-purple, var(--purple));
+  --_mono-tabs-neutral: var(--mono-tabs-neutral, var(--neutral));
+  --_mono-tabs-dark: var(--mono-tabs-dark, var(--dark));
+  /* the colour in play — `primary` unless a [mono-color] rule re-points it */
+  --_mono-tabs-accent: var(--mono-tabs-accent, var(--_mono-tabs-accent-preset, var(--_mono-tabs-primary)));
+
+  /* ── inks. `text-foreground/60 → text-foreground`, and the dark-mode pair
+        `text-muted-foreground → text-foreground`, ride one mode token. ────── */
+  --_mono-tabs-text: var(--mono-tabs-text, var(--foreground));
+  --_mono-tabs-muted: var(--mono-tabs-muted, var(--mono-mode-tab-inactive-fg));
+  /* `-background` is the pre-port name for the strip's own fill, honoured
+     until 2.0; `-surface` named the SELECTED tab's fill and is read there. */
+  --_mono-tabs-bg: var(--mono-tabs-bg, var(--mono-tabs-background, var(--muted)));
+
+  /* ── md metrics live on the unqualified root ON PURPOSE ────────────────── */
+  --_mono-tabs-height: var(--mono-tabs-height, var(--_mono-tabs-height-preset, var(--mono-tabs-height-md, var(--mono-control-height-md))));
+  --_mono-tabs-radius: var(--mono-tabs-radius, var(--_mono-tabs-radius-preset, var(--mono-tabs-radius-md, var(--mono-radius-lg))));
+  --_mono-tabs-padding: var(--mono-tabs-padding, var(--_mono-tabs-padding-preset, var(--mono-tabs-padding-md, 3px)));
+  /* `--mono-tabs-gap` named the gap INSIDE a tab before the port and still
+     does; the STRIP's own gap — upstream's `gap-1` on the line variant — is a
+     new thing and gets a new name. */
+  --_mono-tabs-gap: var(--mono-tabs-strip-gap, var(--_mono-tabs-gap-preset, 0px));
+
+  --_mono-tabs-tab-radius: var(--mono-tabs-tab-radius, var(--_mono-tabs-tab-radius-preset, var(--mono-tabs-tab-radius-md, var(--mono-radius-md))));
+  /* `-pad-x` / `-pad-y` / `-gap` without the `tab-` are the pre-port names for
+     these three, honoured until 2.0. */
+  --_mono-tabs-tab-pad-x: var(--mono-tabs-tab-pad-x, var(--mono-tabs-pad-x, var(--_mono-tabs-tab-pad-x-preset, var(--mono-tabs-tab-pad-x-md, calc(var(--mono-spacing) * 2)))));
+  --_mono-tabs-tab-pad-y: var(--mono-tabs-tab-pad-y, var(--mono-tabs-pad-y, var(--_mono-tabs-tab-pad-y-preset, var(--mono-tabs-tab-pad-y-md, var(--mono-spacing)))));
+  --_mono-tabs-tab-gap: var(--mono-tabs-tab-gap, var(--mono-tabs-gap, var(--_mono-tabs-tab-gap-preset, var(--mono-tabs-tab-gap-md, calc(var(--mono-spacing) * 1.5)))));
+  --_mono-tabs-font: var(--mono-tabs-font, var(--_mono-tabs-font-preset, var(--mono-tabs-tab-font-md, var(--mono-text-sm))));
+  --_mono-tabs-line-height: var(--mono-tabs-line-height, var(--_mono-tabs-line-height-preset, var(--mono-text-sm--lh)));
+  --_mono-tabs-font-weight: var(--mono-tabs-font-weight, var(--mono-tabs-tab-font-weight, var(--mono-font-weight-medium)));
+  --_mono-tabs-text-transform: var(--mono-tabs-text-transform, var(--mono-tabs-tab-text-transform, none));
+  --_mono-tabs-letter-spacing: var(--mono-tabs-letter-spacing, var(--mono-tabs-tab-letter-spacing, normal));
+  --_mono-tabs-icon-size: var(--mono-tabs-icon-size, var(--_mono-tabs-icon-size-preset, var(--mono-tabs-icon-size-md, calc(var(--mono-spacing) * 4))));
+
+  /* ── the selected PILL — `bg-background shadow-sm`, dark `border-input
+        bg-input/30`, both carried by mode tokens ─────────────────────────── */
+  --_mono-tabs-active-bg: var(--mono-tabs-active-bg, var(--mono-tabs-surface, var(--mono-mode-tab-active-bg)));
+  --_mono-tabs-active-border: var(--mono-tabs-active-border, var(--mono-mode-tab-active-border));
+  --_mono-tabs-active-shadow: var(--mono-tabs-active-shadow, var(--mono-shadow-sm));
+  /* EXTENSION: upstream's selected tab is `text-foreground`; ours takes the role,
+     which IS the foreground under the Basecoat palette. */
+  --_mono-tabs-active-color: var(--mono-tabs-active-color, var(--_mono-tabs-accent));
+
+  /* ── the LINE bar — `after:bg-foreground h-0.5 bottom-[-5px]` ──────────── */
+  --_mono-tabs-line-color: var(--mono-tabs-line-color, var(--_mono-tabs-accent));
+  --_mono-tabs-line-size: var(--mono-tabs-line-size, 2px);
+  --_mono-tabs-line-offset: var(--mono-tabs-line-offset, -5px);
+  /* EXTENSION, off by default: upstream's line variant has no baseline rule
+     under the strip, only the bar under the selected tab. A flavor or consumer
+     that wants the old full-width rule sets this. */
+  --_mono-tabs-line-track-color: var(--mono-tabs-line-track-color, transparent);
+  --_mono-tabs-line-track-size: var(--mono-tabs-line-track-size, var(--_mono-tabs-line-size));
+
+  /* ── focus — `focus-visible:border-ring ring-ring/50 ring-[3px]` ───────── */
+  --_mono-tabs-ring-color: var(--mono-tabs-ring-color, var(--ring));
+  --_mono-tabs-ring-width: var(--mono-tabs-ring-width, var(--mono-ring-width));
+
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: var(--_mono-tabs-gap);
+  box-sizing: border-box;
+  height: var(--_mono-tabs-height);
+  padding: var(--_mono-tabs-padding);
+  border-radius: var(--_mono-tabs-radius);
+  color: var(--muted-foreground);
+  font-family: inherit;
+}
+
+[mono-tabs],
+:where([mono-tabs]) *,
+:where([mono-tabs]) *::before,
+:where([mono-tabs]) *::after {
+  box-sizing: border-box;
+}
+
+/* basecoat@1.0.2 components/tabs.css .tabs >> > [role='tablist'] >> &[aria-orientation='vertical']
+   — h-fit flex-col */
+[mono-tabs][aria-orientation="vertical"] {
+  height: fit-content;
+  flex-direction: column;
+}
+
+/* =========================================
+   Variants — upstream's default tablist and its `[data-variant='line']`
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .tabs > [role='tablist']:not([data-variant='line']) — bg-muted */
+[mono-tabs][mono-variant="pill"] {
+  background: var(--_mono-tabs-bg);
+}
+
+/* basecoat@1.0.2 styles/vega.css .tabs > [role='tablist'][data-variant='line']
+   — gap-1 rounded-none bg-transparent */
+[mono-tabs]:is(:not([mono-variant]), [mono-variant="underline"]) {
+  --_mono-tabs-gap: var(--mono-tabs-strip-gap, var(--mono-spacing));
+  border-radius: 0;
+  background: transparent;
+  /* EXTENSION — the baseline rule, off unless a flavor or consumer turns it on. */
+  box-shadow: inset 0 calc(-1 * var(--_mono-tabs-line-track-size)) 0 0 var(--_mono-tabs-line-track-color);
+}
+
+/* EXTENSION — a bare strip whose tabs wash on hover and hold a tint when selected. */
+[mono-tabs][mono-variant="ghost"] {
+  --_mono-tabs-gap: var(--mono-tabs-strip-gap, var(--mono-spacing));
+  background: transparent;
+}
+
+/* =========================================
+   Sizes — EXTENSION: Basecoat ships ONE tab size; md is its `[role='tablist']`
+   ========================================= */
+
+[mono-tabs][mono-size="xs"] {
+  --_mono-tabs-height-preset: var(--mono-control-height-xs);
+  --_mono-tabs-radius-preset: var(--mono-tabs-radius-xs, var(--mono-radius-md));
+  --_mono-tabs-padding-preset: var(--mono-tabs-padding-xs, 2px);
+  --_mono-tabs-tab-radius-preset: var(--mono-tabs-tab-radius-xs, var(--mono-radius-sm));
+  --_mono-tabs-tab-pad-x-preset: var(--mono-tabs-tab-pad-x-xs, calc(var(--mono-spacing) * 1.5));
+  --_mono-tabs-tab-pad-y-preset: var(--mono-tabs-tab-pad-y-xs, calc(var(--mono-spacing) * 0.25));
+  --_mono-tabs-tab-gap-preset: calc(var(--mono-spacing) * 1);
+  --_mono-tabs-font-preset: var(--mono-tabs-tab-font-xs, var(--mono-text-xs));
+  --_mono-tabs-line-height-preset: var(--mono-text-xs--lh);
+  --_mono-tabs-icon-size-preset: var(--mono-tabs-icon-size-xs, calc(var(--mono-spacing) * 3));
+}
+
+[mono-tabs][mono-size="sm"] {
+  --_mono-tabs-height-preset: var(--mono-control-height-sm);
+  --_mono-tabs-radius-preset: var(--mono-tabs-radius-sm, var(--mono-radius-md));
+  --_mono-tabs-padding-preset: var(--mono-tabs-padding-sm, 2px);
+  --_mono-tabs-tab-radius-preset: var(--mono-tabs-tab-radius-sm, var(--mono-radius-sm));
+  --_mono-tabs-tab-pad-x-preset: var(--mono-tabs-tab-pad-x-sm, calc(var(--mono-spacing) * 1.5));
+  --_mono-tabs-tab-pad-y-preset: var(--mono-tabs-tab-pad-y-sm, calc(var(--mono-spacing) * 0.5));
+  --_mono-tabs-tab-gap-preset: calc(var(--mono-spacing) * 1.25);
+  --_mono-tabs-font-preset: var(--mono-tabs-tab-font-sm, var(--mono-text-xs));
+  --_mono-tabs-line-height-preset: var(--mono-text-xs--lh);
+  --_mono-tabs-icon-size-preset: var(--mono-tabs-icon-size-sm, calc(var(--mono-spacing) * 3.5));
+}
+
+[mono-tabs][mono-size="lg"] {
+  --_mono-tabs-height-preset: var(--mono-control-height-lg);
+  --_mono-tabs-radius-preset: var(--mono-tabs-radius-lg, var(--mono-radius-lg));
+  --_mono-tabs-padding-preset: var(--mono-tabs-padding-lg, 4px);
+  --_mono-tabs-tab-radius-preset: var(--mono-tabs-tab-radius-lg, var(--mono-radius-md));
+  --_mono-tabs-tab-pad-x-preset: var(--mono-tabs-tab-pad-x-lg, calc(var(--mono-spacing) * 3));
+  --_mono-tabs-tab-pad-y-preset: var(--mono-tabs-tab-pad-y-lg, calc(var(--mono-spacing) * 1.5));
+  --_mono-tabs-tab-gap-preset: calc(var(--mono-spacing) * 2);
+  --_mono-tabs-font-preset: var(--mono-tabs-tab-font-lg, var(--mono-text-sm));
+  --_mono-tabs-icon-size-preset: var(--mono-tabs-icon-size-lg, calc(var(--mono-spacing) * 4.5));
+}
+
+[mono-tabs][mono-size="xl"] {
+  --_mono-tabs-height-preset: var(--mono-control-height-xl);
+  --_mono-tabs-radius-preset: var(--mono-tabs-radius-xl, var(--mono-radius-xl));
+  --_mono-tabs-padding-preset: var(--mono-tabs-padding-xl, 5px);
+  --_mono-tabs-tab-radius-preset: var(--mono-tabs-tab-radius-xl, var(--mono-radius-lg));
+  --_mono-tabs-tab-pad-x-preset: var(--mono-tabs-tab-pad-x-xl, calc(var(--mono-spacing) * 3.5));
+  --_mono-tabs-tab-pad-y-preset: var(--mono-tabs-tab-pad-y-xl, calc(var(--mono-spacing) * 2));
+  --_mono-tabs-tab-gap-preset: calc(var(--mono-spacing) * 2.25);
+  --_mono-tabs-font-preset: var(--mono-tabs-tab-font-xl, var(--mono-text-base));
+  --_mono-tabs-line-height-preset: var(--mono-text-base--lh);
+  --_mono-tabs-icon-size-preset: var(--mono-tabs-icon-size-xl, calc(var(--mono-spacing) * 5));
+}
+
+[mono-tabs][mono-size="xxl"] {
+  --_mono-tabs-height-preset: var(--mono-control-height-xxl);
+  --_mono-tabs-radius-preset: var(--mono-tabs-radius-xxl, var(--mono-radius-xl));
+  --_mono-tabs-padding-preset: var(--mono-tabs-padding-xxl, 6px);
+  --_mono-tabs-tab-radius-preset: var(--mono-tabs-tab-radius-xxl, var(--mono-radius-lg));
+  --_mono-tabs-tab-pad-x-preset: var(--mono-tabs-tab-pad-x-xxl, calc(var(--mono-spacing) * 4));
+  --_mono-tabs-tab-pad-y-preset: var(--mono-tabs-tab-pad-y-xxl, calc(var(--mono-spacing) * 2.5));
+  --_mono-tabs-tab-gap-preset: calc(var(--mono-spacing) * 2.5);
+  --_mono-tabs-font-preset: var(--mono-tabs-tab-font-xxl, var(--mono-text-lg));
+  --_mono-tabs-line-height-preset: var(--mono-text-lg--lh);
+  --_mono-tabs-icon-size-preset: var(--mono-tabs-icon-size-xxl, calc(var(--mono-spacing) * 5.5));
+}
+
+/* =========================================
+   Colours — EXTENSION: the role inks the selected tab and the line bar
+   ========================================= */
+
+[mono-tabs][mono-color="primary"] { --_mono-tabs-accent-preset: var(--_mono-tabs-primary); }
+[mono-tabs][mono-color="secondary"] { --_mono-tabs-accent-preset: var(--_mono-tabs-secondary); }
+[mono-tabs][mono-color="success"] { --_mono-tabs-accent-preset: var(--_mono-tabs-success); }
+[mono-tabs][mono-color="danger"] { --_mono-tabs-accent-preset: var(--_mono-tabs-danger); }
+[mono-tabs][mono-color="warning"] { --_mono-tabs-accent-preset: var(--_mono-tabs-warning); }
+[mono-tabs][mono-color="info"] { --_mono-tabs-accent-preset: var(--_mono-tabs-info); }
+[mono-tabs][mono-color="teal"] { --_mono-tabs-accent-preset: var(--_mono-tabs-teal); }
+[mono-tabs][mono-color="purple"] { --_mono-tabs-accent-preset: var(--_mono-tabs-purple); }
+[mono-tabs][mono-color="neutral"] { --_mono-tabs-accent-preset: var(--_mono-tabs-neutral); }
+[mono-tabs][mono-color="dark"] { --_mono-tabs-accent-preset: var(--_mono-tabs-dark); }
+
+/* =========================================
+   Tab — `> [role='tab']`
+   ========================================= */
+
+/* basecoat@1.0.2 components/tabs.css .tabs >> > [role='tablist'] >> > [role='tab']
+   — relative inline-flex flex-1 items-center justify-center whitespace-nowrap
+   transition-all outline-none, disabled:pointer-events-none disabled:opacity-50 */
+/* basecoat@1.0.2 styles/vega.css .tabs > [role='tablist'] > [role='tab']
+   — gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium,
+   text-foreground/60 hover:text-foreground (dark: muted-foreground → foreground),
+   focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] */
+:where([mono-tabs]) > [mono-tab] {
+  position: relative;
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: var(--_mono-tabs-tab-gap);
+  padding: var(--_mono-tabs-tab-pad-y) var(--_mono-tabs-tab-pad-x);
+  border: var(--mono-border-width) solid transparent;
+  border-radius: var(--_mono-tabs-tab-radius);
+  background: transparent;
+  color: var(--_mono-tabs-muted);
+  font-family: inherit;
+  font-size: var(--_mono-tabs-font);
+  line-height: var(--_mono-tabs-line-height);
+  font-weight: var(--_mono-tabs-font-weight);
+  text-transform: var(--_mono-tabs-text-transform);
+  letter-spacing: var(--_mono-tabs-letter-spacing);
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  appearance: none;
+  transition:
+    color var(--mono-duration) var(--mono-ease),
+    background-color var(--mono-duration) var(--mono-ease),
+    border-color var(--mono-duration) var(--mono-ease),
+    box-shadow var(--mono-duration) var(--mono-ease);
+}
+
+@media (hover: hover) {
+  [mono-tabs] > [mono-tab]:hover:not(:disabled):not([aria-disabled="true"]) {
+    color: var(--_mono-tabs-text);
+  }
+}
+
+[mono-tabs] > [mono-tab]:focus-visible {
+  border-color: var(--_mono-tabs-ring-color);
+  box-shadow: 0 0 0 var(--_mono-tabs-ring-width)
+    color-mix(in oklab, var(--_mono-tabs-ring-color) var(--mono-ring-alpha), transparent);
+}
+
+/* basecoat@1.0.2 components/tabs.css .tabs >> > [role='tablist'] >> > [role='tab']
+   — disabled:pointer-events-none disabled:opacity-50. DEVIATION: 0.45, this
+   component's pre-port value. */
+[mono-tabs] > [mono-tab]:disabled,
+[mono-tabs] > [mono-tab][aria-disabled="true"],
+[mono-tabs][mono-disabled] > [mono-tab] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* basecoat@1.0.2 styles/vega.css .tabs > [role='tablist'][aria-orientation='vertical'] > [role='tab']
+   — w-full justify-start */
+[mono-tabs][aria-orientation="vertical"] > [mono-tab] {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+/* Upstream suppresses the host page's generic anchor decoration the same way a
+   button would; tabs render as <button> today, but the rule is kept for a future
+   anchor tab (an `href` / RouterLink integration) — and for VitePress, whose
+   `.vp-doc a` would otherwise underline one. */
+[mono-tabs] a[mono-tab],
+[mono-tabs] a[mono-tab]:hover,
+[mono-tabs] a[mono-tab]:focus {
+  text-decoration: none;
+}
+
+[mono-tabs] a[mono-tab]::after {
+  display: none;
+}
+
+/* =========================================
+   Selected — `[aria-selected='true']`
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .tabs > [role='tablist']:not([data-variant='line']) > [role='tab'][aria-selected='true']
+   — bg-background text-foreground shadow-sm, dark border-input bg-input/30 */
+[mono-tabs][mono-variant="pill"] > [mono-tab][aria-selected="true"] {
+  background: var(--_mono-tabs-active-bg);
+  border-color: var(--_mono-tabs-active-border);
+  box-shadow: var(--_mono-tabs-active-shadow);
+  color: var(--_mono-tabs-active-color);
+}
+
+/* EXTENSION — ghost holds a tint instead of a raised pill. */
+[mono-tabs][mono-variant="ghost"] > [mono-tab][aria-selected="true"] {
+  background: var(--mono-tabs-ghost-active-bg,
+    color-mix(in oklab, var(--_mono-tabs-accent) var(--mono-mode-tint), transparent));
+  color: var(--_mono-tabs-active-color);
+}
+
+@media (hover: hover) {
+  [mono-tabs][mono-variant="ghost"] > [mono-tab]:hover:not(:disabled):not([aria-selected="true"]) {
+    background: var(--mono-tabs-ghost-hover-bg, var(--mono-mode-ghost-hover));
+  }
+}
+
+/* basecoat@1.0.2 styles/vega.css .tabs > [role='tablist'][data-variant='line'] > [role='tab'][aria-selected='true']
+   — bg-transparent text-foreground shadow-none after:opacity-100 */
+[mono-tabs]:is(:not([mono-variant]), [mono-variant="underline"]) > [mono-tab][aria-selected="true"] {
+  background: transparent;
+  box-shadow: none;
+  color: var(--_mono-tabs-active-color);
+}
+
+/* =========================================
+   The line bar — the `::after` upstream reveals
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .tabs > [role='tablist'] > [role='tab']
+   — after:absolute after:bg-foreground after:opacity-0 after:transition-opacity */
+:where([mono-tabs]) > [mono-tab]::after {
+  content: '';
+  position: absolute;
+  background: var(--_mono-tabs-line-color);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--mono-duration) var(--mono-ease);
+}
+
+/* basecoat@1.0.2 styles/vega.css .tabs > [role='tablist'][data-variant='line'][aria-orientation='horizontal'] > [role='tab']
+   — after:inset-x-0 after:bottom-[-5px] after:h-0.5 */
+[mono-tabs]:is(:not([mono-variant]), [mono-variant="underline"]):not([aria-orientation="vertical"]) > [mono-tab]::after {
+  inset-inline: 0;
+  bottom: var(--_mono-tabs-line-offset);
+  height: var(--_mono-tabs-line-size);
+}
+
+/* basecoat@1.0.2 styles/vega.css .tabs > [role='tablist'][data-variant='line'][aria-orientation='vertical'] > [role='tab']
+   — after:inset-y-0 after:end-[-4px] after:w-0.5 */
+[mono-tabs]:is(:not([mono-variant]), [mono-variant="underline"])[aria-orientation="vertical"] > [mono-tab]::after {
+  inset-block: 0;
+  inset-inline-end: calc(var(--_mono-tabs-line-offset) + 1px);
+  width: var(--_mono-tabs-line-size);
+}
+
+[mono-tabs]:is(:not([mono-variant]), [mono-variant="underline"]) > [mono-tab][aria-selected="true"]::after {
+  opacity: 1;
+}
+
+/* =========================================
+   Icon — `[&_svg:not([class*='size-'])]:size-4`
+   ========================================= */
+
+:where([mono-tabs] > [mono-tab]) > [mono-icon] {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-tabs-icon-size);
+  height: var(--_mono-tabs-icon-size);
+  color: inherit;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Light: the `[data-mono-slot]` placeholder the svg is moved into. Shadow: the
+   projected svg. Either way it fills the box upstream sizes. */
+[mono-tabs] > [mono-tab] > [mono-icon] > :is(svg, span, [data-mono-slot]),
+[mono-tabs] > [mono-tab] > [mono-icon] > [data-mono-slot] > svg,
+[mono-tabs] > [mono-tab] > [mono-icon] slot::slotted(svg) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* basecoat@1.0.2 styles/vega.css .tabs > [role='tablist'] > [role='tab']:has(> svg:first-child)
+   — ps-1.5. A tab that LEADS with a glyph tucks in on that side.
+
+   `:not([mono-empty])` is what keeps the two builds equal: the shadow one
+   renders an icon box for every tab (DSD has to have something to project into)
+   and marks the empty ones, so a bare `:has()` tucked in EVERY shadow tab. */
+[mono-tabs] > [mono-tab]:has(> [mono-icon]:first-child:not([mono-empty])) {
+  padding-inline-start: var(--mono-tabs-tab-icon-pad, calc(var(--mono-spacing) * 1.5));
+}
+
+/* basecoat@1.0.2 styles/vega.css .tabs > [role='tablist'] > [role='tab']:has(> svg:last-child)
+   — pe-1.5 */
+[mono-tabs] > [mono-tab]:has(> [mono-icon]:last-child:not([mono-empty])) {
+  padding-inline-end: var(--mono-tabs-tab-icon-pad, calc(var(--mono-spacing) * 1.5));
+}
+
+/* The shadow build renders the icon box for every tab (DSD projects into it) and
+   marks the empty ones; the light build renders only what it captured. */
+[mono-tabs] > [mono-tab] > [mono-icon][mono-empty] {
+  display: none;
+}
+
+/* =========================================
+   Label + badge
+   ========================================= */
+
+:where([mono-tabs] > [mono-tab]) > [mono-label] {
+  display: inline-block;
+  line-height: inherit;
+  text-decoration: none;
+}
+
+/* EXTENSION — a count beside the label. Upstream has no badge. */
+:where([mono-tabs] > [mono-tab]) > [mono-badge] {
+  --_mono-tabs-badge-size: var(--mono-tabs-badge-size, calc(var(--mono-spacing) * 4.5));
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--_mono-tabs-badge-size);
+  height: var(--_mono-tabs-badge-size);
+  padding-inline: calc(var(--mono-spacing) * 1.25);
+  border-radius: var(--mono-radius-full);
+  background: var(--mono-tabs-badge-bg, color-mix(in oklab, var(--foreground) 10%, transparent));
+  color: var(--mono-tabs-badge-color, var(--_mono-tabs-muted));
+  font-size: var(--mono-tabs-badge-font, var(--mono-text-xs));
+  font-weight: var(--mono-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+[mono-tabs] > [mono-tab][aria-selected="true"] > [mono-badge] {
+  background: var(--mono-tabs-badge-active-bg, var(--_mono-tabs-accent));
+  color: var(--mono-tabs-badge-active-color, var(--primary-foreground));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [mono-tabs] > [mono-tab],
+  [mono-tabs] > [mono-tab]::after {
+    transition: none;
+  }
+}

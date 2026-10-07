@@ -1,0 +1,50 @@
+{
+    "name": "monorepo",
+    "private": true,
+    "packageManager": "pnpm@10.7.0",
+    "workspaces": [
+        "packages/*",
+        "docs"
+    ],
+    "devDependencies": {
+        "@vitest/browser": "^3.1.1",
+        "@vitest/ui": "^3.1.1",
+        "jsdom": "^26.0.0",
+        "msw": "^2.7.4",
+        "playwright": "^1.51.1",
+        "taze": "^18.7.1",
+        "vite-plus": "1.1.0",
+        "vitest": "^3.1.1"
+    },
+    "dependencies": {
+        "@netlify/blobs": "^11.0.3"
+    },
+    "scripts": {
+        "helper": "pnpm --filter @mono-lit/helper",
+        "utility": "pnpm --filter @mono-lit/utility",
+        "devextreme": "pnpm --filter @mono-lit/devextreme",
+        "data": "pnpm --filter @mono-lit/data",
+        "site": "pnpm --filter docs",
+        "bootstrap": "vp install && vp run lib:all",
+        "dev": "vp run lib:all && pnpm site dev",
+        "preview": "pnpm site preview",
+        "build": "vp run lib:all",
+        "build:docs": "vp run site:build",
+        "build:all": "vp run site:build",
+        "test": "vitest run && pnpm data test",
+        "test:helper": "vitest run --project helper",
+        "test:utility": "vitest run --project utility",
+        "test:data": "pnpm data test",
+        "test:perf": "pnpm helper test:perf",
+        "test:watch": "vitest",
+        "test:ui": "vitest --ui",
+        "check": "pnpm helper theme:check && pnpm helper basecoat:check && pnpm helper glyphs:check && pnpm registry:check",
+        "clean": "pnpm -r --filter \"./packages/*\" exec node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\" && vp cache clean",
+        "cache:clean": "vp cache clean",
+        "registry:dev": "node scripts/registry/local-serve.mjs",
+        "registry:verify": "node scripts/registry/verify.mjs",
+        "registry:publish": "node scripts/registry/publish.mjs",
+        "registry:check": "node scripts/registry/check-versions.mjs",
+        "registry:purge": "node scripts/registry/purge.mjs"
+    }
+}

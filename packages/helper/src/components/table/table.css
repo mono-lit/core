@@ -1,0 +1,2861 @@
+/* LEGACY CLASS ALIASES — every `[mono-x]` below is wrapped as `:is([mono-x], .legacy)`
+   by `scripts/legacy-class-alias.mjs`, because the table's markup is written by the
+   CONSUMER and host apps still spell it with the pre-port classes
+   (`<table class="mono-table mono-table-sticky-head">`, `<th class="mono-table-sticky-right">`).
+   Both spellings paint identically at the same specificity. Author selectors with the
+   attribute only and re-run the script (`--check` is a perf spec). */
+/* ============================================================================
+   mono-table — a port of Basecoat's `.table`, extended
+
+   Upstream is eight rules: a container, the table, its four row groups, a cell
+   and a caption. Everything else here — search, paging, sort and filter heads,
+   grouping, row detail, selection, inline editing, sticky columns, the loading
+   / empty / error overlays — is mono's own, and borrows its shape from the
+   Basecoat component it most resembles (`.button`, `.input`, `.badge`,
+   `.popover`), cited where it does.
+
+   Styling is by ATTRIBUTE. A table is markup the CONSUMER writes — the library
+   cannot emit a `<tr>` — so there is no element to mirror; the attributes ARE
+   the API:
+
+     <div mono-table-scroll>
+       <table mono-table mono-color="success">…</table>
+     </div>
+
+   The sibling chrome (`<mono-table-search>`, `<mono-table-paging>`, …) keeps
+   its full component name as its root attribute rather than a short part name:
+   those elements are SIBLINGS of the table, not descendants, so a short name
+   could not be scoped under `[mono-table]` and would collide with every other
+   component's parts.
+   ============================================================================ */
+
+/* basecoat@1.0.2 styles/vega.css .table — w-full caption-bottom text-sm */
+:is([mono-table],.mono-table),
+:is([mono-table-scroll],.mono-table-scroll),
+:is([mono-table-shell],.mono-table-shell),
+:is([mono-table-card],.mono-table-card),
+:is([mono-table-toolbar],.mono-table-toolbar),
+:is([mono-table-foot],.mono-table-foot),
+:is([mono-table-search],.mono-table-search),
+:is([mono-table-paging],.mono-table-pg),
+:is([mono-table-paging-group],.mono-table-pg-group),
+:is([mono-table-page-size],.mono-table-page-size),
+:is([mono-table-info],.mono-table-info),
+:is([mono-table-summary],.mono-table-summary),
+:is([mono-table-loading],.mono-table-loading),
+:is([mono-table-empty],.mono-table-empty),
+:is([mono-table-error],.mono-table-error),
+:is([mono-table-th],.mono-table-th),
+:is([mono-table-sort],.mono-table-sort),
+:is([mono-table-checkbox],.mono-table-checkbox),
+:is([mono-table-detail],.mono-table-detail),
+/* …and the PORTALED panels. They are moved to <body>, so they inherit nothing
+   from the table and must carry the whole chain themselves. Listing them here
+   rather than re-declaring the chain below them is deliberate: the hand-written
+   copy drifted to eleven of these forty-nine, and every rule inside a panel that
+   read one of the missing ones silently resolved to nothing. */
+:is([mono-th-menu],.mono-th-menu),
+:is([mono-th-filter],.mono-th-filter),
+:is([mono-search-panel],.mono-table-search-panel),
+:is([mono-search-more-panel],.mono-table-search-more-panel),
+:is([mono-search-filter],.mono-table-search-filter) {
+  /* ── ink and surface ────────────────────────────────────────────────────
+     basecoat@1.0.2 styles/vega.css .table th — text-foreground
+     basecoat@1.0.2 styles/vega.css .table caption — text-muted-foreground */
+  --_mono-table-surface: var(--mono-table-surface, var(--background));
+  --_mono-table-text: var(--mono-table-text, var(--foreground));
+  --_mono-table-muted: var(--mono-table-muted, var(--muted-foreground));
+  --_mono-table-faint: var(--mono-table-faint, color-mix(in oklab, var(--_mono-table-muted) 70%, transparent));
+  --_mono-table-ink-mid: var(--mono-table-ink-mid, color-mix(in oklab, var(--_mono-table-text) 82%, transparent));
+
+  /* basecoat@1.0.2 styles/vega.css .table tr — border-b */
+  --_mono-table-border: var(--mono-table-border, var(--border));
+  --_mono-table-border-lite: var(--mono-table-border-lite, var(--_mono-table-border));
+  /* The table's OUTER edge — a hairline so a fixed-height box reads as a frame
+     even when a failure has cleared the rows. `none` removes it. */
+  --_mono-table-outer-border-color: var(--mono-table-outer-border-color, var(--_mono-table-border));
+  --_mono-table-outer-border: var(--mono-table-outer-border, var(--mono-border-width) solid var(--_mono-table-outer-border-color));
+  --_mono-table-radius: var(--mono-table-radius, var(--_mono-table-radius-preset, var(--mono-radius-lg)));
+
+  /* ── the accent — EXTENSION ─────────────────────────────────────────────
+     Upstream's table has no accent at all: its head, its hover and its
+     selected row are all `--muted`. mono keeps a role colour for the pinned
+     rail on a selected row, the sort and filter indicators, the spinner and
+     the paging pill — so the role only TINTS upstream's neutral wash, at
+     `--mono-mode-tint`, and `color="secondary"` leaves it exactly neutral. */
+  --_mono-table-accent: var(--mono-table-accent, var(--_mono-table-accent-preset, var(--primary)));
+  --_mono-table-on-accent: var(--mono-table-on-accent, var(--_mono-table-on-accent-preset, var(--primary-foreground)));
+
+  /* ── row states ─────────────────────────────────────────────────────────
+     basecoat@1.0.2 styles/vega.css .table tr — hover:bg-muted/50 data-[state=selected]:bg-muted
+
+     Every one of these mixes into the SURFACE, never into `transparent`.
+     Upstream can afford `bg-muted/50` because nothing in its table overlaps
+     anything; mono pins columns and freezes the head and foot, and a pinned cell
+     paints over the rows sliding under it by restating `--_mono-table-row-bg`.
+     A translucent value there shows the scrolled content straight through. */
+  --_mono-table-selected-bg: var(--mono-table-selected-bg, var(--muted));
+  /* Zebra is mono's own — upstream stripes nothing. A tint of the neutral, not
+     of the accent, so a coloured table does not turn into a coloured page. */
+  --_mono-table-zebra: var(--mono-table-zebra, color-mix(in oklab, var(--muted) 42%, var(--_mono-table-surface)));
+  /* the soft wash the detail panel, the group row and the selected rail share */
+  --_mono-table-soft: var(--mono-table-soft, color-mix(in oklab, var(--muted) 62%, var(--_mono-table-surface)));
+  /* The head band. Upstream paints the head nothing (the page under a bottom
+     rule), so the resting head is transparent; a flavor can give it a surface
+     (ONE's `#f7f8fc` band). The FROZEN head must be opaque whatever this says —
+     rows slide under it — so it falls back to a tint of the accent instead. */
+  --_mono-table-head-bg: var(--mono-table-head-bg, transparent);
+  --_mono-table-head-frozen-bg: var(--mono-table-head-bg, color-mix(in oklab, var(--_mono-table-accent) 7%, var(--_mono-table-surface)));
+  /* a group header row (grouping) and its hover — a tint of the accent unless a
+     flavor names the wash */
+  --_mono-table-group-bg: var(--mono-table-group-bg, color-mix(in oklab, var(--_mono-table-accent) 9%, var(--_mono-table-surface)));
+  --_mono-table-group-hover-bg: var(--mono-table-group-hover-bg, color-mix(in oklab, var(--_mono-table-accent) 14%, var(--_mono-table-surface)));
+  /* ── hover — DELIBERATELY off ────────────────────────────────────────────
+     Upstream's `hover:bg-muted/50` lands within a hair of mono's zebra, so on a
+     striped table (and mono stripes by default) hovering an odd row simply
+     repaints it as an even one: the row appears to merge with the one below it
+     rather than to light up. A cue that is indistinguishable from the pattern
+     it sits in is worse than no cue, so the default is the row's own colour.
+     `--mono-table-hover-bg` turns it back on for anyone who wants it. */
+  --_mono-table-hover-bg: var(--mono-table-hover-bg, var(--_mono-table-row-bg, var(--_mono-table-surface)));
+
+  /* ── head and cell metrics ──────────────────────────────────────────────
+     basecoat@1.0.2 styles/vega.css .table th — h-10 px-2 text-start align-middle font-medium whitespace-nowrap
+     basecoat@1.0.2 styles/vega.css .table td — p-2 align-middle whitespace-nowrap */
+  --_mono-table-font: var(--mono-table-font, var(--_mono-table-font-preset, var(--mono-text-sm)));
+  --_mono-table-line-height: var(--mono-table-line-height, var(--_mono-table-line-height-preset, var(--mono-text-sm--lh)));
+  --_mono-table-th-height: var(--mono-table-th-height, var(--_mono-table-th-height-preset, calc(var(--mono-spacing) * 10)));
+  --_mono-table-th-pad-x: var(--mono-table-th-pad-x, var(--_mono-table-th-pad-x-preset, calc(var(--mono-spacing) * 2)));
+  --_mono-table-th-font: var(--mono-table-th-font, var(--_mono-table-th-font-preset, var(--_mono-table-font)));
+  --_mono-table-th-weight: var(--mono-table-th-weight, var(--_mono-table-th-weight-preset, var(--mono-font-weight-medium)));
+  --_mono-table-th-color: var(--mono-table-th-color, var(--_mono-table-th-color-preset, var(--_mono-table-text)));
+  --_mono-table-th-transform: var(--mono-table-th-transform, var(--_mono-table-th-transform-preset, none));
+  --_mono-table-th-tracking: var(--mono-table-th-tracking, var(--_mono-table-th-tracking-preset, normal));
+  --_mono-table-cell-pad: var(--mono-table-cell-pad, var(--_mono-table-cell-pad-preset, calc(var(--mono-spacing) * 2)));
+
+  /* ── the sibling chrome ─────────────────────────────────────────────────
+     basecoat@1.0.2 components/table.css .table tfoot — bg-muted/50 border-t font-medium */
+  --_mono-table-foot-bg: var(--mono-table-foot-bg, color-mix(in oklab, var(--muted) 50%, var(--_mono-table-surface)));
+  --_mono-table-foot-gap: var(--mono-table-foot-gap, calc(var(--mono-spacing) * 3));
+
+  /* ── Loading overlay (mono-table-loading) ── */
+  --_mono-table-loading-bg: var(--mono-table-loading-bg, color-mix(in oklab, var(--_mono-table-surface) 64%, transparent));
+  --_mono-table-loading-blur: var(--mono-table-loading-blur, 2px);
+  --_mono-table-spinner-size: var(--mono-table-spinner-size, 1.5rem);
+  --_mono-table-spinner-width: var(--mono-table-spinner-width, 2.5px);
+  --_mono-table-spinner-color: var(--mono-table-spinner-color, var(--_mono-table-accent));
+  --_mono-table-spinner-speed: var(--mono-table-spinner-speed, 0.65s);
+  /* Above every tier this sheet uses (pinned header/footer tops out at 3) AND above the
+     lifts consumers have already shipped, so an app that raises its own header cannot
+     accidentally paint through the dim. Raise it here if a ladder ever needs to go past. */
+  --_mono-table-loading-z: var(--mono-table-loading-z, 10);
+  /* How far below the frozen header the spinner sits. */
+  --_mono-table-loading-gap: var(--mono-table-loading-gap, 1.25rem);
+
+  /* ── Error bar (mono-table-error) ── */
+  --_mono-table-error: var(--mono-table-error, var(--destructive));
+  /* opaque: the bar pins under a frozen header with rows sliding beneath it */
+  --_mono-table-error-bg: var(--mono-table-error-bg, color-mix(in oklab, var(--_mono-table-error) var(--mono-mode-tint), var(--_mono-table-surface)));
+  --_mono-table-error-border: var(--mono-table-error-border, color-mix(in oklab, var(--_mono-table-error) var(--mono-mode-state-border-alpha, 24%), transparent));
+
+  /* ── Empty state (mono-table-empty) ──
+     Room the message reserves on the scroll wrapper. An empty grid is a header
+     over nothing, so unlike the loading overlay there is no height left to
+     freeze — this is the height, and the element reads it off itself so a theme
+     or a single field can retune it. */
+  --_mono-table-empty-min-h: var(--mono-table-empty-min-h, 12rem);
+  /* How far below the frozen header the message sits. */
+  --_mono-table-empty-gap: var(--mono-table-empty-gap, 2rem);
+  /* One tier BELOW the loading overlay: when a reload starts on an empty grid
+     both are briefly up, and the spinner is the one that should be on top. */
+  --_mono-table-empty-z: var(--mono-table-empty-z, 9);
+
+  /* ── Row detail (mono-table-detail) ── */
+  --_mono-table-detail-size: var(--mono-table-detail-size, 1.5rem);
+  --_mono-table-detail-radius: var(--mono-table-detail-radius, var(--mono-radius-sm));
+  --_mono-table-detail-color: var(--mono-table-detail-color, var(--_mono-table-muted));
+  --_mono-table-detail-color-open: var(--mono-table-detail-color-open, var(--_mono-table-accent));
+  --_mono-table-detail-hover-bg: var(--mono-table-detail-hover-bg, var(--_mono-table-hover-bg));
+  --_mono-table-detail-panel-bg: var(--mono-table-detail-panel-bg, var(--_mono-table-soft));
+  --_mono-table-detail-panel-pad: var(--mono-table-detail-panel-pad, calc(var(--mono-spacing) * 3) calc(var(--mono-spacing) * 4));
+
+  /* ── Pre-port READ-ONLY colour names — alive until 3.0 ──────────────────
+     The pre-port sheet DECLARED a palette on the table that host CSS reads
+     (esw-ui paints a sticky dropdown-panel head with
+     `color-mix(… var(--mono-table-primary) …, var(--mono-table-sky) …)`). The
+     port dropped them, so such a declaration went invalid → transparent and the
+     rows scrolled through the head. Restated here from the resolved palette, so
+     they follow the theme colour (ONE's navy/blue) and a per-table `mono-color`.
+     ONLY names the port does not read as knobs: declaring a knob name
+     (`--mono-table-border`, `-surface`, `-soft`, `-zebra`…) here would override
+     the value a flavor sets on :root. Not knobs — setting one changes nothing. */
+  --mono-table-primary: var(--_mono-table-accent);
+  --mono-table-deep: color-mix(in oklab, var(--_mono-table-accent) 82%, black);
+  --mono-table-sky: var(--info);
+  --mono-table-lite: color-mix(in oklab, var(--_mono-table-accent) 22%, var(--_mono-table-surface));
+}
+
+/* ── Colours — EXTENSION ───────────────────────────────────────────────────
+   `primary` is the default and emits no attribute, exactly as every other
+   ported component does. */
+:is([mono-table],.mono-table):is([mono-color="secondary"],:where(.mono-table-secondary)),
+:is([mono-table-scroll],.mono-table-scroll):is([mono-color="secondary"],:where(.mono-table-secondary)),
+:is([mono-table-shell],.mono-table-shell):is([mono-color="secondary"],:where(.mono-table-secondary)) {
+  --_mono-table-accent-preset: var(--secondary-foreground);
+  --_mono-table-on-accent-preset: var(--secondary);
+}
+
+:is([mono-table],.mono-table):is([mono-color="success"],:where(.mono-table-success)),
+:is([mono-table-scroll],.mono-table-scroll):is([mono-color="success"],:where(.mono-table-success)),
+:is([mono-table-shell],.mono-table-shell):is([mono-color="success"],:where(.mono-table-success)) {
+  --_mono-table-accent-preset: var(--success);
+  --_mono-table-on-accent-preset: var(--success-foreground);
+}
+
+:is([mono-table],.mono-table):is([mono-color="danger"],:where(.mono-table-danger)),
+:is([mono-table-scroll],.mono-table-scroll):is([mono-color="danger"],:where(.mono-table-danger)),
+:is([mono-table-shell],.mono-table-shell):is([mono-color="danger"],:where(.mono-table-danger)) {
+  --_mono-table-accent-preset: var(--destructive);
+  --_mono-table-on-accent-preset: var(--destructive-foreground);
+}
+
+:is([mono-table],.mono-table):is([mono-color="warning"],:where(.mono-table-warning)),
+:is([mono-table-scroll],.mono-table-scroll):is([mono-color="warning"],:where(.mono-table-warning)),
+:is([mono-table-shell],.mono-table-shell):is([mono-color="warning"],:where(.mono-table-warning)) {
+  --_mono-table-accent-preset: var(--warning);
+  --_mono-table-on-accent-preset: var(--warning-foreground);
+}
+
+:is([mono-table],.mono-table):is([mono-color="info"],:where(.mono-table-info)),
+:is([mono-table-scroll],.mono-table-scroll):is([mono-color="info"],:where(.mono-table-info)),
+:is([mono-table-shell],.mono-table-shell):is([mono-color="info"],:where(.mono-table-info)) {
+  --_mono-table-accent-preset: var(--info);
+  --_mono-table-on-accent-preset: var(--info-foreground);
+}
+
+:is([mono-table],.mono-table):is([mono-color="teal"],:where(.mono-table-teal)),
+:is([mono-table-scroll],.mono-table-scroll):is([mono-color="teal"],:where(.mono-table-teal)),
+:is([mono-table-shell],.mono-table-shell):is([mono-color="teal"],:where(.mono-table-teal)) {
+  --_mono-table-accent-preset: var(--teal);
+  --_mono-table-on-accent-preset: var(--teal-foreground);
+}
+
+:is([mono-table],.mono-table):is([mono-color="purple"],:where(.mono-table-purple)),
+:is([mono-table-scroll],.mono-table-scroll):is([mono-color="purple"],:where(.mono-table-purple)),
+:is([mono-table-shell],.mono-table-shell):is([mono-color="purple"],:where(.mono-table-purple)) {
+  --_mono-table-accent-preset: var(--purple);
+  --_mono-table-on-accent-preset: var(--purple-foreground);
+}
+
+:is([mono-table],.mono-table):is([mono-color="neutral"],:where(.mono-table-neutral)),
+:is([mono-table-scroll],.mono-table-scroll):is([mono-color="neutral"],:where(.mono-table-neutral)),
+:is([mono-table-shell],.mono-table-shell):is([mono-color="neutral"],:where(.mono-table-neutral)) {
+  --_mono-table-accent-preset: var(--neutral);
+  --_mono-table-on-accent-preset: var(--neutral-foreground);
+}
+
+:is([mono-table],.mono-table):is([mono-color="dark"],:where(.mono-table-dark)),
+:is([mono-table-scroll],.mono-table-scroll):is([mono-color="dark"],:where(.mono-table-dark)),
+:is([mono-table-shell],.mono-table-shell):is([mono-color="dark"],:where(.mono-table-dark)) {
+  --_mono-table-accent-preset: var(--dark);
+  --_mono-table-on-accent-preset: var(--dark-foreground);
+}
+
+
+/* ── Search ─────────────────────────────────────────────────────────────── */
+
+/* `mono-table-search` renders mono-input's markup (`.mono-input` →
+   `.mono-input-field` → `.mono-input-native`), so the entire size × color ×
+   variant matrix comes from `input.css` — there is deliberately no field styling
+   here. Block-level to match `mono-input { display: block }`. */
+mono-table-search,
+mono-shadow-table-search {
+  display: block;
+}
+
+/* The search keeps a sensible floor width so it can't collapse in a cramped
+   toolbar. It still grows to fill like a `mono-input` (`.mono-input` is
+   `width: 100%`), and an explicit `width`/`min-width` prop wins because
+   `buildSizeStyle` writes those inline. */
+.mono-input:is([mono-table-search],.mono-table-search) {
+  min-width: 180px;
+}
+
+/* The glyphs size themselves — `.mono-icon` is already `--mono-icon-md` (light)
+   and the shadow build's inline SVGs are em-based — so there is nothing to set
+   here. `.mono-input-prefix` has no intrinsic box, so do NOT give the icon a
+   percentage size: it would resolve against `auto` and collapse. */
+
+/* Kill the native focus outline in host projects; keep the box-shadow ring.
+   Covers mono-input's inner field and the page-size native <select>. */
+:is([mono-table-search],.mono-table-search) .mono-input-native:focus,
+:is([mono-table-search],.mono-table-search) .mono-input-native:focus-visible,
+:is([mono-sel],.mono-table-sel):focus,
+:is([mono-sel],.mono-table-sel):focus-visible {
+  outline: none !important;
+}
+
+/* A `type="search"` input shows a native clear affordance; make it feel clickable
+   (mono-input's own `clearable` button is styled by input.css). */
+:is([mono-table-search],.mono-table-search) .mono-input-native[type='search']::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+/* ── multi-context chips (inside the field, before the input) ─────────────── */
+:is([mono-search-chips],.mono-table-search-chips) {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+  padding-left: 0.4rem;
+  /* Fixed-width horizontal strip so a chip list never squeezes the input —
+     overflow scrolls instead of wrapping into a column. */
+  width: var(--mono-table-search-chips-width, 140px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Drag-to-scroll (see the core's pointer handlers): the grab cursor advertises
+     it, and the scrollbar is hidden so the strip stays tidy. */
+  cursor: grab;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+:is([mono-search-chips],.mono-table-search-chips):is([mono-grabbing],.is-grabbing) {
+  cursor: grabbing;
+}
+:is([mono-search-chips],.mono-table-search-chips)::-webkit-scrollbar {
+  display: none;
+}
+:is([mono-search-chip],.mono-table-search-chip) {
+  /* Keep chips at their natural width inside the nowrap strip so they scroll
+     rather than compress. */
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: var(--_mono-table-soft);
+  color: var(--_mono-table-text);
+  font-size: 0.85rem;
+  line-height: 1.35;
+  white-space: nowrap;
+  justify-content: space-between;
+}
+/* The column a chip is bound to — the "context" half of `Nama: Andy`. */
+:is([mono-search-chip-ctx],.mono-table-search-chip-ctx) {
+  color: var(--_mono-table-accent);
+  font-weight: 600;
+}
+:is([mono-search-chip-text],.mono-table-search-chip-text) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+:is([mono-search-chip-x],.mono-table-search-chip-x) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--_mono-table-muted);
+  line-height: 0;
+  cursor: pointer;
+}
+:is([mono-search-chip-x],.mono-table-search-chip-x):hover {
+  color: var(--_mono-table-accent);
+}
+:is([mono-search-chip-x],.mono-table-search-chip-x) .mono-icon {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+
+/* ── "See All" overflow trigger + panel ─────────────────────────────────── */
+/* The field wrapper anchors the absolutely-positioned overflow panel. */
+:is([mono-table-search],.mono-table-search) {
+  position: relative;
+}
+/* The trigger chip reuses `[mono-search-chip]`'s shape; these layer a
+   stronger surface so it reads as a button rather than a plain chip. */
+:is([mono-search-chip-more],.mono-table-search-chip-more) {
+  padding: 0.3rem 0.55rem 0.3rem 0.7rem;
+  border: 0;
+  background: var(--_mono-table-border);
+  color: var(--_mono-table-accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+:is([mono-search-chip-more],.mono-table-search-chip-more):hover {
+  background: color-mix(in oklab, var(--_mono-table-accent) 30%, var(--_mono-table-surface));
+}
+:is([mono-search-chip-more],.mono-table-search-chip-more):is([mono-open],.open) {
+  background: var(--_mono-table-accent);
+  color: var(--_mono-table-on-accent);
+}
+/* Count badge — tints itself from the chip's `currentColor`. */
+:is([mono-search-chip-count],.mono-table-search-chip-count) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+/* The panel sits below the field and lists the chips that didn't fit inline. */
+:is([mono-search-more-panel],.mono-table-search-more-panel) {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  z-index: var(--mono-popup-z, 1000);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem;
+  max-width: 22rem;
+  max-height: 14rem;
+  overflow: auto;
+  /* Portaled + anchored: a chained scroll would drag this panel off-screen
+     (see `[mono-th-filter-list]`). */
+  overscroll-behavior: contain;
+  background: var(--_mono-table-panel-bg, var(--popover));
+  border: 0;
+  border-radius: var(--_mono-table-panel-radius, var(--mono-radius-md));
+  box-shadow: var(--_mono-table-panel-ring, 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent)), var(--_mono-table-panel-shadow, var(--mono-shadow-md));
+}
+
+/* ── slotted filter-builder (chevron toggle + panel + chip) ──────────────── */
+/* Sized to match `mono-input`'s clearable affordance (`.mono-input-clear`) so the
+   chevron sits level with the field's other suffix controls. */
+:is([mono-search-filter-toggle],.mono-table-search-filter-toggle) {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.4rem;
+  width: var(--_mi-clear, 1.8rem);
+  height: var(--_mi-clear, 1.8rem);
+  padding: 0;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: color-mix(in oklab, var(--_mono-table-text) 56%, transparent);
+  line-height: 1;
+  cursor: pointer;
+  transition: transform var(--mono-duration-fast, 150ms) var(--mono-ease, ease);
+}
+:is([mono-search-filter-toggle],.mono-table-search-filter-toggle) > .mono-icon {
+  width: var(--mono-icon-md, 1.25rem);
+  height: var(--mono-icon-md, 1.25rem);
+}
+:is([mono-search-filter-toggle],.mono-table-search-filter-toggle):hover {
+  color: var(--_mono-table-accent);
+  background: color-mix(in srgb, var(--_mono-table-accent) 8%, transparent);
+}
+:is([mono-search-filter-toggle],.mono-table-search-filter-toggle):active {
+  transform: scale(0.95);
+}
+:is([mono-search-filter-toggle],.mono-table-search-filter-toggle):is([mono-active],.active) {
+  color: var(--_mono-table-accent);
+}
+/* `open` rotates the chevron on its own (the :active scale is momentary). */
+:is([mono-search-filter-toggle],.mono-table-search-filter-toggle):is([mono-open],.open) {
+  transform: rotate(180deg);
+}
+:is([mono-search-filter-toggle],.mono-table-search-filter-toggle):is([mono-open],.open):active {
+  transform: rotate(180deg) scale(0.95);
+}
+/* The slotted `<mono-filter-builder>` panel — portaled to <body> and positioned
+   fixed by the popup controller (flip up / shift in at viewport edges), so it
+   floats over the rows instead of pushing them. Width tracks the builder's own
+   `width` (max-content, floored/clamped to the viewport) — so the builder sizes
+   its "modal". */
+:is([mono-search-filter],.mono-table-search-filter) {
+  width: max-content;
+  min-width: min(90vw, 20rem);
+  max-width: 90vw;
+  max-height: min(70vh, var(--mono-popup-avail-h, 70vh));
+  overflow: auto;
+  /* Portaled + anchored: a chained scroll would drag this panel off-screen
+     (see `[mono-th-filter-list]`). */
+  overscroll-behavior: contain;
+  padding: 0.65rem;
+  background: var(--_mono-table-panel-bg, var(--popover));
+  border: 0;
+  border-radius: var(--_mono-table-panel-radius, var(--mono-radius-md));
+  box-shadow: var(--_mono-table-panel-ring, 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent)), var(--_mono-table-panel-shadow, var(--mono-shadow-md));
+}
+/* One chip representing the active built filter — a touch stronger than a search
+   chip so it stands apart as a different kind of context. */
+:is([mono-search-filter-chip],.mono-table-search-filter-chip) {
+  background: var(--_mono-table-border);
+  color: var(--_mono-table-accent);
+  font-weight: 600;
+}
+
+/* ── suggestion panel ─────────────────────────────────────────────────────── */
+/* The panel is portaled to <body>, so it only sees the `--mono-table-*` block if
+   the portal host got a matching class. Every colour therefore falls back to the
+   global `--theme-*` tokens (and then a literal) — an unresolved var would make
+   `background` invalid and paint the whole panel transparent. */
+:is([mono-search-panel],.mono-table-search-panel) {
+  /* Resolved once here so the row rules below can't inherit an invalid value. */
+  --_mono-search-accent: var(--_mono-table-accent, var(--primary));
+  --_mono-search-surface: var(--_mono-table-surface, var(--popover));
+  --_mono-search-soft: color-mix(in oklab, var(--_mono-search-accent) 7%, var(--_mono-search-surface));
+  --_mono-search-lite: color-mix(in oklab, var(--_mono-search-accent) 22%, var(--_mono-search-surface));
+
+  display: none;
+  position: fixed;
+  z-index: var(--mono-popup-z, 1000);
+  min-width: 12rem;
+  max-height: 15rem;
+  overflow-y: auto;
+  /* Portaled + anchored: a chained scroll would drag this panel off-screen
+     (see `[mono-th-filter-list]`). */
+  overscroll-behavior: contain;
+  padding: 0.25rem;
+  background: var(--_mono-table-panel-bg, var(--popover));
+  border: 0;
+  border-radius: var(--_mono-table-panel-radius, var(--mono-radius-md));
+  box-shadow: var(--_mono-table-panel-ring, 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent)), var(--_mono-table-panel-shadow, var(--mono-shadow-md));
+  color: var(--_mono-table-text);
+  font-size: 0.82rem;
+}
+:is([mono-search-panel],.mono-table-search-panel):is([mono-open],.open) {
+  display: block;
+}
+:is([mono-search-option],.mono-table-search-option) {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+:is([mono-search-option],.mono-table-search-option):hover {
+  background: var(--_mono-search-soft);
+}
+/* The active row is marked by a leading bar only — no fill — so it stays
+   distinct from a hovered row's tint, and Enter always has a visible target.
+   The bar reads stronger once the keyboard has actually moved INTO the list. */
+:is([mono-search-option],.mono-table-search-option):is([mono-active],.active) {
+  box-shadow: inset 2px 0 0 var(--_mono-search-accent);
+}
+:is([mono-search-panel],.mono-table-search-panel):is([mono-zone-list],.zone-list) :is([mono-search-option],.mono-table-search-option):is([mono-active],.active) {
+  box-shadow: inset 3px 0 0 var(--_mono-search-accent);
+}
+
+/* ── Paging ─────────────────────────────────────────────────────────────── */
+
+:is([mono-table-paging],.mono-table-pg) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+:is([mono-pgb],.mono-table-pgb) {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 0.45rem;
+  border: var(--mono-border-width, 1px) solid var(--_mono-table-border);
+  border-radius: var(--mono-radius-sm, 0.5rem);
+  background: var(--_mono-table-surface);
+  color: var(--_mono-table-muted);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: var(--mono-font-weight-semibold, 600);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    border-color var(--mono-duration-fast, 150ms) var(--mono-ease, ease),
+    background-color var(--mono-duration-fast, 150ms) var(--mono-ease, ease),
+    color var(--mono-duration-fast, 150ms) var(--mono-ease, ease);
+}
+
+/* The prev/next arrows are inline SVG, and `.mono-icon` defaults to 20px — which is
+   wider than the 0.8rem digit beside it, so those two buttons grew to 36px while the
+   numbered ones stayed 30 and the row read as mismatched (an ellipse among circles,
+   once a skin rounds them). `em` ties the glyph to the BUTTON's own font-size, so the
+   compact group pager scales with it instead of needing its own rule. */
+:is([mono-pgb],.mono-table-pgb) .mono-icon {
+  width: 1.15em;
+  height: 1.15em;
+}
+
+:is([mono-pgb],.mono-table-pgb):hover:not(:disabled) {
+  border-color: var(--_mono-table-border);
+  background: var(--_mono-table-soft);
+  color: var(--_mono-table-accent);
+}
+
+:is([mono-pgb],.mono-table-pgb):is([mono-on],.on) {
+  background: var(--_mono-table-accent);
+  color: var(--_mono-table-on-accent);
+  border-color: var(--_mono-table-accent);
+  box-shadow: 0 2px 8px color-mix(in oklab, var(--_mono-table-accent) 22%, transparent);
+}
+
+:is([mono-pgb],.mono-table-pgb):disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+:is([mono-pg-el],.mono-table-pg-el) {
+  padding: 0 0.3rem;
+  color: var(--_mono-table-muted);
+  font-size: 0.8rem;
+}
+
+/* ── Page size + info ───────────────────────────────────────────────────── */
+
+:is([mono-table-page-size],.mono-table-page-size) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--_mono-table-muted);
+}
+
+:is([mono-sel],.mono-table-sel) {
+  padding: 0.4rem 0.6rem;
+  border: var(--mono-border-width, 1px) solid var(--_mono-table-border);
+  border-radius: var(--mono-radius-sm, 0.5rem);
+  font-family: inherit;
+  font-size: 0.8rem;
+  color: var(--_mono-table-muted);
+  background: var(--_mono-table-soft);
+  outline: none;
+  cursor: pointer;
+}
+
+:is([mono-sel],.mono-table-sel):focus {
+  border-color: var(--_mono-table-accent);
+}
+
+:is([mono-sel],.mono-table-sel):disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+:is([mono-table-info],.mono-table-info) {
+  font-size: 0.78rem;
+  color: var(--_mono-table-muted);
+}
+
+/* ── Native table wrapper ───────────────────────────────────────────────── */
+
+:is([mono-table-scroll],.mono-table-scroll) {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* Opt-in vertical scroll region for infinity/virtual paging. Add `scroll-y` +
+   an inline `max-height`; the container becomes the scroll target that
+   `<mono-table-paging type="infinity-scroll|virtual-scroll">` drives. */
+:is([mono-table-scroll],.mono-table-scroll):is([mono-scroll-y],.scroll-y) {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  position: relative;
+}
+
+/* Opt-in sticky header so column titles stay visible while the rows scroll.
+
+   A pinned cell in a `border-collapse: collapse` table keeps its TEXT and loses
+   everything else. Collapsed borders belong to the table, not the cell — they are
+   painted where the cell sits in flow — so the header's bottom rule, a pinned
+   column's edge and any `th { border-right }` a consumer adds all scrolled away
+   under the frozen titles. And the header gradient sits on `thead`, which
+   scrolls too, so the rows showed through the transparent cells.
+
+   A pinned COLUMN (`mono-table-sticky-left` / `-right`) is the same story
+   sideways: its edge was painted at the cell's flow position, off in the
+   scrolled-away part of the table, and the borders of the cells sliding UNDER
+   it leaked through as ticks between the rows.
+
+   So any table with a frozen cell — sticky head, sticky foot, a pinned column —
+   uses SEPARATE borders with zero spacing: the same geometry (each row still
+   carries its 1px rule, the header its 2px), but every cell paints its own
+   borders inside its own box and carries them along, and a cell sliding under
+   a pinned one takes its border with it. The pinned cells get an opaque
+   background of their own. Separate borders ignore a `<tr>` border, so the body
+   row rule moves onto the cells here. */
+:is([mono-table],.mono-table):is([mono-sticky-head],.mono-table-sticky-head),
+:is([mono-sticky-head],.mono-table-sticky-head) :is([mono-table],.mono-table),
+:is([mono-table],.mono-table):is([mono-sticky-foot],.mono-table-sticky-foot),
+:is([mono-sticky-foot],.mono-table-sticky-foot) :is([mono-table],.mono-table),
+:is([mono-table],.mono-table):has(:is([mono-sticky-left],.mono-table-sticky-left), :is([mono-sticky-right],.mono-table-sticky-right)) {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+:is([mono-sticky-head],.mono-table-sticky-head) tbody tr > td,
+:is([mono-sticky-foot],.mono-table-sticky-foot) tbody tr > td,
+:is([mono-table],.mono-table):has(:is([mono-sticky-left],.mono-table-sticky-left), :is([mono-sticky-right],.mono-table-sticky-right)) tbody tr > td {
+  border-bottom: 1px solid var(--_mono-table-border-lite);
+}
+:is([mono-sticky-head],.mono-table-sticky-head) tbody tr:last-child > td,
+:is([mono-sticky-foot],.mono-table-sticky-foot) tbody tr:last-child > td,
+:is([mono-table],.mono-table):has(:is([mono-sticky-left],.mono-table-sticky-left), :is([mono-sticky-right],.mono-table-sticky-right)) tbody tr:last-child > td {
+  border-bottom: none;
+}
+/* (0,2,2) on purpose — a STATE rule. `[mono-sticky-head] thead th` alone is
+   (0,1,2): attribute + two type selectors — the SAME weight as the resting
+   `[mono-table] thead th` paint further down, which then won on source order
+   and left a frozen head see-through. The marker may sit on the table or on
+   its scroll wrapper, so both forms. */
+:is([mono-table],.mono-table):is([mono-sticky-head],.mono-table-sticky-head) thead th,
+:is([mono-sticky-head],.mono-table-sticky-head) :is([mono-table],.mono-table) thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  /* Opaque — the gradient is on `thead` and does not follow; same fill the
+     pinned-column header cells use, so the two kinds of frozen cell match. */
+  background: var(--_mono-table-head-frozen-bg);
+}
+
+/* Opt-in sticky footer — mirrors sticky-head so an aggregate row (usually
+   holding <mono-table-summary> cells) stays pinned to the bottom while the body
+   scrolls. Needs an opaque background or scrolled rows show through.
+
+   It draws NO separator of its own. `[mono-table] tfoot td/th` further down
+   already carries a `border-top`, and this rule used to add a hairline shadow on
+   that same edge — so a pinned footer read as two lines a pixel apart. The
+   border is the one that stays. */
+/* (0,2,2) on purpose — a STATE rule. The marker may sit on the table or on its
+   scroll wrapper, so both forms; and a host page's cell-padding rule at (0,2,1)
+   (these docs carry one, to undo VitePress's own) must not take the scrollbar
+   band away. */
+:is([mono-table],.mono-table):is([mono-sticky-foot],.mono-table-sticky-foot) tfoot th,
+:is([mono-table],.mono-table):is([mono-sticky-foot],.mono-table-sticky-foot) tfoot td,
+:is([mono-sticky-foot],.mono-table-sticky-foot) :is([mono-table],.mono-table) tfoot th,
+:is([mono-sticky-foot],.mono-table-sticky-foot) :is([mono-table],.mono-table) tfoot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--_mono-table-foot-bg);
+  /* Reserve space at the bottom of the cell for a horizontal scrollbar that
+     shares this edge (mainly for OVERLAY scrollbars, which draw over content).
+     The totals text sits above this band and the cell's opaque background fills
+     it — so the scrollbar covers the empty band, not the numbers, with no
+     content peeking through (unlike padding on the container). Off by default so
+     classic-scrollbar layouts (footer already above the bar) aren't made chunky;
+     opt in with `--mono-table-foot-scrollbar` (e.g. `0.6rem`). */
+  padding-bottom: calc(0.65rem + var(--mono-table-foot-scrollbar, 0rem));
+}
+
+/* A NON-sticky footer at the end of a scroll region shares the bottom edge with
+   the horizontal scrollbar; this gap lifts it clear. Scoped with `:has(tfoot)` so
+   scroll regions without a footer (virtual / infinity paging) keep their exact
+   scroll math, and EXCLUDED for a sticky footer — that one already pins itself
+   above the scrollbar, so the padding would only open a strip below the frozen
+   totals where scrolled rows peek through. Tune with `--mono-table-foot-gap`. */
+:is([mono-table-scroll],.mono-table-scroll):has(tfoot):not(:has(:is([mono-sticky-foot],.mono-table-sticky-foot))) {
+  padding-bottom: var(--_mono-table-foot-gap, 0.4rem);
+}
+
+/* Footer cells are OPAQUE and separated by a top border, so:
+   • a pinned footer cell (sticky column) doesn't let horizontally-scrolled body
+     cells show through it (the totals stay legible over the scrolling data), and
+   • the totals read as a distinct row.
+   The sticky-column z-index already lifts a pinned footer cell above the body. */
+/* basecoat@1.0.2 styles/vega.css .table tfoot — bg-muted/50 border-t font-medium
+   A DIFFERENT wash from the rows, on purpose: a footer painted the row colour
+   read as one more row, and pinned, as a row sliding over the others. */
+:is([mono-table],.mono-table) tfoot td,
+:is([mono-table],.mono-table) tfoot th {
+  background: var(--_mono-table-foot-bg);
+  border-top: var(--mono-border-width) solid var(--_mono-table-border);
+  font-weight: var(--mono-font-weight-medium);
+}
+
+/* Aggregate value rendered by <mono-table-summary>. Tabular figures so a column
+   of totals lines up; slightly heavier than body text. */
+:is([mono-table-summary],.mono-table-summary) {
+  font-weight: var(--mono-font-weight-semibold, 600);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Scroll-paging status strip (Load more / Loading… / — end —). */
+:is([mono-table-paging],.mono-table-pg):is([mono-pg-scroll],.mono-table-pg-scroll) {
+  justify-content: center;
+  padding: 0.5rem 0;
+  color: rgba(var(--theme-text-rgb, 26, 45, 66), 0.6);
+  font-size: 0.82rem;
+}
+
+:is([mono-table-shell],.mono-table-shell),
+:is([mono-table-card],.mono-table-card),
+:is([mono-table-toolbar],.mono-table-toolbar),
+:is([mono-table-foot],.mono-table-foot) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* ── Loading overlay (mono-table-loading) ───────────────────────────────────
+   A drop-in spinner overlay dropped straight into the <table> (or into
+   [mono-table-scroll]). A bare custom element is not valid in a row section, so the
+   core wraps itself in a zero-height <tr><td colspan> on connect — see
+   `_ensureRowHost`; a hand-written <caption> or <td> host is honoured as-is.
+   The host is out of normal flow (position:absolute), so its row adds no layout and
+   the overlay covers the nearest positioned ancestor (the core sets
+   position:relative on the table / scroll wrapper for it). Hidden until the
+   core reflects [data-mono-loading] from the controller's `loading` state — or until the
+   consumer sets [data-loading] from a busy flag of its own.
+   `mono-shadow-table-loading` styles the light-DOM host from this global sheet;
+   the shadow build additionally rewrites these to `:host` for the spinner tree. */
+
+mono-table-loading,
+mono-shadow-table-loading {
+  position: absolute;
+  inset: 0;
+  z-index: var(--_mono-table-loading-z, 10);
+  display: none;
+  /* Anchored at the TOP, not centred: `sticky` below only moves the spinner once its static
+     position would leave the view, so a static position in the middle of a tall table gives a
+     different result at every scroll offset. From the top, one `top` holds at all of them. */
+  align-items: flex-start;
+  justify-content: center;
+  background: var(--_mono-table-loading-bg);
+  backdrop-filter: blur(var(--_mono-table-loading-blur));
+  -webkit-backdrop-filter: blur(var(--_mono-table-loading-blur));
+  pointer-events: none;
+}
+
+/* Two independent sources, two attributes. `data-loading` is the CONSUMER's — set it from your
+   own busy flag and the element never touches it. `data-mono-loading` is the element's own,
+   reflected from the bound controller's `loading`. Either one shows the overlay; one attribute
+   shared between both would need the element to work out who wrote it, which is not knowable
+   (a MutationObserver reports asynchronously, after any "I am writing" flag has been reset). */
+mono-table-loading[data-loading],
+mono-table-loading[data-mono-loading],
+mono-shadow-table-loading[data-loading],
+mono-shadow-table-loading[data-mono-loading] {
+  display: flex;
+}
+
+/* ── Pending placeholder (the automatic skeleton, `pending`) ───────────────────
+   For the controller's FIRST load the element shows a phantom-ui block of placeholder
+   rows mirroring the header instead of the spinner — same overlay geometry, not dimmed
+   (there is nothing under it yet). The row/cell/bar classes are the structure phantom
+   measures; the bars carry a real background so it counts them as blocks. Colours and
+   radius come from the theme hooks shared with components/skeleton/skeleton.css. */
+mono-table-loading[data-mono-pending],
+mono-shadow-table-loading[data-mono-pending] {
+  display: block;
+  align-items: stretch;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  pointer-events: none;
+}
+
+:is([mono-table-skeleton], .mono-table-skeleton) {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+:is([mono-table-skeleton-row], .mono-table-skeleton-row) {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+:is([mono-table-skeleton-cell], .mono-table-skeleton-cell) {
+  flex: none;
+  box-sizing: border-box;
+  padding-inline: 0.75rem;
+}
+
+:is([mono-table-skeleton-bar], .mono-table-skeleton-bar) {
+  display: block;
+  width: 100%;
+  height: calc(var(--_mono-table-th-height, 2.5rem) * 0.4);
+  border-radius: var(--mono-skeleton-radius, var(--mono-radius-sm, 0.25rem));
+  background: var(--mono-skeleton-bg, var(--mono-mode-surface-hover, var(--muted)));
+}
+
+/* The row `mono-table-loading` builds for itself when it is dropped straight into
+   a row section (see `_ensureRowHost`). It is a host, not a layout participant:
+   any height, padding or border here would open a permanent gap under the header
+   whether or not anything is loading. */
+/* `!important` for the same reason as `[mono-error-row] > td` below: this
+   cell is a host, not content, and a consumer's generic `td { padding }` would
+   otherwise open a permanent gap under the header — on a row whose entire job is
+   to occupy no space at all. */
+:is([mono-loading-row],.mono-table-loading-row),
+:is([mono-loading-row],.mono-table-loading-row) > td {
+  height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+:is([mono-loading-spinner],.mono-table-spinner) {
+  box-sizing: border-box;
+  width: var(--_mono-table-spinner-size);
+  height: var(--_mono-table-spinner-size);
+  border: var(--_mono-table-spinner-width) solid var(--_mono-table-spinner-color);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: mono-table-spin var(--_mono-table-spinner-speed) linear infinite;
+
+  /* Stay in the VISIBLE area of a table that scrolls.
+
+     The overlay covers the whole table — that is what keeps every column and row dimmed
+     however far you have scrolled — but the centre of a wide or long table is far outside
+     the scrollport, and a spinner you have to scroll to find reads as no spinner at all.
+
+     So the spinner is pinned a constant distance below the header instead. Only `top` is
+     set: a second inset on the same axis gives sticky two edges to satisfy and it slides
+     between them as you scroll, which is what made the old `inset: 1rem` drift. The header
+     offset is measured and published by the element (0 unless the header is frozen). */
+  position: sticky;
+  top: calc(var(--mono-table-loading-head, 0px) + var(--_mono-table-loading-gap, 1.25rem));
+  /* `auto` = no horizontal stickiness, so a table with no scroll region keeps the flex
+     centring below and this costs it nothing. The offset is handed down by the overlay
+     (next rule) only where there IS a scrollport to centre on. */
+  left: var(--mono-table-loading-x, auto);
+}
+
+/* Centre the spinner on the SCROLLPORT rather than on the table, so it lands in the middle
+   of what you can actually see at any horizontal offset.
+
+   Both halves are scoped to `[mono-table-scroll]`. `cqw` with no query container resolves
+   against the small VIEWPORT, which would throw the spinner off a table that has no scroll
+   region — and there the default `justify-content: center` already centres it on the table,
+   which for a table that does not scroll is the same place. `:has()` keeps the containment
+   off scrollers this feature never touches — keyed on the ELEMENT, not on the row it generates,
+   so a `<caption>` or hand-written `<td>` host gets the same treatment.
+
+   The offset travels as a custom property on the OVERLAY rather than as a rule on the
+   spinner, so the shadow build gets it too: this sheet styles the light-DOM
+   `mono-shadow-table-loading` host, and the value inherits across the shadow boundary to
+   the spinner — where a `[mono-table-scroll] <spinner>` descendant selector never would. */
+:is([mono-table-scroll],.mono-table-scroll):has(mono-table-loading),
+:is([mono-table-scroll],.mono-table-scroll):has(mono-shadow-table-loading),
+:is([mono-table-scroll],.mono-table-scroll):has(mono-table-error),
+:is([mono-table-scroll],.mono-table-scroll):has(mono-shadow-table-error) {
+  container-type: inline-size;
+}
+
+:is([mono-table-scroll],.mono-table-scroll) mono-table-loading,
+:is([mono-table-scroll],.mono-table-scroll) mono-shadow-table-loading {
+  justify-content: flex-start;
+  --mono-table-loading-x: calc(50cqw - var(--_mono-table-spinner-size) / 2);
+}
+
+@keyframes mono-table-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Header filter (mono-table-th `header-filter`) ───────────────────────────
+   Right-click a header → `[mono-th-menu]` (one "Header Filter" item) → the
+   cascading `[mono-th-filter]` panel of the column's distinct values. Both panels
+   are body-portaled by PopupPortalController (position:fixed, top/left applied),
+   so they escape the table/card's clipping/stacking. The panels re-declare the
+   `--mono-table-*` token chain so they theme correctly at the body root; the
+   portal also mirrors the table's classes (color themes flow through). */
+
+/* The root block above gives a panel the whole chain; these are the few values
+   a POPOVER resolves differently. Its surface is `--popover` and its ink
+   `--popover-foreground` — a panel floats over the page, not in the table — and
+   its hover is a real wash rather than the deliberately-off row hover. */
+:is([mono-th-menu],.mono-th-menu),
+:is([mono-th-filter],.mono-th-filter),
+:is([mono-search-panel],.mono-table-search-panel),
+:is([mono-search-more-panel],.mono-table-search-more-panel),
+:is([mono-search-filter],.mono-table-search-filter) {
+  --_mono-table-surface: var(--mono-table-surface, var(--popover));
+  --_mono-table-text: var(--mono-table-text, var(--popover-foreground));
+  --_mono-table-ink-mid: var(--mono-table-ink-mid, color-mix(in oklab, var(--popover-foreground) 82%, transparent));
+  --_mono-table-hover-bg: var(--mono-table-hover-bg, color-mix(in oklab, var(--muted) 50%, transparent));
+}
+
+/* basecoat@1.0.2 styles/vega.css [data-popover] — bg-popover text-popover-foreground ring-foreground/10 rounded-md shadow-md ring-1
+   The chrome every portaled table panel shares — the header filter, the column
+   menu and its submenu, and the search suggestions. One set of knobs so a
+   flavour moves all four at once, exactly as it moves the select's and the
+   dropdown's popovers. */
+:is([mono-th-menu],.mono-th-menu),
+:is([mono-th-filter],.mono-th-filter),
+:is([mono-search-panel],.mono-table-search-panel),
+:is([mono-search-more-panel],.mono-table-search-more-panel),
+:is([mono-search-filter],.mono-table-search-filter) {
+  --_mono-table-panel-bg: var(--mono-table-panel-bg, var(--popover));
+  --_mono-table-panel-color: var(--mono-table-panel-color, var(--popover-foreground));
+  --_mono-table-panel-radius: var(--mono-table-panel-radius, var(--mono-radius-md));
+  --_mono-table-panel-ring: var(--mono-table-panel-ring, 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent));
+  --_mono-table-panel-shadow: var(--mono-table-panel-shadow, var(--mono-shadow-md));
+}
+
+/* Header-filter funnel — a BUTTON that leads the header row (so it sits left of
+   the caption) and opens the filter. Always visible while `showIcon` is on: it is
+   the affordance, not just an active-filter badge.
+
+   Two signals mark a filtered column, and the GLYPH is the primary one:
+   `renderIcon('funnel')` renders `i-mdi-filter-outline` at rest and `i-mdi-filter`
+   once the column carries a filter. The colour below reinforces it — faint at
+   rest, accent once filtered — but is too easy to miss at 14px on its own. */
+:is([mono-th-filter-ind],.mono-th-filter-ind) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0.28rem 0 -0.15rem;
+  padding: 0.2rem 0.15rem;
+  border: 0;
+  background: none;
+  color: var(--_mono-table-faint);
+  line-height: 0;
+  cursor: pointer;
+  border-radius: var(--theme-radius-xs, 4px);
+  vertical-align: middle;
+  transition: color var(--mono-duration-fast, 150ms) var(--mono-ease, ease);
+}
+/* The funnel glyph itself. Light build: an empty <span> carrying `i-mdi-filter` /
+   `i-mdi-filter-outline`; shadow build: the inlined mdi SVG. Two things must be
+   restated here, and the descendant selector (specificity 0,2,0) is what makes
+   them stick in BOTH the layered prod bundle and the unlayered dev server:
+     · `display` — under presetWind4, preset-icons emits none, so a bare `i-*`
+       span is `inline` and collapses to 0x0 (invisible).
+     · `width`/`height` — preset-icons sizes to `1.2em`; the funnel is a fixed
+       0.875rem box (the 14px the inline SVG used to hard-code).
+   The SVG build inherits the same box, so both render identically. */
+:is([mono-th-filter-ind],.mono-th-filter-ind) :is([mono-th-filter-glyph],.mono-th-filter-glyph),
+:is([mono-th-menu-ic],.mono-th-menu-ic) :is([mono-th-filter-glyph],.mono-th-filter-glyph) {
+  display: block;
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+:is([mono-th-filter-ind],.mono-th-filter-ind):hover,
+:is([mono-th-filter-ind],.mono-th-filter-ind):focus-visible {
+  color: var(--_mono-table-accent);
+  outline: none;
+}
+:is([mono-th-filter-ind],.mono-th-filter-ind):focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--_mono-table-accent) 30%, transparent);
+}
+/* Filtered → the funnel switches COLOUR, on top of the outlined→filled glyph swap
+   the builds' `renderIcon('funnel')` already made (it used to switch `display`). */
+mono-table-th[data-filtered] :is([mono-th-filter-ind],.mono-th-filter-ind),
+mono-shadow-table-th[data-filtered] :is([mono-th-filter-ind],.mono-th-filter-ind),
+:host([data-filtered]) :is([mono-th-filter-ind],.mono-th-filter-ind) {
+  color: var(--_mono-table-accent);
+}
+
+
+/* ── Required-column marker (mono-table-th `required`) ───────────────────────
+   The header lays out as three independent boxes — funnel, caption, sort arrow —
+   so a marker placed among them drifts away from the text the moment the header
+   wraps (a narrow column puts the funnel on its own line above the caption). It
+   is rendered INSIDE this wrapper with the label instead, and an inline-flex
+   container with the default `nowrap` cannot break between its two items, so the
+   `*` and the caption stay together at any width. The wrapper is only emitted for
+   a marked column. */
+:is([mono-th-caption],.mono-th-caption) {
+  display: inline-flex;
+  /* Baseline, NOT `flex-start`: the group is as tall as the label's whole line
+     box, so top-aligning threw the `*` up to the top of that box — visibly adrift
+     above the word rather than attached to it. Sharing the baseline puts it where
+     a superscript belongs, and the asterisk glyph already sits high in its own em
+     box, so it lands around the caption's cap height with no raise of its own. */
+  align-items: baseline;
+  /* No gap: the marker supplies its own hair of margin. A gap here would space it
+     off the caption the way the funnel and the sort arrow are spaced — which is
+     what made a narrow column read as `AGE * ↑` with the `*` crowding the arrow. */
+  gap: 0;
+  /* The label may be squeezed in a narrow column; the marker must not be, so give
+     the group a shrinkable floor and pin the marker below. */
+  min-width: 0;
+}
+/* The same red `*` the form controls draw for their own `required`
+   (`.mono-input-required`), so one marker means one thing across the library.
+   It is deliberately NOT sized like the header's other marks: the funnel and the
+   sort caret are fixed ~0.875rem boxes that reserve a slot of their own, while
+   this is a hairline glyph that hangs off the end of the caption. `flex: 0 0 auto`
+   keeps it from being shrunk into the text or stretched into a box, and a
+   `line-height` under the label's own means it cannot grow the header row.
+   `<sup>` is a flex item here, so its native `vertical-align: super` does nothing
+   — the shared baseline above plus the glyph's own height is what raises it. */
+:is([mono-th-required],.mono-th-required) {
+  flex: 0 0 auto;
+  margin-left: 0.1em;
+  color: var(--_mono-table-error);
+  font-size: 0.75em;
+  line-height: 1;
+}
+
+/* Icon-less sort (`sort.showIcon: false`) — the caption itself is the button, so
+   strip the arrow-sized padding and let it inherit the header's typography. */
+:is([mono-sort-head],.mono-table-sort-head):is([mono-no-icon],.no-icon) :is([mono-sort-btn],.mono-table-sort-btn):is([mono-label-trigger],.label-trigger) {
+  margin: 0;
+  padding: 0;
+  line-height: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+/* The small right-click menu. */
+:is([mono-th-menu],.mono-th-menu) {
+  display: none;
+  position: fixed;
+  z-index: var(--mono-popup-z, 1000);
+  min-width: 158px;
+  padding: 0.25rem;
+  background: var(--_mono-table-panel-bg, var(--popover));
+  border: 0;
+  border-radius: var(--_mono-table-panel-radius, var(--mono-radius-md));
+  box-shadow: var(--_mono-table-panel-ring, 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent)), var(--_mono-table-panel-shadow, var(--mono-shadow-md));
+  font-size: 0.82rem;
+}
+:is([mono-th-menu],.mono-th-menu):is([mono-open],.open) {
+  display: block;
+}
+:is([mono-th-menu-item],.mono-th-menu-item) {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.42rem 0.5rem;
+  border: 0;
+  border-radius: var(--_mono-table-control-radius, var(--mono-radius-md));
+  background: transparent;
+  color: var(--_mono-table-text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+:is([mono-th-menu-item],.mono-th-menu-item):hover {
+  background: var(--_mono-table-soft);
+}
+/* "Clear all sorting" while nothing is sorted — inert, and no hover affordance. */
+:is([mono-th-menu-item],.mono-th-menu-item):disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+:is([mono-th-menu-item],.mono-th-menu-item):disabled:hover {
+  background: transparent;
+}
+:is([mono-th-menu-label],.mono-th-menu-label) {
+  flex: 1;
+}
+:is([mono-th-menu-ic],.mono-th-menu-ic),
+:is([mono-th-menu-caret],.mono-th-menu-caret),
+:is([mono-th-menu-check],.mono-th-menu-check) {
+  display: inline-flex;
+  color: var(--_mono-table-muted);
+}
+/* Divider between the Sort and Header Filter sections when a column has both,
+   and above "Clear all sorting" in the Sort submenu. */
+:is([mono-th-menu-sep],.mono-th-menu-sep) {
+  height: 1px;
+  margin: 0.25rem 0.1rem;
+  background: var(--_mono-table-border);
+}
+/* The Sort submenu reuses `[mono-th-menu]`'s surface/border/shadow — only its
+   sizing differs, so there is no duplicated box styling here. Wide enough for
+   "Clear all sorting" to sit on one line. */
+:is([mono-th-submenu],.mono-th-submenu) {
+  min-width: 176px;
+}
+/* The active direction in the Sort submenu. */
+:is([mono-th-menu-item],.mono-th-menu-item):is([mono-active],.active) {
+  color: var(--_mono-table-accent);
+  font-weight: 600;
+}
+:is([mono-th-menu-item],.mono-th-menu-item):is([mono-active],.active) :is([mono-th-menu-ic],.mono-th-menu-ic),
+:is([mono-th-menu-item],.mono-th-menu-item):is([mono-active],.active) :is([mono-th-menu-check],.mono-th-menu-check) {
+  color: var(--_mono-table-accent);
+}
+
+/* The cascading distinct-values panel. */
+:is([mono-th-filter],.mono-th-filter) {
+  display: none;
+  position: fixed;
+  z-index: var(--mono-popup-z, 1000);
+  width: 244px;
+  flex-direction: column;
+  background: var(--_mono-table-panel-bg);
+  color: var(--_mono-table-panel-color);
+  /* a RING, not a border — upstream draws the edge in the shadow so the corner
+     stays clean at every radius the flavours ask for */
+  border: 0;
+  border-radius: var(--_mono-table-panel-radius);
+  box-shadow: var(--_mono-table-panel-ring), var(--_mono-table-panel-shadow);
+  font-size: var(--_mono-table-font);
+  /* `clip`, not `hidden`: a `hidden` box is still PROGRAMMATICALLY scrollable, so
+     anything that focuses an off-box descendant scrolls the panel away and it
+     reads blank. `clip` cannot scroll at all. The list keeps its own scrollport,
+     and the sticky "(Select all)" sticks against that, not against this. */
+  overflow: clip;
+}
+:is([mono-th-filter],.mono-th-filter):is([mono-open],.open) {
+  display: flex;
+}
+:is([mono-th-filter-head],.mono-th-filter-head) {
+  padding: 0.55rem 0.65rem;
+  font-weight: 600;
+  color: var(--_mono-table-text);
+  border-bottom: 1px solid var(--_mono-table-border-lite);
+}
+:is([mono-th-filter-search],.mono-th-filter-search) {
+  padding: 0.5rem 0.55rem 0.35rem;
+}
+:is([mono-th-filter-input],.mono-th-filter-input) {
+  width: 100%;
+  padding: 0.38rem 0.55rem;
+  border: 1px solid var(--_mono-table-border);
+  border-radius: var(--_mono-table-control-radius, var(--mono-radius-md));
+  font: inherit;
+  color: var(--_mono-table-text);
+  background: var(--_mono-table-panel-bg, var(--_mono-table-surface));
+}
+
+/* A host page's own placeholder colour reaches a portaled panel like anything
+   else — VitePress paints one in its brand purple — so state it. */
+:is([mono-th-filter-input],.mono-th-filter-input)::placeholder,
+:is([mono-search-panel],.mono-table-search-panel) input::placeholder {
+  color: var(--_mono-table-muted);
+  opacity: 1;
+}
+:is([mono-th-filter-input],.mono-th-filter-input):focus-visible {
+  outline: none;
+  border-color: var(--_mono-table-accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--_mono-table-accent) 18%, transparent);
+}
+:is([mono-th-filter-list],.mono-th-filter-list) {
+  max-height: 224px;
+  overflow-y: auto;
+  /* Don't chain to the document at the ends of the list. This panel is
+     `position: fixed` and body-portaled, and PopupPortalController re-anchors it
+     to the funnel on every window scroll — so a chained scroll drags the panel
+     off-screen with its header and the list just reads as "blank". */
+  overscroll-behavior: contain;
+  padding: 0.15rem 0.35rem 0.25rem;
+}
+:is([mono-th-filter-msg],.mono-th-filter-msg) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0.6rem;
+  color: var(--_mono-table-muted);
+  text-align: center;
+}
+:is([mono-th-filter-msg-text],.mono-th-filter-msg-text) {
+  font-size: 0.82rem;
+}
+:is([mono-th-retry],.mono-th-retry) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--_mono-table-border);
+  border-radius: var(--_mono-table-control-radius, var(--mono-radius-md));
+  background: transparent;
+  color: var(--_mono-table-accent);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+:is([mono-th-retry],.mono-th-retry):hover {
+  background: var(--_mono-table-soft);
+  border-color: var(--_mono-table-accent);
+}
+:is([mono-th-retry],.mono-th-retry) svg {
+  color: var(--_mono-table-accent);
+}
+:is([mono-th-filter-spin],.mono-th-filter-spin) {
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-right: 0.4rem;
+  border: 2px solid var(--_mono-table-accent);
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -0.15rem;
+  animation: mono-table-spin 0.65s linear infinite;
+}
+
+/* Native checkbox rows, styled to match mono-checkbox. */
+:is([mono-th-check],.mono-th-check) {
+  /* LOAD-BEARING (same line `.mono-checkbox` carries). The real <input> below is
+     `position: absolute`, so without a positioned row it resolves against the
+     PANEL — it then stays put while the list scrolls, lands outside the panel's
+     box, and clicking the label focuses it, making the browser scroll the
+     `overflow` panel to reach it. The whole panel scrolls away and reads blank. */
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.34rem 0.4rem;
+  border-radius: var(--_mono-table-control-radius, var(--mono-radius-md));
+  cursor: pointer;
+  color: var(--_mono-table-text);
+}
+:is([mono-th-check],.mono-th-check):hover {
+  background: var(--_mono-table-soft);
+}
+:is([mono-th-check],.mono-th-check) input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  pointer-events: none;
+}
+:is([mono-th-check-box],.mono-th-check-box) {
+  position: relative;
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid color-mix(in oklab, var(--_mono-table-border) 72%, var(--_mono-table-muted));
+  border-radius: 0.3rem;
+  background: var(--_mono-table-surface);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+:is([mono-th-check],.mono-th-check) input:checked ~ :is([mono-th-check-box],.mono-th-check-box) {
+  background: var(--_mono-table-accent);
+  border-color: var(--_mono-table-accent);
+}
+:is([mono-th-check],.mono-th-check) input:checked ~ :is([mono-th-check-box],.mono-th-check-box)::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid var(--_mono-table-on-accent);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+:is([mono-th-check],.mono-th-check) input:focus-visible ~ :is([mono-th-check-box],.mono-th-check-box) {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--_mono-table-accent) 20%, transparent);
+}
+/* Tri-state: a partly-ticked period (some of its months, not all) shows a dash. */
+:is([mono-th-check],.mono-th-check) input:indeterminate ~ :is([mono-th-check-box],.mono-th-check-box) {
+  background: var(--_mono-table-accent);
+  border-color: var(--_mono-table-accent);
+}
+:is([mono-th-check],.mono-th-check) input:indeterminate ~ :is([mono-th-check-box],.mono-th-check-box)::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 5px;
+  height: 2px;
+  background: var(--_mono-table-surface);
+  border: 0;
+  transform: none;
+}
+
+/* ── Date filter: the value list as a year → … → second tree ────────────────
+   Same rows as the plain list (`[mono-th-check]`), each preceded by an expand
+   chevron and indented per level. Only periods that occur in the data exist,
+   so a leaf is a node with nothing below it (its chevron is hidden, not
+   removed, to keep the labels aligned). */
+:is([mono-th-tree],.mono-th-tree) {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+:is([mono-th-tree-row],.mono-th-tree-row) {
+  display: flex;
+  align-items: center;
+  padding-left: calc(var(--mono-th-tree-indent, 1rem) * var(--_level, 0));
+}
+:is([mono-th-tree-row],.mono-th-tree-row)[data-level='1'] { --_level: 1; }
+:is([mono-th-tree-row],.mono-th-tree-row)[data-level='2'] { --_level: 2; }
+:is([mono-th-tree-row],.mono-th-tree-row)[data-level='3'] { --_level: 3; }
+:is([mono-th-tree-row],.mono-th-tree-row)[data-level='4'] { --_level: 4; }
+:is([mono-th-tree-row],.mono-th-tree-row)[data-level='5'] { --_level: 5; }
+:is([mono-th-tree-row],.mono-th-tree-row) > :is([mono-th-check],.mono-th-check) {
+  flex: 1;
+  min-width: 0;
+}
+:is([mono-th-tree-toggle],.mono-th-tree-toggle) {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.3rem;
+  background: transparent;
+  color: var(--_mono-table-faint);
+  cursor: pointer;
+}
+:is([mono-th-tree-toggle],.mono-th-tree-toggle)[hidden] {
+  display: inline-flex;
+  visibility: hidden;
+}
+:is([mono-th-tree-toggle],.mono-th-tree-toggle):hover {
+  background: var(--_mono-table-soft);
+  color: var(--_mono-table-text);
+}
+:is([mono-th-tree-toggle],.mono-th-tree-toggle) > svg,
+:is([mono-th-tree-toggle],.mono-th-tree-toggle) > .mono-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+  transition: transform 0.15s ease; /* the glyph points right; open turns it down */
+}
+:is([mono-th-tree-toggle],.mono-th-tree-toggle):is([mono-open],.open) > svg,
+:is([mono-th-tree-toggle],.mono-th-tree-toggle):is([mono-open],.open) > .mono-icon {
+  transform: rotate(90deg);
+}
+:is([mono-th-check-label],.mono-th-check-label) {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:is([mono-th-check-count],.mono-th-check-count) {
+  color: var(--_mono-table-faint);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.76rem;
+}
+/* `(Select all)` pins to the top of the scrolling value list so it stays reachable
+   in a long column. `[mono-th-filter-list]` is the scrollport (max-height +
+   overflow-y), so `top: 0` sticks against it. An opaque background is required —
+   without it the scrolling rows would show through. The negative top padding
+   compensates for the list's own padding so nothing peeks above the pinned row. */
+:is([mono-th-check-all],.mono-th-check-all) {
+  position: sticky;
+  top: -0.15rem;
+  z-index: 1;
+  background: var(--_mono-table-surface);
+  border-bottom: 1px solid var(--_mono-table-border-lite);
+  border-radius: 0;
+  margin-bottom: 0.15rem;
+  font-weight: 600;
+}
+
+/* Footer actions. */
+/* MUST wrap: the panel is a fixed width, so a fourth button ("Clear all", only
+   present on the multi-column menu path) or a longer translation overflows the
+   row — and an overflowing button sits OUTSIDE the panel box, where its own
+   click reads as an outside-click and dismisses the panel instead of firing. */
+:is([mono-th-filter-foot],.mono-th-filter-foot) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.55rem;
+  border-top: 1px solid var(--_mono-table-border-lite);
+}
+:is([mono-th-filter-foot-sp],.mono-th-filter-foot-sp) {
+  flex: 1 1 0;
+  min-width: 0;
+}
+:is([mono-th-filter-btn],.mono-th-filter-btn) {
+  padding: 0.34rem 0.72rem;
+  border-radius: var(--_mono-table-control-radius, var(--mono-radius-md));
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+:is([mono-th-filter-btn],.mono-th-filter-btn):is([mono-ghost],.ghost) {
+  background: transparent;
+  border-color: var(--_mono-table-border);
+  color: var(--_mono-table-text);
+}
+:is([mono-th-filter-btn],.mono-th-filter-btn):is([mono-ghost],.ghost):hover {
+  background: var(--_mono-table-soft);
+}
+:is([mono-th-filter-btn],.mono-th-filter-btn):is([mono-primary],.primary) {
+  background: var(--_mono-table-accent);
+  color: var(--_mono-table-on-accent);
+}
+:is([mono-th-filter-btn],.mono-th-filter-btn):is([mono-primary],.primary):hover {
+  filter: brightness(0.96);
+}
+
+/* ── Native table base: W3Schools-style full-width table ────────────────── */
+
+/* basecoat@1.0.2 styles/vega.css .table — w-full caption-bottom text-sm */
+:is([mono-table],.mono-table) {
+  /* A prose stylesheet that makes tables scroll — VitePress does exactly this
+     (`.vp-doc table { display: block; overflow-x: auto }`), and so do most
+     typography plugins — takes the table out of table layout entirely, and the
+     columns stop distributing the width. Upstream assumes a real table and
+     hands the scrolling to `.table-container`; state it so the assumption holds
+     on a host page that disagrees. */
+  display: table;
+  width: 100%;
+  caption-side: bottom;
+  font-size: var(--_mono-table-font);
+  line-height: var(--_mono-table-line-height);
+  color: var(--_mono-table-text);
+  /* `border-collapse: separate` — NOT upstream's default. A collapsed border
+     stays at the cell's flow position, so a sticky head, a sticky foot and a
+     pinned column all lose their edge the moment they leave it. */
+  border-collapse: separate;
+  border-spacing: 0;
+  border: var(--_mono-table-outer-border);
+  border-radius: var(--_mono-table-radius);
+  /* Resolved HERE, above any cell that re-points the token for its editors —
+     see the `font-size` note on `[mono-table] td`. */
+  --_mono-table-cell-font: var(--mono-table-cell-font, var(--theme-control-font-lg, 0.84rem));
+
+  /* Same trick, same reason: an editor cell sets `--theme-control-height-*: auto`
+     to flatten a FIELD, but checkbox / radio / switch derive their actual box size
+     from that token (`calc(token * 0.5)`), and `calc(auto * 0.5)` is invalid — the
+     box collapses to 0x0. Snapshot the real values here, above the override, so
+     those three can restore them further down. */
+  --_mono-table-ch-xs: var(--theme-control-height-xs);
+  --_mono-table-ch-sm: var(--theme-control-height-sm);
+  --_mono-table-ch-md: var(--theme-control-height-md);
+  --_mono-table-ch-lg: var(--theme-control-height-lg);
+  --_mono-table-ch-xl: var(--theme-control-height-xl);
+  --_mono-table-ch-xxl: var(--theme-control-height-xxl);
+  /* ...and the --mono-* vocabulary the ported controls read (checkbox today; radio
+     and switch join as they are ported — box = token × 4/9). */
+  --_mono-table-mch-xs: var(--mono-control-height-xs);
+  --_mono-table-mch-sm: var(--mono-control-height-sm);
+  --_mono-table-mch-md: var(--mono-control-height-md);
+  --_mono-table-mch-lg: var(--mono-control-height-lg);
+  --_mono-table-mch-xl: var(--mono-control-height-xl);
+  --_mono-table-mch-xxl: var(--mono-control-height-xxl);
+  /* ...and the border width: the editor cell zeroes `--mono-border-width` /
+     `--theme-border-width` to flatten a FIELD, but a ported checkbox (and radio /
+     switch as they port) draws its box's outline from the same token — an
+     unchecked box, which is outline only, went invisible in any table cell. */
+  --_mono-table-bw: var(--mono-border-width);
+  --_mono-table-tbw: var(--theme-border-width);
+}
+
+/* Optional: equal-width columns.
+   Use only when you want every column to have the same width. */
+:is([mono-table],.mono-table):is([mono-fixed],.mono-table-fixed) {
+  table-layout: fixed;
+}
+
+:is([mono-table],.mono-table):is([mono-fixed],.mono-table-fixed) th,
+:is([mono-table],.mono-table):is([mono-fixed],.mono-table-fixed) td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Optional: wide scroll mode.
+   Use only when you want the table wider than its container. */
+:is([mono-table],.mono-table):is([mono-wide],.mono-table-wide) {
+  min-width: max-content;
+}
+
+/* ── Table visual style ─────────────────────────────────────────────────── */
+
+/* basecoat@1.0.2 styles/vega.css .table thead — [&_tr]:border-b
+   The head had a two-stop gradient; the port allows none, and upstream paints
+   the head nothing at all — it is the page under a bottom rule. */
+:is([mono-table],.mono-table) thead {
+  background: transparent;
+}
+/* On the CELL, not the section: a host page that paints `th` (VitePress does,
+   with its soft surface) would otherwise cover whatever the section carried.
+   At (0,1,2) this beats a host's (0,1,1), and the sticky head's (0,2,2) still
+   beats this. */
+:is([mono-table],.mono-table) thead th {
+  background: var(--_mono-table-head-bg, transparent);
+}
+
+/* basecoat@1.0.2 styles/vega.css .table td — p-2 align-middle whitespace-nowrap */
+:is([mono-table],.mono-table) td {
+  padding: var(--_mono-table-cell-pad);
+  text-align: start;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* basecoat@1.0.2 styles/vega.css .table th — text-foreground h-10 px-2 text-start align-middle font-medium whitespace-nowrap */
+:is([mono-table],.mono-table) th {
+  height: var(--_mono-table-th-height);
+  padding: 0 var(--_mono-table-th-pad-x);
+  text-align: start;
+  vertical-align: middle;
+  font-size: var(--_mono-table-th-font);
+  font-weight: var(--_mono-table-th-weight);
+  color: var(--_mono-table-th-color);
+  text-transform: var(--_mono-table-th-transform);
+  letter-spacing: var(--_mono-table-th-tracking);
+  white-space: nowrap;
+  user-select: none;
+  /* `thead [&_tr]:border-b` — carried on the cell, not the row, because a
+     `border-collapse: separate` table paints no row border at all. */
+  border-bottom: var(--mono-border-width) solid var(--_mono-table-border);
+}
+
+/* basecoat@1.0.2 styles/vega.css .table caption — text-muted-foreground mt-4 text-sm */
+:is([mono-table],.mono-table) caption {
+  margin-top: calc(var(--mono-spacing) * 4);
+  color: var(--_mono-table-muted);
+  font-size: var(--_mono-table-font);
+}
+
+/* ── Sortable header control (<mono-table-sort> inside a <th>) ───────────── */
+/* Label + arrow row. The LABEL IS NOT INTERACTIVE — only the arrow button sorts,
+   so clicking the caption text (to select it, or on the way to a header filter)
+   never reorders the table. */
+:is([mono-sort-head],.mono-table-sort-head) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+:is([mono-sort-btn],.mono-table-sort-btn) {
+  display: inline-flex;
+  align-items: center;
+  /* The arrow alone is a small target, so pad it out to a comfortable hit area
+     without letting the padding push the header row taller. */
+  margin: 0 -0.15rem;
+  padding: 0.2rem 0.15rem;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  line-height: 0;
+  cursor: pointer;
+  border-radius: var(--theme-radius-xs, 4px);
+  transition: color var(--mono-duration-fast, 150ms) var(--mono-ease, ease);
+}
+:is([mono-sort-btn],.mono-table-sort-btn):hover,
+:is([mono-sort-btn],.mono-table-sort-btn):focus-visible {
+  color: var(--_mono-table-accent);
+  outline: none;
+}
+:is([mono-sort-btn],.mono-table-sort-btn):focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--_mono-table-accent) 30%, transparent);
+}
+/* Sort indicator rendered at the end of the header text. A single icon whose
+   GLYPH encodes the state: neutral `i-fluent-arrow-sort-16-filled` when unsorted,
+   `i-ri-arrow-up-long-fill` / `i-ri-arrow-down-long-fill` when sorted (see the
+   builds' `renderIcon`). Colour still signals active vs. idle. */
+:is([mono-sort-ind],.mono-table-sort-ind) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0; /* no extra line-box height so it stays compact */
+  flex-shrink: 0;
+}
+/* Faint by default (a hint that the column is sortable). The descendant selector
+   (specificity 0,2,0) is deliberate: it must beat preset-icons' `1.2em`
+   width/height in BOTH the layered prod bundle and the unlayered dev server so
+   the box is fixed. A single square box; both the 16- and 24-viewBox glyphs scale
+   into it. */
+:is([mono-sort-ind],.mono-table-sort-ind) :is([mono-sort-caret],.mono-table-sort-caret) {
+  display: block;
+  width: 0.9rem;
+  height: 0.9rem;
+  color: var(--_mono-table-faint);
+  transition: color var(--mono-duration-fast, 150ms) ease;
+}
+/* Once sorted (asc or desc — anything but `none`), the directional arrow darkens
+   to the header text colour. */
+:is([mono-sort-btn],.mono-table-sort-btn):not([data-dir='none']) :is([mono-sort-caret],.mono-table-sort-caret) {
+  color: var(--_mono-table-text);
+}
+/* Hover/focus feedback now has to target the CARET: the button wraps only the
+   icon, so the inherited `color` on the button can't reach past the descendant
+   rules above. Same specificity as the sorted rule (0,3,0) — it must stay AFTER
+   it to win the tie and highlight an already-sorted column too. */
+:is([mono-sort-btn],.mono-table-sort-btn):hover :is([mono-sort-caret],.mono-table-sort-caret),
+:is([mono-sort-btn],.mono-table-sort-btn):focus-visible :is([mono-sort-caret],.mono-table-sort-caret) {
+  color: var(--_mono-table-accent);
+}
+/* Multi-column sort precedence, rendered beside the arrow. Only present when TWO
+   OR MORE columns are sorted — a lone sorted column shows just the arrow, so the
+   ordinary case looks unchanged. */
+:is([mono-sort-seq],.mono-table-sort-seq) {
+  /* `<sup>` defaults to a relative baseline shift; keep it but make it compact so
+     it can't grow the header line box. */
+  font-size: 0.62em;
+  font-weight: 700;
+  line-height: 1;
+  margin-left: 0.1em;
+  color: var(--_mono-table-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+:is([mono-table],.mono-table) td {
+  /* Read through an alias resolved on `[mono-table]`, NOT the token directly: an
+     editing cell re-points `--theme-control-font-*` to `1em` for its editors,
+     and since a custom property is visible to the element that sets it, a direct
+     `var(--theme-control-font-lg)` here would resolve to `1em` and blow the
+     cell's own text up to the inherited size. */
+  font-size: var(--_mono-table-cell-font);
+  color: var(--_mono-table-ink-mid);
+}
+
+/* ── Row background ──────────────────────────────────────────────────────────
+   ONE variable decides a row's colour and everything else reads it: the row
+   itself, and the sticky column's cells further down.
+   That matters because a `<td>` background always covers the `<tr>`'s, so a
+   pinned cell cannot inherit the row's paint — it has to restate it. Restating
+   it by hand meant five near-duplicate blocks that drifted (group rows were
+   never added to them, so a pinned cell on a group row kept the plain surface).
+   With `--_mono-table-row-bg`, a row state is declared once and the pinned cell
+   follows for free.
+
+   Every rule that decides a row colour sets the variable AND repeats
+   `background: var(--_mono-table-row-bg)`. The repeat is not redundant: a rule
+   that only sets the variable leaves the `background` DECLARATION down here on
+   the base rule, at its low specificity (0,1,2) — so any competing `tr`
+   background from the host page wins and the row paints as if mono had said
+   nothing. VitePress does exactly that (`.vp-doc tr:nth-child(2n)`, (0,2,1)),
+   which turned every even row transparent the first time this was written.
+   Repeating the declaration carries the paint at each rule's own specificity.
+
+   The row is OPAQUE by default. It used to have no background at all, so odd
+   rows were fully transparent while even rows were painted opaque near-white —
+   which reads as stripes only if the table happens to sit on white, and as
+   "some rows transparent, some grey" anywhere else. For a see-through table,
+   set `--mono-table-surface: transparent`. */
+/* basecoat@1.0.2 styles/vega.css .table tr — hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors */
+:is([mono-table],.mono-table) tbody tr {
+  --_mono-table-row-bg: var(--_mono-table-surface);
+  background: var(--_mono-table-row-bg);
+  transition: background-color var(--mono-duration-fast, 150ms) var(--mono-ease, ease);
+}
+
+/* The rule is on the CELL: a `border-collapse: separate` table paints no border
+   for a `<tr>` at all. */
+:is([mono-table],.mono-table) tbody td {
+  border-bottom: var(--mono-border-width) solid var(--_mono-table-border-lite);
+}
+
+/* basecoat@1.0.2 styles/vega.css .table tbody — [&_tr:last-child]:border-0 */
+:is([mono-table],.mono-table) tbody tr:last-child > td {
+  border-bottom: none;
+}
+
+/* Zebra, floor version: plain parity over every `<tr>` in the tbody. */
+:is([mono-table],.mono-table) tbody tr:nth-child(even) {
+  --_mono-table-row-bg: var(--_mono-table-zebra);
+  background: var(--_mono-table-row-bg);
+}
+
+/* Zebra, corrected: `:nth-child(even of S)` counts only the siblings matching S,
+   which is the whole point — plain `:nth-child` counts rows the reader does not
+   see as rows. An open detail panel is a real `<tr>` (inserted by
+   mono-table-detail-core), virtual-scroll demos pad with spacer rows, and a
+   group header is a row too; each shifts the count, so stripes invert below an
+   expanded row and strobe while scrolling.
+
+   Behind @supports, and as a RESET + re-stripe pair, so an engine that cannot
+   parse `of S` keeps the floor rule above rather than losing striping entirely
+   (a dropped selector would be worse than the bug). @supports adds no
+   specificity, so these two are decided by source order — keep the reset first.
+
+   `[data-mono-stripe-skip]` is the escape hatch for a consumer's own non-data
+   rows; `[aria-hidden]` already covers spacer rows as the demos write them. */
+@supports selector(:nth-child(1 of :root)) {
+  :is([mono-table],.mono-table) tbody tr:nth-child(even) {
+    --_mono-table-row-bg: var(--_mono-table-surface);
+    background: var(--_mono-table-row-bg);
+  }
+
+  /* :where() ON PURPOSE. `:nth-child(of S)` takes S's specificity, and five
+     `:not()`s made this (0,7,2) — heavier than every row STATE below it (hover
+     (0,1,3), selected and editing (0,1,2), the dropdown-table's cursor), so on
+     an even row no state ever painted: a checked row kept its stripe. At (0,1,2)
+     it still beats the reset above it by order, and the states beat it the same
+     way. */
+  :is([mono-table],.mono-table) tbody tr:where(:nth-child(even of :not(:is([mono-detail-row],.mono-table-detail-row)):not(:is([mono-group-row],.mono-table-group-row)):not(:is([mono-filler],.mono-table-filler)):not([aria-hidden='true']):not([data-mono-stripe-skip]))) {
+    --_mono-table-row-bg: var(--_mono-table-zebra);
+    background: var(--_mono-table-row-bg);
+  }
+}
+
+:is([mono-table],.mono-table) tbody tr:hover {
+  --_mono-table-row-bg: var(--_mono-table-hover-bg);
+  background: var(--_mono-table-row-bg);
+}
+
+/* ── Filling the scroll box ─────────────────────────────────────────────────
+   A table is only as tall as its rows, so a short result set leaves dead space
+   under the last row — and every line the rows carried stops there: a pinned
+   column's edge, a consumer's column rules, the row backgrounds. Against a
+   bordered scroll box that reads as a table cut off mid-way (DevExtreme's fixed
+   columns run their separators to the bottom of the grid).
+
+   `mono-table-fill` on the `<table>` stretches it to the box (`height: 100%`).
+   On its own that spreads the extra height over EVERY row, so pair it with one
+   `<tr class="mono-table-filler">` at the END of the tbody: a row at `height:
+   100%` absorbs the whole remainder and the data rows keep their natural
+   height. Give it the same cells as a data row — empty, with the pinned classes
+   on the pinned ones — and each column's edge continues to the floor of the
+   box, the pinned ones included. Rendered by the consumer (the library cannot
+   emit a `<tr>`), e.g.
+
+     <tr class="mono-table-filler"><td v-for="c in columns" :class="stickyCls(c)"></td></tr>
+
+   It is not a data row: no zebra stripe (it is outside the `of S` set above and
+   the floor rule is reset here), no hover tint, no row rule under it, no padding
+   — so an empty box costs no height when there is nothing to fill. Add it
+   unconditionally; with enough rows to overflow the box it collapses to zero. */
+:is([mono-table],.mono-table):is([mono-fill],.mono-table-fill) {
+  height: 100%;
+}
+:is([mono-table],.mono-table) tbody tr:is([mono-filler],.mono-table-filler),
+:is([mono-table],.mono-table) tbody tr:is([mono-filler],.mono-table-filler):hover {
+  height: 100%;
+  --_mono-table-row-bg: var(--_mono-table-surface);
+  background: var(--_mono-table-row-bg);
+}
+:is([mono-table],.mono-table) tbody tr:is([mono-filler],.mono-table-filler) > td {
+  padding: 0;
+  border-bottom: none;
+}
+
+/* basecoat@1.0.2 styles/vega.css .table tr — data-[state=selected]:bg-muted
+   The pinned rail is mono's — upstream marks a selected row by its wash alone. */
+:is([mono-table],.mono-table) tbody tr:is([mono-selected],.mono-table-row-selected,.mono-dd-row-selected) {
+  --_mono-table-row-bg: var(--_mono-table-selected-bg);
+  background: var(--_mono-table-row-bg);
+  box-shadow: inset 3px 0 0 var(--_mono-table-accent);
+}
+
+/* ── Inline row editing (mono-table-th `:editable` + controller edit state) ───
+   Click (or double-click, per `editableTrigger`) a row → `mono-table-row-editing`. */
+:is([mono-table],.mono-table) tbody tr:is([mono-editing],.mono-table-row-editing),
+:is([mono-table],.mono-table) tbody tr:is([mono-editing],.mono-table-row-editing):hover {
+  --_mono-table-row-bg: color-mix(in oklab, var(--_mono-table-accent) 6%, var(--_mono-table-surface));
+  background: var(--_mono-table-row-bg);
+  box-shadow: inset 3px 0 0 var(--_mono-table-accent);
+}
+
+/* ── Seamless inline editors (automatic — no consumer setup) ──────────────────
+   A `<td>` that CONTAINS a mono form control is treated as an editing cell and
+   the control is flattened into it: no border, radius, shadow or background, and
+   no height of its own — so the editor's text lands exactly where the static
+   text was and the row doesn't grow when editing starts.
+
+   How it reaches every component INCLUDING the shadow builds: geometry
+   (radius / control height / border width) is publicly overridable only on
+   mono-input — select, tag-input, date and textarea read the `--theme-*` tokens
+   straight from their size rules. So re-point those tokens here. Custom
+   properties inherit through a shadow root; page-level rules against inner
+   classes (`.mono-select-trigger` …) would not.
+
+   NOTE: `--theme-radius-full` is deliberately left alone — the switch track and
+   thumb depend on it. Same for checkbox/switch sizing: they're glyph controls,
+   not text fields, so they only lose their resting shadow — their sizes AND their
+   border width are restored below (an unchecked checkbox is drawn by its border). */
+:is([mono-table],.mono-table) td:has(mono-input, mono-textarea, mono-select, mono-tag-input, mono-date,
+    mono-dropdown-table, mono-checkbox, mono-radio, mono-switch),
+:is([mono-table],.mono-table) td:has(mono-shadow-input, mono-shadow-textarea, mono-shadow-select,
+    mono-shadow-tag-input, mono-shadow-date, mono-shadow-dropdown-table,
+    mono-shadow-checkbox, mono-shadow-radio, mono-shadow-switch) {
+  /* geometry — the single lever that also reaches the shadow builds */
+  /* 0px, not 0: these tokens are also read inside calc() (a switch builds its
+     track from the border, a ring adds it to a shadow), and adding a UNITLESS
+     zero to a length makes the whole expression invalid — the switch track
+     collapsed to 0 height in an editor cell. */
+  --theme-border-width: 0px;
+  --theme-radius-xs: 0;
+  --theme-radius-sm: 0;
+  --theme-radius-md: 0;
+  --theme-radius-lg: 0;
+  --theme-radius-xl: 0;
+  /* `auto`, NOT 0 — this token feeds `min-height` on every field wrapper, so
+     zeroing it would let a field collapse below its own content. `auto` lets the
+     intrinsic line box size it, which is exactly the height of the static text it
+     replaces. `xs` belongs here too: without it an `xs` editor keeps a 24px strut
+     while the text it replaces is ~21px, and the row jumps on click. */
+  --theme-control-height-xs: auto;
+  --theme-control-height-sm: auto;
+  --theme-control-height-md: auto;
+  --theme-control-height-lg: auto;
+  --theme-control-height-xl: auto;
+  --theme-control-height-xxl: auto;
+  /* Ported (Basecoat) controls read the --mono-* vocabulary instead: the same
+     levers, restated. mono-input, mono-select, mono-date and mono-tag-input read these today; the rest join as they are
+     ported, and the --theme-* lines above go in 2.0. */
+  --mono-border-width: 0px;
+  --mono-control-height-xs: auto;
+  --mono-control-height-sm: auto;
+  --mono-control-height-md: auto;
+  --mono-control-height-lg: auto;
+  --mono-control-height-xl: auto;
+  --mono-control-height-xxl: auto;
+  /* tag-input / dropdown-table cap their chip height by the field height (chip-fit); with the
+     heights at `auto` here that calc is invalid, so pin the chips to their fixed sizes. */
+  --mono-tag-input-chip-height-xs: calc(var(--mono-spacing) * 4.5);
+  --mono-tag-input-chip-height-sm: calc(var(--mono-spacing) * 5);
+  --mono-tag-input-chip-height-md: calc(var(--mono-spacing) * 5.5);
+  --mono-tag-input-chip-height-lg: calc(var(--mono-spacing) * 6);
+  --mono-tag-input-chip-height-xl: calc(var(--mono-spacing) * 6.5);
+  --mono-tag-input-chip-height-xxl: calc(var(--mono-spacing) * 7);
+  --mono-input-radius: 0;
+  --mono-input-ring-width: 0px;
+  --mono-input-font-xs: 1em;
+  --mono-input-font-sm: 1em;
+  --mono-input-font-md: 1em;
+  --mono-input-font-lg: 1em;
+  --mono-input-font-xl: 1em;
+  --mono-input-font-xxl: 1em;
+  --mono-select-radius: 0;
+  --mono-select-ring-width: 0px;
+  --mono-select-font-xs: 1em;
+  --mono-select-font-sm: 1em;
+  --mono-select-font-md: 1em;
+  --mono-select-font-lg: 1em;
+  --mono-select-font-xl: 1em;
+  --mono-select-font-xxl: 1em;
+  --mono-date-radius: 0;
+  --mono-date-ring-width: 0px;
+  --mono-date-font-xs: 1em;
+  --mono-date-font-sm: 1em;
+  --mono-date-font-md: 1em;
+  --mono-date-font-lg: 1em;
+  --mono-date-font-xl: 1em;
+  --mono-date-font-xxl: 1em;
+  --mono-tag-input-radius: 0;
+  --mono-tag-input-ring-width: 0px;
+  --mono-tag-input-font-xs: 1em;
+  --mono-tag-input-font-sm: 1em;
+  --mono-tag-input-font-md: 1em;
+  --mono-tag-input-font-lg: 1em;
+  --mono-tag-input-font-xl: 1em;
+  --mono-tag-input-font-xxl: 1em;
+
+  /* surfaces + resting shadows. Both `-bg` and `-surface` are needed for input:
+     the default `outlined` variant's own rule paints `--_mono-input-surface`,
+     which would otherwise win over `--mono-input-bg`. */
+  --mono-input-bg: transparent;
+  --mono-input-surface: transparent;
+  --mono-input-rest-border: transparent;
+  --mono-input-shadow: none;
+  --mono-textarea-surface: transparent;
+  --mono-textarea-shadow: none;
+  --mono-textarea-min-height: 0;
+  --mono-select-surface: transparent;
+  --mono-select-shadow: none;
+  --mono-tag-input-surface: transparent;
+  --mono-tag-input-shadow: none;
+  --mono-date-surface: transparent;
+  --mono-dropdown-table-surface: transparent;
+  --mono-dropdown-table-shadow: none;
+  --mono-checkbox-shadow: none;
+  --mono-switch-shadow: none;
+
+  /* kill the control's own inset so its text starts at the cell's content edge,
+     exactly where the static text sits */
+  --mono-input-padding-x-sm: 0;
+
+  --mono-input-padding-x-xs: 0;
+  --mono-input-padding-x-md: 0;
+  --mono-input-padding-x-lg: 0;
+  --mono-input-padding-x-xl: 0;
+  --mono-input-padding-x-xxl: 0;
+  --mono-select-padding-x: 0;
+  --mono-tag-input-padding-x: 0;
+  --mono-date-padding-x: 0;
+  --mono-textarea-padding-x: 0;
+
+  /* …and the VERTICAL inset. Only `mono-input` had none to begin with; the
+     others each carried 0.35–0.55rem top+bottom, which is 11–18px of height the
+     static text doesn't have — the row grew the moment you clicked it. */
+  --mono-select-padding-y: 0;
+  --mono-tag-input-padding-y: 0;
+  --mono-date-padding-y: 0;
+  --mono-textarea-padding-y: 0;
+
+  /* The wrapper is a grid of [label?, field, message-wrapper]. The message
+     wrapper is emitted even when there IS no message, so the gap ALWAYS added
+     ~6.4px that the static text doesn't have. Inside a cell there is no label
+     or message, so the gap has nothing to space. */
+  --mono-input-gap: 0;
+  --mono-select-gap: 0;
+  --mono-textarea-gap: 0;
+  --mono-tag-input-gap: 0;
+  --mono-date-gap: 0;
+
+  /* Type must match the static text the editor replaces, or the glyphs resize
+     and the line box changes height on click. Same single-lever trick as the
+     geometry above: select/tag-input/date/textarea read these tokens directly,
+     mono-input through its own indirection — and custom properties cross into
+     the shadow builds, which a page-level element rule cannot.
+
+     `1em`, NOT `inherit`: a CSS-wide keyword in a custom-property declaration
+     applies to the PROPERTY (re-inheriting it) instead of being stored as the
+     value, so `--theme-control-font-md: inherit` is silently a no-op. `1em`
+     resolves a font-size against the parent's, which is what we actually want —
+     and it chains, so nested elements all land on the cell's size. */
+  --theme-control-font-sm: 1em;
+  --theme-control-font-md: 1em;
+  --theme-control-font-lg: 1em;
+  --theme-control-font-xl: 1em;
+  --theme-control-font-xxl: 1em;
+
+  /* One line box owned by the CELL, so the row height is fixed by the column and
+     not by whichever element happens to be visible. Same keyword caveat as
+     above — hand the editors the literal value, not `inherit`. */
+  line-height: var(--mono-table-edit-line-height, 1.5);
+  --mono-input-line-height: var(--mono-table-edit-line-height, 1.5);
+  --mono-textarea-line-height: var(--mono-table-edit-line-height, 1.5);
+  /* select / tag-input / date pin their own line-height so a host page's absolute
+     line box cannot inflate them past the control-height token. That pin is a
+     `var()` precisely so the cell can keep owning the line box here. */
+  --mono-select-line-height: var(--mono-table-edit-line-height, 1.5);
+  --mono-tag-input-line-height: var(--mono-table-edit-line-height, 1.5);
+  --mono-date-line-height: var(--mono-table-edit-line-height, 1.5);
+
+  /* Silence each control's OWN focus ring — the cell draws the underline below,
+     and showing both would put the box straight back. These are the components'
+     private ring knobs (same ones the `underlined` variant re-points); an alpha
+     of 0 makes the ring transparent whatever its geometry. */
+  --_mono-input-ring-alpha: 0;
+  --_mono-input-ring-alpha-state: 0;
+  --_mono-textarea-ring-alpha: 0;
+  --_mono-textarea-ring-alpha-state: 0;
+  --_mono-select-ring-alpha: 0;
+  --_mono-select-ring-alpha-state: 0;
+  --_mono-tag-input-ring-alpha: 0;
+  --_mono-tag-input-ring-alpha-state: 0;
+  --_mono-date-ring-alpha: 0;
+  --_mdt-ring-alpha: 0;
+  --_mdt-ring-alpha-state: 0;
+}
+
+/* ── …and the cell's ALIGNMENT ────────────────────────────────────────────────
+   The block above moves the editor's BOX into the cell. This moves its TEXT.
+
+   `text-align` is inherited, so a right-aligned money `<td>` already passes
+   `right` down to the control's wrapper — but not into the field itself, because
+   the UA stylesheet gives `input` / `textarea` their own `text-align: start`,
+   and an author declaration on an ancestor cannot beat a UA declaration on the
+   element. So a right-aligned column's figures jumped to the left edge the moment
+   the editor appeared: exactly the shift this section exists to prevent.
+
+   `inherit` rather than a fixed value, so the field simply tracks whatever the
+   cell is — right for money, centre for a code column, untouched for the usual
+   left. Nothing to configure.
+
+   Class selectors reach the LIGHT builds. The shadow builds render the same field
+   inside their own root, which page CSS cannot cross and which has no custom
+   property for alignment yet — a shadow editor in a right-aligned cell still sits
+   left. Noted rather than papered over. */
+:is([mono-table],.mono-table) td :is(.mono-input-native, .mono-select-native, .mono-tag-input-native,
+    .mono-date-native, .mono-textarea-field) {
+  text-align: inherit;
+}
+
+/* …but NOT for checkbox / radio / switch.
+   For a FIELD, `--theme-control-height-*` feeds `min-height`, so `auto` above is
+   right. For these three it is the control's actual geometry — the box, circle and
+   track are all `calc(token * 0.5)` (radio.css, switch.css; the ported checkbox
+   are `calc(token * 4 / 9)` off the --mono-* twin — the switch derives its track
+   from the same expression — restored the same way) — and
+   `calc(auto * 0.5)` is INVALID AT COMPUTED-VALUE TIME, so width/height fall back
+   to `auto` and the box, having no intrinsic size, renders 0x0. The control is
+   there, sized to nothing.
+
+   Restore the snapshot taken on `[mono-table]`. Done as a descendant rule rather
+   than by dropping these three from the `:has()` list above, for two reasons: they
+   still want the flattening (an editable boolean cell should look seamless), and a
+   cell holding BOTH a field and a checkbox still matches that list — a selector
+   split would leave that case broken.
+
+   Element AND class selectors: the light build renders the class on an inner node,
+   raw class markup is used directly by the css/ demos, and custom properties
+   inherit through the shadow boundary so setting them on the host covers the
+   shadow builds. */
+:is([mono-table],.mono-table) td :is(mono-checkbox, mono-radio, mono-switch),
+:is([mono-table],.mono-table) td :is(mono-shadow-checkbox, mono-shadow-radio, mono-shadow-switch),
+:is([mono-table],.mono-table) td :is(.mono-checkbox, .mono-radio, .mono-switch),
+:is([mono-table],.mono-table) td :is(:is([mono-checkbox],.mono-checkbox), :is([mono-radio],.mono-radio), :is([mono-switch],.mono-switch)) {
+  --theme-control-height-xs: var(--_mono-table-ch-xs);
+  --theme-control-height-sm: var(--_mono-table-ch-sm);
+  --theme-control-height-md: var(--_mono-table-ch-md);
+  --theme-control-height-lg: var(--_mono-table-ch-lg);
+  --theme-control-height-xl: var(--_mono-table-ch-xl);
+  --theme-control-height-xxl: var(--_mono-table-ch-xxl);
+  --mono-control-height-xs: var(--_mono-table-mch-xs);
+  --mono-control-height-sm: var(--_mono-table-mch-sm);
+  --mono-control-height-md: var(--_mono-table-mch-md);
+  --mono-control-height-lg: var(--_mono-table-mch-lg);
+  --mono-control-height-xl: var(--_mono-table-mch-xl);
+  --mono-control-height-xxl: var(--_mono-table-mch-xxl);
+  --mono-border-width: var(--_mono-table-bw);
+  --theme-border-width: var(--_mono-table-tbw);
+}
+
+/* Editors fill their column (promoted from the demos' local CSS). */
+:is([mono-table],.mono-table) td > :is(mono-input, mono-textarea, mono-select, mono-tag-input, mono-date,
+    mono-dropdown-table, mono-shadow-input, mono-shadow-textarea, mono-shadow-select,
+    mono-shadow-tag-input, mono-shadow-date, mono-shadow-dropdown-table) {
+  display: block;
+  width: 100%;
+}
+
+/* Glyph controls are sized in literal px, so a switch/checkbox replacing a text
+   run changes the row height. Clamp them to the cell's line box instead — the
+   HOST element is always light DOM (even in the shadow build), so a page rule
+   reaches it, and at the default 1.5 line-height the box is ~20px, which the
+   `sm` switch track (20px) and checkbox (16px) already fit inside. */
+:is([mono-table],.mono-table) td :is(mono-switch, mono-checkbox, mono-radio,
+    mono-shadow-switch, mono-shadow-checkbox, mono-shadow-radio) {
+  display: inline-flex;
+  align-items: center;
+  height: calc(1em * var(--mono-table-edit-line-height, 1.5));
+  /* `middle`, not the default `baseline`: an inline-level box that sits ON the
+     baseline still needs the font's descender space BELOW it, so the line box —
+     and the row — grows by a couple of px even when the control is exactly one
+     line tall. Only visible in a row whose height isn't already set by something
+     taller, which is why it hides in grids that have action buttons. */
+  vertical-align: middle;
+}
+
+/* `mono-table-fixed` clips with ellipsis; an editing cell must not clip its
+   editor (or a select/date popup anchored in it). */
+:is([mono-table],.mono-table):is([mono-fixed],.mono-table-fixed) td:has(mono-input, mono-textarea, mono-select, mono-tag-input,
+    mono-date, mono-dropdown-table, mono-checkbox, mono-radio, mono-switch),
+:is([mono-table],.mono-table):is([mono-fixed],.mono-table-fixed) td:has(mono-shadow-input, mono-shadow-textarea,
+    mono-shadow-select, mono-shadow-tag-input, mono-shadow-date,
+    mono-shadow-dropdown-table, mono-shadow-checkbox, mono-shadow-radio,
+    mono-shadow-switch) {
+  overflow: visible;
+  white-space: normal;
+}
+
+/* An ACTION cell (row buttons) must not ellipsis-clip either. `mono-table-fixed`
+   gives every cell `overflow: hidden; white-space: nowrap`, which silently cuts
+   off a Save/Cancel pair the moment the column is a few px too narrow — the
+   button is still there and still clickable, just invisible. Keep `nowrap` so
+   the buttons stay on one line, but let them out of the box. */
+:is([mono-table],.mono-table):is([mono-fixed],.mono-table-fixed) td:has(> mono-button),
+:is([mono-table],.mono-table):is([mono-fixed],.mono-table-fixed) td:has(> mono-shadow-button) {
+  overflow: visible;
+}
+
+/* Focus cue on the CELL, not the control: the `<td>` is always light DOM and
+   `:focus-within` propagates out of a shadow root, so one rule covers every
+   component in both builds. Geometry matches the `underlined` form variant —
+   spread cancels blur, so the glow stays under the line instead of ringing the
+   cell. */
+:is([mono-table],.mono-table) td:has(mono-input, mono-textarea, mono-select, mono-tag-input, mono-date,
+    mono-dropdown-table, mono-checkbox, mono-radio, mono-switch):focus-within,
+:is([mono-table],.mono-table) td:has(mono-shadow-input, mono-shadow-textarea, mono-shadow-select,
+    mono-shadow-tag-input, mono-shadow-date, mono-shadow-dropdown-table,
+    mono-shadow-checkbox, mono-shadow-radio, mono-shadow-switch):focus-within {
+  box-shadow:
+    inset 0 -2px 0 var(--_mono-table-accent),
+    0 5px 6px -6px rgba(var(--theme-primary-rgb, 30, 58, 110), 0.5);
+}
+
+/* ── Grouping (group header rows) ────────────────────────────────────────────
+   A `<tr class="mono-table-group-row">` is a clickable group header. Set
+   `--mono-table-group-level` (0-based depth) on the group cell to indent nested levels.
+   Pair with `<mono-data-grid>`'s `group` option + `toggleGroup`. */
+/* The `:nth-child(even)` twin is kept so the floor zebra rule (for engines
+   without `of S`) cannot tint a group header; where `of S` works, the group row
+   is already excluded from the data set and never receives the stripe. */
+:is([mono-table],.mono-table) tbody tr:is([mono-group-row],.mono-table-group-row),
+:is([mono-table],.mono-table) tbody tr:is([mono-group-row],.mono-table-group-row):nth-child(even) {
+  --_mono-table-row-bg: var(--_mono-table-group-bg);
+  background: var(--_mono-table-row-bg);
+  cursor: pointer;
+}
+
+:is([mono-table],.mono-table) tbody tr:is([mono-group-row],.mono-table-group-row):hover {
+  --_mono-table-row-bg: var(--_mono-table-group-hover-bg);
+  background: var(--_mono-table-row-bg);
+}
+
+:is([mono-table],.mono-table) td:is([mono-group-cell],.mono-table-group-cell) {
+  padding-left: calc(0.9rem + var(--mono-table-group-level, 0) * 1.4rem);
+  color: var(--_mono-table-accent);
+  font-weight: var(--mono-font-weight-semibold, 600);
+}
+
+:is([mono-group-toggle],.mono-table-group-toggle) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+  cursor: pointer;
+}
+
+:is([mono-group-toggle],.mono-table-group-toggle):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--_mono-table-accent) 30%, transparent);
+  border-radius: var(--theme-radius-xs, 4px);
+}
+
+:is([mono-group-caret],.mono-table-group-caret) {
+  width: 0.62rem;
+  height: 0.62rem;
+  flex-shrink: 0;
+  color: var(--_mono-table-accent);
+  /* Expanded → points down. Collapsed (data-collapsed) → points right. */
+  transform: rotate(90deg);
+  transition: transform var(--mono-duration-fast, 150ms) var(--mono-ease, ease);
+}
+
+:is([mono-group-toggle],.mono-table-group-toggle)[data-collapsed] :is([mono-group-caret],.mono-table-group-caret) {
+  transform: rotate(0deg);
+}
+
+:is([mono-group-caret],.mono-table-group-caret) svg {
+  width: 100%;
+  height: 100%;
+}
+
+:is([mono-group-key],.mono-table-group-key) {
+  color: var(--_mono-table-text);
+}
+
+:is([mono-group-count],.mono-table-group-count) {
+  margin-left: 0.45rem;
+  font-size: 0.72rem;
+  font-weight: var(--theme-font-weight-normal, 400);
+  color: var(--_mono-table-muted);
+}
+
+/* Per-group row pager (`<mono-table-paging-group>`), shown in a footer row at the
+   end of a group's rows. Reuses the `[mono-table-paging]*` button styling. */
+:is([mono-table],.mono-table) td:is([mono-group-foot],.mono-table-group-foot) {
+  padding-top: 0.4rem;
+  padding-bottom: 0.5rem;
+  padding-left: calc(0.9rem + var(--mono-table-group-level, 0) * 1.4rem);
+  background: color-mix(in oklab, var(--_mono-table-accent) 3%, var(--_mono-table-surface));
+}
+
+:is([mono-table-paging-group],.mono-table-pg-group) {
+  --mono-table-pg-scale: 0.86;
+}
+
+:is([mono-table-paging-group],.mono-table-pg-group) :is([mono-pgb],.mono-table-pgb) {
+  min-width: 26px;
+  height: 26px;
+  font-size: 0.74rem;
+}
+
+:is([mono-table-paging-group],.mono-table-pg-group) :is([mono-pg-el],.mono-table-pg-el) {
+  font-size: 0.74rem;
+}
+
+/* ── Fixed / sticky columns ─────────────────────────────────────────────────
+   Pin a column to an edge while the table scrolls horizontally. Add
+   `mono-table-sticky-left` / `-right` to the column's header `<th>` AND its body
+   `<td>`s. For 2+ pinned columns on one side, set `--mono-table-sticky-left` /
+   `--mono-table-sticky-right` on the later column(s) to the combined width of the ones
+   before it (give those columns fixed widths so it lines up).
+
+   The edge is a real BORDER. It was a zero-blur box-shadow, on the reasoning that a collapsed
+   border belongs to the table rather than the cell and so might not repaint as a sticky cell
+   moves — but a shadow is painted OUTSIDE the border box, so it landed a pixel clear of the
+   column and stacked next to whatever rule was already there, which is what made a pinned edge
+   read as a smudge rather than a line.
+
+   That reasoning about collapsed borders was RIGHT, though: in `collapse` mode the border
+   stayed at the cell's flow position and scrolled away with the rest of the table. Which is
+   why a table holding a pinned column runs with SEPARATE borders (the `:has()` rule up by
+   the sticky-head block) — the cell owns its edge and takes it along. */
+:is([mono-table],.mono-table) th:is([mono-sticky-left],.mono-table-sticky-left),
+:is([mono-table],.mono-table) td:is([mono-sticky-left],.mono-table-sticky-left) {
+  position: sticky;
+  /* Default 0 (one pinned column). For a 2nd+ pinned column on this side, set
+     --mono-table-sticky-left to the combined width of the columns before it. */
+  left: var(--mono-table-sticky-left, 0);
+  z-index: 1;
+  border-right: 1px solid var(--_mono-table-border);
+}
+:is([mono-table],.mono-table) th:is([mono-sticky-right],.mono-table-sticky-right),
+:is([mono-table],.mono-table) td:is([mono-sticky-right],.mono-table-sticky-right) {
+  position: sticky;
+  right: var(--mono-table-sticky-right, 0);
+  z-index: 1;
+  border-left: 1px solid var(--_mono-table-border);
+}
+
+/* The pinned edge runs to the FLOOR of the scroll box, not just to the last row.
+
+   A table is only as tall as its rows, so a short result set left the edge
+   stopping mid-box, which reads as a table cut off (DevExtreme's fixed columns
+   run their separators to the bottom of the grid). Nothing can be appended to
+   a `<tbody>` from CSS, and a pseudo-element on the cell is clipped by the
+   cell's own `overflow: hidden` (`mono-table-fixed` sets it for the ellipsis).
+   What a cell cannot clip is its OWN border painting — so the last row's pinned
+   cells draw that edge as a `border-image` with a bottom OUTSET: the 1px edge
+   slice is stretched from the cell's top to a viewport-height below it. It is
+   ink overflow, so it adds no scroll height, the scroll box clips it at its
+   floor, and once the rows overflow the box there is nothing below the last
+   row for it to show in. Scoped to `[mono-table-scroll]` so a table in normal
+   flow never paints a tail below itself. The same colour the edge already
+   uses; `border-image` needs separate borders, which every pinned table has.
+
+   EVERY pinned body cell paints the tail, not only the last row's: the rows
+   are painted in order and each opaque row covers the tail of the one above,
+   so only the last one shows — and it does not matter what the last `<tr>` is.
+   Keyed on `:last-child` it went missing whenever the tbody ended in something
+   other than a data row (an error / loading row, an open detail panel, a
+   virtual-scroll spacer). */
+:is([mono-table-scroll],.mono-table-scroll) :is([mono-table],.mono-table) :is(tbody, tfoot) td:is([mono-sticky-left],.mono-table-sticky-left) {
+  border-image: linear-gradient(var(--_mono-table-border), var(--_mono-table-border)) 0 1 0 0 / 0 1px 0 0 / 0 0 100vh 0;
+}
+:is([mono-table-scroll],.mono-table-scroll) :is([mono-table],.mono-table) :is(tbody, tfoot) td:is([mono-sticky-right],.mono-table-sticky-right) {
+  border-image: linear-gradient(var(--_mono-table-border), var(--_mono-table-border)) 0 0 0 1 / 0 0 0 1px / 0 0 100vh 0;
+}
+
+/* A border-image paints INSTEAD of the borders — every side, at the image's
+   widths — so with only the edge in the image the cell's bottom rule went
+   unpainted, and a bottom outset would put the image's bottom edge a viewport
+   below the cell anyway. The row rule on a pinned cell is therefore an inset
+   shadow on the bottom pixel (a cell's own shadow, painted by the cell, never
+   clipped by it), and the layout border it replaces is dropped so that pixel
+   is the same one the neighbouring cells' border sits on. A footer's pinned
+   cell does the same for its TOP rule (the footer separator). */
+:is([mono-table-scroll],.mono-table-scroll) :is([mono-table],.mono-table) tbody td:is([mono-sticky-left],.mono-table-sticky-left),
+:is([mono-table-scroll],.mono-table-scroll) :is([mono-table],.mono-table) tbody td:is([mono-sticky-right],.mono-table-sticky-right) {
+  border-bottom-width: 0;
+  box-shadow: inset 0 -1px 0 0 var(--_mono-table-border-lite);
+}
+:is([mono-table-scroll],.mono-table-scroll) :is([mono-table],.mono-table) tfoot td:is([mono-sticky-left],.mono-table-sticky-left),
+:is([mono-table-scroll],.mono-table-scroll) :is([mono-table],.mono-table) tfoot td:is([mono-sticky-right],.mono-table-sticky-right) {
+  border-top-width: 0;
+  box-shadow: inset 0 1px 0 0 color-mix(in oklab, var(--_mono-table-text) 12%, transparent);
+}
+/* No rule where the row is closed by something else: a footer's top border, or
+   the filler's floor. */
+:is([mono-table-scroll],.mono-table-scroll) :is([mono-table],.mono-table):has(tfoot) tbody tr:last-child > td:is([mono-sticky-left],.mono-table-sticky-left),
+:is([mono-table-scroll],.mono-table-scroll) :is([mono-table],.mono-table):has(tfoot) tbody tr:last-child > td:is([mono-sticky-right],.mono-table-sticky-right),
+:is([mono-table-scroll],.mono-table-scroll) :is([mono-table],.mono-table) tbody tr:is([mono-filler],.mono-table-filler) > td:is([mono-sticky-left],.mono-table-sticky-left),
+:is([mono-table-scroll],.mono-table-scroll) :is([mono-table],.mono-table) tbody tr:is([mono-filler],.mono-table-filler) > td:is([mono-sticky-right],.mono-table-sticky-right) {
+  box-shadow: none;
+}
+
+/* …and the last row keeps its rule. The base sheet drops the bottom rule on the
+   last row so it does not double up with a `tfoot`'s top border or a wrapper's
+   edge, but in a scroll box taller than its rows that leaves the last row open —
+   every row above is closed by a line and the last is not, right where the
+   pinned edges now carry on below it. Only where nothing follows the row; the
+   pinned cells carry theirs as the shadow above. */
+:is([mono-table-scroll],.mono-table-scroll) :is([mono-table],.mono-table):not(:has(tfoot)):has(:is([mono-sticky-left],.mono-table-sticky-left), :is([mono-sticky-right],.mono-table-sticky-right)) tbody tr:last-child:not(:is([mono-filler],.mono-table-filler)) > td:not(:is([mono-sticky-left],.mono-table-sticky-left)):not(:is([mono-sticky-right],.mono-table-sticky-right)) {
+  border-bottom: 1px solid var(--_mono-table-border-lite);
+}
+
+/* Header cells need an opaque background (the gradient sits on `thead`, not the
+   cell) and the top layer so they stay above pinned body cells. */
+:is([mono-table],.mono-table) thead th:is([mono-sticky-left],.mono-table-sticky-left),
+:is([mono-table],.mono-table) thead th:is([mono-sticky-right],.mono-table-sticky-right) {
+  z-index: 3;
+  background: var(--_mono-table-head-frozen-bg);
+}
+
+/* Body cells take the row background so scrolled content can't bleed through.
+   A pinned cell paints over the row, so it cannot simply inherit the colour —
+   but it CAN read the same variable the row set, which means zebra, hover,
+   selected, editing and group rows are all covered by this one rule. Adding a
+   new row state needs nothing here. */
+:is([mono-table],.mono-table) tbody td:is([mono-sticky-left],.mono-table-sticky-left),
+:is([mono-table],.mono-table) tbody td:is([mono-sticky-right],.mono-table-sticky-right) {
+  background: var(--_mono-table-row-bg, var(--_mono-table-surface));
+}
+
+/* A pinned SUMMARY cell is sticky on both axes at once — bottom (sticky-foot) and
+   left/right (sticky column). Lift it above the scrolling body's pinned column
+   AND the rest of the footer row so the bottom corner stays put through both
+   scrolls; the opaque background from the sticky-foot rule already applies. */
+:is([mono-sticky-foot],.mono-table-sticky-foot) tfoot td:is([mono-sticky-left],.mono-table-sticky-left),
+:is([mono-sticky-foot],.mono-table-sticky-foot) tfoot td:is([mono-sticky-right],.mono-table-sticky-right),
+:is([mono-sticky-foot],.mono-table-sticky-foot) tfoot th:is([mono-sticky-left],.mono-table-sticky-left),
+:is([mono-sticky-foot],.mono-table-sticky-foot) tfoot th:is([mono-sticky-right],.mono-table-sticky-right) {
+  z-index: 3;
+}
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+
+:is([mono-table-foot],.mono-table-foot) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.72rem 1rem;
+  border-top: 1px solid var(--_mono-table-border-lite);
+  background: color-mix(in oklab, var(--_mono-table-text) 3%, var(--_mono-table-surface));
+}
+
+/* ── Error bar (mono-table-error) ────────────────────────────────────────────
+   The odd one out of the three controller-driven table elements: `loading` and
+   `empty` paint OVER the grid, this one is IN it. A failed request is not a
+   transient state to cover the rows with — it is a fact about the table that
+   should push the rows down and stay there until it is dismissed, which is what
+   DevExtreme's error row does too.
+
+   So there is no `position: absolute` here and no height reservation: the
+   generated `<tr>` (see `ensureRowHost`) is a real row, and the bar inside it is
+   ordinary flow content directly under the header. */
+
+/* `!important`, and not as a shortcut. A generated row's cell is a structural
+   HOST, not a content cell — it exists only because `<table>`'s content model
+   forbids a bare custom element — so a host page that styles `td` generically is
+   simply wrong about this one. And host pages do: these docs carry
+   `.vp-doc table[mono-table] td { padding: … }` to undo VitePress's own table
+   styling, which at (0,2,2) beat the (0,1,1) this rule used to have and put a
+   14px gutter around the error bar. Winning that on specificity is an arms race
+   against every consumer's reset; stating the invariant is not. */
+:is([mono-error-row],.mono-table-error-row) > td {
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+/* The ROW too, like the loading/empty rows above. With no error the element
+   renders nothing, but the row stays — the consumer wrote it, and it is theirs —
+   and a `<tr>` carries the base row rule's 1px border-bottom of its own, so an
+   idle host was a 1px band pushing every data row down. `height: 0` is a
+   minimum on a table row, so the bar still grows it when there is one. */
+:is([mono-error-row],.mono-table-error-row) {
+  height: 0 !important;
+  border: 0 !important;
+}
+
+mono-table-error,
+mono-shadow-table-error {
+  display: block;
+}
+
+/* The row's cell follows a FROZEN header. `[mono-sticky-head]` may sit on
+   the table or on its scroll wrapper — a descendant selector covers both. The
+   cell is what sticks (the row stays in flow, so it keeps taking its honest
+   height); `top` is the `<thead>` height the element measures and publishes on
+   the `<table>` — a banded two-row header is not 1 row tall. Above the pinned
+   body cells (1) and the sticky head cells (2) it slides over; the pinned
+   header cells are also 3, but a bar under the header never overlaps them.
+   Without a frozen header there is no rule here: the bar scrolls away with the
+   rows it describes, like any row. */
+:is([mono-sticky-head],.mono-table-sticky-head) :is([mono-error-row],.mono-table-error-row) > td {
+  position: sticky;
+  top: var(--mono-table-error-head, 0px);
+  z-index: 3;
+}
+
+/* Exactly the SCROLLPORT wide, pinned to its left edge — never the table.
+
+   The cell spans every column, so on a table wider than its `[mono-table-scroll]`
+   a bar that filled it put the text at the far left and the ✕ / ↻ past the right
+   edge, invisible until you scrolled for them (a table with a pinned action
+   column is that wide by design). `100cqw` is the scroll wrapper's inline size
+   (it is a query container whenever it holds this element — the rule by the
+   loading spinner, which centres with the same unit), and `sticky; left: 0`
+   keeps the bar at the visible left as you scroll sideways. `max-width: 100%`
+   keeps it inside a table that happens to be NARROWER than the wrapper, and
+   `auto` outside any wrapper, where there is no scrollport to size to. The
+   value travels as a custom property so the shadow build's bar gets it too. */
+:is([mono-table-scroll],.mono-table-scroll) mono-table-error,
+:is([mono-table-scroll],.mono-table-scroll) mono-shadow-table-error {
+  --mono-table-error-w: 100cqw;
+}
+
+:is([mono-error-bar],.mono-table-error-bar) {
+  position: sticky;
+  left: 0;
+  box-sizing: border-box;
+  width: var(--mono-table-error-w, auto);
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--_mono-table-error-border);
+  background: var(--_mono-table-error-bg);
+  color: var(--_mono-table-error);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  /* The bar lives in a <td>, and a cell is `whitespace-nowrap` upstream — so the
+     message inherited that and ran under the ↻ / ✕ instead of wrapping. */
+  white-space: normal;
+}
+
+:is([mono-error-text],.mono-table-error-text) {
+  /* Takes the whole bar so the close button is pinned to the right edge, and
+     wraps rather than truncating: a message worth showing is worth reading, and
+     a store's error text is routinely a sentence. */
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* What the server said beyond the status, after the preset headline — quieter,
+   so "Something went wrong on the server" reads first and "Object reference not
+   set…" is there for whoever wants it. */
+:is([mono-error-detail],.mono-table-error-detail) {
+  opacity: 0.8;
+}
+:is([mono-error-detail],.mono-table-error-detail)::before {
+  content: ' — ';
+}
+
+/* The ↻ and × at the right edge: one look, the class kept as a second
+   selector so a consumer rule on `[mono-error-close]` still matches. */
+:is([mono-error-actions],.mono-table-error-actions) {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+:is([mono-error-btn],.mono-table-error-btn),
+:is([mono-error-close],.mono-table-error-close) {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--theme-radius-sm, 0.375rem);
+  background: transparent;
+  color: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 0.75;
+  transition: background-color var(--theme-duration-fast, 0.12s) var(--mono-ease, ease),
+    opacity var(--theme-duration-fast, 0.12s) var(--mono-ease, ease);
+}
+
+:is([mono-error-btn],.mono-table-error-btn):hover,
+:is([mono-error-close],.mono-table-error-close):hover {
+  background: color-mix(in srgb, var(--_mono-table-error) 14%, transparent);
+  opacity: 1;
+}
+
+:is([mono-error-btn],.mono-table-error-btn):disabled {
+  cursor: default;
+  opacity: 0.45;
+  background: transparent;
+}
+
+:is([mono-error-btn],.mono-table-error-btn):focus-visible,
+:is([mono-error-close],.mono-table-error-close):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--_mono-table-error) 45%, transparent);
+  outline-offset: 1px;
+  opacity: 1;
+}
+
+/* ── Empty state ────────────────────────────────────────────────────────────
+   Two consumers, one look. `[mono-table-empty]` as a CLASS is the hand-rolled
+   form — a plain `<div>` after the table, which is what every demo wrote before
+   the element existed and what a consumer with an entirely custom condition
+   still writes. `<mono-table-empty>` as an ELEMENT is the same message placed
+   inside the table and driven by the controller. The typography rules below are
+   shared by both, so the two can never drift apart; only the placement differs,
+   and that is the block after this one. */
+
+:is([mono-table-empty],.mono-table-empty) {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--_mono-table-muted);
+}
+
+:is([mono-empty-title],.mono-table-empty-title) {
+  font-size: 0.9rem;
+  font-weight: var(--mono-font-weight-bold, 700);
+  color: var(--_mono-table-text);
+}
+
+:is([mono-empty-sub],.mono-table-empty-sub) {
+  font-size: 0.78rem;
+  color: var(--_mono-table-faint);
+  margin-top: 0.25rem;
+}
+
+/* ── Empty overlay (mono-table-empty) ────────────────────────────────────────
+   `mono-table-loading`'s pair, and deliberately the same shape: dropped into the
+   `<caption>` (or into a row section, where the core wraps itself in a
+   zero-height `<tr><td colspan>` — see `table-overlay.ts`), out of normal flow,
+   covering the nearest positioned ancestor.
+
+   Hidden until the core reflects [data-mono-empty]. Note the DEFAULT here is
+   hidden even though an unbound element is always "visible": the core sets the
+   attribute immediately when no controller is bound, so a `v-if`-driven usage
+   still paints. Defaulting to shown instead would flash the message on every
+   controller-driven table for the one frame before the core's first sync. */
+
+mono-table-empty,
+mono-shadow-table-empty {
+  box-sizing: border-box;
+  position: absolute;
+  inset: 0;
+  z-index: var(--_mono-table-empty-z, 9);
+  display: none;
+  /* The RESTING offset, in real layout. It cannot come from the message's own
+     `sticky` `top`, which only pushes an element away from a SCROLLPORT edge —
+     with no scrolling ancestor the nearest scrollport is the viewport, the box is
+     already far below its top, and sticky does nothing at all. The message then
+     sits at the overlay's top, which is the top of the table: printed across the
+     column names. A table with no `[mono-table-scroll]` is not a corner case
+     either — it is exactly what `<mono-dropdown-table>` renders. The sticky `top`
+     below still does its own job once there IS a scroll region. */
+  padding-top: calc(var(--mono-table-empty-head, 0px) + var(--_mono-table-empty-gap, 2rem));
+  /* Anchored at the TOP for the same reason the spinner is: `sticky` below only
+     moves the box once its static position would leave the view, so a static
+     position in the middle of a tall region gives a different result at every
+     scroll offset. */
+  align-items: flex-start;
+  justify-content: center;
+  /* The message is not a modal. Everything around it stays click-through so a
+     sticky header, a column resizer or a row underneath still answers the mouse;
+     the box itself takes its interactivity back (next rule) because it holds a
+     button. */
+  pointer-events: none;
+}
+
+mono-table-empty[data-mono-empty],
+mono-shadow-table-empty[data-mono-empty] {
+  display: flex;
+}
+
+/* The generated row, when the element was dropped straight into a row section.
+   A host, not a layout participant: any height, padding or border here would
+   open a permanent gap under the header whether or not the table is empty. */
+/* Same invariant as the loading row above — a host cell, never a content cell. */
+:is([mono-table],.mono-table) :is([mono-empty-row],.mono-table-empty-row),
+:is([mono-table],.mono-table) :is([mono-empty-row],.mono-table-empty-row) > td {
+  height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+/* The message itself. `sticky` keeps it in the visible part of a table that
+   scrolls; the overlay's `padding-top` above is what places it at rest, and the
+   two use the same offset so scrolling starts from where it already sits. */
+:is([mono-empty-box],.mono-table-empty-box) {
+  position: sticky;
+  top: calc(var(--mono-table-empty-head, 0px) + var(--_mono-table-empty-gap, 2rem));
+  left: var(--mono-table-empty-x, auto);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 32rem;
+  padding: 0 1rem;
+  text-align: center;
+  color: var(--_mono-table-muted);
+  /* Back on, so the reload button is clickable and the text selectable. */
+  pointer-events: auto;
+}
+
+/* Centre on the SCROLLPORT rather than on the table, so the message lands in the
+   middle of what can actually be seen at any horizontal offset. Both halves are
+   scoped to `[mono-table-scroll]`: `cqw` with no query container resolves against
+   the viewport, which would be wrong everywhere else. */
+:is([mono-table-scroll],.mono-table-scroll):has(mono-table-empty),
+:is([mono-table-scroll],.mono-table-scroll):has(mono-shadow-table-empty) {
+  container-type: inline-size;
+}
+
+:is([mono-table-scroll],.mono-table-scroll) mono-table-empty,
+:is([mono-table-scroll],.mono-table-scroll) mono-shadow-table-empty {
+  justify-content: flex-start;
+}
+
+:is([mono-table-scroll],.mono-table-scroll) :is([mono-empty-box],.mono-table-empty-box) {
+  /* Half the scrollport, less half the box — `translateX(-50%)` cannot be used
+     here because the box is `sticky` and a transform on a sticky box is applied
+     AFTER the stick, so it would drift back out of view as you scroll. */
+  --mono-table-empty-x: calc(50cqw - min(16rem, 50cqw));
+  width: min(32rem, 100cqw);
+  max-width: none;
+}
+
+/* The glyph. An iconify class paints as a mask on an empty span and needs a box;
+   an emoji is text and needs a font size. Both land on the same footprint so the
+   title sits at the same height either way.
+
+   Scoped under the box ON PURPOSE (two attributes/classes, (0,2,0)): the glyph also
+   carries its iconify class (`i-mdi-help-circle-outline` by default), and an app's
+   own UnoCSS / Tailwind emits that utility UNLAYERED with `width/height: 1em` at
+   (0,1,0) — a tie this rule lost on load order, shrinking the icon to the table's
+   font size (12px instead of 40). One utility class can no longer out-weigh it. */
+:is([mono-empty-box],.mono-table-empty-box) :is([mono-empty-icon],.mono-table-empty-icon) {
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem;
+  color: var(--_mono-table-faint);
+}
+
+:is([mono-empty-box],.mono-table-empty-box) :is([mono-empty-icon],.mono-table-empty-icon):is([mono-text],.is-text) {
+  font-size: 2rem;
+  line-height: 2.5rem;
+}
+
+/* The body slot replaces the props' content, so it owns the whole box. */
+:is([mono-empty-body],.mono-table-empty-body)[data-empty] {
+  display: none;
+}
+
+:is([mono-empty-reload],.mono-table-empty-reload) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  padding: 0.32rem 0.7rem;
+  border: 1px solid var(--_mono-table-border);
+  border-radius: var(--theme-radius-sm, 0.375rem);
+  background: var(--_mono-table-surface);
+  color: var(--_mono-table-accent);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition:
+    background-color var(--theme-duration-fast, 0.12s) var(--mono-ease, ease),
+    border-color var(--theme-duration-fast, 0.12s) var(--mono-ease, ease);
+}
+
+:is([mono-empty-reload],.mono-table-empty-reload):hover {
+  border-color: var(--_mono-table-accent);
+  background: color-mix(in srgb, var(--_mono-table-accent) 8%, var(--_mono-table-surface));
+}
+
+:is([mono-empty-reload],.mono-table-empty-reload):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--_mono-table-accent) 45%, transparent);
+  outline-offset: 1px;
+}
+/* ── Row detail (mono-table-detail) ──────────────────────────────────────────
+   Two pieces that live in DIFFERENT places:
+
+   1. The TOGGLE — the `<mono-table-detail>` element itself, sitting in one of the
+      row's `<td>`s. It renders a single chevron button.
+   2. The PANEL — `tr[mono-detail-row]`, which the element inserts into the
+      consumer's `<tbody>` right below its own row while open. It is light DOM in
+      BOTH builds (a shadow root cannot project content into a row outside its
+      host), so these rules are what style it either way. */
+
+mono-table-detail,
+mono-shadow-table-detail {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+:is([mono-detail-toggle],.mono-table-detail-toggle) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-table-detail-size);
+  height: var(--_mono-table-detail-size);
+  padding: 0;
+  border: 0;
+  border-radius: var(--_mono-table-detail-radius);
+  background: transparent;
+  color: var(--_mono-table-detail-color);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+:is([mono-detail-toggle],.mono-table-detail-toggle):hover:not(:disabled) {
+  background: var(--_mono-table-detail-hover-bg);
+  color: var(--_mono-table-detail-color-open);
+}
+
+:is([mono-detail-toggle],.mono-table-detail-toggle):disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+mono-table-detail[open] :is([mono-detail-toggle],.mono-table-detail-toggle),
+mono-shadow-table-detail[open] :is([mono-detail-toggle],.mono-table-detail-toggle) {
+  color: var(--_mono-table-detail-color-open);
+}
+
+/* The shadow build inlines its chevrons as SVG (no page-level icon CSS inside a
+   shadow root); size them like the light build's `.mono-icon`. */
+:is([mono-detail-caret],.mono-table-detail-caret) {
+  width: 1.15em;
+  height: 1.15em;
+}
+
+/* The inserted panel row. The colour is set on the CELL, not via the row's
+   `--_mono-table-row-bg`, because this is panel decoration rather than a row
+   state — it must also beat the sticky-column cell rule, which reads that
+   variable. The panel is excluded from the zebra's data set, so it never
+   receives a stripe and never shifts the parity of the rows below it. */
+:is([mono-table],.mono-table) tbody tr:is([mono-detail-row],.mono-table-detail-row) > td,
+tr:is([mono-detail-row],.mono-table-detail-row) > td {
+  padding: var(--_mono-table-detail-panel-pad);
+  background: var(--_mono-table-detail-panel-bg);
+}
+
+/* A detail row is not a data row: keep the row hover/zebra treatment off it, so
+   hovering the panel doesn't look like hovering a record. */
+:is([mono-table],.mono-table) tbody tr:is([mono-detail-row],.mono-table-detail-row):hover > td {
+  background: var(--_mono-table-detail-panel-bg);
+}
+
+:is([mono-detail-panel],.mono-table-detail-panel) {
+  color: var(--_mono-table-ink-mid);
+  font-size: 0.86rem;
+}
+
+/* A nested table inside a panel sits flush with the panel padding. */
+:is([mono-detail-panel],.mono-table-detail-panel) > :is([mono-table],.mono-table),
+:is([mono-detail-panel],.mono-table-detail-panel) > :is([mono-table-scroll],.mono-table-scroll) {
+  margin-top: 0.5rem;
+}
+
+/* ── Row selection (mono-table-checkbox) ─────────────────────────────────────
+   The element renders `mono-checkbox`'s own attribute markup, so the whole
+   size × color × state matrix comes from checkbox.css — the only rules here are
+   the ones about sitting in a table cell. */
+
+mono-table-checkbox,
+mono-shadow-table-checkbox {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+/* A bare (label-less) box in a header/body cell centres on the column and needs
+   no extra gap, unlike a form checkbox that always has text beside it. */
+:is([mono-table],.mono-table) th > mono-table-checkbox,
+:is([mono-table],.mono-table) td > mono-table-checkbox,
+:is([mono-table],.mono-table) th > mono-shadow-table-checkbox,
+:is([mono-table],.mono-table) td > mono-shadow-table-checkbox {
+  vertical-align: middle;
+}
+
+:is([mono-table-checkbox],.mono-table-checkbox) .mono-checkbox-label:empty {
+  display: none;
+}
+
+/* While a `mode="all"` drain is in flight the element emits
+   [mono-checkbox][mono-loading] > [mono-box] > [mono-loading-spinner] — checkbox.css owns
+   that look (accent-filled box, spinner, "working" cursor); nothing to restate. */

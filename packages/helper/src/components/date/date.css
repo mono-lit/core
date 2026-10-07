@@ -1,0 +1,777 @@
+/* @unocss-include */
+
+/* flatpickr's base stylesheet. The calendar renders into <body>, so this must
+   live in the global bundle (dist/ui/index.css) — that's why date.css is
+   @imported from src/entries/index.css. */
+@import 'flatpickr/dist/flatpickr.css';
+
+/* =========================================================================
+   mono-date — the mono-input box (a port of Basecoat's `.input-group` with a
+   leading icon, basecoat-css@1.0.2, vega style) around a flatpickr field, plus
+   a calendar restyled in Basecoat's popover idiom.
+
+   Styled by ATTRIBUTE, like Basecoat — and the attributes mirror the element's
+   props one for one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-date size="sm" color="danger" variant="filled" label="Start">
+     <div mono-date mono-size="sm" mono-color="danger" mono-variant="filled">
+       <label mono-label>Start</label>
+       <div mono-field>
+         <span mono-prefix><span mono-icon class="mono-icon i-mdi-calendar-outline"></span></span>
+         <input mono-native type="text" placeholder="Pick a date" />
+       </div>
+     </div>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-color])` = primary, `:not([mono-variant])` = outlined). The element
+   renders these attributes on its wrapper (both builds); the old classes
+   (`.mono-date.sm.filled`) are still emitted as inert hooks until 2.0 but no
+   rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-date]                                   ≡ .field (flex column gap-3)
+     [mono-date] > [mono-label]                    ≡ .field > label / .label
+     [mono-date] > [mono-field]                    ≡ .input-group (h-9 rounded-md border-input shadow-xs)
+     [mono-field] > [mono-prefix] > [mono-icon]    ≡ .input-group > span[data-align='start'] > svg (ps-2, size-4, muted)
+     [mono-field] > [mono-native]                  ≡ .input-group > input (borderless, ps-1.5 after an affix, text-sm)
+     [mono-field] > [mono-clear] > [mono-icon]     ≡ .input-group > button[data-align='end']:has(> svg) (ghost, size-6)
+     [mono-message-wrap] > [mono-message]          ≡ .field > p / .field [role='alert']
+     [mono-validation-state="error"]               ≡ .input-group:has([aria-invalid=true]) + .field[data-invalid]
+     [mono-validation-state="success"]             ≡ EXTENSION (the invalid pattern in --success)
+     [mono-size="xs|sm|lg|xl|xxl"]                 ≡ EXTENSION (the --mono-control-height-* ladder)
+     [mono-variant="filled"]                       ≡ EXTENSION (luma's .input-group)
+     [mono-variant="underlined"]                   ≡ EXTENSION (sera's .input-group: bottom edge only, no ring)
+     .flatpickr-calendar.mono-flatpickr            ≡ [data-popover] frame (bg-popover ring-1 ring-foreground/10 rounded-md shadow-md)
+                                                     + EXTENSION: shadcn Calendar values (Basecoat 1.0.2 ships no calendar)
+
+   Inner parts are attributes too: [mono-label] (+ [mono-required-mark]),
+   [mono-field], [mono-prefix] > [mono-icon], [mono-native], [mono-clear] >
+   [mono-icon], [mono-message-wrap] > [mono-message="helper|error|success"].
+
+   The calendar renders into <body> (both builds), so it is styled through
+   flatpickr's own classes under our `.mono-flatpickr` marker and reads the page
+   tokens directly; the element copies the field's accent onto it as
+   `--cal-accent` / `--cal-accent-foreground` so it follows the `color` prop.
+
+   FLAVORS set the same knobs as mono-input, renamed `--mono-date-*` (see
+   input.css) plus `--mono-date-calendar-{radius,shadow,ring,day-radius}`. Every
+   fallback here is vega's value.
+   ========================================================================= */
+
+mono-date {
+  display: block;
+}
+
+[mono-date] {
+  /* ── palette: each slot is a public knob over a Basecoat token ─────────── */
+  --_mono-date-text: var(--mono-date-color, var(--mono-date-text, var(--foreground)));
+  --_mono-date-placeholder: var(--mono-date-placeholder, var(--muted-foreground));
+  --_mono-date-muted: var(--mono-date-muted, var(--muted-foreground));
+  --_mono-date-primary: var(--mono-date-primary, var(--_mono-date-primary-preset, var(--ring)));
+  --_mono-date-primary-foreground: var(--mono-date-primary-foreground, var(--_mono-date-primary-foreground-preset, var(--primary-foreground)));
+  --_mono-date-danger: var(--mono-date-danger, var(--destructive));
+  --_mono-date-success: var(--mono-date-success, var(--success));
+  --_mono-date-warning: var(--mono-date-warning, var(--warning));
+  --_mono-date-info: var(--mono-date-info, var(--info));
+  --_mono-date-teal: var(--mono-date-teal, var(--teal));
+  --_mono-date-purple: var(--mono-date-purple, var(--purple));
+  --_mono-date-neutral: var(--mono-date-neutral, var(--neutral));
+  --_mono-date-dark: var(--mono-date-dark, var(--dark));
+  --_mono-date-secondary: var(--mono-date-secondary, var(--muted-foreground));
+
+  /* ── the painted result — three tiers, base = .input-group (vega) ──────── */
+  --_mono-date-ring-color: var(--mono-date-ring-color, var(--mono-date-focus-color, var(--_mono-date-primary)));
+  --_mono-date-ring-width: var(--mono-date-ring-width, var(--_mono-date-ring-width-preset, var(--mono-ring-width)));
+  --_mono-date-ring-alpha: var(--mono-date-ring-alpha, var(--mono-ring-alpha));
+  --_mono-date-border-color: var(--mono-date-rest-border, var(--mono-date-border-color, var(--mono-date-border, var(--_mono-date-border-color-preset, var(--input)))));
+  --_mono-date-bg: var(--mono-date-bg, var(--mono-date-surface, var(--_mono-date-bg-preset, var(--mono-mode-surface))));
+  --_mono-date-shadow: var(--mono-date-shadow, var(--_mono-date-shadow-preset, 0 0 #0000));
+  --_mono-date-affix-padding: var(--mono-date-affix-padding, var(--_mono-date-affix-padding-preset, calc(var(--mono-spacing) * 2)));
+  --_mono-date-affix-icon: var(--mono-date-affix-icon-size, calc(var(--mono-spacing) * 4));
+
+  /* ── md metrics live on the unqualified root ON PURPOSE: hand-written
+        `<div mono-date>` that names no size renders exactly like size="md".
+        basecoat@1.0.2 styles/vega.css .input-group — h-9 rounded-md; > input px-2.5 text-sm ── */
+  --_mono-date-height: var(--mono-date-height-md, var(--mono-control-height-md));
+  --_mono-date-radius: var(--mono-date-radius-md, var(--_mono-date-radius-preset, var(--mono-date-radius, var(--mono-radius-md))));
+  --_mono-date-padding-x: var(--mono-date-padding-x-md, var(--mono-date-padding-x, var(--_mono-date-padding-x-preset, calc(var(--mono-spacing) * 2.5))));
+  --_mono-date-font-size: var(--mono-date-font-md, var(--mono-text-sm));
+  --_mono-date-line-height: var(--mono-date-line-height, var(--mono-date-line-height-md, var(--mono-text-sm--lh)));
+  --_mono-date-clear: calc(var(--mono-spacing) * 6);
+  --_mono-date-clear-glyph: calc(var(--mono-spacing) * 3.5);
+
+  /* basecoat@1.0.2 styles/vega.css .field — flex w-full flex-col gap-3 */
+  display: flex;
+  flex-direction: column;
+  gap: var(--mono-date-gap, calc(var(--mono-spacing) * 3));
+  width: 100%;
+  font-family: inherit;
+  color: var(--_mono-date-text);
+}
+
+[mono-date],
+[mono-date] *,
+[mono-date] *::before,
+[mono-date] *::after {
+  box-sizing: border-box;
+}
+
+[mono-date] :is([mono-label], [mono-message])[mono-empty] {
+  display: none;
+}
+
+/* =========================================
+   Sizes — the field's painted height IS the token (tests/perf/field-heights)
+   EXTENSION: the shared --mono-control-height-* ladder; text follows .btn's steps
+   ========================================= */
+
+@media (width < 48rem) {
+  [mono-date]:is(:not([mono-size]), [mono-size="md"]) {
+    --_mono-date-font-size: var(--mono-date-font-md, var(--mono-text-base));
+    --_mono-date-line-height: var(--mono-date-line-height, var(--mono-date-line-height-md, var(--mono-text-base--lh)));
+  }
+}
+
+[mono-date][mono-size="xs"] {
+  --_mono-date-height: var(--mono-date-height-xs, var(--mono-control-height-xs));
+  --_mono-date-radius: var(--mono-date-radius-xs, var(--_mono-date-radius-preset, var(--mono-date-radius, var(--mono-radius-md))));
+  --_mono-date-padding-x: var(--mono-date-padding-x-xs, var(--mono-date-padding-x, var(--_mono-date-padding-x-preset, calc(var(--mono-spacing) * 2))));
+  --_mono-date-font-size: var(--mono-date-font-xs, var(--mono-text-xs));
+  --_mono-date-line-height: var(--mono-date-line-height, var(--mono-date-line-height-xs, var(--mono-text-xs--lh)));
+  --_mono-date-affix-icon: var(--mono-date-affix-icon-size, calc(var(--mono-spacing) * 3.5));
+  --_mono-date-clear: calc(var(--mono-spacing) * 4);
+  --_mono-date-clear-glyph: calc(var(--mono-spacing) * 3);
+}
+
+[mono-date][mono-size="sm"] {
+  --_mono-date-height: var(--mono-date-height-sm, var(--mono-control-height-sm));
+  --_mono-date-radius: var(--mono-date-radius-sm, var(--_mono-date-radius-preset, var(--mono-date-radius, var(--mono-radius-md))));
+  --_mono-date-padding-x: var(--mono-date-padding-x-sm, var(--mono-date-padding-x, var(--_mono-date-padding-x-preset, calc(var(--mono-spacing) * 2.5))));
+  --_mono-date-font-size: var(--mono-date-font-sm, var(--mono-date-font-md, var(--mono-text-sm)));
+  --_mono-date-line-height: var(--mono-date-line-height, var(--mono-date-line-height-sm, var(--mono-text-sm--lh)));
+  --_mono-date-clear: calc(var(--mono-spacing) * 5);
+  --_mono-date-clear-glyph: calc(var(--mono-spacing) * 3.5);
+}
+
+[mono-date][mono-size="lg"] {
+  --_mono-date-height: var(--mono-date-height-lg, var(--mono-control-height-lg));
+  --_mono-date-radius: var(--mono-date-radius-lg, var(--_mono-date-radius-preset, var(--mono-date-radius, var(--mono-radius-md))));
+  --_mono-date-padding-x: var(--mono-date-padding-x-lg, var(--mono-date-padding-x, var(--_mono-date-padding-x-preset, calc(var(--mono-spacing) * 2.5))));
+  --_mono-date-font-size: var(--mono-date-font-lg, var(--mono-date-font-md, var(--mono-text-sm)));
+  --_mono-date-line-height: var(--mono-date-line-height, var(--mono-date-line-height-lg, var(--mono-text-sm--lh)));
+}
+
+[mono-date][mono-size="xl"] {
+  --_mono-date-height: var(--mono-date-height-xl, var(--mono-control-height-xl));
+  --_mono-date-radius: var(--mono-date-radius-xl, var(--_mono-date-radius-preset, var(--mono-date-radius, var(--mono-radius-md))));
+  --_mono-date-padding-x: var(--mono-date-padding-x-xl, var(--mono-date-padding-x, var(--_mono-date-padding-x-preset, calc(var(--mono-spacing) * 3))));
+  --_mono-date-font-size: var(--mono-date-font-xl, var(--mono-text-base));
+  --_mono-date-line-height: var(--mono-date-line-height, var(--mono-date-line-height-xl, var(--mono-text-base--lh)));
+  --_mono-date-affix-icon: var(--mono-date-affix-icon-size, calc(var(--mono-spacing) * 5));
+  --_mono-date-clear: calc(var(--mono-spacing) * 7);
+  --_mono-date-clear-glyph: calc(var(--mono-spacing) * 4);
+}
+
+[mono-date][mono-size="xxl"] {
+  --_mono-date-height: var(--mono-date-height-xxl, var(--mono-control-height-xxl));
+  --_mono-date-radius: var(--mono-date-radius-xxl, var(--_mono-date-radius-preset, var(--mono-date-radius, var(--mono-radius-md))));
+  --_mono-date-padding-x: var(--mono-date-padding-x-xxl, var(--mono-date-padding-x, var(--_mono-date-padding-x-preset, calc(var(--mono-spacing) * 4))));
+  --_mono-date-font-size: var(--mono-date-font-xxl, var(--mono-text-lg));
+  --_mono-date-line-height: var(--mono-date-line-height, var(--mono-date-line-height-xxl, var(--mono-text-lg--lh)));
+  --_mono-date-affix-icon: var(--mono-date-affix-icon-size, calc(var(--mono-spacing) * 5));
+  --_mono-date-clear: calc(var(--mono-spacing) * 8);
+  --_mono-date-clear-glyph: calc(var(--mono-spacing) * 4);
+}
+
+/* =========================================
+   Variants — each writes only `*-preset` slots
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .input-group — rounded-md border border-input
+   shadow-xs bg-transparent (dark:bg-input/30 via --mono-mode-surface) */
+[mono-date]:is(:not([mono-variant]), [mono-variant="outlined"]) {
+  --_mono-date-bg-preset: var(--mono-date-outline-bg);
+  --_mono-date-border-color-preset: var(--mono-date-outline-border-color);
+  --_mono-date-side-border-color-preset: var(--mono-date-outline-side-border-color);
+  --_mono-date-shadow-preset: var(--mono-date-outline-shadow, var(--mono-shadow-xs));
+  --_mono-date-ring-width-preset: var(--mono-date-outline-ring-width);
+  --_mono-date-radius-preset: var(--mono-date-outline-radius);
+  --_mono-date-padding-x-preset: var(--mono-date-outline-padding-x);
+  --_mono-date-affix-padding-preset: var(--mono-date-outline-affix-padding);
+}
+
+/* EXTENSION — filled ≡ basecoat@1.0.2 styles/luma.css .input-group */
+[mono-date][mono-variant="filled"] {
+  --_mono-date-bg-preset: var(--mono-date-filled-bg, color-mix(in oklab, var(--input) 50%, transparent));
+  --_mono-date-border-color-preset: transparent;
+  --_mono-date-shadow-preset: 0 0 #0000;
+}
+
+/* EXTENSION — underlined ≡ basecoat@1.0.2 styles/sera.css .input-group */
+[mono-date][mono-variant="underlined"] {
+  --_mono-date-bg-preset: transparent;
+  --_mono-date-side-border-color-preset: transparent;
+  --_mono-date-shadow-preset: 0 0 #0000;
+  --_mono-date-ring-width-preset: 0px;
+  --_mono-date-radius-preset: 0;
+  --_mono-date-padding-x-preset: 0;
+  --_mono-date-affix-padding-preset: 0;
+}
+
+/* =========================================
+   Colours — the `color` prop is the accent: the focus ring + the calendar's
+   selected day. Primary is Basecoat's --ring for the ring and --primary for the
+   calendar (copied by the element as --cal-accent).
+   ========================================= */
+
+[mono-date]:is(:not([mono-color]), [mono-color="primary"]) {
+  --_mono-date-primary-preset: var(--ring);
+  --_mono-date-primary-foreground-preset: var(--primary-foreground);
+  --_mono-date-calendar-accent: var(--mono-date-calendar-accent, var(--primary));
+}
+[mono-date][mono-color="secondary"] {
+  --_mono-date-primary-preset: var(--_mono-date-secondary);
+  --_mono-date-primary-foreground-preset: var(--background);
+  --_mono-date-calendar-accent: var(--mono-date-calendar-accent, var(--_mono-date-secondary));
+}
+[mono-date][mono-color="success"] {
+  --_mono-date-primary-preset: var(--_mono-date-success);
+  --_mono-date-primary-foreground-preset: var(--success-foreground);
+  --_mono-date-calendar-accent: var(--mono-date-calendar-accent, var(--_mono-date-success));
+}
+[mono-date][mono-color="danger"] {
+  --_mono-date-primary-preset: var(--_mono-date-danger);
+  --_mono-date-primary-foreground-preset: var(--destructive-foreground);
+  --_mono-date-calendar-accent: var(--mono-date-calendar-accent, var(--_mono-date-danger));
+}
+[mono-date][mono-color="warning"] {
+  --_mono-date-primary-preset: var(--_mono-date-warning);
+  --_mono-date-primary-foreground-preset: var(--warning-foreground);
+  --_mono-date-calendar-accent: var(--mono-date-calendar-accent, var(--_mono-date-warning));
+}
+[mono-date][mono-color="info"] {
+  --_mono-date-primary-preset: var(--_mono-date-info);
+  --_mono-date-primary-foreground-preset: var(--info-foreground);
+  --_mono-date-calendar-accent: var(--mono-date-calendar-accent, var(--_mono-date-info));
+}
+[mono-date][mono-color="teal"] {
+  --_mono-date-primary-preset: var(--_mono-date-teal);
+  --_mono-date-primary-foreground-preset: var(--teal-foreground);
+  --_mono-date-calendar-accent: var(--mono-date-calendar-accent, var(--_mono-date-teal));
+}
+[mono-date][mono-color="purple"] {
+  --_mono-date-primary-preset: var(--_mono-date-purple);
+  --_mono-date-primary-foreground-preset: var(--purple-foreground);
+  --_mono-date-calendar-accent: var(--mono-date-calendar-accent, var(--_mono-date-purple));
+}
+[mono-date][mono-color="neutral"] {
+  --_mono-date-primary-preset: var(--_mono-date-neutral);
+  --_mono-date-primary-foreground-preset: var(--neutral-foreground);
+  --_mono-date-calendar-accent: var(--mono-date-calendar-accent, var(--_mono-date-neutral));
+}
+[mono-date][mono-color="dark"] {
+  --_mono-date-primary-preset: var(--_mono-date-dark);
+  --_mono-date-primary-foreground-preset: var(--dark-foreground);
+  --_mono-date-calendar-accent: var(--mono-date-calendar-accent, var(--_mono-date-dark));
+}
+
+/* =========================================
+   Label
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .field > label, .label — flex items-center
+   gap-2 text-sm leading-none font-medium select-none w-fit */
+[mono-date] > [mono-label] {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  gap: var(--mono-date-label-gap, calc(var(--mono-spacing) * 2));
+  font-size: var(--mono-date-label-font-size, var(--mono-text-sm));
+  line-height: var(--mono-date-label-line-height, 1);
+  font-weight: var(--mono-date-label-font-weight, var(--mono-label-font-weight, var(--mono-font-weight-medium)));
+  text-transform: var(--mono-date-label-text-transform, none);
+  letter-spacing: var(--mono-date-label-letter-spacing, normal);
+  color: var(--_mono-date-text);
+  user-select: none;
+}
+
+[mono-date][mono-disabled] > [mono-label],
+[mono-date]:has(> [mono-field] > [mono-native]:disabled) > [mono-label] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* basecoat@1.0.2 styles/vega.css .field — data-invalid:text-destructive */
+[mono-date][mono-validation-state="error"] > [mono-label] {
+  color: var(--_mono-date-danger);
+}
+
+[mono-date] [mono-required-mark] {
+  color: var(--_mono-date-danger);
+}
+
+/* =========================================
+   The field — the bordered box
+   ========================================= */
+
+/* basecoat@1.0.2 components/input-group.css .input-group */
+/* basecoat@1.0.2 styles/vega.css .input-group — h-9 rounded-md border border-input
+   shadow-xs focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 */
+[mono-date] > [mono-field] {
+  --_mono-date-bc: var(--_mono-date-border-color);
+  --_mono-date-side-bc: var(--mono-date-side-border-color, var(--_mono-date-side-border-color-preset, var(--_mono-date-bc)));
+  --_mono-date-ring: 0 0 #0000;
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--_mono-date-height);
+  padding-block: var(--mono-date-padding-y, 0);
+  outline-style: none;
+  border: var(--mono-border-width) solid var(--_mono-date-bc);
+  border-top-color: var(--_mono-date-side-bc);
+  border-inline-color: var(--_mono-date-side-bc);
+  border-radius: var(--_mono-date-radius);
+  background: var(--_mono-date-bg);
+  color: var(--_mono-date-text);
+  box-shadow: var(--_mono-date-ring), var(--_mono-date-shadow);
+  transition-property: color, box-shadow, border-color, background-color;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+
+  &:focus-within {
+    --_mono-date-bc: var(--_mono-date-ring-color);
+    --_mono-date-ring: 0 0 0 var(--_mono-date-ring-width) color-mix(in oklab, var(--_mono-date-ring-color) var(--_mono-date-ring-alpha), transparent);
+  }
+}
+
+/* basecoat@1.0.2 styles/vega.css .input-group — has-[[aria-invalid=true]]:border-destructive
+   has-[[aria-invalid=true]]:ring-3 has-[[aria-invalid=true]]:ring-destructive/20 */
+[mono-date][mono-validation-state="error"] > [mono-field],
+[mono-date] > [mono-field]:has(> [mono-native][aria-invalid="true"]) {
+  --_mono-date-bc: var(--mono-mode-invalid-border);
+  --_mono-date-ring: 0 0 0 var(--_mono-date-ring-width) var(--mono-mode-invalid-ring);
+}
+
+/* EXTENSION — success is the invalid pattern in --success */
+[mono-date][mono-validation-state="success"] > [mono-field] {
+  --_mono-date-bc: color-mix(in oklab, var(--_mono-date-success) var(--mono-mode-state-border-alpha), transparent);
+  --_mono-date-ring: 0 0 0 var(--_mono-date-ring-width) color-mix(in oklab, var(--_mono-date-success) var(--mono-mode-state-ring-alpha), transparent);
+}
+
+/* EXTENSION — readonly: a muted surface */
+[mono-date][mono-readonly] > [mono-field] {
+  background: var(--mono-date-readonly-bg, var(--muted));
+}
+
+/* basecoat@1.0.2 styles/vega.css .input-group:has(> :is(input, textarea, select, [data-control]):disabled) — opacity-50 */
+[mono-date][mono-disabled] > [mono-field],
+[mono-date]:not([mono-readonly]) > [mono-field]:has(> [mono-native]:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--mono-date-disabled-bg, var(--_mono-date-bg));
+}
+
+/* =========================================
+   The native input (flatpickr's altInput takes the same rule: it replaces the
+   native in the DOM and inherits its class + attributes)
+   ========================================= */
+
+/* basecoat@1.0.2 components/input-group.css .input-group > :is(input, textarea, select, [data-control]) */
+/* basecoat@1.0.2 styles/vega.css .input-group > :is(input, select, [data-control]) — px-2.5 py-1 text-sm */
+[mono-date] [mono-native],
+[mono-date] [mono-field] > input.flatpickr-input.altInput {
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  align-self: stretch;
+  appearance: none;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--_mono-date-text);
+  font-family: inherit;
+  font-size: var(--_mono-date-font-size);
+  line-height: var(--_mono-date-line-height);
+  padding-inline: var(--_mono-date-padding-x);
+  padding-block: 0;
+
+  &::placeholder {
+    color: var(--_mono-date-placeholder);
+  }
+
+  &:disabled {
+    pointer-events: none;
+    cursor: not-allowed;
+  }
+
+  &:read-only {
+    cursor: inherit;
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: none !important;
+  }
+}
+
+/* basecoat@1.0.2 styles/vega.css .input-group:not([data-orientation='vertical']):has(> :is([data-align='start'], [data-align='inline-start'])) > :is(input, select, [data-control]) — ps-1.5 */
+[mono-date] > [mono-field]:has(> [mono-prefix]:not([mono-empty])) > :is([mono-native], input.flatpickr-input.altInput) {
+  padding-inline-start: var(--mono-date-affix-gap, calc(var(--mono-spacing) * 1.5));
+}
+[mono-date] > [mono-field]:has(> [mono-clear]) > :is([mono-native], input.flatpickr-input.altInput) {
+  padding-inline-end: var(--mono-date-affix-gap, calc(var(--mono-spacing) * 1.5));
+}
+
+/* =========================================
+   The leading icon
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .input-group > :is(span, [role='group'], header, footer), .input-group > :is(svg, kbd, .popover, .dropdown-menu)
+   — text-muted-foreground select-none, svg size-4; [data-align='start'] ps-2 */
+[mono-date] [mono-prefix] {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  padding-inline-start: var(--_mono-date-affix-padding);
+  color: var(--_mono-date-muted);
+  user-select: none;
+  pointer-events: none;
+}
+
+[mono-date] [mono-prefix] > :is(svg, .mono-icon, [mono-icon]) {
+  display: block;
+  width: var(--_mono-date-affix-icon);
+  height: var(--_mono-date-affix-icon);
+  flex-shrink: 0;
+}
+
+/* =========================================
+   Clear button — a ghost icon button in the end slot
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .input-group > :is(button, [role='group'] > button, header > button, footer > button):has(> svg):not(:has(> :not(svg)))
+   — size-6 rounded-[calc(var(--radius)-5px)] p-0 shadow-none, svg size-3.5; me-1 */
+[mono-date] [mono-clear] {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-date-clear);
+  height: var(--_mono-date-clear);
+  padding: 0;
+  margin: 0;
+  margin-inline-end: var(--mono-spacing);
+  border: 0;
+  border-radius: var(--mono-date-clear-radius, calc(var(--radius) - 5px));
+  background: transparent;
+  box-shadow: none;
+  color: var(--_mono-date-muted);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  outline-style: none;
+  transition-property: color, background-color, box-shadow;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+
+  &:focus-visible {
+    box-shadow: 0 0 0 var(--_mono-date-ring-width) color-mix(in oklab, var(--_mono-date-ring-color) var(--_mono-date-ring-alpha), transparent);
+  }
+}
+
+/* basecoat@1.0.2 styles/vega.css .btn[data-variant='ghost'] — hover:bg-muted hover:text-foreground */
+@media (hover: hover) {
+  [mono-date] [mono-clear]:hover {
+    background: var(--mono-mode-ghost-hover);
+    color: var(--_mono-date-text);
+  }
+}
+
+[mono-date] [mono-clear] > :is(svg, .mono-icon, [mono-icon]) {
+  display: block;
+  width: var(--_mono-date-clear-glyph);
+  height: var(--_mono-date-clear-glyph);
+  pointer-events: none;
+}
+
+/* =========================================
+   Message
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .fieldset legend + p, .field > p, .field section > p */
+[mono-date] > [mono-message-wrap] {
+  display: block;
+}
+
+[mono-date] > [mono-message-wrap]:not(:has([mono-message]:not([mono-empty]))) {
+  display: none;
+}
+
+[mono-date] [mono-message] {
+  font-size: var(--mono-date-message-font-size, var(--mono-text-sm));
+  line-height: var(--mono-date-message-line-height, var(--mono-leading-normal));
+  font-weight: var(--mono-font-weight-normal);
+  text-align: start;
+  color: var(--_mono-date-muted);
+}
+
+/* basecoat@1.0.2 styles/vega.css .field [role="alert"] — text-destructive text-sm */
+[mono-date] [mono-message="error"] {
+  color: var(--_mono-date-danger);
+}
+
+[mono-date] [mono-message="success"] {
+  color: var(--_mono-date-success);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [mono-date] > [mono-field],
+  [mono-date] [mono-clear] {
+    transition: none;
+  }
+}
+
+/* =========================================
+   flatpickr calendar — restyled in Basecoat's idiom
+   -----------------------------------------
+   The calendar renders into <body>, so it reads the page tokens and cannot see
+   the field's resolvers; the element copies the field's accent onto it as
+   `--cal-accent` / `--cal-accent-foreground` (inline) so it follows the `color`
+   prop. Every rule is scoped to our `.mono-flatpickr` marker; flatpickr's own
+   geometry (day cells, container widths) is kept — only colour, radius,
+   typography and the frame are ours.
+
+   basecoat@1.0.2 styles/vega.css .select:not(select) [data-popover] — the frame:
+   bg-popover text-popover-foreground ring-1 ring-foreground/10 rounded-md
+   shadow-md. EXTENSION: the day / caption / nav values are shadcn's Calendar
+   (Basecoat 1.0.2 ships no calendar): day size-8 rounded-md text-sm,
+   hover / today / in-range bg-accent text-accent-foreground, selected
+   bg-primary text-primary-foreground, outside days text-muted-foreground/50,
+   caption text-sm font-medium, weekdays text-muted-foreground text-[0.8rem].
+   ========================================= */
+.flatpickr-calendar.mono-flatpickr {
+  --cal-bg: var(--mono-date-calendar-bg, var(--popover));
+  --cal-text: var(--mono-date-calendar-color, var(--popover-foreground));
+  --cal-muted: var(--muted-foreground);
+  --cal-faint: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
+  --cal-border: var(--border);
+  --cal-soft: var(--accent);
+  --cal-soft-foreground: var(--accent-foreground);
+  --cal-accent: var(--primary);
+  --cal-accent-foreground: var(--primary-foreground);
+  --cal-radius: var(--mono-date-calendar-day-radius, var(--mono-radius-md));
+
+  background: var(--cal-bg);
+  border: 0;
+  border-radius: var(--mono-date-calendar-radius, var(--mono-radius-md));
+  box-shadow: var(--mono-date-calendar-ring, 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent)), var(--mono-date-calendar-shadow, var(--mono-shadow-md));
+  color: var(--cal-text);
+  font-family: inherit;
+  font-size: var(--mono-text-sm);
+  line-height: var(--mono-text-sm--lh);
+}
+
+/* a popover has no pointer arrow */
+.flatpickr-calendar.mono-flatpickr::before,
+.flatpickr-calendar.mono-flatpickr::after {
+  display: none;
+}
+
+/* months / header — text-sm font-medium */
+.flatpickr-calendar.mono-flatpickr .flatpickr-month,
+.flatpickr-calendar.mono-flatpickr .flatpickr-current-month,
+.flatpickr-calendar.mono-flatpickr .flatpickr-current-month input.cur-year {
+  color: var(--cal-text);
+  fill: var(--cal-text);
+  font-size: var(--mono-text-sm);
+  font-weight: var(--mono-font-weight-medium);
+}
+
+/* nav — .btn[data-variant='outline'][data-size='icon-sm']: size-7 rounded-md
+   border-border bg-background hover:bg-muted, painted flat here */
+.flatpickr-calendar.mono-flatpickr .flatpickr-prev-month,
+.flatpickr-calendar.mono-flatpickr .flatpickr-next-month {
+  color: var(--cal-muted);
+  fill: var(--cal-muted);
+  border-radius: var(--cal-radius);
+  transition-property: color, background-color;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+}
+
+.flatpickr-calendar.mono-flatpickr .flatpickr-prev-month svg,
+.flatpickr-calendar.mono-flatpickr .flatpickr-next-month svg {
+  fill: currentColor;
+}
+
+.flatpickr-calendar.mono-flatpickr .flatpickr-prev-month:hover,
+.flatpickr-calendar.mono-flatpickr .flatpickr-next-month:hover {
+  background: var(--cal-soft);
+  color: var(--cal-soft-foreground);
+}
+
+.flatpickr-calendar.mono-flatpickr .flatpickr-prev-month:hover svg,
+.flatpickr-calendar.mono-flatpickr .flatpickr-next-month:hover svg {
+  fill: var(--cal-soft-foreground);
+}
+
+/* month dropdown — a native <select>. Its popup list is drawn by the browser
+   from the select's OWN background-color and the option colours (a transparent
+   select falls back to the OS palette, which is what mismatched the dark popover),
+   so the select carries the popover surface and never changes it on hover. */
+.flatpickr-calendar.mono-flatpickr .flatpickr-monthDropdown-months {
+  background: var(--cal-bg);
+  color: var(--cal-text);
+  color-scheme: inherit;
+  font-weight: var(--mono-font-weight-medium);
+  border-radius: var(--cal-radius);
+  transition-property: color;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+}
+
+.flatpickr-calendar.mono-flatpickr .flatpickr-monthDropdown-months:hover {
+  background: var(--cal-bg);
+  color: var(--cal-accent);
+}
+
+.flatpickr-calendar.mono-flatpickr .flatpickr-monthDropdown-months .flatpickr-monthDropdown-month {
+  background: var(--cal-bg);
+  color: var(--cal-text);
+  font-weight: var(--mono-font-weight-normal);
+}
+
+.flatpickr-calendar.mono-flatpickr .flatpickr-monthDropdown-months .flatpickr-monthDropdown-month:checked {
+  background: var(--cal-soft);
+  color: var(--cal-soft-foreground);
+}
+
+/* year stepper */
+
+.flatpickr-calendar.mono-flatpickr .numInputWrapper:hover {
+  background: var(--cal-soft);
+}
+
+.flatpickr-calendar.mono-flatpickr .numInputWrapper span {
+  border-color: var(--cal-border);
+}
+
+.flatpickr-calendar.mono-flatpickr .numInputWrapper span:hover {
+  background: var(--cal-soft);
+}
+
+.flatpickr-calendar.mono-flatpickr .numInputWrapper span.arrowUp::after {
+  border-bottom-color: var(--cal-muted);
+}
+
+.flatpickr-calendar.mono-flatpickr .numInputWrapper span.arrowDown::after {
+  border-top-color: var(--cal-muted);
+}
+
+/* weekdays — text-muted-foreground text-[0.8rem] font-normal */
+.flatpickr-calendar.mono-flatpickr .flatpickr-weekdays {
+  background: transparent;
+}
+
+.flatpickr-calendar.mono-flatpickr span.flatpickr-weekday {
+  background: transparent;
+  color: var(--cal-muted);
+  font-size: 0.8rem;
+  font-weight: var(--mono-font-weight-normal);
+}
+
+/* days — rounded-md text-sm; hover bg-accent; today bg-accent; selected bg-primary */
+.flatpickr-calendar.mono-flatpickr .flatpickr-day {
+  color: var(--cal-text);
+  border: 1px solid transparent;
+  border-radius: var(--cal-radius);
+  font-size: var(--mono-text-sm);
+  font-weight: var(--mono-font-weight-normal);
+}
+
+.flatpickr-calendar.mono-flatpickr .flatpickr-day:hover,
+.flatpickr-calendar.mono-flatpickr .flatpickr-day:focus {
+  background: var(--cal-soft);
+  border-color: transparent;
+  color: var(--cal-soft-foreground);
+}
+
+.flatpickr-calendar.mono-flatpickr .flatpickr-day.today {
+  background: var(--cal-soft);
+  border-color: transparent;
+  color: var(--cal-soft-foreground);
+}
+
+.flatpickr-calendar.mono-flatpickr .flatpickr-day.selected,
+.flatpickr-calendar.mono-flatpickr .flatpickr-day.startRange,
+.flatpickr-calendar.mono-flatpickr .flatpickr-day.endRange,
+.flatpickr-calendar.mono-flatpickr .flatpickr-day.selected:hover,
+.flatpickr-calendar.mono-flatpickr .flatpickr-day.startRange:hover,
+.flatpickr-calendar.mono-flatpickr .flatpickr-day.endRange:hover,
+.flatpickr-calendar.mono-flatpickr .flatpickr-day.selected:focus,
+.flatpickr-calendar.mono-flatpickr .flatpickr-day.startRange:focus,
+.flatpickr-calendar.mono-flatpickr .flatpickr-day.endRange:focus,
+.flatpickr-calendar.mono-flatpickr .flatpickr-day.selected.today {
+  background: var(--cal-accent);
+  border-color: var(--cal-accent);
+  color: var(--cal-accent-foreground);
+}
+
+/* range middle — bg-accent, squared between the two ends */
+.flatpickr-calendar.mono-flatpickr .flatpickr-day.inRange {
+  background: var(--cal-soft);
+  border-color: transparent;
+  color: var(--cal-soft-foreground);
+  border-radius: 0;
+  box-shadow: -5px 0 0 var(--cal-soft), 5px 0 0 var(--cal-soft);
+}
+
+.flatpickr-calendar.mono-flatpickr .flatpickr-day.prevMonthDay,
+.flatpickr-calendar.mono-flatpickr .flatpickr-day.nextMonthDay {
+  color: var(--cal-faint);
+}
+
+.flatpickr-calendar.mono-flatpickr .flatpickr-day.flatpickr-disabled,
+.flatpickr-calendar.mono-flatpickr .flatpickr-day.flatpickr-disabled:hover {
+  color: var(--cal-faint);
+  background: transparent;
+  cursor: not-allowed;
+}
+
+/* week numbers */
+.flatpickr-calendar.mono-flatpickr .flatpickr-weekwrapper .flatpickr-weekday,
+.flatpickr-calendar.mono-flatpickr .flatpickr-weekwrapper span.flatpickr-day {
+  color: var(--cal-faint);
+}
+
+/* time */
+.flatpickr-calendar.mono-flatpickr.hasTime .flatpickr-time {
+  border-top: 1px solid var(--cal-border);
+}
+
+.flatpickr-calendar.mono-flatpickr .flatpickr-time input,
+.flatpickr-calendar.mono-flatpickr .flatpickr-time .flatpickr-time-separator,
+.flatpickr-calendar.mono-flatpickr .flatpickr-time .flatpickr-am-pm {
+  color: var(--cal-text);
+  background: transparent;
+}
+
+.flatpickr-calendar.mono-flatpickr .flatpickr-time input:hover,
+.flatpickr-calendar.mono-flatpickr .flatpickr-time input:focus,
+.flatpickr-calendar.mono-flatpickr .flatpickr-time .flatpickr-am-pm:hover,
+.flatpickr-calendar.mono-flatpickr .flatpickr-time .flatpickr-am-pm:focus {
+  background: var(--cal-soft);
+  color: var(--cal-soft-foreground);
+}
+
+/* the inline calendar (`inline`) sits in the page flow, on the field's own surface */
+.flatpickr-calendar.mono-flatpickr.inline {
+  box-shadow: var(--mono-date-calendar-ring, 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent));
+}

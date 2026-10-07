@@ -1,0 +1,37 @@
+{
+  "name": "@mono-lit/devextreme",
+  "version": "0.0.1",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "module": "./dist/index.js",
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "sideEffects": [
+    "./dist/index.js",
+    "./dist/index.cjs"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "prepack": "pnpm build"
+  },
+  "publishConfig": {
+    "registry": "https://mono-libs.netlify.app/npm/"
+  },
+  "dependencies": {
+    "devextreme": "25.1.6"
+  },
+  "devDependencies": {
+    "taze": "^19.14.1",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3"
+  }
+}

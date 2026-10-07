@@ -1,0 +1,18 @@
+[
+    {
+        "name": "sap.ui.fl.id_1745290720659_77_version",
+        "value": "{\"version\":\"id_1745290720659_77_version\",\"id\":\"id_1745290720659_77_version\",\"isDraft\":false,\"activatedAt\":\"2025-04-22T02:58:40.684Z\",\"activatedBy\":\"DEFAULT_USER\",\"fileType\":\"version\",\"layer\":\"CUSTOMER\",\"title\":\"1.2\",\"reference\":\"bsc\",\"parentVersion\":\"id_1745290656534_76_version\"}"
+    },
+    {
+        "name": "sap.ui.fl.id_1745290650864_72_rename",
+        "value": "{\"changeType\":\"rename\",\"reference\":\"bsc\",\"namespace\":\"apps/bsc/changes/\",\"projectId\":\"bsc\",\"packageName\":\"$TMP\",\"support\":{\"generator\":\"sap.ui.rta.command\",\"user\":\"DEFAULT_USER\",\"command\":\"rename\",\"sapui5Version\":\"1.133.0\"},\"originalLanguage\":\"EN\",\"layer\":\"CUSTOMER\",\"fileType\":\"change\",\"fileName\":\"id_1745290650864_72_rename\",\"content\":{\"originalControlType\":\"sap.m.Button\"},\"texts\":{\"newText\":{\"value\":\"Pergi ke halaman detailmmmm\",\"type\":\"XBUT\"}},\"selector\":{\"id\":\"middleware--idMiddlewareButton0\",\"idIsLocal\":true},\"dependentSelector\":{},\"jsOnly\":false,\"version\":\"id_1745290656534_76_version\",\"creation\":\"2025-04-22T02:57:36.536Z\"}"
+    },
+    {
+        "name": "sap.ui.fl.id_1745290711329_72_rename",
+        "value": "{\"changeType\":\"rename\",\"reference\":\"bsc\",\"namespace\":\"apps/bsc/changes/\",\"projectId\":\"bsc\",\"packageName\":\"$TMP\",\"support\":{\"generator\":\"sap.ui.rta.command\",\"user\":\"DEFAULT_USER\",\"command\":\"rename\",\"sapui5Version\":\"1.133.0\"},\"originalLanguage\":\"EN\",\"layer\":\"CUSTOMER\",\"fileType\":\"change\",\"fileName\":\"id_1745290711329_72_rename\",\"content\":{\"originalControlType\":\"sap.m.Button\"},\"texts\":{\"newText\":{\"value\":\"Pergi ke halaman detailmmmmlllll\",\"type\":\"XBUT\"}},\"selector\":{\"id\":\"middleware--idMiddlewareButton0\",\"idIsLocal\":true},\"dependentSelector\":{},\"jsOnly\":false,\"version\":\"id_1745290720659_77_version\",\"creation\":\"2025-04-22T02:58:40.660Z\"}"
+    },
+    {
+        "name": "sap.ui.fl.id_1745290656534_76_version",
+        "value": "{\"version\":\"id_1745290656534_76_version\",\"id\":\"id_1745290656534_76_version\",\"isDraft\":false,\"activatedAt\":\"2025-04-22T02:57:36.545Z\",\"activatedBy\":\"DEFAULT_USER\",\"fileType\":\"version\",\"layer\":\"CUSTOMER\",\"title\":\"1.1\",\"reference\":\"bsc\"}"
+    }
+]

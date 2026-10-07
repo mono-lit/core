@@ -1,0 +1,669 @@
+/* @unocss-include */
+
+/* =========================================================================
+   mono-menu — a port of Basecoat's sidebar NAVIGATION (basecoat-css@1.0.2,
+   vega style).
+
+   Basecoat has no standalone menu, but it has the thing a menu is: the list
+   inside `.sidebar nav` — a group, its rows, its headings and its separators.
+   That block is also the richest per-flavor surface in the whole vendor sheet,
+   so this port is where a flavor finally gets to say what a nav row looks like.
+
+   Styled by ATTRIBUTE, and the attributes mirror the element's props one for
+   one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-menu density="compact" color="success" :nav="false">
+     <nav mono-menu mono-density="compact" mono-color="success" mono-plain
+          role="navigation">
+       <ul mono-list>
+         <li mono-item mono-active>
+           <a mono-action href="/" aria-current="page">
+             <span mono-icon>…</span>
+             <span mono-content>
+               <span mono-title>Dashboard</span>
+               <span mono-subtitle>Overview</span>
+             </span>
+             <span mono-badge="info">3</span>
+           </a>
+         </li>
+         <li mono-divider role="separator"></li>
+         <li mono-subheader>Section</li>
+       </ul>
+     </nav>
+
+   An absent attribute is the prop's default (`:not([mono-density])` =
+   comfortable, `:not([mono-color])` = primary, and `nav` defaults to TRUE so
+   `mono-plain` is what the other mode says). The old classes
+   (`.mono-menu.comfortable.primary.nav`) are still emitted as inert hooks
+   until 2.0 but no rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-menu]        ≡ .sidebar nav > section > [role=group]
+                          (relative flex w-full min-w-0 flex-col, p-2 text-sm)
+     :where([mono-menu]) [mono-list]        ≡ .sidebar nav ul (flex w-full min-w-0 flex-col, gap-1)
+     :where([mono-menu]) [mono-item]        ≡ .sidebar nav li (relative)
+     :where([mono-menu]) [mono-action]      ≡ .sidebar nav li > :is(a, button) — the row
+     [mono-active]      ≡ [aria-current=page], [data-active=true]
+                          (bg-sidebar-accent text-sidebar-accent-foreground font-medium)
+     :where([mono-menu]) [mono-subheader]   ≡ .sidebar nav h3
+     :where([mono-menu]) [mono-divider]     ≡ .sidebar nav [role=separator] (border-sidebar-border mx-2 w-auto)
+     :where([mono-menu]) [mono-group-header]≡ details > summary — the same row, plus the chevron
+     [mono-density=…]   ≡ [data-size='sm' | default | 'lg'] (h-7 / h-8 / h-12)
+     :where([mono-menu]) [mono-badge]       ≡ .badge — EXTENSION (upstream's rows carry none)
+     :where([mono-menu]) [mono-subtitle]    ≡ EXTENSION ([&>span:last-child]:truncate is upstream's
+                          only nod to a second line)
+     [mono-color=…]     ≡ EXTENSION (upstream has one accent)
+
+   THE ACTIVE ROW IS A NEUTRAL WASH, not a brand gradient. Upstream paints it
+   `bg-sidebar-accent text-sidebar-accent-foreground font-medium` — a flat
+   surface tint. The pre-port sheet filled it with a two-stop brand gradient and
+   a coloured shadow; both are gone. `color` still tints hover and the active
+   row through `--mono-menu-accent`, and `color="surface"` leaves it upstream's
+   plain `--sidebar-accent`.
+
+   DARK MODE comes free — every colour resolves through a Basecoat token that
+   already flips. A selector crosses neither the custom-element host nor the
+   shadow boundary, so no `.dark` rule can live in component CSS.
+
+   FLAVORS set `--mono-menu-{radius,pad-x,pad-y,height,font,gap,icon-size,
+   subheader-*,badge-*}` (+ the per-density forms); every fallback here is
+   vega's value (`node scripts/basecoat-styles.mjs --grep "sidebar nav"`).
+   ========================================================================= */
+
+mono-menu,
+mono-menu-list {
+  display: block;
+}
+
+/* =========================================
+   Root — the group
+   ========================================= */
+
+/* basecoat@1.0.2 components/sidebar.css .sidebar >> nav >> > section >> > [role=group] — relative flex w-full min-w-0 flex-col */
+/* basecoat@1.0.2 styles/vega.css .sidebar nav > section > [role=group] — p-2 text-sm */
+[mono-menu] {
+  /* ── the roles, each a public knob over a Basecoat token ────────────────── */
+  --_mono-menu-primary: var(--mono-menu-primary, var(--primary));
+  --_mono-menu-secondary: var(--mono-menu-secondary, var(--secondary-foreground));
+  --_mono-menu-success: var(--mono-menu-success, var(--success));
+  --_mono-menu-danger: var(--mono-menu-danger, var(--destructive));
+  --_mono-menu-warning: var(--mono-menu-warning, var(--warning));
+  --_mono-menu-info: var(--mono-menu-info, var(--info));
+  --_mono-menu-teal: var(--mono-menu-teal, var(--teal));
+  --_mono-menu-purple: var(--mono-menu-purple, var(--purple));
+  --_mono-menu-neutral: var(--mono-menu-neutral, var(--neutral));
+  --_mono-menu-dark: var(--mono-menu-dark, var(--dark));
+
+  --_mono-menu-accent: var(--mono-menu-accent, var(--_mono-menu-accent-preset, var(--_mono-menu-primary)));
+  --_mono-menu-on-accent: var(--mono-menu-on-accent, var(--_mono-menu-on-accent-preset, var(--primary-foreground)));
+
+  /* ── ink and surface — upstream's own chrome tokens ──────────────────────
+     basecoat@1.0.2 styles/vega.css .sidebar nav — bg-sidebar text-sidebar-foreground */
+  --_mono-menu-surface: var(--mono-menu-surface, transparent);
+  --_mono-menu-text: var(--mono-menu-text, var(--sidebar-foreground));
+  /* basecoat@1.0.2 styles/vega.css .sidebar nav h3 — text-sidebar-foreground/70 …:
+     upstream's muted chrome ink is the row ink at 70%. */
+  --_mono-menu-text-soft: var(--mono-menu-text-soft, color-mix(in oklab, var(--_mono-menu-text) 70%, transparent));
+  --_mono-menu-text-faint: var(--mono-menu-text-faint, color-mix(in oklab, var(--_mono-menu-text) 50%, transparent));
+  /* basecoat@1.0.2 styles/vega.css .sidebar nav [role=separator] — border-sidebar-border mx-2 */
+  --_mono-menu-border: var(--mono-menu-border, var(--sidebar-border));
+  --_mono-menu-border-lite: var(--mono-menu-border-lite, var(--_mono-menu-border));
+
+  /* ── the row's resting / hover / active paint ────────────────────────────
+     basecoat@1.0.2 styles/vega.css .sidebar nav li > :is(a, button), .sidebar nav li > details > summary — ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground gap-2 rounded-md p-2 text-sm focus-visible:ring-2 text-left focus-visible:outline-hidden data-[open]:hover:bg-sidebar-accent data-[open]:hover:text-sidebar-accent-foreground [&>svg]:shrink-0 [&>svg]:size-4
+     Hover is a SURFACE wash upstream, not the brand — so the role only tints
+     it, at `--mono-mode-tint`, and `color="surface"` leaves it exactly
+     `--sidebar-accent`. */
+  --_mono-menu-hover-tint: var(--mono-menu-hover-tint, var(--_mono-menu-hover-tint-preset, var(--mono-mode-tint)));
+  --_mono-menu-hover-bg: var(--mono-menu-hover-bg, color-mix(in oklab, var(--_mono-menu-accent) var(--_mono-menu-hover-tint), var(--sidebar-accent)));
+  --_mono-menu-hover-color: var(--mono-menu-hover-color, var(--sidebar-accent-foreground));
+  --_mono-menu-hover-border-color: var(--mono-menu-hover-border-color, transparent);
+
+  /* basecoat@1.0.2 styles/vega.css .sidebar nav li > :is(a, button):is([aria-current=page], [data-active=true]), .sidebar nav li > details > summary:is([aria-current=page], [data-active=true]) — bg-sidebar-accent text-sidebar-accent-foreground font-medium */
+  --_mono-menu-active-tint: var(--mono-menu-active-tint, var(--_mono-menu-active-tint-preset, var(--mono-mode-tint-hover)));
+  --_mono-menu-active-bg: var(--mono-menu-active-bg, color-mix(in oklab, var(--_mono-menu-accent) var(--_mono-menu-active-tint), var(--sidebar-accent)));
+  --_mono-menu-active-color: var(--mono-menu-active-color, var(--_mono-menu-active-color-preset, var(--_mono-menu-accent)));
+  --_mono-menu-active-weight: var(--mono-menu-active-weight, var(--mono-font-weight-medium));
+  /* the pre-port glow; upstream has none, so it starts at nothing */
+  --_mono-menu-active-shadow: var(--mono-menu-active-shadow, none);
+
+  /* ── comfortable metrics live on the unqualified root ON PURPOSE ─────────
+     basecoat@1.0.2 styles/vega.css .sidebar nav li > :is(a, button):not([data-size]), .sidebar nav li > details > summary:not([data-size]), .sidebar nav li > :is(a, button)[data-size=default], .sidebar nav li > details > summary[data-size=default] — h-8 text-sm */
+  --_mono-menu-height: var(--mono-menu-height, var(--_mono-menu-height-preset, var(--mono-menu-height-comfortable, calc(var(--mono-spacing) * 8))));
+  --_mono-menu-pad-x: var(--mono-menu-pad-x, var(--_mono-menu-pad-x-preset, var(--mono-menu-pad-x-comfortable, calc(var(--mono-spacing) * 2))));
+  --_mono-menu-pad-y: var(--mono-menu-pad-y, var(--_mono-menu-pad-y-preset, var(--mono-menu-pad-y-comfortable, calc(var(--mono-spacing) * 2))));
+  --_mono-menu-font: var(--mono-menu-font, var(--_mono-menu-font-preset, var(--mono-menu-font-comfortable, var(--mono-text-sm))));
+  --_mono-menu-line-height: var(--mono-menu-line-height, var(--_mono-menu-line-height-preset, var(--mono-text-sm--lh)));
+  /* basecoat@1.0.2 styles/vega.css .sidebar nav > section > [role=group] > ul — gap-1 */
+  --_mono-menu-gap: var(--mono-menu-gap, var(--_mono-menu-gap-preset, var(--mono-menu-gap-comfortable, var(--mono-spacing))));
+  /* the row's own gap — `gap-2` between icon, label and append */
+  --_mono-menu-row-gap: var(--mono-menu-row-gap, calc(var(--mono-spacing) * 2));
+  --_mono-menu-radius: var(--mono-menu-radius, var(--_mono-menu-radius-preset, var(--mono-menu-radius-comfortable, var(--mono-radius-md))));
+  /* `[&>svg]:size-4` */
+  --_mono-menu-icon-size: var(--mono-menu-icon-size, var(--_mono-menu-icon-size-preset, var(--mono-menu-icon-size-comfortable, calc(var(--mono-spacing) * 4))));
+  /* the group's own padding — `p-2` */
+  --_mono-menu-group-pad: var(--mono-menu-group-pad, var(--_mono-menu-group-pad-preset, var(--mono-menu-group-pad-comfortable, calc(var(--mono-spacing) * 2))));
+  /* ── the nested tree — EXTENSION ─────────────────────────────────────────
+     Upstream nests a list and leaves it flush — `.sidebar nav … ul > ul` is only
+     `flex min-w-0 flex-col` — so a child list reads as one straight column with
+     its parent. mono keeps its pre-port tree affordance instead: a child list
+     steps in by one gutter and hangs off a guide rule drawn under the centre of
+     the parent row's icon, so depth is legible without reading the labels. */
+  --_mono-menu-indent: var(--mono-menu-indent, var(--_mono-menu-indent-preset, var(--mono-menu-indent-comfortable, calc(var(--mono-spacing) * 4))));
+  --_mono-menu-guide-width: var(--mono-menu-guide-width, var(--mono-border-width));
+  --_mono-menu-guide-color: var(--mono-menu-guide-color, var(--_mono-menu-border-lite));
+  /* the guide lines up with the middle of the parent row's icon */
+  --_mono-menu-guide-offset: var(--mono-menu-guide-offset, calc(var(--_mono-menu-pad-x) + (var(--_mono-menu-icon-size) / 2)));
+
+  /* ── the subheader — `.sidebar nav h3` ───────────────────────────────────
+     basecoat@1.0.2 styles/vega.css .sidebar nav h3 — text-sidebar-foreground/70 ring-sidebar-ring h-8 rounded-md px-2 text-xs font-medium focus-visible:ring-2 [&>svg]:size-4 transition-[margin,opacity] duration-200 ease-linear */
+  --_mono-menu-subheader-height: var(--mono-menu-subheader-height, calc(var(--mono-spacing) * 8));
+  --_mono-menu-subheader-pad-x: var(--mono-menu-subheader-pad-x, var(--_mono-menu-subheader-pad-x-preset, calc(var(--mono-spacing) * 2)));
+  --_mono-menu-subheader-font: var(--mono-menu-subheader-font, var(--mono-text-xs));
+  --_mono-menu-subheader-weight: var(--mono-menu-subheader-weight, var(--mono-font-weight-medium));
+  --_mono-menu-subheader-transform: var(--mono-menu-subheader-transform, none);
+  --_mono-menu-subheader-tracking: var(--mono-menu-subheader-tracking, normal);
+  --_mono-menu-subheader-radius: var(--mono-menu-subheader-radius, var(--_mono-menu-subheader-radius-preset, var(--mono-radius-md)));
+
+  /* ── the badge — EXTENSION, borrowing `.badge`'s shape ───────────────────
+     basecoat@1.0.2 styles/vega.css .badge — h-5 gap-1 rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium transition-all [&>svg]:size-3! */
+  --_mono-menu-badge-height: var(--mono-menu-badge-height, calc(var(--mono-spacing) * 5));
+  --_mono-menu-badge-pad-x: var(--mono-menu-badge-pad-x, calc(var(--mono-spacing) * 2));
+  --_mono-menu-badge-radius: var(--mono-menu-badge-radius, var(--mono-radius-4xl));
+  --_mono-menu-badge-font: var(--mono-menu-badge-font, var(--mono-text-xs));
+  --_mono-menu-badge-weight: var(--mono-menu-badge-weight, var(--mono-font-weight-medium));
+  --_mono-menu-badge-bg: var(--mono-menu-badge-bg, var(--secondary));
+  --_mono-menu-badge-color: var(--mono-menu-badge-color, var(--secondary-foreground));
+
+  /* the two knobs a rail collapses with — the sidebar writes them */
+  /* ── the rail-collapse contract ──────────────────────────────────────────
+     A sidebar in collapsed rail mode hands these down as inherited custom
+     properties, because a descendant selector cannot reach a slotted SHADOW
+     menu's rows. Every one of them has to be consumed here or the collapse
+     only happens in the build the sidebar's own legacy class rules could
+     reach — which is exactly how the light build ended up centring its rows
+     while the shadow build and the hand-written twins did not. */
+  --_mono-menu-label-display: var(--mono-menu-label-display, inline-flex);
+  /* the same switch, for the parts whose natural display is block-level */
+  --_mono-menu-block-display: var(--mono-menu-label-display, list-item);
+  --_mono-menu-row-display: var(--mono-menu-row-display, list-item);
+  --_mono-menu-row-justify: var(--mono-menu-row-justify, normal);
+  --_mono-menu-action-width: var(--mono-menu-action-width, 100%);
+  --_mono-menu-action-justify: var(--mono-menu-action-justify, flex-start);
+  --_mono-menu-action-gap: var(--mono-menu-action-gap, var(--_mono-menu-row-gap));
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  padding: var(--_mono-menu-group-pad);
+  font-family: inherit;
+  font-size: var(--_mono-menu-font);
+  color: var(--_mono-menu-text);
+  background: var(--_mono-menu-surface);
+}
+
+[mono-menu],
+:where([mono-menu]) *,
+:where([mono-menu]) *::before,
+:where([mono-menu]) *::after {
+  box-sizing: border-box;
+}
+
+/* =========================================
+   Density — upstream's `data-size` ladder
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .sidebar nav li > :is(a, button)[data-size=sm], .sidebar nav li > details > summary[data-size=sm] — h-7 text-xs */
+[mono-menu][mono-density="compact"] {
+  --_mono-menu-height-preset: var(--mono-menu-height-compact, calc(var(--mono-spacing) * 7));
+  --_mono-menu-pad-x-preset: var(--mono-menu-pad-x-compact, calc(var(--mono-spacing) * 2));
+  --_mono-menu-pad-y-preset: var(--mono-menu-pad-y-compact, calc(var(--mono-spacing) * 1));
+  --_mono-menu-font-preset: var(--mono-menu-font-compact, var(--mono-text-xs));
+  --_mono-menu-line-height-preset: var(--mono-text-xs--lh);
+  --_mono-menu-gap-preset: var(--mono-menu-gap-compact, calc(var(--mono-spacing) * 0.5));
+  --_mono-menu-icon-size-preset: var(--mono-menu-icon-size-compact, calc(var(--mono-spacing) * 3.5));
+  --_mono-menu-group-pad-preset: var(--mono-menu-group-pad-compact, calc(var(--mono-spacing) * 1.5));
+  --_mono-menu-indent-preset: var(--mono-menu-indent-compact, calc(var(--mono-spacing) * 3.5));
+}
+
+/* basecoat@1.0.2 styles/vega.css .sidebar nav li > :is(a, button)[data-size=lg], .sidebar nav li > details > summary[data-size=lg] — h-12 text-sm */
+[mono-menu][mono-density="default"] {
+  --_mono-menu-height-preset: var(--mono-menu-height-default, calc(var(--mono-spacing) * 12));
+  --_mono-menu-pad-x-preset: var(--mono-menu-pad-x-default, calc(var(--mono-spacing) * 2));
+  --_mono-menu-pad-y-preset: var(--mono-menu-pad-y-default, calc(var(--mono-spacing) * 2));
+  --_mono-menu-font-preset: var(--mono-menu-font-default, var(--mono-text-sm));
+  --_mono-menu-gap-preset: var(--mono-menu-gap-default, calc(var(--mono-spacing) * 1.5));
+  --_mono-menu-icon-size-preset: var(--mono-menu-icon-size-default, calc(var(--mono-spacing) * 5));
+  --_mono-menu-group-pad-preset: var(--mono-menu-group-pad-default, calc(var(--mono-spacing) * 3));
+  --_mono-menu-indent-preset: var(--mono-menu-indent-default, calc(var(--mono-spacing) * 4.5));
+}
+
+/* =========================================
+   Colours — EXTENSION: the role TINTS upstream's neutral wash
+   ========================================= */
+
+[mono-menu][mono-color="primary"] {
+  --_mono-menu-accent-preset: var(--_mono-menu-primary);
+  --_mono-menu-on-accent-preset: var(--primary-foreground);
+}
+[mono-menu][mono-color="secondary"] {
+  --_mono-menu-accent-preset: var(--_mono-menu-secondary);
+  --_mono-menu-on-accent-preset: var(--secondary);
+}
+[mono-menu][mono-color="success"] {
+  --_mono-menu-accent-preset: var(--_mono-menu-success);
+  --_mono-menu-on-accent-preset: var(--success-foreground);
+}
+[mono-menu][mono-color="danger"] {
+  --_mono-menu-accent-preset: var(--_mono-menu-danger);
+  --_mono-menu-on-accent-preset: var(--destructive-foreground);
+}
+[mono-menu][mono-color="warning"] {
+  --_mono-menu-accent-preset: var(--_mono-menu-warning);
+  --_mono-menu-on-accent-preset: var(--warning-foreground);
+}
+[mono-menu][mono-color="info"] {
+  --_mono-menu-accent-preset: var(--_mono-menu-info);
+  --_mono-menu-on-accent-preset: var(--info-foreground);
+}
+[mono-menu][mono-color="teal"] {
+  --_mono-menu-accent-preset: var(--_mono-menu-teal);
+  --_mono-menu-on-accent-preset: var(--teal-foreground);
+}
+[mono-menu][mono-color="purple"] {
+  --_mono-menu-accent-preset: var(--_mono-menu-purple);
+  --_mono-menu-on-accent-preset: var(--purple-foreground);
+}
+[mono-menu][mono-color="neutral"] {
+  --_mono-menu-accent-preset: var(--_mono-menu-neutral);
+  --_mono-menu-on-accent-preset: var(--neutral-foreground);
+}
+[mono-menu][mono-color="dark"] {
+  --_mono-menu-accent-preset: var(--_mono-menu-dark);
+  --_mono-menu-on-accent-preset: var(--dark-foreground);
+}
+
+/* `surface` is upstream exactly: the wash is `--sidebar-accent`, untinted, and
+   the active row is inked `--sidebar-accent-foreground` rather than a role. */
+[mono-menu][mono-color="surface"] {
+  --_mono-menu-hover-tint-preset: 0%;
+  --_mono-menu-active-tint-preset: 0%;
+  --_mono-menu-active-color-preset: var(--sidebar-accent-foreground);
+}
+
+/* =========================================
+   The list
+   ========================================= */
+
+/* basecoat@1.0.2 components/sidebar.css .sidebar >> nav >> > section >> ul — flex w-full min-w-0 flex-col */
+/* basecoat@1.0.2 styles/vega.css .sidebar nav > section > [role=group] > ul — gap-1
+   The root is in the selector so `.vp-doc ul, .vp-doc ol` (0,1,1) cannot inject
+   the left padding that would break a flush menu. */
+:where([mono-menu]) [mono-list] {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  gap: var(--_mono-menu-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* basecoat@1.0.2 components/sidebar.css .sidebar >> nav >> > section >> ul >> ul — flex min-w-0 flex-col
+   Upstream stops at the flex column. The rest is mono's own tree affordance:
+   the child list is pushed in under the parent row's icon, hangs off a guide
+   rule, and clears the row above it by one list gap — a nested `ul` is a block
+   child of its `li`, so the parent list's `gap` never reaches it.
+
+   `:has(> *)` because a declarative row always renders its children list, even
+   with no children in it: an empty one would otherwise hang a guide off every
+   leaf row and push the next row down by a gap. */
+:where([mono-menu]) [mono-list] [mono-list]:has(> *) {
+  width: auto;
+  margin-top: var(--_mono-menu-gap);
+  margin-inline-start: var(--_mono-menu-guide-offset);
+  padding-inline-start: var(--_mono-menu-indent);
+  border-inline-start: var(--_mono-menu-guide-width) solid var(--_mono-menu-guide-color);
+}
+
+/* The DECLARATIVE body (`slot="body"` + `<mono-menu-list>`). Each top-level
+   row renders its own `<ul mono-list>`, so they are siblings of one another
+   rather than `li`s of one list — nothing was left to carry the row gap, and a
+   declarative menu's top-level rows sat flush while an items-driven one (and
+   every hand-written twin) spaced them. Lay the body out as the list would, and
+   dissolve the element the author hung `slot="body"` on so the rows become its
+   own children. */
+:where([mono-menu]) [mono-body] {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  gap: var(--_mono-menu-gap);
+}
+
+:where([mono-menu]) [mono-body] > [mono-slotted] {
+  display: contents;
+}
+
+/* basecoat@1.0.2 components/sidebar.css .sidebar >> nav >> > section >> ul >> li — relative */
+:where([mono-menu]) [mono-item] {
+  position: relative;
+  display: var(--_mono-menu-row-display);
+  justify-content: var(--_mono-menu-row-justify);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* =========================================
+   The row
+   ========================================= */
+
+/* basecoat@1.0.2 components/sidebar.css .sidebar >> nav >> > section >> ul >> li >> > a, > button, > details > summary — flex w-full items-center overflow-hidden text-left outline-hidden transition-[width,height,padding] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:shrink-0 */
+/* basecoat@1.0.2 styles/vega.css .sidebar nav li > :is(a, button), .sidebar nav li > details > summary — ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground gap-2 rounded-md p-2 text-sm focus-visible:ring-2 text-left focus-visible:outline-hidden data-[open]:hover:bg-sidebar-accent data-[open]:hover:text-sidebar-accent-foreground [&>svg]:shrink-0 [&>svg]:size-4 */
+:where([mono-menu]) :is([mono-action], [mono-group-header]) {
+  display: flex;
+  align-items: center;
+  justify-content: var(--_mono-menu-action-justify);
+  gap: var(--_mono-menu-action-gap);
+  width: var(--_mono-menu-action-width);
+  min-height: var(--_mono-menu-height);
+  padding: var(--_mono-menu-pad-y) var(--_mono-menu-pad-x);
+  border: var(--mono-border-width) solid transparent;
+  border-radius: var(--_mono-menu-radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--_mono-menu-font);
+  line-height: var(--_mono-menu-line-height);
+  text-align: left;
+  text-decoration: none;
+  overflow: hidden;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color var(--mono-duration) var(--mono-ease),
+    color var(--mono-duration) var(--mono-ease),
+    border-color var(--mono-duration) var(--mono-ease);
+}
+
+/* VitePress's `.vp-doc a` (0,1,1) underlines and re-inks every link. */
+[mono-menu] a[mono-action] {
+  text-decoration: none;
+  color: inherit;
+}
+
+[mono-menu] a[mono-action]::after {
+  display: none !important;
+}
+
+@media (hover: hover) {
+  [mono-menu] :is([mono-action], [mono-group-header]):hover {
+    background: var(--_mono-menu-hover-bg);
+    color: var(--_mono-menu-hover-color);
+    border-color: var(--_mono-menu-hover-border-color);
+  }
+}
+
+/* `focus-visible:ring-2` on `ring-sidebar-ring` */
+[mono-menu] :is([mono-action], [mono-group-header]):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 var(--mono-ring-width)
+    color-mix(in oklab, var(--sidebar-ring, var(--ring)) var(--mono-ring-alpha), transparent);
+}
+
+/* basecoat@1.0.2 styles/vega.css .sidebar nav li > :is(a, button):is([aria-current=page], [data-active=true]), .sidebar nav li > details > summary:is([aria-current=page], [data-active=true]) — bg-sidebar-accent text-sidebar-accent-foreground font-medium
+   A flat wash and a weight step — NOT the pre-port brand gradient and glow. */
+[mono-menu] [mono-item][mono-active] > :is([mono-action], [mono-group-header]) {
+  background: var(--_mono-menu-active-bg);
+  color: var(--_mono-menu-active-color);
+  font-weight: var(--_mono-menu-active-weight);
+  box-shadow: var(--_mono-menu-active-shadow);
+}
+
+/* `disabled:pointer-events-none disabled:opacity-50 aria-disabled:…` */
+[mono-menu] [mono-item][mono-disabled] > :is([mono-action], [mono-group-header]),
+[mono-menu] :is([mono-action], [mono-group-header]):disabled,
+[mono-menu][mono-disabled] :is([mono-action], [mono-group-header]) {
+  opacity: var(--mono-disabled-opacity, 0.5);
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* `plain` — the non-`nav` mode: rows read as list entries, not links. */
+[mono-menu][mono-plain] :is([mono-action], [mono-group-header]) {
+  border-radius: 0;
+}
+
+/* =========================================
+   Row content
+   ========================================= */
+
+/* `[&>svg]:shrink-0 [&>svg]:size-4` */
+:where([mono-menu]) [mono-icon] {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-menu-icon-size);
+  height: var(--_mono-menu-icon-size);
+  font-size: var(--_mono-menu-icon-size);
+  line-height: 1;
+}
+
+/* Three shapes end up inside the box and all must fill it:
+     shadow build, user-slotted → <slot> → ::slotted(svg)
+     light build, user-slotted  → <span data-mono-slot="icon-<id>"> → svg
+     inline `item.icon` markup  → a direct child svg
+   The light placeholder parks the captured child, so the SVG is a GRANDchild
+   and a `> svg` rule misses it entirely. */
+[mono-menu] [mono-icon] > svg,
+[mono-menu] [mono-icon] > [data-mono-slot] > svg,
+[mono-menu] [mono-icon] slot::slotted(svg) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+[mono-menu] [mono-icon] > [data-mono-slot] {
+  display: contents;
+}
+
+/* Class + attribute = specificity (0,2,0), deliberately. UnoCSS's `i-…`
+   utilities set `width`/`height: 1.2em` (presetIcons `scale: 1.2`) at (0,1,0)
+   and their sheet loads AFTER this one, so a single selector loses and the
+   glyph overflows its box. Two selectors win regardless of sheet order — and it
+   is the only thing that works for the SHADOW build, where this span is a
+   LIGHT-DOM child of the host that no shadow-scoped selector can reach.
+   Scoped to the menu: its OWN class (every build sets it on the span — the shadow
+   build's span is a light-DOM child of the host, outside [mono-menu]) OR anything
+   inside a [mono-menu] root (raw CSS markup writes a bare
+   `<span mono-glyph class="i-…">`). Still (0,2,0): `:is()` weighs its heaviest
+   argument. A bare `[mono-glyph][mono-glyph]` is global and stretched every other
+   component's `[mono-glyph]` to 100% — the accordion's icon chip filled its header. */
+:is(.mono-menu-iconify, [mono-menu] *)[mono-glyph] {
+  display: inline-block;
+  width: 100%;
+  height: 100%;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+/* An `alias` icon is the placeholder a row shows when it has no glyph of its
+   own — a dimmed dot rather than a hole in the column. */
+[mono-menu] [mono-icon][mono-alias] {
+  opacity: 0.55;
+}
+
+/* `[&>span:last-child]:truncate` */
+:where([mono-menu]) [mono-content] {
+  display: var(--_mono-menu-label-display);
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+:where([mono-menu]) [mono-title] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: inherit;
+  color: inherit;
+}
+
+:where([mono-menu]) [mono-subtitle] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--mono-text-xs);
+  line-height: var(--mono-text-xs--lh);
+  color: var(--_mono-menu-text-soft);
+}
+
+:where([mono-menu]) [mono-append] {
+  flex-shrink: 0;
+  display: var(--_mono-menu-label-display);
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-menu-icon-size);
+  height: var(--_mono-menu-icon-size);
+  color: var(--_mono-menu-text-faint);
+}
+
+/* =========================================
+   Group — upstream's `<details><summary>`
+   ========================================= */
+
+/* basecoat@1.0.2 components/sidebar.css .sidebar >> nav >> > section >> ul >> li >> > details >> > summary >> &::after — ms-auto block size-3.5 bg-current content-[''] transition-transform ease-linear */
+:where([mono-menu]) [mono-chevron] {
+  flex-shrink: 0;
+  display: var(--_mono-menu-label-display);
+  align-items: center;
+  justify-content: center;
+  margin-inline-start: auto;
+  width: calc(var(--mono-spacing) * 3.5);
+  height: calc(var(--mono-spacing) * 3.5);
+  color: var(--_mono-menu-text-faint);
+  transition: rotate var(--mono-duration) linear;
+}
+
+/* basecoat@1.0.2 components/sidebar.css .sidebar >> nav >> > section >> ul >> li >> > details >> &:not([open]) >> > summary >> &::after — -rotate-90 rtl:rotate-90
+   Upstream's marker is a chevron-DOWN, so it rotates the CLOSED state a quarter
+   turn back to point along the reading direction. mono's marker is a
+   chevron-RIGHT, which already points that way at rest — so the rotation
+   belongs on the OPEN state instead. Taking upstream's rule literally left an
+   open group pointing right and a closed one pointing up. */
+[mono-menu] [mono-group][mono-open] > [mono-group-header] > [mono-chevron] {
+  rotate: 90deg;
+}
+
+[dir="rtl"] [mono-menu] [mono-group]:not([mono-open]) > [mono-group-header] > [mono-chevron] {
+  rotate: 180deg;
+}
+
+[mono-menu] [mono-group]:not([mono-open]) > [mono-group-body] {
+  display: none;
+}
+
+[mono-menu] [mono-group] > [mono-group-body] {
+  display: var(--mono-menu-group-children-display, flex);
+}
+
+/* =========================================
+   Subheader and divider
+   ========================================= */
+
+/* basecoat@1.0.2 components/sidebar.css .sidebar >> nav >> > section >> h3 — flex shrink-0 items-center outline-hidden transition-[margin,opacity] duration-200 ease-linear [&>svg]:shrink-0 */
+/* basecoat@1.0.2 styles/vega.css .sidebar nav h3 — text-sidebar-foreground/70 ring-sidebar-ring h-8 rounded-md px-2 text-xs font-medium focus-visible:ring-2 [&>svg]:size-4 transition-[margin,opacity] duration-200 ease-linear */
+:where([mono-menu]) [mono-subheader] {
+  flex-shrink: 0;
+  display: var(--_mono-menu-label-display);
+  align-items: center;
+  height: var(--_mono-menu-subheader-height);
+  padding: 0 var(--_mono-menu-subheader-pad-x);
+  margin: 0;
+  border-radius: var(--_mono-menu-subheader-radius);
+  list-style: none;
+  font-size: var(--_mono-menu-subheader-font);
+  font-weight: var(--_mono-menu-subheader-weight);
+  text-transform: var(--_mono-menu-subheader-transform);
+  letter-spacing: var(--_mono-menu-subheader-tracking);
+  color: var(--_mono-menu-text-soft);
+}
+
+/* basecoat@1.0.2 components/sidebar.css .sidebar >> nav >> [role=separator] — w-auto */
+/* basecoat@1.0.2 styles/vega.css .sidebar nav [role=separator] — border-sidebar-border mx-2 */
+:where([mono-menu]) [mono-divider] {
+  display: var(--_mono-menu-block-display);
+  width: auto;
+  height: 0;
+  /* `mx-2` and nothing else: upstream gives the separator no block margin at
+     all, because it is a flex item of the list and the list's own `gap` already
+     spaces it from the rows either side. Adding a block margin on top double-
+     spaced it — and put the one property on this row that `.vp-doc li + li`
+     (0,1,2) could out-specify. */
+  margin-inline: calc(var(--mono-spacing) * 2);
+  padding: 0;
+  border: 0;
+  border-top: var(--mono-border-width) solid var(--_mono-menu-border-lite);
+  list-style: none;
+}
+
+/* =========================================
+   Badge — EXTENSION, borrowing `.badge`'s shape
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .badge — h-5 gap-1 rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium transition-all [&>svg]:size-3! */
+:where([mono-menu]) [mono-badge] {
+  flex-shrink: 0;
+  display: var(--_mono-menu-label-display);
+  align-items: center;
+  justify-content: center;
+  gap: var(--mono-spacing);
+  margin-inline-start: auto;
+  height: var(--_mono-menu-badge-height);
+  padding: 0 var(--_mono-menu-badge-pad-x);
+  border: var(--mono-border-width) solid transparent;
+  border-radius: var(--_mono-menu-badge-radius);
+  font-size: var(--_mono-menu-badge-font);
+  font-weight: var(--_mono-menu-badge-weight);
+  line-height: 1;
+  background: var(--_mono-menu-badge-bg);
+  color: var(--_mono-menu-badge-color);
+}
+
+[mono-menu] [mono-badge="primary"] {
+  background: color-mix(in oklab, var(--_mono-menu-primary) var(--mono-mode-tint), transparent);
+  color: var(--_mono-menu-primary);
+}
+[mono-menu] [mono-badge="success"] {
+  background: color-mix(in oklab, var(--_mono-menu-success) var(--mono-mode-tint), transparent);
+  color: var(--_mono-menu-success);
+}
+[mono-menu] [mono-badge="danger"] {
+  background: color-mix(in oklab, var(--_mono-menu-danger) var(--mono-mode-tint), transparent);
+  color: var(--_mono-menu-danger);
+}
+[mono-menu] [mono-badge="warning"] {
+  background: color-mix(in oklab, var(--_mono-menu-warning) var(--mono-mode-tint), transparent);
+  color: var(--_mono-menu-warning);
+}
+[mono-menu] [mono-badge="info"] {
+  background: color-mix(in oklab, var(--_mono-menu-info) var(--mono-mode-tint), transparent);
+  color: var(--_mono-menu-info);
+}
+
+/* =========================================
+   Reduced motion
+   ========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  [mono-menu] :is([mono-action], [mono-group-header], [mono-chevron]) {
+    transition: none;
+  }
+}

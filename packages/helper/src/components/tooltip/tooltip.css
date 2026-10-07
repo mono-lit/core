@@ -1,0 +1,178 @@
+/* ============================================================================
+   mono-tooltip — the floating bubble `controlMonoTooltip(...)` appends to <body>.
+
+   Built by script, positioned by @floating-ui/dom (`left`/`top`, fixed). Lives
+   OUTSIDE every shadow root, so this one sheet (in `ui/index.css`) styles it for
+   the light and the shadow build alike.
+
+     <div class="mono-tooltip" role="tooltip" mono-tooltip
+          [mono-variant="popover"] [mono-color="…"] [mono-size="sm|lg"]
+          [mono-interactive] [mono-arrow] data-side="top" [data-open]>
+       <div mono-tooltip-body>…</div>
+       <div mono-tooltip-arrow></div>
+     </div>
+
+   Every colour resolves from theme tokens (`--foreground`, `--background`,
+   `--popover`, the palette pairs), so flavours, colour presets and `.dark` all
+   reach it with no rule of its own. Public knobs `--mono-tooltip-*`, resolved
+   once into private `--_mono-tooltip-*`.
+
+   basecoat@1.0.2 styles/vega.css [data-tooltip] — bg-foreground text-background
+   rounded-md px-3 py-1.5 text-xs
+   ============================================================================ */
+
+[mono-tooltip] {
+  /* inverted (default) */
+  --_mono-tooltip-bg: var(--mono-tooltip-bg, var(--foreground));
+  --_mono-tooltip-color: var(--mono-tooltip-color, var(--background));
+  --_mono-tooltip-ring: var(--mono-tooltip-ring, 0 0 0 0 transparent);
+  --_mono-tooltip-shadow: var(--mono-tooltip-shadow, 0 0 0 0 transparent);
+  /* `--mono-tooltip-radius` is set per flavour (luma/rhea xl, maia 2xl, lyra/sera 0) */
+  --_mono-tooltip-radius: var(--mono-tooltip-radius, var(--mono-radius-md));
+  --_mono-tooltip-max-width: var(--mono-tooltip-max-width, 20rem);
+  --_mono-tooltip-arrow-size: var(--mono-tooltip-arrow-size, calc(var(--mono-spacing) * 2.5));
+
+  /* md metrics */
+  --_mono-tooltip-font-size: var(--mono-tooltip-font-size, var(--_mono-tooltip-font-size-preset, var(--mono-text-xs)));
+  --_mono-tooltip-line-height: var(--mono-tooltip-line-height, var(--_mono-tooltip-line-height-preset, var(--mono-text-xs--lh)));
+  --_mono-tooltip-padding-y: var(--mono-tooltip-padding-y, var(--_mono-tooltip-padding-y-preset, calc(var(--mono-spacing) * 1.5)));
+  --_mono-tooltip-padding-x: var(--mono-tooltip-padding-x, var(--_mono-tooltip-padding-x-preset, calc(var(--mono-spacing) * 3)));
+
+  --_mono-tooltip-distance: calc(var(--mono-spacing) * 1);
+  --_mono-tooltip-enter-x: 0px;
+  --_mono-tooltip-enter-y: var(--_mono-tooltip-distance);
+
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: var(--mono-popup-z, 1000);
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(var(--_mono-tooltip-max-width), calc(100vw - 16px));
+  padding: var(--_mono-tooltip-padding-y) var(--_mono-tooltip-padding-x);
+  border-radius: var(--_mono-tooltip-radius);
+  background: var(--_mono-tooltip-bg);
+  color: var(--_mono-tooltip-color);
+  box-shadow: var(--_mono-tooltip-ring), var(--_mono-tooltip-shadow);
+  font-family: var(--mono-tooltip-font-family, var(--font-sans, inherit));
+  font-size: var(--_mono-tooltip-font-size);
+  font-weight: 400;
+  line-height: var(--_mono-tooltip-line-height);
+  text-align: start;
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  translate: var(--_mono-tooltip-enter-x) var(--_mono-tooltip-enter-y);
+  transition:
+    opacity var(--mono-duration-fast, 100ms) var(--mono-ease, ease),
+    translate var(--mono-duration-fast, 100ms) var(--mono-ease, ease);
+}
+
+[mono-tooltip][data-open] {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/* slide in AWAY from the anchor */
+[mono-tooltip][data-side='top'] { --_mono-tooltip-enter-x: 0px; --_mono-tooltip-enter-y: var(--_mono-tooltip-distance); }
+[mono-tooltip][data-side='bottom'] { --_mono-tooltip-enter-x: 0px; --_mono-tooltip-enter-y: calc(var(--_mono-tooltip-distance) * -1); }
+[mono-tooltip][data-side='left'] { --_mono-tooltip-enter-x: var(--_mono-tooltip-distance); --_mono-tooltip-enter-y: 0px; }
+[mono-tooltip][data-side='right'] { --_mono-tooltip-enter-x: calc(var(--_mono-tooltip-distance) * -1); --_mono-tooltip-enter-y: 0px; }
+
+[mono-tooltip][mono-interactive] {
+  pointer-events: auto;
+}
+
+[mono-tooltip] > [mono-tooltip-body] {
+  position: relative; /* above the arrow's inner half */
+  z-index: 1;
+}
+
+[mono-tooltip] > [mono-tooltip-body] a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* =========================================
+   Arrow — a rotated square half-tucked under the bubble. Floating UI gives the
+   cross-axis offset (`left` or `top`); the side decides which edge it sits on.
+   ========================================= */
+
+[mono-tooltip] > [mono-tooltip-arrow] {
+  display: none;
+  position: absolute;
+  width: var(--_mono-tooltip-arrow-size);
+  height: var(--_mono-tooltip-arrow-size);
+  background: var(--_mono-tooltip-bg);
+  rotate: 45deg;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+[mono-tooltip][mono-arrow] > [mono-tooltip-arrow] {
+  display: block;
+}
+
+[mono-tooltip][data-side='top'] > [mono-tooltip-arrow] { bottom: calc(var(--_mono-tooltip-arrow-size) / -2); }
+[mono-tooltip][data-side='bottom'] > [mono-tooltip-arrow] { top: calc(var(--_mono-tooltip-arrow-size) / -2); }
+[mono-tooltip][data-side='left'] > [mono-tooltip-arrow] { right: calc(var(--_mono-tooltip-arrow-size) / -2); }
+[mono-tooltip][data-side='right'] > [mono-tooltip-arrow] { left: calc(var(--_mono-tooltip-arrow-size) / -2); }
+
+/* =========================================
+   Sizes
+   ========================================= */
+
+[mono-tooltip][mono-size='sm'] {
+  --_mono-tooltip-font-size-preset: var(--mono-tooltip-font-size-sm, var(--mono-text-xs));
+  --_mono-tooltip-line-height-preset: var(--mono-tooltip-line-height-sm, var(--mono-text-xs--lh));
+  --_mono-tooltip-padding-y-preset: var(--mono-tooltip-padding-y-sm, var(--mono-spacing));
+  --_mono-tooltip-padding-x-preset: var(--mono-tooltip-padding-x-sm, calc(var(--mono-spacing) * 2));
+}
+
+[mono-tooltip][mono-size='lg'] {
+  --_mono-tooltip-font-size-preset: var(--mono-tooltip-font-size-lg, var(--mono-text-sm));
+  --_mono-tooltip-line-height-preset: var(--mono-tooltip-line-height-lg, var(--mono-text-sm--lh));
+  --_mono-tooltip-padding-y-preset: var(--mono-tooltip-padding-y-lg, calc(var(--mono-spacing) * 2));
+  --_mono-tooltip-padding-x-preset: var(--mono-tooltip-padding-x-lg, calc(var(--mono-spacing) * 3.5));
+}
+
+/* =========================================
+   Popover variant — the dropdown surface: popover pair, hairline ring, shadow.
+   Same chain the chart tooltip uses, so a restyled select panel restyles both.
+   ========================================= */
+
+[mono-tooltip][mono-variant='popover'] {
+  --_mono-tooltip-bg: var(--mono-tooltip-bg, var(--mono-select-dropdown-bg, var(--popover)));
+  --_mono-tooltip-color: var(--mono-tooltip-color, var(--mono-select-dropdown-color, var(--popover-foreground)));
+  --_mono-tooltip-ring: var(--mono-tooltip-ring, var(--mono-select-dropdown-ring, 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent)));
+  --_mono-tooltip-shadow: var(--mono-tooltip-shadow, var(--mono-select-dropdown-shadow, var(--mono-shadow-md)));
+}
+
+
+/* =========================================
+   Colours — the palette's solid pair. Wins over the variant's surface.
+   ========================================= */
+
+[mono-tooltip][mono-color] {
+  --_mono-tooltip-bg: var(--mono-tooltip-bg, var(--_mono-tooltip-c));
+  --_mono-tooltip-color: var(--mono-tooltip-color, var(--_mono-tooltip-c-foreground));
+}
+
+[mono-tooltip][mono-color='primary'] { --_mono-tooltip-c: var(--primary); --_mono-tooltip-c-foreground: var(--primary-foreground); }
+[mono-tooltip][mono-color='secondary'] { --_mono-tooltip-c: var(--secondary); --_mono-tooltip-c-foreground: var(--secondary-foreground); }
+[mono-tooltip][mono-color='success'] { --_mono-tooltip-c: var(--success); --_mono-tooltip-c-foreground: var(--success-foreground); }
+[mono-tooltip][mono-color='danger'] { --_mono-tooltip-c: var(--destructive); --_mono-tooltip-c-foreground: var(--destructive-foreground); }
+[mono-tooltip][mono-color='warning'] { --_mono-tooltip-c: var(--warning); --_mono-tooltip-c-foreground: var(--warning-foreground); }
+[mono-tooltip][mono-color='info'] { --_mono-tooltip-c: var(--info); --_mono-tooltip-c-foreground: var(--info-foreground); }
+[mono-tooltip][mono-color='teal'] { --_mono-tooltip-c: var(--teal); --_mono-tooltip-c-foreground: var(--teal-foreground); }
+[mono-tooltip][mono-color='purple'] { --_mono-tooltip-c: var(--purple); --_mono-tooltip-c-foreground: var(--purple-foreground); }
+[mono-tooltip][mono-color='neutral'] { --_mono-tooltip-c: var(--neutral); --_mono-tooltip-c-foreground: var(--neutral-foreground); }
+[mono-tooltip][mono-color='dark'] { --_mono-tooltip-c: var(--dark); --_mono-tooltip-c-foreground: var(--dark-foreground); }
+
+@media (prefers-reduced-motion: reduce) {
+  [mono-tooltip] {
+    transition: none;
+    translate: 0 0;
+  }
+}

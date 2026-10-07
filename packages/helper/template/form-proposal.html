@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EkaJaya BMS — Form Proposal</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --cobalt:#2563a8;--cobalt-dark:#1a4a85;--cobalt-deep:#0f3060;
+  --cobalt-lite:#dbeafe;--cobalt-soft:#eff6ff;
+  --sky:#4a9fd4;--sky-lite:#cde8f8;--sky-soft:#f0f8fd;
+  --teal:#3aaa8c;--teal-dark:#2a8870;--teal-lite:#c6ede3;--teal-soft:#f0faf7;
+  --silver:#8ba0b0;--silver-lite:#e8f0f5;--silver-soft:#f4f7fa;
+  --ink:#1a2d42;--ink-mid:#3a5068;--ink-soft:#6a8098;--ink-faint:#9ab0c0;
+  --bg:#f0f6fb;--border:#d0e4f0;--border-lite:#e4eff8;
+  --red:#dc2626;--red-soft:#fef2f2;--red-lite:#fecaca;
+  --orange:#ea580c;--orange-soft:#fff7ed;--orange-lite:#fed7aa;
+  --green:#16a34a;--green-soft:#f0fdf4;--green-lite:#bbf7d0;
+  --yellow:#ca8a04;--yellow-soft:#fefce8;--yellow-lite:#fef08a;
+  --sb-w:264px;
+}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+#sb::-webkit-scrollbar{width:3px;}#sb::-webkit-scrollbar-thumb{background:var(--cobalt-lite);border-radius:99px;}
+
+/* SIDEBAR */
+#sb{width:var(--sb-w);background:#fff;border-right:1.5px solid var(--border-lite);box-shadow:3px 0 20px rgba(37,99,168,.07);position:fixed;top:0;left:0;bottom:0;z-index:50;display:flex;flex-direction:column;overflow-y:auto;transition:left .26s ease;}
+#sb-ov{display:none;}
+.sb-brand{padding:1rem 1rem .85rem;background:linear-gradient(135deg,var(--cobalt),var(--sky));flex-shrink:0;}
+.sb-brand-row{display:flex;align-items:center;gap:.8rem;}
+.sb-logo{width:46px;height:46px;border-radius:10px;background:#fff;border:2px solid rgba(255,255,255,.6);box-shadow:0 2px 12px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;padding:4px;overflow:hidden;flex-shrink:0;}
+.sb-logo img{width:100%;height:100%;object-fit:contain;}
+.sb-name{color:#fff;font-size:1.05rem;font-weight:800;letter-spacing:.03em;line-height:1.2;}
+.sb-sub-txt{color:rgba(255,255,255,.82);font-size:.67rem;font-weight:600;letter-spacing:.13em;text-transform:uppercase;margin-top:2px;}
+.sb-user{padding:.75rem .85rem;border-bottom:1px solid var(--border-lite);}
+.sb-user-in{display:flex;align-items:center;gap:.7rem;background:var(--cobalt-soft);border-radius:11px;padding:.55rem .8rem;border:1px solid var(--cobalt-lite);}
+.sb-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--cobalt),var(--sky));display:flex;align-items:center;justify-content:center;color:#fff;font-size:.72rem;font-weight:700;flex-shrink:0;}
+.sb-un{color:var(--ink);font-size:.83rem;font-weight:700;}.sb-ur{color:var(--ink-soft);font-size:.7rem;}
+.sb-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 2px var(--teal-lite);flex-shrink:0;margin-left:auto;}
+.sb-nav{flex:1;padding:.6rem .7rem;display:flex;flex-direction:column;gap:1px;}
+.nav-grp{font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--silver);padding:0 10px;margin:12px 0 3px;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;cursor:pointer;color:var(--ink-mid);font-size:.82rem;font-weight:500;border:1px solid transparent;text-decoration:none;transition:all .14s;}
+.nav-item:hover{background:var(--cobalt-soft);color:var(--cobalt);border-color:var(--cobalt-lite);}
+.nav-item.on{background:linear-gradient(135deg,var(--cobalt),var(--sky));color:#fff;box-shadow:0 3px 12px rgba(37,99,168,.25);}
+.nav-badge{margin-left:auto;font-size:.68rem;border-radius:99px;padding:1px 7px;background:var(--silver-lite);color:var(--ink-mid);font-family:'DM Mono',monospace;}
+.nav-item.on .nav-badge{background:rgba(255,255,255,.25);color:#fff;}
+.nb-red{background:#fee2e2!important;color:#dc2626!important;}
+.sb-foot{padding:.75rem .7rem;border-top:1px solid var(--border-lite);}
+.sb-btn-nav{width:100%;display:flex;align-items:center;gap:.7rem;padding:.55rem .9rem;border-radius:9px;font-size:.82rem;font-weight:500;cursor:pointer;border:none;font-family:inherit;transition:all .14s;color:var(--ink-soft);background:transparent;}
+.sb-btn-nav:hover{background:var(--silver-soft);}
+.sb-logout{background:#fff0f0!important;color:#dc2626!important;border:1px solid #fecaca!important;margin-top:3px;}
+.sb-ver{text-align:center;font-size:.66rem;color:var(--ink-faint);margin-top:.6rem;}
+.main{margin-left:var(--sb-w);display:flex;flex-direction:column;min-height:100vh;}
+
+/* TOPBAR */
+.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:.65rem;padding:.75rem 1.5rem;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1.5px solid var(--border-lite);box-shadow:0 2px 12px rgba(37,99,168,.06);min-height:56px;}
+.tb-ham{display:none;flex-direction:column;gap:5px;padding:.35rem;border-radius:9px;border:none;background:transparent;cursor:pointer;flex-shrink:0;}
+.tb-ham span{display:block;width:22px;height:2px;background:var(--ink-mid);border-radius:2px;}
+.tb-ttl{min-width:0;flex:1;overflow:hidden;}
+.tb-ttl h1{font-size:.95rem;font-weight:800;color:var(--cobalt-deep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-ttl p{font-size:.72rem;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-acts{display:flex;align-items:center;gap:.35rem;flex-shrink:0;}
+.tb-ico{position:relative;padding:.45rem .55rem;border-radius:10px;border:1.5px solid var(--border-lite);background:var(--cobalt-soft);cursor:pointer;font-size:1rem;line-height:1;transition:all .14s;}
+.tb-ico:hover{background:var(--cobalt-lite);border-color:var(--cobalt);}
+.tb-notif{position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:var(--red);color:#fff;font-size:.58rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.tb-avbtn{display:flex;align-items:center;gap:.55rem;padding:.38rem .7rem .38rem .38rem;border-radius:11px;border:1.5px solid var(--border-lite);background:var(--cobalt-soft);cursor:pointer;transition:all .14s;}
+.tb-avbtn:hover{background:var(--cobalt-lite);}
+.tb-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--cobalt),var(--sky));display:flex;align-items:center;justify-content:center;color:#fff;font-size:.68rem;font-weight:700;}
+.tb-avnm{font-size:.78rem;font-weight:700;color:var(--ink);}
+.tb-avrl{font-size:.66rem;color:var(--ink-soft);}
+.tb-chev{font-size:.6rem;color:var(--ink-faint);}
+.ddw{position:relative;}
+.ddp{display:none;position:absolute;right:0;top:calc(100% + 8px);z-index:200;background:#fff;border:1px solid var(--border-lite);border-radius:14px;box-shadow:0 12px 40px rgba(37,99,168,.15);min-width:220px;overflow:hidden;}
+.ddp.on{display:block;}
+.dd-hd{padding:.85rem 1rem .6rem;border-bottom:1px solid var(--border-lite);background:var(--cobalt-soft);}
+.dd-ht{font-size:.88rem;font-weight:800;color:var(--cobalt-deep);}
+.dd-it{display:flex;align-items:center;gap:.7rem;padding:.62rem 1rem;font-size:.82rem;font-weight:500;cursor:pointer;color:var(--ink-mid);border:none;background:none;width:100%;text-align:left;font-family:inherit;transition:background .12s;}
+.dd-it:hover{background:var(--cobalt-soft);color:var(--cobalt);}
+.dd-it.dng:hover{background:var(--red-soft);color:var(--red);}
+.dd-ico{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.82rem;background:var(--silver-lite);flex-shrink:0;}
+.dd-ic-c{background:var(--cobalt-soft);}
+.dd-lbl{font-size:.82rem;font-weight:600;color:var(--ink);}
+.dd-sep{height:1px;background:var(--border-lite);margin:.1rem 0;}
+.dd-prf{display:flex;align-items:center;gap:.75rem;padding:.85rem 1rem;border-bottom:1px solid var(--border-lite);background:var(--cobalt-soft);}
+.dd-pav{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--cobalt),var(--sky));display:flex;align-items:center;justify-content:center;color:#fff;font-size:.78rem;font-weight:700;flex-shrink:0;}
+.dd-pnm{font-size:.88rem;font-weight:700;color:var(--ink);}
+.dd-prl{font-size:.72rem;color:var(--ink-soft);}
+
+/* CONTENT */
+#content{padding:1.5rem;flex:1;}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1.4rem;flex-wrap:wrap;}
+.ph-bc{font-size:.72rem;color:var(--ink-faint);margin-bottom:.28rem;}.ph-bc span{color:var(--cobalt);font-weight:600;}
+.ph-ttl{font-size:1.1rem;font-weight:800;color:var(--cobalt-deep);}
+.ph-sub{font-size:.78rem;color:var(--ink-soft);margin-top:2px;}
+.ph-btns{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;}
+
+/* === FORM LAYOUT === */
+.form-wrap{display:flex;flex-direction:column;gap:1.25rem;}
+
+/* Section card */
+.sc{background:#fff;border:1px solid var(--border-lite);border-radius:16px;box-shadow:0 2px 12px rgba(37,99,168,.06);overflow:visible;}
+.sc-head{padding:.82rem 1.25rem;border-bottom:1px solid var(--border-lite);background:linear-gradient(135deg,var(--cobalt-soft),var(--sky-soft));border-radius:16px 16px 0 0;display:flex;align-items:center;gap:.65rem;}
+.sc-ico{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--cobalt),var(--sky));display:flex;align-items:center;justify-content:center;font-size:.82rem;flex-shrink:0;}
+.sc-ttl{font-size:.88rem;font-weight:800;color:var(--cobalt-deep);}
+.sc-sub{font-size:.7rem;color:var(--ink-soft);margin-top:1px;}
+.sc-body{padding:1.25rem;}
+.sc-foot{padding:.85rem 1.25rem;border-top:1px solid var(--border-lite);background:var(--silver-soft);border-radius:0 0 16px 16px;display:flex;justify-content:space-between;align-items:center;}
+
+/* Two-column main layout */
+.main-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
+
+/* Form field */
+.ff{display:flex;flex-direction:column;gap:.28rem;margin-bottom:.85rem;}
+.ff:last-child{margin-bottom:0;}
+.ff-lbl{font-size:.74rem;font-weight:700;color:var(--ink-mid);display:flex;align-items:center;gap:.28rem;}
+.ff-req{color:var(--red);}
+.ff-hint{font-size:.67rem;color:var(--ink-faint);margin-top:.15rem;}
+.fi,.fi-sel{width:100%;padding:.56rem .85rem;border:1.5px solid var(--border);border-radius:9px;font-size:.83rem;font-family:inherit;color:var(--ink);background:var(--cobalt-soft);outline:none;transition:all .18s;appearance:none;}
+.fi::placeholder{color:var(--ink-faint);}
+.fi:focus,.fi-sel:focus{border-color:var(--sky);background:#fff;box-shadow:0 0 0 3px var(--sky-lite);}
+.fi:read-only{background:var(--silver-lite);color:var(--ink-soft);cursor:default;}
+.fi-sel{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236a8098' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .75rem center;padding-right:2.1rem;cursor:pointer;}
+.fi-ta{min-height:80px;resize:vertical;line-height:1.5;}
+.fi-prefix-wrap{position:relative;}
+.fi-prefix{position:absolute;left:.82rem;top:50%;transform:translateY(-50%);font-size:.78rem;color:var(--ink-faint);font-weight:700;pointer-events:none;font-family:'DM Mono',monospace;}
+.fi-prefix-wrap .fi{padding-left:2.4rem;}
+.fi-prefix-wrap.suf .fi{padding-right:2rem;}
+.fi-suffix{position:absolute;right:.82rem;top:50%;transform:translateY(-50%);font-size:.78rem;color:var(--ink-faint);font-weight:600;pointer-events:none;}
+
+/* Grid inside form */
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:.85rem;}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.85rem;}
+.fg4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.85rem;}
+.full{grid-column:1/-1;}
+
+/* Radio group */
+.radio-inline{display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;}
+.ri{display:flex;align-items:center;gap:.42rem;cursor:pointer;font-size:.83rem;color:var(--ink-mid);font-weight:500;}
+.ri input{width:15px;height:15px;accent-color:var(--cobalt);cursor:pointer;}
+.ri.active{color:var(--cobalt);font-weight:700;}
+
+/* Checkbox */
+.cb-item{display:flex;align-items:center;gap:.42rem;cursor:pointer;font-size:.82rem;color:var(--ink-mid);}
+.cb-item input{width:15px;height:15px;accent-color:var(--cobalt);}
+
+/* ============================================================
+   REPEATABLE ITEM ROWS
+   ============================================================ */
+.repeat-section{display:flex;flex-direction:column;gap:.75rem;}
+.repeat-item{border:1.5px solid var(--border-lite);border-radius:12px;background:#fff;overflow:hidden;transition:box-shadow .15s;}
+.repeat-item:hover{box-shadow:0 3px 12px rgba(37,99,168,.08);}
+.ri-head{display:flex;align-items:center;justify-content:space-between;padding:.6rem .9rem;background:var(--cobalt-soft);border-bottom:1px solid var(--border-lite);}
+.ri-title-wrap{display:flex;align-items:center;gap:.5rem;}
+.ri-num{width:22px;height:22px;border-radius:6px;background:var(--cobalt);color:#fff;font-size:.68rem;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;}
+.ri-title{font-size:.8rem;font-weight:700;color:var(--cobalt-dark);}
+.ri-prog-name{font-size:.72rem;color:var(--ink-soft);font-style:italic;}
+.ri-actions{display:flex;gap:.28rem;}
+.ri-body{padding:.9rem;}
+
+/* Add row button */
+.btn-add-row{display:flex;align-items:center;justify-content:center;gap:.45rem;width:100%;padding:.55rem;border:1.5px dashed var(--cobalt-lite);border-radius:10px;background:var(--cobalt-soft);color:var(--cobalt);font-size:.8rem;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s;}
+.btn-add-row:hover{border-color:var(--cobalt);background:var(--cobalt-lite);}
+
+/* ============================================================
+   ITEM ACTIONS BUTTONS
+   ============================================================ */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.35rem;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;cursor:pointer;border:none;border-radius:8px;transition:all .15s;white-space:nowrap;font-size:.78rem;padding:.36rem .75rem;line-height:1.2;}
+.btn:active{transform:scale(.96);}
+.btn-primary{background:linear-gradient(135deg,var(--cobalt),var(--sky));color:#fff;box-shadow:0 2px 10px rgba(37,99,168,.25);}
+.btn-primary:hover{box-shadow:0 4px 16px rgba(37,99,168,.38);transform:translateY(-1px);}
+.btn-secondary{background:#fff;color:var(--cobalt);border:1.5px solid var(--cobalt-lite);}
+.btn-secondary:hover{background:var(--cobalt-soft);border-color:var(--cobalt);}
+.btn-danger{background:var(--red-soft);color:var(--red);border:1.5px solid var(--red-lite);}
+.btn-danger:hover{background:var(--red);color:#fff;}
+.btn-success{background:var(--green);color:#fff;}
+.btn-success:hover{background:var(--teal-dark);}
+.btn-light{background:var(--silver-lite);color:var(--ink-mid);border:1.5px solid var(--border);}
+.btn-light:hover{background:var(--silver-soft);}
+.btn-teal{background:var(--teal);color:#fff;box-shadow:0 2px 8px rgba(58,170,140,.2);}
+.btn-teal:hover{background:var(--teal-dark);}
+.btn-lg{padding:.6rem 1.3rem;font-size:.88rem;border-radius:10px;}
+.btn-xl{padding:.72rem 1.6rem;font-size:.93rem;border-radius:12px;}
+.btn-ico{width:28px;height:28px;padding:0;border-radius:7px;font-size:.82rem;}
+
+/* ============================================================
+   BUDGET SUMMARY BOX
+   ============================================================ */
+.budget-summary{background:#fff;border:1.5px solid var(--border-lite);border-radius:12px;overflow:hidden;}
+.bs-row{display:flex;align-items:center;justify-content:space-between;padding:.6rem 1rem;border-bottom:1px solid var(--border-lite);}
+.bs-row:last-child{border-bottom:none;}
+.bs-row.total{background:linear-gradient(135deg,var(--cobalt-soft),var(--sky-soft));padding:.75rem 1rem;}
+.bs-lbl{font-size:.78rem;font-weight:600;color:var(--ink-mid);display:flex;align-items:center;gap:.3rem;}
+.bs-lbl .cb-small{width:13px;height:13px;accent-color:var(--cobalt);}
+.bs-val{font-family:'DM Mono',monospace;font-size:.83rem;font-weight:700;color:var(--cobalt-dark);}
+.bs-row.total .bs-lbl{font-size:.84rem;font-weight:800;color:var(--cobalt-deep);}
+.bs-row.total .bs-val{font-size:.95rem;color:var(--cobalt);}
+.bs-input{width:130px;padding:.3rem .6rem;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Mono',monospace;font-size:.8rem;color:var(--ink);text-align:right;background:var(--cobalt-soft);outline:none;transition:all .16s;}
+.bs-input:focus{border-color:var(--sky);background:#fff;}
+
+/* ============================================================
+   RICH TEXT EDITOR (simulated)
+   ============================================================ */
+.rte-wrap{border:1.5px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;}
+.rte-toolbar{display:flex;align-items:center;gap:2px;padding:.45rem .65rem;background:var(--silver-soft);border-bottom:1px solid var(--border-lite);flex-wrap:wrap;}
+.rte-btn{padding:.22rem .42rem;border-radius:5px;border:none;background:transparent;cursor:pointer;font-size:.78rem;color:var(--ink-mid);transition:background .12s;font-family:inherit;line-height:1;}
+.rte-btn:hover{background:var(--cobalt-soft);color:var(--cobalt);}
+.rte-btn.on{background:var(--cobalt-soft);color:var(--cobalt);}
+.rte-sep{width:1px;height:16px;background:var(--border);margin:0 3px;flex-shrink:0;}
+.rte-body{min-height:140px;padding:.85rem;font-size:.84rem;line-height:1.6;color:var(--ink);outline:none;}
+.rte-body:empty::before{content:attr(data-ph);color:var(--ink-faint);}
+
+/* ============================================================
+   ATTACHMENT
+   ============================================================ */
+.attach-row{display:flex;align-items:center;gap:.55rem;padding:.52rem .75rem;border:1.5px solid var(--border-lite);border-radius:9px;background:#fff;margin-bottom:.4rem;}
+.attach-row:last-child{margin-bottom:0;}
+.attach-type{font-size:.7rem;font-weight:700;color:var(--ink-soft);min-width:80px;}
+.attach-file{flex:1;}
+.attach-file input[type=file]{display:none;}
+.attach-choose{display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .72rem;border:1.5px solid var(--cobalt-lite);border-radius:7px;background:var(--cobalt-soft);color:var(--cobalt);font-size:.74rem;font-weight:600;cursor:pointer;transition:all .14s;}
+.attach-choose:hover{background:var(--cobalt-lite);border-color:var(--cobalt);}
+.attach-name{font-size:.76rem;color:var(--ink-soft);margin-left:.5rem;font-style:italic;}
+.attach-actions{display:flex;gap:.28rem;}
+
+/* ============================================================
+   SAVE BAR
+   ============================================================ */
+.save-bar{position:sticky;bottom:0;z-index:20;background:rgba(255,255,255,.97);backdrop-filter:blur(10px);border-top:1.5px solid var(--border-lite);box-shadow:0 -4px 20px rgba(37,99,168,.08);padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;}
+.save-bar-info{font-size:.77rem;color:var(--ink-soft);}
+.save-bar-info strong{color:var(--cobalt);font-weight:700;}
+.save-btns{display:flex;gap:.55rem;align-items:center;}
+
+/* Divider */
+.divider{display:flex;align-items:center;gap:.6rem;margin:.75rem 0;}
+.divider-line{flex:1;height:1px;background:var(--border-lite);}
+.divider-txt{font-size:.68rem;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;}
+
+/* Alert */
+.alert{display:flex;align-items:flex-start;gap:.6rem;padding:.75rem 1rem;border-radius:10px;font-size:.8rem;margin-bottom:1rem;}
+.alert-info{background:var(--cobalt-soft);border:1px solid var(--cobalt-lite);color:var(--cobalt-dark);}
+.alert-ico{font-size:.88rem;flex-shrink:0;}
+.alert-ttl{font-weight:700;margin-bottom:2px;}
+.alert-sub{font-size:.74rem;opacity:.85;}
+
+/* Toast */
+#toasts{position:fixed;bottom:1.4rem;right:1.4rem;z-index:9999;display:flex;flex-direction:column;gap:.4rem;}
+.toast{display:flex;align-items:center;gap:.6rem;padding:.65rem .95rem;border-radius:11px;font-size:.81rem;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.13);min-width:210px;max-width:310px;animation:tIn .28s cubic-bezier(.34,1.56,.64,1);}
+@keyframes tIn{from{opacity:0;transform:translateX(18px);}to{opacity:1;transform:translateX(0);}}
+.t-ok{background:var(--green-soft);border:1px solid var(--green-lite);color:var(--green);}
+.t-inf{background:var(--cobalt-soft);border:1px solid var(--cobalt-lite);color:var(--cobalt-dark);}
+.t-err{background:var(--red-soft);border:1px solid var(--red-lite);color:var(--red);}
+
+/* Responsive */
+@media(max-width:1200px){.main-grid{grid-template-columns:1fr;}}
+@media(max-width:1024px){
+  #sb{left:calc(-1 * var(--sb-w));} #sb.open{left:0;}
+  #sb-ov{display:block;} #sb-ov.on{position:fixed;inset:0;z-index:40;background:rgba(15,45,90,.4);backdrop-filter:blur(3px);}
+  .main{margin-left:0;} .tb-ham{display:flex;}
+}
+@media(max-width:768px){
+  .fg2,.fg3,.fg4{grid-template-columns:1fr;} .full{grid-column:1;}
+  .tb-avnm,.tb-avrl,.tb-chev{display:none;} .tb-ttl p{display:none;}
+  .topbar{padding:.6rem .85rem;gap:.5rem;}
+  .save-bar{padding:.75rem 1rem;}
+}
+@media(max-width:640px){#content{padding:1rem;}}
+</style>
+</head>
+<body>
+
+<div id="sb-ov" onclick="closeSb()"></div>
+
+<!-- SIDEBAR -->
+<aside id="sb">
+  <div class="sb-brand"><div class="sb-brand-row">
+    <div class="sb-logo"><img src="https://esw.eji.co.id/res/img/logo.png" alt="EJ" onerror="this.style.display='none'"/></div>
+    <div><div class="sb-name">EKA JAYA</div><div class="sb-sub-txt">Internasional</div></div>
+  </div></div>
+  <div class="sb-user"><div class="sb-user-in">
+    <div class="sb-av">AD</div>
+    <div><div class="sb-un">Administrator</div><div class="sb-ur">Super Admin</div></div>
+    <div class="sb-dot"></div>
+  </div></div>
+  <nav class="sb-nav">
+    <a class="nav-item on" href="#">🏠 <span>Dashboard</span></a>
+    <div class="nav-grp">Penjualan</div>
+    <a class="nav-item" href="#">💰 <span>Sell Out</span></a>
+    <a class="nav-item" href="#">🧾 <span>Sell In</span></a>
+    <a class="nav-item" href="#">🎯 <span>Target &amp; Periode</span></a>
+    <a class="nav-item" href="#">🚗 <span>Salesman &amp; BA</span></a>
+    <div class="nav-grp">Proposal</div>
+    <a class="nav-item" href="#">📋 <span>Buat Proposal</span></a>
+    <a class="nav-item" href="#">📁 <span>Daftar Proposal</span><span class="nav-badge">12</span></a>
+    <div class="nav-grp">Klaim</div>
+    <a class="nav-item" href="#">📌 <span>Manajemen Klaim</span><span class="nav-badge nb-red">4.4K</span></a>
+    <div class="nav-grp">Laporan</div>
+    <a class="nav-item" href="#">📊 <span>Report &amp; Analisis</span></a>
+    <div class="nav-grp">Master Data</div>
+    <a class="nav-item" href="#">🗄️ <span>Data Master</span></a>
+  </nav>
+  <div class="sb-foot">
+    <button class="sb-btn-nav">❓ Bantuan</button>
+    <button class="sb-btn-nav sb-logout">🚪 Log Out</button>
+    <p class="sb-ver">v2.5.0 · © 2025 PT EkaJaya</p>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <header class="topbar">
+    <button class="tb-ham" onclick="openSb()"><span></span><span></span><span></span></button>
+    <div class="tb-ttl"><h1>Buat Proposal</h1><p>Dashboard › Proposal › Buat Proposal</p></div>
+    <div class="tb-acts">
+      <div class="ddw">
+        <button class="tb-ico" onclick="togDD('ddi')">📩<span class="tb-notif">3</span></button>
+        <div class="ddp" id="ddi">
+          <div class="dd-hd"><div class="dd-ht">My Inbox</div></div>
+          <div style="padding:.65rem 1rem;border-bottom:1px solid var(--border-lite);font-size:.79rem;color:var(--ink-soft)">Proposal #PRO-0024 disetujui</div>
+          <div style="padding:.6rem 1rem;background:var(--cobalt-soft)"><a href="#" style="font-size:.77rem;color:var(--cobalt);font-weight:600;text-decoration:none">Lihat semua →</a></div>
+        </div>
+      </div>
+      <div class="ddw"><button class="tb-avbtn" onclick="togDD('ddu')">
+        <div class="tb-av">AD</div>
+        <div><div class="tb-avnm">Administrator</div><div class="tb-avrl">Super Admin</div></div>
+        <span class="tb-chev">▼</span>
+      </button>
+      <div class="ddp" id="ddu">
+        <div class="dd-prf"><div class="dd-pav">AD</div><div><div class="dd-pnm">Administrator</div><div class="dd-prl">Super Admin · EkaJaya</div></div></div>
+        <button class="dd-it"><div class="dd-ico dd-ic-c">👤</div><div><div class="dd-lbl">Profil Saya</div></div></button>
+        <div class="dd-sep"></div>
+        <button class="dd-it dng"><div class="dd-ico">🚪</div><div><div class="dd-lbl">Log Out</div></div></button>
+      </div></div>
+    </div>
+  </header>
+
+  <div id="content">
+    <div class="ph">
+      <div>
+        <div class="ph-bc">Dashboard › Proposal › <span>Buat Proposal</span></div>
+        <div class="ph-ttl">Form Proposal — PT EkaJaya Internasional</div>
+        <div class="ph-sub">Lengkapi semua field yang wajib diisi (<span style="color:var(--red)">*</span>) sebelum menyimpan</div>
+      </div>
+      <div class="ph-btns">
+        <button class="btn btn-light" onclick="toast('💾 Draft tersimpan','inf')">💾 Simpan Draft</button>
+      </div>
+    </div>
+
+    <div class="form-wrap">
+
+      <!-- ══ SECTION 1: INFO DASAR ══ -->
+      <div class="sc">
+        <div class="sc-head">
+          <div class="sc-ico">📋</div>
+          <div><div class="sc-ttl">Informasi Dasar Proposal</div><div class="sc-sub">Data umum, dokumen, dan platform terkait</div></div>
+        </div>
+        <div class="sc-body">
+          <div class="main-grid">
+            <!-- Kolom Kiri -->
+            <div>
+              <div class="ff">
+                <label class="ff-lbl">Project Name</label>
+                <input class="fi" type="text" placeholder="Masukkan nama project..." id="proj-name"/>
+              </div>
+              <div class="ff">
+                <label class="ff-lbl">Sumber Dokumen</label>
+                <div class="radio-inline">
+                  <label class="ri active" id="rd-proposal">
+                    <input type="radio" name="sumber" value="proposal" checked onchange="setSumber(this)"/> Proposal
+                  </label>
+                  <label class="ri" id="rd-pr">
+                    <input type="radio" name="sumber" value="pr" onchange="setSumber(this)"/> Proposal to PR
+                  </label>
+                </div>
+              </div>
+              <div class="ff">
+                <label class="ff-lbl">Detail Project <span class="ff-req">*</span></label>
+                <input class="fi" type="text" placeholder="Masukkan detail project..."/>
+              </div>
+              <div class="fg2">
+                <div class="ff" style="margin-bottom:0">
+                  <label class="ff-lbl">Area <span class="ff-req">*</span></label>
+                  <select class="fi-sel">
+                    <option value="hd">HQ / HO</option>
+                    <option>Jakarta Utara</option>
+                    <option>Jakarta Barat</option>
+                    <option>Surabaya</option>
+                    <option>Medan</option>
+                    <option>Bandung</option>
+                    <option>Semarang</option>
+                  </select>
+                </div>
+                <div class="ff" style="margin-bottom:0">
+                  <label class="ff-lbl">Platform <span class="ff-req">*</span></label>
+                  <select class="fi-sel">
+                    <option value="">— Pilih Platform —</option>
+                    <option>Offline / GT</option>
+                    <option>Shopee</option>
+                    <option>Tokopedia</option>
+                    <option>Lazada</option>
+                    <option>TikTok Shop</option>
+                    <option>Instagram</option>
+                    <option>Multi Platform</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Kolom Kanan -->
+            <div>
+              <div class="ff">
+                <label class="ff-lbl">Jenis Program <span class="ff-req">*</span></label>
+                <select class="fi-sel" onchange="updateBudgetLabel(this)">
+                  <option value="">— Pilih Jenis Program —</option>
+                  <option>Trade Marketing</option>
+                  <option>Consumer Promo</option>
+                  <option>Digital Campaign</option>
+                  <option>Event & Activation</option>
+                  <option>Visibility & Display</option>
+                  <option>Product Launch</option>
+                </select>
+              </div>
+              <div class="fg2">
+                <div class="ff" style="margin-bottom:0">
+                  <label class="ff-lbl">Periode Mulai <span class="ff-req">*</span></label>
+                  <input class="fi" type="date" id="periode-start"/>
+                </div>
+                <div class="ff" style="margin-bottom:0">
+                  <label class="ff-lbl">Sampai <span class="ff-req">*</span></label>
+                  <input class="fi" type="date" id="periode-end"/>
+                </div>
+              </div>
+              <div class="ff" style="margin-top:.85rem">
+                <label class="ff-lbl">Brand <span class="ff-req">*</span></label>
+                <select class="fi-sel">
+                  <option value="">— Pilih Brand —</option>
+                  <option>EkaJaya Gold</option>
+                  <option>Beauté Lumière</option>
+                  <option>PureGlow</option>
+                  <option>ScentEssence</option>
+                  <option>DermaClear</option>
+                </select>
+              </div>
+              <div class="fg3">
+                <div class="ff" style="margin-bottom:0">
+                  <label class="ff-lbl">Kategori <span class="ff-req">*</span></label>
+                  <select class="fi-sel" onchange="updateSubKat(this)">
+                    <option value="">— Pilih —</option>
+                    <option>Skincare</option>
+                    <option>Makeup</option>
+                    <option>Fragrance</option>
+                    <option>Hair Care</option>
+                  </select>
+                </div>
+                <div class="ff" style="margin-bottom:0">
+                  <label class="ff-lbl">Sub Kategori <span class="ff-req">*</span></label>
+                  <select class="fi-sel" id="sub-kat">
+                    <option value="">— Pilih —</option>
+                    <option>Serum</option>
+                    <option>Moisturizer</option>
+                    <option>Toner</option>
+                    <option>Sunscreen</option>
+                  </select>
+                </div>
+                <div class="ff" style="margin-bottom:0">
+                  <label class="ff-lbl">Group Kategori <span class="ff-req">*</span></label>
+                  <select class="fi-sel">
+                    <option value="">— Pilih —</option>
+                    <option>Premium</option>
+                    <option>Mid Range</option>
+                    <option>Mass Market</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SECTION 2: ITEM PROGRAM + BUDGET (2 kolom) ══ -->
+      <div class="main-grid">
+
+        <!-- Kiri: Item Klaim / Program -->
+        <div class="sc">
+          <div class="sc-head">
+            <div class="sc-ico">📦</div>
+            <div><div class="sc-ttl">Item Program</div><div class="sc-sub">Tambah item klaim, sub brand, dan program terkait</div></div>
+          </div>
+          <div class="sc-body">
+            <div class="repeat-section" id="items-klaim">
+              <!-- Item 1 -->
+              <div class="repeat-item" id="item-1">
+                <div class="ri-head">
+                  <div class="ri-title-wrap">
+                    <div class="ri-num">1</div>
+                    <div>
+                      <div class="ri-title">Item Program #1</div>
+                      <div class="ri-prog-name" id="prog-name-1">— belum diisi —</div>
+                    </div>
+                  </div>
+                  <div class="ri-actions">
+                    <button class="btn btn-danger btn-ico" title="Hapus item" onclick="removeItem(1)" style="display:none">✕</button>
+                  </div>
+                </div>
+                <div class="ri-body">
+                  <div class="ff">
+                    <label class="ff-lbl">Jenis Klaim <span class="ff-req">*</span></label>
+                    <select class="fi-sel" onchange="updateProgName(1,this)">
+                      <option value="">— Pilih Jenis Klaim —</option>
+                      <option>Sell Out</option>
+                      <option>PPL (Price Promotion List)</option>
+                      <option>Insentif BA</option>
+                      <option>Retur</option>
+                      <option>Kompetitor</option>
+                      <option>Display Fee</option>
+                      <option>Listing Fee</option>
+                    </select>
+                  </div>
+                  <div class="ff">
+                    <label class="ff-lbl">Sub Brand <span class="ff-req">*</span></label>
+                    <input class="fi" type="text" placeholder="Nama sub brand / SKU..."/>
+                  </div>
+                  <div class="ff">
+                    <label class="ff-lbl">Keterangan</label>
+                    <input class="fi" type="text" placeholder="Keterangan singkat program..."/>
+                  </div>
+                  <div class="ff" style="margin-bottom:0">
+                    <label class="ff-lbl">Post Budget <span class="ff-req">*</span></label>
+                    <select class="fi-sel">
+                      <option value="">— Pilih Post Budget —</option>
+                      <option>Trade Marketing Fund</option>
+                      <option>Consumer Activation</option>
+                      <option>Digital Marketing</option>
+                      <option>Sales Promotion</option>
+                      <option>Co-op Fund</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button class="btn-add-row" style="margin-top:.65rem" onclick="addItem()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              Tambah Item Program
+            </button>
+          </div>
+        </div>
+
+        <!-- Kanan: Budget per Item + Summary -->
+        <div style="display:flex;flex-direction:column;gap:1.25rem">
+          <div class="sc">
+            <div class="sc-head">
+              <div class="sc-ico">💰</div>
+              <div><div class="sc-ttl">Budget per Item</div><div class="sc-sub">Harga, PPN, PPh, dan jumlah qty</div></div>
+            </div>
+            <div class="sc-body">
+              <div class="repeat-section" id="budget-items">
+                <!-- Budget item 1 -->
+                <div class="repeat-item" id="budget-1">
+                  <div class="ri-head">
+                    <div class="ri-title-wrap">
+                      <div class="ri-num" style="background:var(--teal)">1</div>
+                      <div class="ri-title" id="btitle-1">Item Program #1</div>
+                    </div>
+                    <button class="btn btn-light btn-ico" onclick="editBudget(1)" title="Edit">✏️</button>
+                  </div>
+                  <div class="ri-body">
+                    <div class="fg2" style="margin-bottom:.65rem">
+                      <div class="ff" style="margin-bottom:0">
+                        <label class="ff-lbl">Harga Satuan <span class="ff-req">*</span></label>
+                        <div class="fi-prefix-wrap">
+                          <span class="fi-prefix">Rp</span>
+                          <input class="fi" type="number" id="harga-1" placeholder="0" min="0" oninput="calcBudget()"/>
+                        </div>
+                      </div>
+                      <div class="ff" style="margin-bottom:0">
+                        <label class="ff-lbl">Qty <span class="ff-req">*</span></label>
+                        <input class="fi" type="number" id="qty-1" placeholder="0" min="0" value="1" oninput="calcBudget()"/>
+                      </div>
+                    </div>
+                    <div class="fg2">
+                      <div class="ff" style="margin-bottom:0">
+                        <label class="ff-lbl">PPN (%)</label>
+                        <div class="fi-prefix-wrap suf">
+                          <input class="fi" type="number" id="ppn-1" placeholder="11" value="11" min="0" max="100" oninput="calcBudget()"/>
+                          <span class="fi-suffix">%</span>
+                        </div>
+                      </div>
+                      <div class="ff" style="margin-bottom:0">
+                        <label class="ff-lbl">PPh (%)</label>
+                        <div class="fi-prefix-wrap suf">
+                          <input class="fi" type="number" id="pph-1" placeholder="2" value="2" min="0" max="100" oninput="calcBudget()"/>
+                          <span class="fi-suffix">%</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="divider"><div class="divider-line"></div><div class="divider-txt">Sub Total Item #1</div><div class="divider-line"></div></div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:.3rem 0">
+                      <span style="font-size:.78rem;color:var(--ink-soft)">Subtotal (excl. tax)</span>
+                      <span style="font-family:'DM Mono',monospace;font-weight:700;color:var(--cobalt-dark);font-size:.82rem" id="sub-1">Rp 0</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Grand Total Summary -->
+              <div class="divider" style="margin-top:.85rem"><div class="divider-line"></div><div class="divider-txt">Ringkasan Budget</div><div class="divider-line"></div></div>
+              <div class="budget-summary">
+                <div class="bs-row">
+                  <span class="bs-lbl">Total Nilai (excl. tax)</span>
+                  <span class="bs-val" id="total-excl">Rp 0</span>
+                </div>
+                <div class="bs-row">
+                  <span class="bs-lbl">
+                    <input type="checkbox" class="cb-small" id="ppn-toggle" checked onchange="calcBudget()"/>
+                    PPN (11%)
+                  </span>
+                  <span class="bs-val" id="total-ppn">Rp 0</span>
+                </div>
+                <div class="bs-row">
+                  <span class="bs-lbl">
+                    <input type="checkbox" class="cb-small" id="pph-toggle" checked onchange="calcBudget()"/>
+                    PPh (2%)
+                  </span>
+                  <span class="bs-val" id="total-pph">Rp 0</span>
+                </div>
+                <div class="bs-row total">
+                  <span class="bs-lbl">💰 Total Budget (tax &amp; pph)</span>
+                  <span class="bs-val" id="total-all">Rp 0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SECTION 3: LATAR BELAKANG + MEKANISME ══ -->
+      <div class="main-grid">
+        <div class="sc">
+          <div class="sc-head">
+            <div class="sc-ico">📝</div>
+            <div><div class="sc-ttl">Latar Belakang</div><div class="sc-sub">Jelaskan alasan dan konteks proposal ini</div></div>
+          </div>
+          <div class="sc-body">
+            <div class="rte-wrap">
+              <div class="rte-toolbar">
+                <button class="rte-btn" title="Bold" onclick="rteCmd('bold',this)"><b>B</b></button>
+                <button class="rte-btn" title="Italic" onclick="rteCmd('italic',this)"><i>I</i></button>
+                <button class="rte-btn" title="Underline" onclick="rteCmd('underline',this)"><u>U</u></button>
+                <div class="rte-sep"></div>
+                <button class="rte-btn" title="Bullet list" onclick="rteCmd('insertUnorderedList',this)">≡</button>
+                <button class="rte-btn" title="Numbered list" onclick="rteCmd('insertOrderedList',this)">1.</button>
+                <div class="rte-sep"></div>
+                <button class="rte-btn" title="Align left" onclick="rteCmd('justifyLeft',this)">⬅</button>
+                <button class="rte-btn" title="Align center" onclick="rteCmd('justifyCenter',this)">↔</button>
+                <button class="rte-btn" title="Align right" onclick="rteCmd('justifyRight',this)">➡</button>
+                <div class="rte-sep"></div>
+                <select class="fi-sel" style="padding:.22rem .55rem;width:auto;font-size:.74rem;height:24px" onchange="rteSize(this)">
+                  <option value="3">Normal</option>
+                  <option value="1">Kecil</option>
+                  <option value="4">Besar</option>
+                  <option value="5">Sangat Besar</option>
+                </select>
+              </div>
+              <div class="rte-body" id="rte-lb" contenteditable="true" data-ph="Tuliskan latar belakang program ini, termasuk analisis pasar, kondisi kompetitor, dan alasan bisnis..."></div>
+            </div>
+          </div>
+        </div>
+        <div class="sc">
+          <div class="sc-head">
+            <div class="sc-ico">⚙️</div>
+            <div><div class="sc-ttl">Mekanisme Program</div><div class="sc-sub">Jelaskan cara kerja dan detail pelaksanaan</div></div>
+          </div>
+          <div class="sc-body">
+            <div class="rte-wrap">
+              <div class="rte-toolbar">
+                <button class="rte-btn" onclick="rteCmd2('bold',this)"><b>B</b></button>
+                <button class="rte-btn" onclick="rteCmd2('italic',this)"><i>I</i></button>
+                <button class="rte-btn" onclick="rteCmd2('underline',this)"><u>U</u></button>
+                <div class="rte-sep"></div>
+                <button class="rte-btn" onclick="rteCmd2('insertUnorderedList',this)">≡</button>
+                <button class="rte-btn" onclick="rteCmd2('insertOrderedList',this)">1.</button>
+                <div class="rte-sep"></div>
+                <button class="rte-btn" onclick="rteCmd2('justifyLeft',this)">⬅</button>
+                <button class="rte-btn" onclick="rteCmd2('justifyCenter',this)">↔</button>
+                <button class="rte-btn" onclick="rteCmd2('justifyRight',this)">➡</button>
+                <div class="rte-sep"></div>
+                <select class="fi-sel" style="padding:.22rem .55rem;width:auto;font-size:.74rem;height:24px" onchange="rteSize2(this)">
+                  <option value="3">Normal</option>
+                  <option value="1">Kecil</option>
+                  <option value="4">Besar</option>
+                  <option value="5">Sangat Besar</option>
+                </select>
+              </div>
+              <div class="rte-body" id="rte-mek" contenteditable="true" data-ph="Tuliskan mekanisme program: alur proses, syarat & ketentuan, timeline, dan target yang ingin dicapai..."></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SECTION 4: ATTACHMENT ══ -->
+      <div class="sc">
+        <div class="sc-head">
+          <div class="sc-ico">📎</div>
+          <div><div class="sc-ttl">Lampiran / Attachment</div><div class="sc-sub">Upload dokumen pendukung proposal</div></div>
+        </div>
+        <div class="sc-body">
+          <div id="attach-list">
+            <div class="attach-row" id="attach-0">
+              <div class="attach-type">Lampiran 1</div>
+              <div class="attach-file">
+                <label class="attach-choose" for="af-0">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                  Pilih File
+                </label>
+                <input type="file" id="af-0" style="display:none" onchange="setFileName(0,this)"/>
+                <span class="attach-name" id="afn-0">Belum ada file</span>
+              </div>
+              <div class="attach-actions">
+                <button class="btn btn-danger btn-ico" style="display:none" id="afdel-0" onclick="removeAttach(0)" title="Hapus">✕</button>
+              </div>
+            </div>
+            <div class="attach-row" id="attach-1">
+              <div class="attach-type">Lampiran 2</div>
+              <div class="attach-file">
+                <label class="attach-choose" for="af-1">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                  Pilih File
+                </label>
+                <input type="file" id="af-1" style="display:none" onchange="setFileName(1,this)"/>
+                <span class="attach-name" id="afn-1">Belum ada file</span>
+              </div>
+              <div class="attach-actions">
+                <button class="btn btn-danger btn-ico" style="display:none" id="afdel-1" onclick="removeAttach(1)" title="Hapus">✕</button>
+              </div>
+            </div>
+          </div>
+          <button class="btn-add-row" style="margin-top:.6rem" onclick="addAttach()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Tambah Lampiran
+          </button>
+          <div style="margin-top:.65rem;font-size:.72rem;color:var(--ink-faint)">
+            📋 Format yang diterima: PDF, DOC, DOCX, XLS, XLSX, PNG, JPG · Maks. 10MB per file
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.form-wrap -->
+  </div><!-- /#content -->
+
+  <!-- SAVE BAR -->
+  <div class="save-bar">
+    <div class="save-bar-info">
+      Total Budget: <strong id="sb-total">Rp 0</strong> &nbsp;·&nbsp; Draft tersimpan otomatis
+    </div>
+    <div class="save-btns">
+      <button class="btn btn-light btn-lg" onclick="toast('↩ Kembali ke daftar','inf')">↩ Batal</button>
+      <button class="btn btn-secondary btn-lg" onclick="toast('💾 Draft tersimpan!','inf')">💾 Simpan Draft</button>
+      <button class="btn btn-primary btn-lg" onclick="submitForm()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+        Kirim Proposal
+      </button>
+    </div>
+  </div>
+</div><!-- /.main -->
+
+<div id="toasts"></div>
+
+<script>
+'use strict';
+/* UI */
+function openSb(){document.getElementById('sb').classList.add('open');document.getElementById('sb-ov').classList.add('on');}
+function closeSb(){document.getElementById('sb').classList.remove('open');document.getElementById('sb-ov').classList.remove('on');}
+function togDD(id){document.querySelectorAll('.ddp').forEach(p=>{if(p.id!==id)p.classList.remove('on');});document.getElementById(id).classList.toggle('on');}
+document.addEventListener('click',e=>{if(!e.target.closest('.ddw'))document.querySelectorAll('.ddp').forEach(p=>p.classList.remove('on'));});
+function toast(msg,type){const tc=document.getElementById('toasts'),t=document.createElement('div');const c={ok:'t-ok',err:'t-err',inf:'t-inf'};t.className='toast '+(c[type]||'t-inf');t.innerHTML='<span>'+msg+'</span>';tc.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300);},2800);}
+
+/* Sumber dokumen radio */
+function setSumber(input){
+  document.querySelectorAll('.ri').forEach(r=>r.classList.remove('active'));
+  input.closest('.ri').classList.add('active');
+}
+
+/* Prog name label */
+function updateProgName(num, sel){
+  const el=document.getElementById('prog-name-'+num);
+  if(el)el.textContent=sel.value||'— belum diisi —';
+}
+
+/* ── REPEATABLE ITEMS ── */
+var itemCount=1;
+function addItem(){
+  itemCount++;
+  const container=document.getElementById('items-klaim');
+  const budgetContainer=document.getElementById('budget-items');
+  const n=itemCount;
+
+  const item=document.createElement('div');
+  item.className='repeat-item';item.id='item-'+n;
+  item.innerHTML=`
+    <div class="ri-head">
+      <div class="ri-title-wrap">
+        <div class="ri-num">${n}</div>
+        <div>
+          <div class="ri-title">Item Program #${n}</div>
+          <div class="ri-prog-name" id="prog-name-${n}">— belum diisi —</div>
+        </div>
+      </div>
+      <div class="ri-actions">
+        <button class="btn btn-danger btn-ico" onclick="removeItem(${n})" title="Hapus item">✕</button>
+      </div>
+    </div>
+    <div class="ri-body">
+      <div class="ff"><label class="ff-lbl">Jenis Klaim <span class="ff-req">*</span></label>
+        <select class="fi-sel" onchange="updateProgName(${n},this)">
+          <option value="">— Pilih Jenis Klaim —</option>
+          <option>Sell Out</option><option>PPL (Price Promotion List)</option>
+          <option>Insentif BA</option><option>Retur</option>
+          <option>Kompetitor</option><option>Display Fee</option><option>Listing Fee</option>
+        </select>
+      </div>
+      <div class="ff"><label class="ff-lbl">Sub Brand <span class="ff-req">*</span></label><input class="fi" type="text" placeholder="Nama sub brand / SKU..."/></div>
+      <div class="ff"><label class="ff-lbl">Keterangan</label><input class="fi" type="text" placeholder="Keterangan singkat program..."/></div>
+      <div class="ff" style="margin-bottom:0"><label class="ff-lbl">Post Budget <span class="ff-req">*</span></label>
+        <select class="fi-sel">
+          <option value="">— Pilih Post Budget —</option>
+          <option>Trade Marketing Fund</option><option>Consumer Activation</option>
+          <option>Digital Marketing</option><option>Sales Promotion</option><option>Co-op Fund</option>
+        </select>
+      </div>
+    </div>`;
+  container.appendChild(item);
+
+  // Budget item
+  const bitem=document.createElement('div');
+  bitem.className='repeat-item';bitem.id='budget-'+n;
+  bitem.innerHTML=`
+    <div class="ri-head">
+      <div class="ri-title-wrap">
+        <div class="ri-num" style="background:var(--teal)">${n}</div>
+        <div class="ri-title" id="btitle-${n}">Item Program #${n}</div>
+      </div>
+      <button class="btn btn-light btn-ico" title="Edit">✏️</button>
+    </div>
+    <div class="ri-body">
+      <div class="fg2" style="margin-bottom:.65rem">
+        <div class="ff" style="margin-bottom:0"><label class="ff-lbl">Harga Satuan <span class="ff-req">*</span></label>
+          <div class="fi-prefix-wrap"><span class="fi-prefix">Rp</span><input class="fi" type="number" id="harga-${n}" placeholder="0" min="0" oninput="calcBudget()"/></div>
+        </div>
+        <div class="ff" style="margin-bottom:0"><label class="ff-lbl">Qty <span class="ff-req">*</span></label>
+          <input class="fi" type="number" id="qty-${n}" placeholder="0" min="0" value="1" oninput="calcBudget()"/>
+        </div>
+      </div>
+      <div class="fg2">
+        <div class="ff" style="margin-bottom:0"><label class="ff-lbl">PPN (%)</label>
+          <div class="fi-prefix-wrap suf"><input class="fi" type="number" id="ppn-${n}" value="11" min="0" max="100" oninput="calcBudget()"/><span class="fi-suffix">%</span></div>
+        </div>
+        <div class="ff" style="margin-bottom:0"><label class="ff-lbl">PPh (%)</label>
+          <div class="fi-prefix-wrap suf"><input class="fi" type="number" id="pph-${n}" value="2" min="0" max="100" oninput="calcBudget()"/><span class="fi-suffix">%</span></div>
+        </div>
+      </div>
+      <div class="divider"><div class="divider-line"></div><div class="divider-txt">Sub Total Item #${n}</div><div class="divider-line"></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:.3rem 0">
+        <span style="font-size:.78rem;color:var(--ink-soft)">Subtotal (excl. tax)</span>
+        <span style="font-family:'DM Mono',monospace;font-weight:700;color:var(--cobalt-dark);font-size:.82rem" id="sub-${n}">Rp 0</span>
+      </div>
+    </div>`;
+  budgetContainer.appendChild(bitem);
+  toast('➕ Item #'+n+' ditambahkan','inf');
+  calcBudget();
+}
+
+function removeItem(n){
+  const item=document.getElementById('item-'+n);
+  const bitem=document.getElementById('budget-'+n);
+  if(item)item.remove();if(bitem)bitem.remove();
+  toast('🗑️ Item #'+n+' dihapus','inf');
+  calcBudget();
+}
+
+function editBudget(n){toast('✏️ Edit budget item #'+n,'inf');}
+
+/* ── BUDGET CALCULATION ── */
+function fmt(n){return 'Rp '+Math.round(n).toLocaleString('id-ID');}
+function calcBudget(){
+  let totalExcl=0;
+  for(let i=1;i<=itemCount;i++){
+    const h=parseFloat(document.getElementById('harga-'+i)?.value)||0;
+    const q=parseFloat(document.getElementById('qty-'+i)?.value)||0;
+    const sub=h*q;
+    totalExcl+=sub;
+    const subEl=document.getElementById('sub-'+i);
+    if(subEl)subEl.textContent=fmt(sub);
+  }
+  const ppnRate=(parseFloat(document.getElementById('ppn-1')?.value)||11)/100;
+  const pphRate=(parseFloat(document.getElementById('pph-1')?.value)||2)/100;
+  const ppnOn=document.getElementById('ppn-toggle')?.checked;
+  const pphOn=document.getElementById('pph-toggle')?.checked;
+  const ppn=ppnOn?totalExcl*ppnRate:0;
+  const pph=pphOn?totalExcl*pphRate:0;
+  const total=totalExcl+ppn-pph;
+  document.getElementById('total-excl').textContent=fmt(totalExcl);
+  document.getElementById('total-ppn').textContent=fmt(ppn);
+  document.getElementById('total-pph').textContent=fmt(pph);
+  document.getElementById('total-all').textContent=fmt(total);
+  document.getElementById('sb-total').textContent=fmt(total);
+}
+
+/* ── RICH TEXT EDITOR ── */
+function rteCmd(cmd,btn){document.getElementById('rte-lb').focus();document.execCommand(cmd,false,null);}
+function rteCmd2(cmd,btn){document.getElementById('rte-mek').focus();document.execCommand(cmd,false,null);}
+function rteSize(sel){document.getElementById('rte-lb').focus();document.execCommand('fontSize',false,sel.value);}
+function rteSize2(sel){document.getElementById('rte-mek').focus();document.execCommand('fontSize',false,sel.value);}
+
+/* ── ATTACHMENT ── */
+var attachCount=2;
+function setFileName(idx,input){
+  const fn=document.getElementById('afn-'+idx);
+  const del=document.getElementById('afdel-'+idx);
+  if(input.files[0]){fn.textContent=input.files[0].name;if(del)del.style.display='';}
+  else{fn.textContent='Belum ada file';if(del)del.style.display='none';}
+}
+function removeAttach(idx){
+  const row=document.getElementById('attach-'+idx);
+  if(row)row.remove();
+}
+function addAttach(){
+  const list=document.getElementById('attach-list');
+  const idx=attachCount++;
+  const row=document.createElement('div');row.className='attach-row';row.id='attach-'+idx;
+  row.innerHTML=`
+    <div class="attach-type">Lampiran ${idx+1}</div>
+    <div class="attach-file">
+      <label class="attach-choose" for="af-${idx}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+        Pilih File
+      </label>
+      <input type="file" id="af-${idx}" style="display:none" onchange="setFileName(${idx},this)"/>
+      <span class="attach-name" id="afn-${idx}">Belum ada file</span>
+    </div>
+    <div class="attach-actions">
+      <button class="btn btn-danger btn-ico" id="afdel-${idx}" onclick="removeAttach(${idx})" title="Hapus">✕</button>
+    </div>`;
+  list.appendChild(row);
+}
+
+/* ── SUBMIT ── */
+function submitForm(){
+  const name=document.getElementById('proj-name').value.trim();
+  if(!name){toast('⚠️ Project Name wajib diisi','err');document.getElementById('proj-name').focus();return;}
+  toast('🚀 Mengirim proposal...','inf');
+  setTimeout(()=>toast('✅ Proposal berhasil dikirim! Menunggu approval.','ok'),1400);
+}
+
+/* ── INIT ── */
+window.addEventListener('DOMContentLoaded',()=>{
+  // Set default dates
+  const today=new Date().toISOString().split('T')[0];
+  const nextMonth=new Date(Date.now()+30*86400000).toISOString().split('T')[0];
+  document.getElementById('periode-start').value=today;
+  document.getElementById('periode-end').value=nextMonth;
+});
+</script>
+</body>
+</html>

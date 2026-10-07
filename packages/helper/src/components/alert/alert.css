@@ -1,0 +1,398 @@
+/* =========================================================================
+   mono-alert — a port of Basecoat's `.alert` (basecoat-css@1.0.2, vega style).
+
+   Styled by ATTRIBUTE, like Basecoat — and the attributes mirror the element's
+   props one for one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-alert color="danger" variant="tonal" icon="i-mdi-alert-outline"
+                 title="Payment failed" subtitle="Check the card details." clearable>
+     <div mono-alert mono-color="danger" mono-variant="tonal" mono-clearable role="alert">
+       <span mono-icon><svg …></svg></span>
+       <div mono-title>Payment failed</div>
+       <div mono-subtitle>Check the card details.</div>
+       <button type="button" mono-clear aria-label="Close"><svg …></svg></button>
+     </div>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-variant])` = outline, `:not([mono-color])` = neutral).
+
+   Selector map (ours ≡ upstream):
+     [mono-alert]                           ≡ .alert (grid gap-0.5 rounded-lg border px-4 py-3 text-sm bg-card text-card-foreground)
+     [mono-alert]:has(> [mono-icon])        ≡ .alert has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2.5
+     [mono-icon]                            ≡ .alert > svg (row-span-2 translate-y-0.5 size-4 text-current)
+     [mono-title]                           ≡ .alert > :is(h2…h6, strong, [data-title]) (font-medium, col-start-2 beside an icon)
+     [mono-subtitle]                        ≡ .alert > section (text-sm text-muted-foreground text-balance)
+     [mono-body]                            ≡ EXTENSION (`slot="body"`: the whole content, across both columns)
+     [mono-clear]                           ≡ .alert > footer position (top-2.5 end-3), drawn as a ghost ✕
+     [mono-variant="outline"] (default)     ≡ .alert verbatim; with a colour ≡ .alert[data-variant='destructive'] for every hue
+     [mono-variant="tonal|solid|text"]      ≡ EXTENSION — the same four looks as mono-button
+     [mono-color="…"]                       ≡ EXTENSION (`danger` is upstream's destructive)
+     [mono-size="…"]                        ≡ EXTENSION — ONE scale factor over the md metrics (see below)
+
+   Specificity contract: a part's RESTING rule is `:where([mono-alert]) > [part]`
+   = (0,1,0), so a utility class handed in through `cssClass` wins by order;
+   variant / colour / size rules are heavier and win over it.
+
+   The shadow build renders every region and marks the empty ones [mono-empty];
+   this sheet hides them.
+
+   FLAVORS set `--mono-alert-{radius,padding-x,padding-y,font-size,
+   subtitle-font-size,subtitle-line-height,icon-size,icon-gap,icon-offset,
+   title-weight,accent-bar-width}` — the md values only: every size is a multiple
+   of md, so a flavor never has to restate a ladder (and can never leave one step
+   behind). Every fallback here is vega's value
+   (`node scripts/basecoat-styles.mjs --varying "^\.alert(?!-dialog)"`).
+   ========================================================================= */
+
+mono-alert {
+  display: block;
+}
+
+/* The ✕ hides the alert with the native `hidden` attribute; the element's own
+   `display: block` would otherwise out-rank the UA's `[hidden]`. */
+mono-alert[hidden],
+[mono-alert][hidden] {
+  display: none;
+}
+
+[mono-alert] {
+  /* ── presets, RESET on every alert ───────────────────────────────────────
+     A preset is written by a [mono-size] / [mono-color] rule on the alert that
+     has the prop — and a custom property INHERITS. An alert nested in another
+     alert's body (a supported layout) would otherwise pick up the outer one's
+     size and colour: a plain alert inside a `danger` `lg` one came out large.
+     Declaring the defaults here gives every alert its own; the qualified rules
+     are heavier and still win on the element they target. */
+  --_mono-alert-scale-preset: 1;
+  --_mono-alert-c-preset: var(--card-foreground);
+  --_mono-alert-solid-bg-preset: var(--foreground);
+  --_mono-alert-solid-fg-preset: var(--background);
+
+  /* ── the size factor: md = 1; every metric below is md × this ───────────── */
+  --_mono-alert-scale: var(--_mono-alert-scale-preset);
+
+  /* ── palette ─────────────────────────────────────────────────────────────── */
+  --_mono-alert-bg: var(--mono-alert-bg, var(--card));
+  --_mono-alert-text: var(--mono-alert-text, var(--card-foreground));
+  --_mono-alert-subtext: var(--mono-alert-subtext, var(--muted-foreground));
+  --_mono-alert-border-color: var(--mono-alert-border-color, var(--border));
+  --_mono-alert-border-width: var(--mono-alert-border-width, var(--mono-border-width));
+  /* the colour in play — the plain card ink unless a [mono-color] rule re-points it */
+  --_mono-alert-c: var(--_mono-alert-c-preset);
+  --_mono-alert-solid-bg: var(--_mono-alert-solid-bg-preset);
+  --_mono-alert-solid-fg: var(--_mono-alert-solid-fg-preset);
+
+  /* ── shape + md metrics ──────────────────────────────────────────────────
+     basecoat@1.0.2 styles/vega.css .alert — grid gap-0.5 rounded-lg border px-4 py-3 text-start text-sm has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2.5 [&>svg]:row-span-2 [&>svg]:translate-y-0.5 [&>svg]:text-current [&>svg:not([class*='size-'])]:size-4 */
+  --_mono-alert-radius: var(--mono-alert-radius, var(--mono-radius-lg));
+  --_mono-alert-padding-x: calc(var(--mono-alert-padding-x, calc(var(--mono-spacing) * 4)) * var(--_mono-alert-scale));
+  --_mono-alert-padding-y: calc(var(--mono-alert-padding-y, calc(var(--mono-spacing) * 3)) * var(--_mono-alert-scale));
+  --_mono-alert-gap: calc(var(--mono-alert-gap, calc(var(--mono-spacing) * 0.5)) * var(--_mono-alert-scale));
+  --_mono-alert-icon-gap: calc(var(--mono-alert-icon-gap, calc(var(--mono-spacing) * 2.5)) * var(--_mono-alert-scale));
+  --_mono-alert-icon-size: calc(var(--mono-alert-icon-size, calc(var(--mono-spacing) * 4)) * var(--_mono-alert-scale));
+  --_mono-alert-icon-offset: calc(var(--mono-alert-icon-offset, calc(var(--mono-spacing) * 0.5)) * var(--_mono-alert-scale));
+  --_mono-alert-font-size: calc(var(--mono-alert-font-size, var(--mono-text-sm)) * var(--_mono-alert-scale));
+  --_mono-alert-line-height: var(--mono-alert-line-height, var(--mono-text-sm--lh));
+  --_mono-alert-title-weight: var(--mono-alert-title-weight, var(--mono-font-weight-medium));
+  --_mono-alert-subtitle-font-size: calc(var(--mono-alert-subtitle-font-size, var(--mono-text-sm)) * var(--_mono-alert-scale));
+  --_mono-alert-subtitle-line-height: var(--mono-alert-subtitle-line-height, var(--mono-text-sm--lh));
+  /* sera's start-edge bar (`after:w-0.5 after:bg-foreground`); 0 everywhere else */
+  --_mono-alert-accent-bar-width: var(--mono-alert-accent-bar-width, 0px);
+  --_mono-alert-clear-size: calc(var(--mono-alert-clear-size, calc(var(--mono-spacing) * 6)) * var(--_mono-alert-scale));
+
+  /* ── the look, resolved per variant below ───────────────────────────────── */
+  --_mono-alert-surface: var(--_mono-alert-bg);
+  --_mono-alert-edge: var(--_mono-alert-border-color);
+  --_mono-alert-ink: var(--_mono-alert-text);
+  --_mono-alert-sub-ink: var(--_mono-alert-subtext);
+  --_mono-alert-bar: var(--_mono-alert-c);
+
+  position: relative;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  row-gap: var(--_mono-alert-gap);
+  width: 100%;
+  min-width: 0;
+  padding: var(--_mono-alert-padding-y) var(--_mono-alert-padding-x);
+  border: var(--_mono-alert-border-width) solid var(--_mono-alert-edge);
+  border-radius: var(--_mono-alert-radius);
+  background-color: var(--_mono-alert-surface);
+  color: var(--_mono-alert-ink);
+  font-size: var(--_mono-alert-font-size);
+  line-height: var(--_mono-alert-line-height);
+  text-align: start;
+}
+
+/* sera — `relative after:-inset-y-px after:-start-px after:w-0.5 after:absolute
+   after:bg-foreground` (destructive: after:bg-destructive). Zero-width elsewhere. */
+[mono-alert]::after {
+  content: '';
+  position: absolute;
+  inset-block: calc(var(--_mono-alert-border-width) * -1);
+  inset-inline-start: calc(var(--_mono-alert-border-width) * -1);
+  width: var(--_mono-alert-accent-bar-width);
+  background: var(--_mono-alert-bar);
+  pointer-events: none;
+}
+
+/* basecoat@1.0.2 components/alert.css .alert — relative w-full (the icon column
+   below is vega's `has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2.5`) */
+[mono-alert]:has(> [mono-icon]:not([mono-empty])) {
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--_mono-alert-icon-gap);
+}
+
+/* The shadow build renders every region and marks the empty ones. A child
+   combinator, so a nested component's own regions inside the body are left alone. */
+[mono-alert] > :is([mono-icon], [mono-title], [mono-subtitle], [mono-body])[mono-empty] {
+  display: none;
+}
+
+/* =========================================
+   Icon — `[&>svg]:row-span-2 translate-y-0.5 text-current size-4`
+   ========================================= */
+
+:where([mono-alert]) > [mono-icon] {
+  grid-row: span 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-alert-icon-size);
+  height: var(--_mono-alert-icon-size);
+  translate: 0 var(--_mono-alert-icon-offset);
+  color: currentColor;
+  line-height: 1;
+}
+
+/* Whatever paints the glyph fills the box: an inline svg (raw markup, a slotted
+   svg, the shadow build's bundled glyph) or the light build's iconify span.
+   Two attributes strong ON PURPOSE — UnoCSS's `i-*` sets width/height at (0,1,0)
+   and loads later — and scoped to the alert (a bare `[mono-glyph]` rule is global
+   and would resize every component's glyph).
+
+   DESCENDANT, not `>`: in the shadow build the glyph is the FALLBACK of
+   `<slot name="icon">`, so the tree is [mono-icon] > slot > [mono-glyph] > svg.
+   A child combinator never matched it and the icon measured 0 × 0. (The slot is
+   `display: contents`, so the glyph is still the box's flex item.) */
+[mono-alert] > [mono-icon] :is(svg, img, [mono-glyph]) {
+  display: block;
+  width: 100%;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+/* the light build's placeholder is invisible to layout, so the svg sizes against
+   the icon box, not against a zero-width span */
+[mono-alert] > [mono-icon] > [data-mono-slot='icon'] {
+  display: contents;
+}
+
+[mono-alert] > [mono-icon] slot::slotted(:is(svg, img, span)) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* =========================================
+   Title + subtitle
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .alert > :is(h2, h3, h4, h5, h6, strong, [data-title]), .alert[data-variant='destructive'] > :is(h2, h3, h4, h5, h6, strong, [data-title]) — font-medium
+   basecoat@1.0.2 components/alert.css .alert > :is(h2, h3, h4, h5, h6, strong, [data-title]) — min-h-4 */
+:where([mono-alert]) > [mono-title] {
+  min-height: var(--_mono-alert-icon-size);
+  margin: 0;
+  font-size: var(--_mono-alert-font-size);
+  line-height: var(--_mono-alert-line-height);
+  font-weight: var(--_mono-alert-title-weight);
+  color: inherit;
+}
+
+/* basecoat@1.0.2 styles/vega.css .alert > section — text-muted-foreground text-sm text-balance md:text-pretty */
+:where([mono-alert]) > [mono-subtitle] {
+  margin: 0;
+  font-size: var(--_mono-alert-subtitle-font-size);
+  line-height: var(--_mono-alert-subtitle-line-height);
+  color: var(--_mono-alert-sub-ink);
+  text-wrap: pretty;
+}
+
+/* basecoat@1.0.2 styles/vega.css .alert:has(> svg) > :is(h2, h3, h4, h5, h6, strong, [data-title]) — col-start-2 */
+[mono-alert]:has(> [mono-icon]:not([mono-empty])) > :is([mono-title], [mono-subtitle]) {
+  grid-column-start: 2;
+}
+
+/* Raw markup puts the region attribute ON a prose tag, which a host page styles
+   by tag through a class selector (`.vp-doc h3`, (0,1,1)) — restate the type and
+   margin at (0,2,1) so the tag reads like the element's <div>. */
+[mono-alert] > :is(h1, h2, h3, h4, h5, h6, p, strong)[mono-title] {
+  margin: 0;
+  font-size: var(--_mono-alert-font-size);
+  line-height: var(--_mono-alert-line-height);
+  font-weight: var(--_mono-alert-title-weight);
+}
+
+[mono-alert] > :is(h1, h2, h3, h4, h5, h6, p, strong)[mono-subtitle] {
+  margin: 0;
+  font-size: var(--_mono-alert-subtitle-font-size);
+  line-height: var(--_mono-alert-subtitle-line-height);
+}
+
+/* =========================================
+   Body — `slot="body"` / unslotted children: the whole content, both columns
+   ========================================= */
+
+:where([mono-alert]) > [mono-body] {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+/* basecoat@1.0.2 components/alert.css .alert > section >> :where(p, ul, ol) — m-0
+   basecoat@1.0.2 components/alert.css .alert > section >> :where(p, ul, ol):not(:last-child) — mb-4 */
+:where([mono-alert]) > [mono-body] :where(p, ul, ol) {
+  margin: 0;
+}
+
+:where([mono-alert]) > [mono-body] :where(p, ul, ol):not(:last-child) {
+  margin-bottom: calc(var(--mono-spacing) * 4);
+}
+
+/* =========================================
+   The ✕ — a ghost icon button at the top end, centred on the icon's line
+   basecoat@1.0.2 styles/vega.css .alert > footer, .alert[data-variant='destructive'] > footer — top-2.5 end-3
+   basecoat@1.0.2 components/alert.css .alert:has(> footer) — pe-[4.5rem] (here: just the button's room)
+   ========================================= */
+
+[mono-alert][mono-clearable] {
+  padding-inline-end: calc(var(--_mono-alert-padding-x) + var(--_mono-alert-clear-size));
+}
+
+:where([mono-alert]) > [mono-clear] {
+  position: absolute;
+  top: calc(
+    var(--_mono-alert-padding-y) + var(--_mono-alert-icon-offset) +
+      (var(--_mono-alert-icon-size) - var(--_mono-alert-clear-size)) / 2
+  );
+  inset-inline-end: calc(var(--_mono-alert-padding-x) - (var(--_mono-alert-clear-size) - var(--_mono-alert-icon-size)) / 2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-alert-clear-size);
+  height: var(--_mono-alert-clear-size);
+  padding: 0;
+  border: 0;
+  border-radius: var(--mono-radius-md);
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  transition:
+    opacity var(--mono-duration-fast, 100ms) var(--mono-ease),
+    background-color var(--mono-duration-fast, 100ms) var(--mono-ease);
+}
+
+:where([mono-alert]) > [mono-clear] > svg {
+  width: var(--_mono-alert-icon-size);
+  height: var(--_mono-alert-icon-size);
+}
+
+@media (hover: hover) {
+  :where([mono-alert]) > [mono-clear]:hover {
+    opacity: 1;
+    background-color: color-mix(in oklab, currentColor 10%, transparent);
+  }
+}
+
+:where([mono-alert]) > [mono-clear]:focus-visible {
+  opacity: 1;
+  outline: none;
+  box-shadow: 0 0 0 var(--mono-ring-width) color-mix(in oklab, var(--ring) var(--mono-ring-alpha), transparent);
+}
+
+/* =========================================
+   Sizes — one factor over the md metrics (md = 1, the unqualified root)
+   ========================================= */
+
+[mono-alert][mono-size='xs'] { --_mono-alert-scale-preset: 0.8; }
+[mono-alert][mono-size='sm'] { --_mono-alert-scale-preset: 0.9; }
+[mono-alert][mono-size='lg'] { --_mono-alert-scale-preset: 1.1; }
+[mono-alert][mono-size='xl'] { --_mono-alert-scale-preset: 1.25; }
+[mono-alert][mono-size='xxl'] { --_mono-alert-scale-preset: 1.4; }
+
+/* =========================================
+   Colours — `danger` is upstream's destructive; `secondary` is the grey
+   SURFACE pair (its ink is the foreground, its solid plate the surface)
+   ========================================= */
+
+[mono-alert][mono-color='primary'] { --_mono-alert-c-preset: var(--primary); --_mono-alert-solid-bg-preset: var(--primary); --_mono-alert-solid-fg-preset: var(--primary-foreground); }
+[mono-alert][mono-color='secondary'] { --_mono-alert-c-preset: var(--secondary-foreground); --_mono-alert-solid-bg-preset: var(--secondary); --_mono-alert-solid-fg-preset: var(--secondary-foreground); }
+[mono-alert][mono-color='success'] { --_mono-alert-c-preset: var(--success); --_mono-alert-solid-bg-preset: var(--success); --_mono-alert-solid-fg-preset: var(--success-foreground); }
+[mono-alert][mono-color='danger'] { --_mono-alert-c-preset: var(--destructive); --_mono-alert-solid-bg-preset: var(--destructive); --_mono-alert-solid-fg-preset: var(--destructive-foreground); }
+[mono-alert][mono-color='warning'] { --_mono-alert-c-preset: var(--warning); --_mono-alert-solid-bg-preset: var(--warning); --_mono-alert-solid-fg-preset: var(--warning-foreground); }
+[mono-alert][mono-color='info'] { --_mono-alert-c-preset: var(--info); --_mono-alert-solid-bg-preset: var(--info); --_mono-alert-solid-fg-preset: var(--info-foreground); }
+[mono-alert][mono-color='teal'] { --_mono-alert-c-preset: var(--teal); --_mono-alert-solid-bg-preset: var(--teal); --_mono-alert-solid-fg-preset: var(--teal-foreground); }
+[mono-alert][mono-color='purple'] { --_mono-alert-c-preset: var(--purple); --_mono-alert-solid-bg-preset: var(--purple); --_mono-alert-solid-fg-preset: var(--purple-foreground); }
+[mono-alert][mono-color='neutral'] { --_mono-alert-c-preset: var(--neutral); --_mono-alert-solid-bg-preset: var(--neutral); --_mono-alert-solid-fg-preset: var(--neutral-foreground); }
+[mono-alert][mono-color='dark'] { --_mono-alert-c-preset: var(--dark); --_mono-alert-solid-bg-preset: var(--dark); --_mono-alert-solid-fg-preset: var(--dark-foreground); }
+
+/* =========================================
+   Variants — each resolves surface / edge / ink / sub-ink
+   ========================================= */
+
+/* outline (default) WITH a colour —
+   basecoat@1.0.2 styles/vega.css .alert[data-variant='destructive'] — text-destructive bg-card [&>svg]:text-current
+   basecoat@1.0.2 styles/vega.css .alert[data-variant='destructive'] > section — text-destructive/90
+   generalised to every hue; the edge picks up the hue too (EXTENSION), mixed into
+   --border so it follows the mode. Without a colour it is `.alert` verbatim. */
+[mono-alert][mono-color]:is(:not([mono-variant]), [mono-variant='outline']) {
+  --_mono-alert-edge: color-mix(in oklab, var(--_mono-alert-c) 45%, var(--_mono-alert-border-color));
+  --_mono-alert-ink: var(--_mono-alert-c);
+  --_mono-alert-sub-ink: color-mix(in oklab, var(--_mono-alert-c) 90%, transparent);
+}
+
+/* tonal — the hue tinted over the card (chip `soft` / card `tonal`); dark mode
+   deepens the tint through --mono-mode-tint */
+[mono-alert][mono-variant='tonal'] {
+  --_mono-alert-surface: color-mix(in oklab, var(--_mono-alert-c) var(--mono-mode-tint), var(--_mono-alert-bg));
+  --_mono-alert-edge: transparent;
+  --_mono-alert-ink: var(--_mono-alert-c);
+  --_mono-alert-sub-ink: color-mix(in oklab, var(--_mono-alert-c) 90%, transparent);
+}
+
+/* solid — the hue as the plate */
+[mono-alert][mono-variant='solid'] {
+  --_mono-alert-surface: var(--_mono-alert-solid-bg);
+  --_mono-alert-edge: transparent;
+  --_mono-alert-ink: var(--_mono-alert-solid-fg);
+  --_mono-alert-sub-ink: color-mix(in oklab, var(--_mono-alert-solid-fg) 90%, transparent);
+  --_mono-alert-bar: var(--_mono-alert-solid-fg);
+}
+
+/* text — no plate, no edge: an inline notice in the hue */
+[mono-alert][mono-variant='text'] {
+  --_mono-alert-surface: transparent;
+  --_mono-alert-edge: transparent;
+  --_mono-alert-ink: var(--_mono-alert-c);
+  --_mono-alert-sub-ink: color-mix(in oklab, var(--_mono-alert-c) 90%, transparent);
+}
+
+/* =========================================
+   Stacking — consecutive visible alerts keep a gap; a hidden (✕-ed) one takes
+   no room, so the rest move up. `[mono-alert-group]` lays them out itself.
+   ========================================= */
+
+:where(mono-alert, mono-shadow-alert, [mono-alert]):not([hidden]) ~ :where(mono-alert, mono-shadow-alert, [mono-alert]):not([hidden]) {
+  margin-block-start: var(--mono-alert-stack-gap, calc(var(--mono-spacing) * 3));
+}
+
+[mono-alert-group] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mono-alert-group-gap, calc(var(--mono-spacing) * 3));
+}
+
+[mono-alert-group] > :is(mono-alert, mono-shadow-alert, [mono-alert]) {
+  margin-block-start: 0;
+}

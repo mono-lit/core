@@ -1,0 +1,619 @@
+/* =========================================================================
+   mono-input — a port of Basecoat's `.field` / `.input-group` / `.label`
+   (basecoat-css@1.0.2, vega style).
+
+   Styled by ATTRIBUTE, like Basecoat (`.input-group:has([aria-invalid])`) —
+   and the attributes mirror the element's props one for one, so hand-written
+   markup reads like the Lit / Vue tag:
+
+     <mono-input size="sm" color="danger" variant="filled" label="Name">
+     <div mono-input mono-size="sm" mono-color="danger" mono-variant="filled">
+       <label mono-label>Name</label>
+       <div mono-field><input mono-native></div>
+     </div>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-color])` = primary, `:not([mono-variant])` = outlined,
+   `:not([mono-validation-state])` = default). The element renders these
+   attributes on its wrapper (both builds); the old classes
+   (`.mono-input.sm.danger.filled`) are still emitted as inert hooks for
+   consumer CSS until 2.0 but no rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-input]                                  ≡ .field            (flex column, gap-3)
+     [mono-input] > [mono-label]                   ≡ .field > label / .label
+     [mono-input] > [mono-field]                   ≡ .input-group      (the bordered box: h-9 rounded-md border-input shadow-xs)
+     [mono-field] > [mono-native]                  ≡ .input-group > input (borderless, px-2.5 text-sm; `.input` for the metrics)
+     [mono-field] > [mono-prefix|mono-suffix]      ≡ .input-group > span[data-align='start'|'end']
+     [mono-field] > [mono-clear]                   ≡ .input-group > button[data-align='end']:has(> svg)
+     [mono-input] > [mono-message-wrap]            ≡ .field > p
+     [mono-message="helper"]                       ≡ .field > p        (text-sm text-muted-foreground)
+     [mono-message="invalid"]                      ≡ .field [role='alert']
+     [mono-validation-state="invalid"]             ≡ .input-group:has([aria-invalid=true]) + .field[data-invalid]
+     [mono-validation-state="valid|warning"]       ≡ EXTENSION (the invalid pattern with --success / --warning)
+     [mono-size="xs|sm|lg|xl|xxl"]                 ≡ EXTENSION (Basecoat sizes only the select; the ladder is --mono-control-height-*)
+     [mono-variant="filled"]                       ≡ EXTENSION (luma's .input-group: border-transparent bg-input/50, ring-ring/30)
+     [mono-variant="underlined"]                   ≡ EXTENSION (sera's .input-group: rounded-none border-b-input px-0, no ring)
+     [mono-disabled] / [mono-native]:disabled      ≡ .input-group:has(input:disabled) — opacity-50
+     [mono-readonly]                               ≡ EXTENSION (a muted surface)
+
+   Specificity contract (same as the pre-port class sheet, and as checkbox.css):
+   a part's RESTING rule is written `:where([mono-input]) [mono-part]` = exactly
+   one attribute, (0,1,0) — so a utility class composed onto the markup (the
+   `cssClass` prop, or a hand-written class in a css/ demo) wins by source order,
+   while the prop and state rules ([mono-size], [mono-variant], [mono-disabled],
+   :focus-within, [aria-invalid], …) stay heavier and still win over it.
+
+   Inner parts are attributes too: [mono-label] (+ [mono-required-mark]),
+   [mono-field], [mono-prefix] / [mono-suffix] (+ [mono-empty] in the shadow
+   build for an unassigned slot), [mono-native], [mono-clear] > [mono-icon],
+   [mono-message-wrap] > [mono-message="helper|valid|invalid|warning"].
+
+   Values are copied from the compiled vendor sheet (vendor/basecoat/basecoat-
+   vega.cdn.css) through the token layer: `--spacing` → `--mono-spacing`,
+   `--text-sm` → `--mono-text-sm`, `--radius-md` → `--mono-radius-md`,
+   `--color-x` → `--x`, Tailwind's `--tw-ring-*` stack → the two-slot
+   `box-shadow: ring, shadow` below, and every `dark:` variant → a
+   `--mono-mode-*` token (a selector cannot cross a shadow boundary; an
+   inherited custom property can).
+
+   FLAVORS (Basecoat's other seven styles, src/data/theme/flavors/*.css) set
+   the knobs read below — `--mono-input-radius`, `--mono-input-padding-x-<size>`,
+   `--mono-input-font-<size>`, `--mono-input-line-height`, `--mono-input-ring-width`,
+   `--mono-input-ring-alpha`, `--mono-input-gap`, `--mono-input-affix-*`,
+   `--mono-input-label-*`, `--mono-input-message-*`, `--mono-input-clear-radius`,
+   `--mono-input-disabled-bg`, and the outline-variant set `--mono-input-outline-
+   {bg,border-color,side-border-color,shadow,ring-width,radius,padding-x,affix-padding}`.
+   Every fallback here is vega's value
+   (`node scripts/basecoat-styles.mjs --varying "^\.(field|label|input|input-group)\b"`).
+
+   The public `--mono-input-*` knobs and the three-tier resolver
+   (`--mono-input-x` → `--_mono-input-x-preset` → base) are unchanged: a
+   colour / variant attribute only ever writes a `*-preset` slot, so a
+   consumer's own `--mono-input-bg` on the host still wins.
+   ========================================================================= */
+
+mono-input {
+  display: block;
+}
+
+[mono-input] {
+  /* ── palette: each slot is a public knob over a Basecoat token ─────────── */
+  --_mono-input-text: var(--mono-input-color, var(--mono-input-text, var(--foreground)));
+  --_mono-input-placeholder: var(--mono-input-placeholder, var(--muted-foreground));
+  --_mono-input-muted: var(--mono-input-muted, var(--muted-foreground));
+  /* the `color` prop picks the FOCUS colour; primary is Basecoat's `--ring` */
+  --_mono-input-primary: var(--mono-input-primary, var(--ring));
+  --_mono-input-secondary: var(--mono-input-secondary, var(--muted-foreground));
+  --_mono-input-success: var(--mono-input-success, var(--success));
+  --_mono-input-danger: var(--mono-input-danger, var(--destructive));
+  --_mono-input-warning: var(--mono-input-warning, var(--warning));
+  --_mono-input-info: var(--mono-input-info, var(--info));
+  --_mono-input-teal: var(--mono-input-teal, var(--teal));
+  --_mono-input-purple: var(--mono-input-purple, var(--purple));
+  --_mono-input-neutral: var(--mono-input-neutral, var(--neutral));
+  --_mono-input-dark: var(--mono-input-dark, var(--dark));
+  --_mono-input-valid: var(--mono-input-valid, var(--success));
+  --_mono-input-invalid: var(--mono-input-invalid, var(--destructive));
+
+  /* ── the painted result — three tiers, base = .input-group (vega) ──────── */
+  --_mono-input-ring-color: var(--mono-input-ring-color, var(--mono-input-focus-color, var(--_mono-input-ring-color-preset, var(--_mono-input-primary))));
+  --_mono-input-ring-width: var(--mono-input-ring-width, var(--_mono-input-ring-width-preset, var(--mono-ring-width)));
+  --_mono-input-ring-alpha: var(--mono-input-ring-alpha, var(--mono-ring-alpha));
+  --_mono-input-border-color: var(--mono-input-rest-border, var(--mono-input-border-color, var(--_mono-input-border-color-preset, var(--input))));
+  --_mono-input-bg: var(--mono-input-bg, var(--mono-input-surface, var(--_mono-input-bg-preset, var(--mono-mode-surface))));
+  --_mono-input-shadow: var(--mono-input-shadow, var(--_mono-input-shadow-preset, 0 0 #0000));
+  --_mono-input-affix-padding: var(--mono-input-affix-padding, var(--_mono-input-affix-padding-preset, calc(var(--mono-spacing) * 2)));
+  --_mono-input-affix-icon: var(--mono-input-affix-icon-size, calc(var(--mono-spacing) * 4));
+
+  /* ── md metrics live on the unqualified root ON PURPOSE: hand-written
+        `<div mono-input>` that names no size renders exactly like size="md".
+        basecoat@1.0.2 styles/vega.css .input-group — h-9 rounded-md; > input px-2.5 text-sm ── */
+  --_mono-input-height: var(--mono-input-height-md, var(--mono-control-height-md));
+  --_mono-input-radius: var(--mono-input-radius-md, var(--_mono-input-radius-preset, var(--mono-input-radius, var(--mono-radius-md))));
+  --_mono-input-padding-x: var(--mono-input-padding-x-md, var(--_mono-input-padding-x-preset, calc(var(--mono-spacing) * 2.5)));
+  --_mono-input-font-size: var(--mono-input-font-md, var(--mono-text-sm));
+  --_mono-input-line-height: var(--mono-input-line-height, var(--mono-input-line-height-md, var(--mono-text-sm--lh)));
+  --_mono-input-clear: calc(var(--mono-spacing) * 6);
+  --_mono-input-clear-glyph: calc(var(--mono-spacing) * 3.5);
+
+  /* basecoat@1.0.2 styles/vega.css .field — flex w-full flex-col gap-3 */
+  display: flex;
+  flex-direction: column;
+  gap: var(--mono-input-gap, calc(var(--mono-spacing) * 3));
+  width: 100%;
+  font-family: inherit;
+  color: var(--_mono-input-text);
+}
+
+/* A page-level `* { box-sizing: border-box }` reset does NOT cross a shadow
+   boundary; scoped here so both builds measure the same. */
+[mono-input],
+:where([mono-input]) *,
+:where([mono-input]) *::before,
+:where([mono-input]) *::after {
+  box-sizing: border-box;
+}
+
+/* The shadow build renders every slot wrapper and marks an unassigned one
+   `mono-empty`; the light build simply omits it. Inert in the light build. */
+:where([mono-input]) :is([mono-label], [mono-prefix], [mono-suffix], [mono-message])[mono-empty] {
+  display: none;
+}
+
+/* =========================================
+   Sizes — the field's painted height IS the token (tests/perf/field-heights).
+   EXTENSION: Basecoat sizes only its select (data-size=sm); the ladder is the
+   shared --mono-control-height-* scale and the text follows .btn's steps.
+   ========================================= */
+
+/* `.input` is text-base under 48rem (no iOS zoom) and md:text-sm above it —
+   vendor behaviour, kept for the default size only. */
+@media (width < 48rem) {
+  [mono-input]:is(:not([mono-size]), [mono-size="md"]) {
+    --_mono-input-font-size: var(--mono-input-font-md, var(--mono-text-base));
+    --_mono-input-line-height: var(--mono-input-line-height, var(--mono-input-line-height-md, var(--mono-text-base--lh)));
+  }
+}
+
+[mono-input][mono-size="xs"] {
+  --_mono-input-height: var(--mono-input-height-xs, var(--mono-control-height-xs));
+  --_mono-input-radius: var(--mono-input-radius-xs, var(--_mono-input-radius-preset, var(--mono-input-radius, var(--mono-radius-md))));
+  --_mono-input-padding-x: var(--mono-input-padding-x-xs, var(--_mono-input-padding-x-preset, calc(var(--mono-spacing) * 2)));
+  --_mono-input-font-size: var(--mono-input-font-xs, var(--mono-text-xs));
+  --_mono-input-line-height: var(--mono-input-line-height, var(--mono-input-line-height-xs, var(--mono-text-xs--lh)));
+  --_mono-input-affix-icon: var(--mono-input-affix-icon-size, calc(var(--mono-spacing) * 3.5));
+  --_mono-input-clear: calc(var(--mono-spacing) * 4);
+  --_mono-input-clear-glyph: calc(var(--mono-spacing) * 3);
+}
+
+[mono-input][mono-size="sm"] {
+  --_mono-input-height: var(--mono-input-height-sm, var(--mono-control-height-sm));
+  --_mono-input-radius: var(--mono-input-radius-sm, var(--_mono-input-radius-preset, var(--mono-input-radius, var(--mono-radius-md))));
+  --_mono-input-padding-x: var(--mono-input-padding-x-sm, var(--_mono-input-padding-x-preset, calc(var(--mono-spacing) * 2.5)));
+  --_mono-input-font-size: var(--mono-input-font-sm, var(--mono-input-font-md, var(--mono-text-sm)));
+  --_mono-input-line-height: var(--mono-input-line-height, var(--mono-input-line-height-sm, var(--mono-text-sm--lh)));
+  --_mono-input-clear: calc(var(--mono-spacing) * 5);
+  --_mono-input-clear-glyph: calc(var(--mono-spacing) * 3.5);
+}
+
+[mono-input][mono-size="lg"] {
+  --_mono-input-height: var(--mono-input-height-lg, var(--mono-control-height-lg));
+  --_mono-input-radius: var(--mono-input-radius-lg, var(--_mono-input-radius-preset, var(--mono-input-radius, var(--mono-radius-md))));
+  --_mono-input-padding-x: var(--mono-input-padding-x-lg, var(--_mono-input-padding-x-preset, calc(var(--mono-spacing) * 2.5)));
+  --_mono-input-font-size: var(--mono-input-font-lg, var(--mono-input-font-md, var(--mono-text-sm)));
+  --_mono-input-line-height: var(--mono-input-line-height, var(--mono-input-line-height-lg, var(--mono-text-sm--lh)));
+}
+
+[mono-input][mono-size="xl"] {
+  --_mono-input-height: var(--mono-input-height-xl, var(--mono-control-height-xl));
+  --_mono-input-radius: var(--mono-input-radius-xl, var(--_mono-input-radius-preset, var(--mono-input-radius, var(--mono-radius-md))));
+  --_mono-input-padding-x: var(--mono-input-padding-x-xl, var(--_mono-input-padding-x-preset, calc(var(--mono-spacing) * 3)));
+  --_mono-input-font-size: var(--mono-input-font-xl, var(--mono-text-base));
+  --_mono-input-line-height: var(--mono-input-line-height, var(--mono-input-line-height-xl, var(--mono-text-base--lh)));
+  --_mono-input-affix-icon: var(--mono-input-affix-icon-size, calc(var(--mono-spacing) * 5));
+  --_mono-input-clear: calc(var(--mono-spacing) * 7);
+  --_mono-input-clear-glyph: calc(var(--mono-spacing) * 4);
+}
+
+[mono-input][mono-size="xxl"] {
+  --_mono-input-height: var(--mono-input-height-xxl, var(--mono-control-height-xxl));
+  --_mono-input-radius: var(--mono-input-radius-xxl, var(--_mono-input-radius-preset, var(--mono-input-radius, var(--mono-radius-md))));
+  --_mono-input-padding-x: var(--mono-input-padding-x-xxl, var(--_mono-input-padding-x-preset, calc(var(--mono-spacing) * 4)));
+  --_mono-input-font-size: var(--mono-input-font-xxl, var(--mono-text-lg));
+  --_mono-input-line-height: var(--mono-input-line-height, var(--mono-input-line-height-xxl, var(--mono-text-lg--lh)));
+  --_mono-input-affix-icon: var(--mono-input-affix-icon-size, calc(var(--mono-spacing) * 5));
+  --_mono-input-clear: calc(var(--mono-spacing) * 8);
+  --_mono-input-clear-glyph: calc(var(--mono-spacing) * 4);
+}
+
+/* =========================================
+   Variants — each writes only `*-preset` slots
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .input-group — rounded-md border border-input
+   shadow-xs, bg-transparent (dark:bg-input/30 via --mono-mode-surface). The
+   `--mono-input-outline-*` knobs are how a flavor restyles THIS variant alone
+   (maia bg-input/30, luma / rhea border-transparent bg-input/50, sera the
+   underline) without touching filled / underlined. */
+[mono-input]:is(:not([mono-variant]), [mono-variant="outlined"]) {
+  --_mono-input-bg-preset: var(--mono-input-outline-bg);
+  --_mono-input-border-color-preset: var(--mono-input-outline-border-color);
+  --_mono-input-side-border-color-preset: var(--mono-input-outline-side-border-color);
+  --_mono-input-shadow-preset: var(--mono-input-outline-shadow, var(--mono-shadow-xs));
+  --_mono-input-ring-width-preset: var(--mono-input-outline-ring-width);
+  --_mono-input-radius-preset: var(--mono-input-outline-radius);
+  --_mono-input-padding-x-preset: var(--mono-input-outline-padding-x);
+  --_mono-input-affix-padding-preset: var(--mono-input-outline-affix-padding);
+}
+
+/* EXTENSION — filled ≡ basecoat@1.0.2 styles/luma.css .input-group:
+   border-transparent bg-input/50, no shadow-xs (the ring stays) */
+[mono-input][mono-variant="filled"] {
+  --_mono-input-bg-preset: var(--mono-input-filled-bg, color-mix(in oklab, var(--input) 50%, transparent));
+  --_mono-input-border-color-preset: transparent;
+  --_mono-input-shadow-preset: 0 0 #0000;
+}
+
+/* EXTENSION — underlined ≡ basecoat@1.0.2 styles/sera.css .input-group:
+   rounded-none border-transparent border-b-input bg-transparent px-0, no
+   shadow, no ring, focus-within:border-b-ring, has-[aria-invalid]:border-b-destructive.
+   Only the bottom edge paints; the sides are transparent in every state. */
+[mono-input][mono-variant="underlined"] {
+  --_mono-input-bg-preset: transparent;
+  --_mono-input-side-border-color-preset: transparent;
+  --_mono-input-shadow-preset: 0 0 #0000;
+  --_mono-input-ring-width-preset: 0px;
+  --_mono-input-radius-preset: 0;
+  --_mono-input-padding-x-preset: 0;
+  --_mono-input-affix-padding-preset: 0;
+}
+
+/* =========================================
+   Colours — the `color` prop is the FOCUS colour (ring + focused border).
+   No resting tint: Basecoat fields rest on --input whatever their role.
+   ========================================= */
+
+[mono-input]:is(:not([mono-color]), [mono-color="primary"]) {
+  --_mono-input-ring-color-preset: var(--_mono-input-primary);
+}
+[mono-input][mono-color="secondary"] {
+  --_mono-input-ring-color-preset: var(--_mono-input-secondary);
+}
+[mono-input][mono-color="success"] {
+  --_mono-input-ring-color-preset: var(--_mono-input-success);
+}
+[mono-input][mono-color="danger"] {
+  --_mono-input-ring-color-preset: var(--_mono-input-danger);
+}
+[mono-input][mono-color="warning"] {
+  --_mono-input-ring-color-preset: var(--_mono-input-warning);
+}
+[mono-input][mono-color="info"] {
+  --_mono-input-ring-color-preset: var(--_mono-input-info);
+}
+[mono-input][mono-color="teal"] {
+  --_mono-input-ring-color-preset: var(--_mono-input-teal);
+}
+[mono-input][mono-color="purple"] {
+  --_mono-input-ring-color-preset: var(--_mono-input-purple);
+}
+[mono-input][mono-color="neutral"] {
+  --_mono-input-ring-color-preset: var(--_mono-input-neutral);
+}
+[mono-input][mono-color="dark"] {
+  --_mono-input-ring-color-preset: var(--_mono-input-dark);
+}
+
+/* =========================================
+   Label
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .field > label, .label — flex items-center
+   gap-2 text-sm leading-none font-medium select-none w-fit */
+:where([mono-input]) > [mono-label] {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  gap: var(--mono-input-label-gap, calc(var(--mono-spacing) * 2));
+  font-size: var(--mono-input-label-font-size, var(--mono-text-sm));
+  line-height: var(--mono-input-label-line-height, 1);
+  font-weight: var(--mono-input-label-font-weight, var(--mono-label-font-weight, var(--mono-font-weight-medium)));
+  text-transform: var(--mono-input-label-text-transform, none);
+  letter-spacing: var(--mono-input-label-letter-spacing, normal);
+  color: var(--_mono-input-text);
+  user-select: none;
+}
+
+/* in-data-[disabled=true]:opacity-50 / peer-disabled:opacity-50 */
+[mono-input][mono-disabled] > [mono-label],
+[mono-input]:has(> [mono-field] > [mono-native]:disabled) > [mono-label] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* basecoat@1.0.2 styles/vega.css .field — data-invalid:text-destructive */
+[mono-input][mono-validation-state="invalid"] > [mono-label],
+[mono-input]:has(> [mono-field] > [mono-native][aria-invalid="true"]) > [mono-label] {
+  color: var(--_mono-input-invalid);
+}
+
+/* EXTENSION — the required asterisk */
+:where([mono-input]) [mono-required-mark] {
+  color: var(--_mono-input-danger);
+}
+
+/* =========================================
+   The field — the bordered box
+   ========================================= */
+
+/* basecoat@1.0.2 components/input-group.css .input-group */
+/* basecoat@1.0.2 styles/vega.css .input-group — h-9 rounded-md border
+   border-input shadow-xs transition-[color,box-shadow] focus-within:border-ring
+   focus-within:ring-3 focus-within:ring-ring/50; mono: `--tw-ring-*` flattened to
+   the ring + shadow slots, the height is the control token, and the side
+   edges read their own slot so a flavor can keep only the bottom one */
+:where([mono-input]) > [mono-field] {
+  --_mono-input-bc: var(--_mono-input-border-color);
+  --_mono-input-side-bc: var(--mono-input-side-border-color, var(--_mono-input-side-border-color-preset, var(--_mono-input-bc)));
+  /* The focus / state ring slot — `0 0 #0000` until a state sets it. Kept as a
+     slot so a variant can neutralise the resting shadow without ever writing
+     `box-shadow: none` (which would out-specify the ring). */
+  --_mono-input-ring: 0 0 #0000;
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--_mono-input-height);
+  outline-style: none;
+  border: var(--mono-border-width) solid var(--_mono-input-bc);
+  border-top-color: var(--_mono-input-side-bc);
+  border-inline-color: var(--_mono-input-side-bc);
+  border-radius: var(--_mono-input-radius);
+  background: var(--_mono-input-bg);
+  color: var(--_mono-input-text);
+  box-shadow: var(--_mono-input-ring), var(--_mono-input-shadow);
+  transition-property: color, box-shadow, border-color, background-color;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+
+  /* focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 */
+  &:focus-within {
+    --_mono-input-bc: var(--_mono-input-ring-color);
+    --_mono-input-ring: 0 0 0 var(--_mono-input-ring-width) color-mix(in oklab, var(--_mono-input-ring-color) var(--_mono-input-ring-alpha), transparent);
+  }
+}
+
+/* basecoat@1.0.2 styles/vega.css .input-group — has-[[aria-invalid=true]]:border-destructive
+   has-[[aria-invalid=true]]:ring-3 has-[[aria-invalid=true]]:ring-destructive/20
+   (dark: border /50, ring /40 — carried by the mode tokens). The ring is
+   permanent, and it wins over the focus ring — same as the vendor order. */
+[mono-input][mono-validation-state="invalid"] > [mono-field],
+:where([mono-input]) > [mono-field]:has(> [mono-native][aria-invalid="true"]) {
+  --_mono-input-bc: var(--mono-mode-invalid-border);
+  --_mono-input-ring: 0 0 0 var(--_mono-input-ring-width) var(--mono-mode-invalid-ring);
+}
+
+/* EXTENSION — valid / warning are the invalid pattern in the role's colour */
+[mono-input][mono-validation-state="valid"] > [mono-field] {
+  --_mono-input-bc: color-mix(in oklab, var(--_mono-input-valid) var(--mono-mode-state-border-alpha), transparent);
+  --_mono-input-ring: 0 0 0 var(--_mono-input-ring-width) color-mix(in oklab, var(--_mono-input-valid) var(--mono-mode-state-ring-alpha), transparent);
+}
+[mono-input][mono-validation-state="warning"] > [mono-field] {
+  --_mono-input-bc: color-mix(in oklab, var(--_mono-input-warning) var(--mono-mode-state-border-alpha), transparent);
+  --_mono-input-ring: 0 0 0 var(--_mono-input-ring-width) color-mix(in oklab, var(--_mono-input-warning) var(--mono-mode-state-ring-alpha), transparent);
+}
+
+/* EXTENSION — readonly: focusable, on a muted surface */
+[mono-input][mono-readonly] > [mono-field],
+:where([mono-input]) > [mono-field]:has(> [mono-native]:read-only:not(:disabled)) {
+  background: var(--mono-input-readonly-bg, var(--muted));
+}
+
+/* basecoat@1.0.2 styles/vega.css .input-group:has(> :is(input, textarea, select, [data-control]):disabled) — opacity-50
+   (`--mono-input-disabled-bg`: nova / lyra add disabled:bg-input/50) */
+[mono-input][mono-disabled] > [mono-field],
+:where([mono-input]) > [mono-field]:has(> [mono-native]:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--mono-input-disabled-bg, var(--_mono-input-bg));
+}
+
+/* =========================================
+   The native input
+   ========================================= */
+
+/* basecoat@1.0.2 components/input-group.css .input-group > :is(input, textarea, select, [data-control]) —
+   block min-w-0 flex-1 appearance-none rounded-none border-0 bg-transparent
+   text-foreground shadow-none outline-none placeholder:text-muted-foreground */
+/* basecoat@1.0.2 styles/vega.css .input-group > :is(input, select, [data-control])
+   — px-2.5 py-1 text-sm; mono: no block padding — the FIELD owns the height
+   (`min-height: token`) and `align-self: stretch` spans the click target */
+:where([mono-input]) [mono-native] {
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  align-self: stretch;
+  appearance: none;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--_mono-input-text);
+  font-family: inherit;
+  font-size: var(--_mono-input-font-size);
+  line-height: var(--_mono-input-line-height);
+  padding-inline: var(--_mono-input-padding-x);
+  padding-block: 0;
+
+  &::placeholder {
+    color: var(--_mono-input-placeholder);
+  }
+
+  /* .input:disabled — pointer-events-none cursor-not-allowed (the opacity is
+     on the field so the affixes fade with it) */
+  &:disabled {
+    pointer-events: none;
+    cursor: not-allowed;
+  }
+
+  &:read-only {
+    cursor: inherit;
+  }
+
+  /* Kill the native focus outline in host projects; the field draws the ring. */
+  &:focus,
+  &:focus-visible {
+    outline: none !important;
+  }
+
+  &[type='number']::-webkit-outer-spin-button,
+  &[type='number']::-webkit-inner-spin-button {
+    margin: 0;
+  }
+}
+
+/* basecoat@1.0.2 styles/vega.css .input-group:not([data-orientation='vertical']):has(> :is([data-align='start'], [data-align='inline-start'])) > :is(input, select, [data-control]) — ps-1.5
+   (and pe-1.5 for an end affix). The clear button counts as an end affix. */
+:where([mono-input]) > [mono-field]:has(> [mono-prefix]:not([mono-empty])) > [mono-native] {
+  padding-inline-start: var(--mono-input-affix-gap, calc(var(--mono-spacing) * 1.5));
+}
+:where([mono-input]) > [mono-field]:has(> :is([mono-suffix]:not([mono-empty]), [mono-clear])) > [mono-native] {
+  padding-inline-end: var(--mono-input-affix-gap, calc(var(--mono-spacing) * 1.5));
+}
+
+/* =========================================
+   Prefix / suffix
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .input-group > :is(span, [role='group'], header, footer), .input-group > :is(svg, kbd, .popover, .dropdown-menu) — gap-2 py-1.5
+   text-sm font-medium text-muted-foreground select-none, svg size-4;
+   [data-align='start'] ps-2 / [data-align='end'] pe-2 */
+:where([mono-input]) [mono-prefix],
+:where([mono-input]) [mono-suffix] {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--mono-spacing) * 2);
+  font-size: var(--mono-input-affix-font-size, var(--_mono-input-font-size));
+  line-height: var(--_mono-input-line-height);
+  font-weight: var(--mono-font-weight-medium);
+  color: var(--_mono-input-muted);
+  user-select: none;
+}
+
+:where([mono-input]) [mono-prefix] {
+  padding-inline-start: var(--_mono-input-affix-padding);
+}
+
+:where([mono-input]) [mono-suffix] {
+  padding-inline-end: var(--_mono-input-affix-padding);
+}
+
+/* The light build re-appends slotted prefix/suffix content into this
+   `[data-mono-slot]` placeholder, one level below the inline-flex wrapper.
+   Make it a flex container too, so an `display: inline` icon span (e.g. a
+   UnoCSS `i-mdi-*`, which ignores width/height while inline) is blockified
+   into a flex item and actually renders its box. */
+:where([mono-input]) :is([mono-prefix], [mono-suffix]) > [data-mono-slot] {
+  display: inline-flex;
+  align-items: center;
+  gap: inherit;
+}
+
+/* `[&>svg:not([class*='size-'])]:size-4` — our icons are UnoCSS `i-*` mask
+   spans as often as SVGs, so every glyph in an affix takes the affix size. */
+:where([mono-input]) :is([mono-prefix], [mono-suffix]) :is(svg, .mono-icon, [mono-icon]),
+:where([mono-input]) :is([mono-prefix], [mono-suffix]) ::slotted(svg),
+:where([mono-input]) :is([mono-prefix], [mono-suffix]) ::slotted(.mono-icon),
+:where([mono-input]) :is([mono-prefix], [mono-suffix]) ::slotted([mono-icon]) {
+  display: block;
+  width: var(--_mono-input-affix-icon);
+  height: var(--_mono-input-affix-icon);
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+/* =========================================
+   Clear button — a ghost icon button in the end affix slot
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .input-group > :is(button, [role='group'] > button, header > button, footer > button):has(> svg):not(:has(> :not(svg)))
+   — size-6 rounded-[calc(var(--radius)-5px)] p-0 shadow-none, svg size-3.5;
+   .input-group > button[data-align='end'] me-1; painted as .btn[data-variant='ghost'] */
+:where([mono-input]) [mono-clear] {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-input-clear);
+  height: var(--_mono-input-clear);
+  padding: 0;
+  margin: 0;
+  margin-inline-end: var(--mono-spacing);
+  border: 0;
+  border-radius: var(--mono-input-clear-radius, calc(var(--radius) - 5px));
+  background: transparent;
+  box-shadow: none;
+  color: var(--_mono-input-muted);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  outline-style: none;
+  transition-property: color, background-color, box-shadow;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+
+  &:focus-visible {
+    box-shadow: 0 0 0 var(--_mono-input-ring-width) color-mix(in oklab, var(--_mono-input-ring-color) var(--_mono-input-ring-alpha), transparent);
+  }
+
+  &:active {
+    translate: 0 1px;
+  }
+}
+
+/* basecoat@1.0.2 styles/vega.css .btn[data-variant='ghost'] — hover:bg-muted
+   hover:text-foreground (dark:hover:bg-muted/50 via --mono-mode-ghost-hover) */
+@media (hover: hover) {
+  :where([mono-input]) [mono-clear]:hover {
+    background: var(--mono-mode-ghost-hover);
+    color: var(--_mono-input-text);
+  }
+}
+
+:where([mono-input]) [mono-clear] > :is(svg, .mono-icon, [mono-icon]) {
+  display: block;
+  width: var(--_mono-input-clear-glyph);
+  height: var(--_mono-input-clear-glyph);
+  pointer-events: none;
+}
+
+/* =========================================
+   Message — helper / validation text under the field
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .fieldset legend + p, .field > p, .field section > p — text-sm text-muted-foreground
+   leading-normal font-normal text-start. The wrapper is always rendered
+   (aria-describedby points at it); it takes no space until it holds text. */
+:where([mono-input]) > [mono-message-wrap] {
+  display: block;
+}
+
+:where([mono-input]) > [mono-message-wrap]:not(:has([mono-message]:not([mono-empty]))) {
+  display: none;
+}
+
+:where([mono-input]) [mono-message] {
+  font-size: var(--mono-input-message-font-size, var(--mono-text-sm));
+  line-height: var(--mono-input-message-line-height, var(--mono-leading-normal));
+  font-weight: var(--mono-font-weight-normal);
+  text-align: start;
+  color: var(--_mono-input-muted);
+}
+
+/* basecoat@1.0.2 styles/vega.css .field [role="alert"] — text-destructive text-sm */
+:where([mono-input]) [mono-message="invalid"] {
+  color: var(--_mono-input-invalid);
+}
+
+/* EXTENSION — the other two states in their role colour */
+:where([mono-input]) [mono-message="valid"] {
+  color: var(--_mono-input-valid);
+}
+
+:where([mono-input]) [mono-message="warning"] {
+  color: var(--_mono-input-warning);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([mono-input]) > [mono-field],
+  :where([mono-input]) [mono-clear] {
+    transition: none;
+  }
+}

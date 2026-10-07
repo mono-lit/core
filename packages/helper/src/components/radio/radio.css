@@ -1,0 +1,401 @@
+/* =========================================================================
+   mono-radio — a port of Basecoat's `.input[type='radio']` and the `.label`
+   beside it (basecoat-css@1.0.2, vega style).
+
+   Styled by ATTRIBUTE, like Basecoat — and the attributes mirror the element's
+   props one for one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-radio size="sm" color="danger" label="Email" value="email" model-value="email">
+     <label mono-radio mono-size="sm" mono-color="danger">
+       <input mono-input type="radio" name="contact" value="email" checked />
+       <span mono-circle aria-hidden="true"></span>
+       <span mono-label><span mono-label-text>Email</span></span>
+     </label>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-color])` = primary). The element renders these attributes on its
+   root <label> (both builds) plus the STATE `mono-checked`; hand-written markup
+   may rely on the native input's `:checked` instead — every state rule reads
+   both. The old classes (`.mono-radio.sm.mono-radio-checked`) are still emitted
+   as inert hooks until 2.0 but no rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-radio]                                  ≡ .label (flex gap-2 text-sm font-medium leading-snug select-none)
+     [mono-radio] > [mono-circle]                  ≡ .input[type='radio'] (size-4 rounded-full border-input; the real input is visually hidden)
+     [mono-checked] / [mono-input]:checked         ≡ :checked (bg-primary border-primary) + :checked:before (size-2 bg-primary-foreground)
+     [mono-circle] > [mono-dot] / ::before         ≡ :checked:before — the element renders the dot, raw markup may omit it
+     [mono-input]:focus-visible + [mono-circle]    ≡ focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50
+     [mono-invalid] / [mono-input][aria-invalid]   ≡ aria-invalid:border-destructive aria-invalid:ring-destructive/20
+     [mono-disabled] / [mono-input]:disabled       ≡ disabled:cursor-not-allowed disabled:opacity-50
+     [mono-label-text]                             ≡ .label text
+     [mono-description]                            ≡ .field > p (text-sm text-muted-foreground)
+     [mono-size="xs|sm|lg|xl|xxl"]                 ≡ EXTENSION — the circle is 4/9 of the --mono-control-height-* step
+                                                     (16px at vega md), label / description / gap step with it
+     [mono-color="…"]                              ≡ EXTENSION (the checked fill in the role's colour)
+
+   Every metric here is checkbox.css's: the two controls sit side by side in a
+   form, so circle ≡ box, gap ≡ gap, label ≡ label at every step, and the
+   pairing spec asserts it.
+
+   Specificity contract (same as the pre-port class sheet): a part's RESTING rule
+   is exactly one attribute strong — `:where([mono-radio]) [mono-circle]` =
+   (0,1,0) — so a utility class handed in through `cssClass` wins by source
+   order, while state rules (checked / focus / invalid / disabled, keyed on the
+   root or the native input) stay heavier and win over it, as they always did.
+
+   Inner parts: [mono-input], [mono-circle] > [mono-dot], [mono-label] >
+   [mono-label-text] / [mono-description]. The shadow build marks an unassigned
+   slot wrapper [mono-empty].
+
+   The circle sits on the label's CAP BAND (see `--_mono-radio-line-offset`):
+   mono's own alignment rule, kept — Basecoat centres a lone radio on its line
+   box with `items-center`, which is the same thing for a one-line label and
+   drifts for a described one.
+
+   FLAVORS set `--mono-radio-{radius,shadow,ring-width,ring-alpha,bg,border-color,
+   checked-bg,dot-color,size-md}` (the per-style `.input[type='radio']` deltas); every
+   fallback here is vega's value (`node scripts/basecoat-styles.mjs --varying
+   "input\[type='radio'\]"`).
+   ========================================================================= */
+
+mono-radio {
+  display: inline-block;
+}
+
+[mono-radio] {
+  /* ── palette: each slot is a public knob over a Basecoat token ─────────── */
+  --_mono-radio-text: var(--mono-radio-text, var(--foreground));
+  --_mono-radio-description: var(--mono-radio-description, var(--muted-foreground));
+  --_mono-radio-primary: var(--mono-radio-primary, var(--primary));
+  --_mono-radio-primary-foreground: var(--mono-radio-primary-foreground, var(--primary-foreground));
+  --_mono-radio-accent: var(--mono-radio-accent, var(--_mono-radio-accent-preset, var(--_mono-radio-primary)));
+  --_mono-radio-dot-color: var(--mono-radio-dot-color, var(--_mono-radio-dot-preset, var(--_mono-radio-primary-foreground)));
+  --_mono-radio-border-color: var(--mono-radio-border, var(--mono-radio-border-color, var(--input)));
+  --_mono-radio-bg: var(--mono-radio-bg, var(--mono-mode-surface));
+  /* the radio is the one control Basecoat leaves shadowless (the checkbox has
+     shadow-xs) — the slot stays so a flavor or a consumer can put one back */
+  --_mono-radio-shadow: var(--mono-radio-shadow, 0 0 #0000);
+  --_mono-radio-radius: var(--mono-radio-radius, var(--mono-radius-full));
+  --_mono-radio-border-width: var(--mono-radio-border-width, var(--mono-border-width));
+  --_mono-radio-ring-color: var(--mono-radio-ring-color, var(--ring));
+  --_mono-radio-ring-width: var(--mono-radio-ring-width, var(--mono-ring-width));
+  --_mono-radio-ring-alpha: var(--mono-radio-ring-alpha, var(--mono-ring-alpha));
+
+  /* ── md metrics live on the unqualified root ON PURPOSE ────────────────────
+     basecoat@1.0.2 styles/vega.css .input[type='radio'] — size-4 (= 4/9 of the
+     h-9 control); .field > label, .label — gap-2 text-sm leading-snug */
+  --_mono-radio-control: var(--mono-radio-size-md, calc(var(--mono-control-height-md) * 4 / 9));
+  --_mono-radio-gap: var(--mono-radio-gap, var(--mono-radio-gap-md, calc(var(--mono-spacing) * 2)));
+  --_mono-radio-label-font: var(--mono-radio-label-font-md, var(--mono-text-sm));
+  --_mono-radio-description-font: var(--mono-radio-description-font-md, 0.8125rem);
+  /* :checked:before — size-2 on a size-4 circle */
+  --_mono-radio-dot: var(--mono-radio-dot, 50%);
+
+  /* ── whole pixels ────────────────────────────────────────────────────────
+     The circle is a ratio of the control step, so it lands on a fraction (18.39px,
+     17.77px…). A fractional round shape is antialiased on every edge — the
+     switch thumb, which parks flush against the track's cap, picked up a dark
+     rim that changed with the flavor and the screen's pixel ratio. Snap the
+     derived size to 1px; `round()` has the same browser floor as `color-mix()`
+     and `:has()`, which this sheet already requires. Snapping happens HERE, at
+     one place per value, so the per-size blocks stay plain arithmetic. */
+  --_mono-radio-control-px: round(nearest, var(--_mono-radio-control), 1px);
+
+  /* ── alignment with the label ────────────────────────────────────────────
+     The circle is centred on the label's CAP BAND — the ink the eye reads, not
+     the line box. Every number is checkbox.css's; the two controls sit side by
+     side in a form and any divergence shows. */
+  --_mono-radio-label-line-height: var(--mono-radio-label-line-height, var(--mono-leading-snug));
+  --_mono-radio-optical-shift: 0.045;
+  --_mono-radio-optical-nudge: 0px;
+  --_mono-radio-line-offset: calc(
+    (var(--_mono-radio-label-font) * var(--_mono-radio-label-line-height) - var(--_mono-radio-control-px)) / 2 +
+      var(--_mono-radio-label-font) * var(--_mono-radio-optical-shift) + var(--_mono-radio-optical-nudge)
+  );
+
+  /* The element build nests this root inside its host, so it is never itself a
+     grid or flex item and shrink-wraps its content. Hand-written markup usually
+     IS the item (a radio in a `display: grid` list), and an item blockifies —
+     `inline-flex` becomes `flex` and the row stretches to the widest sibling,
+     wrapping its label at a different point than the element's. `fit-content`
+     keeps both shapes shrink-wrapped; a consumer who wants a full-width row
+     still sets a width. */
+  width: fit-content;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--_mono-radio-gap);
+  position: relative;
+  vertical-align: top;
+  cursor: pointer;
+  user-select: none;
+  font-family: inherit;
+  color: var(--_mono-radio-text);
+}
+
+[mono-radio],
+:where([mono-radio]) *,
+:where([mono-radio]) *::before,
+:where([mono-radio]) *::after {
+  box-sizing: border-box;
+}
+
+:where([mono-radio]) :is([mono-label], [mono-label-text], [mono-description])[mono-empty] {
+  display: none;
+}
+
+/* the circle seats on the first line of a label that is actually there; a bare
+   circle stays flush at the top */
+[mono-radio]:has([mono-label-text]:not([mono-empty])) > [mono-circle] {
+  margin-top: var(--_mono-radio-line-offset, 0px);
+}
+
+/* =========================================
+   Sizes — EXTENSION: the circle is 4/9 of the control step (vega md: 36 × 4/9 =
+   16px), label, description and gap step with it (md = Basecoat's text-sm / gap-2)
+   ========================================= */
+
+[mono-radio][mono-size="xs"] {
+  --_mono-radio-control: var(--mono-radio-size-xs, calc(var(--mono-control-height-xs) * 4 / 9));
+  --_mono-radio-gap: var(--mono-radio-gap, var(--mono-radio-gap-xs, calc(var(--mono-spacing) * 1.25)));
+  --_mono-radio-label-font: var(--mono-radio-label-font-xs, var(--mono-text-xs));
+  --_mono-radio-description-font: var(--mono-radio-description-font-xs, 0.6875rem);
+}
+
+[mono-radio][mono-size="sm"] {
+  --_mono-radio-control: var(--mono-radio-size-sm, calc(var(--mono-control-height-sm) * 4 / 9));
+  --_mono-radio-gap: var(--mono-radio-gap, var(--mono-radio-gap-sm, calc(var(--mono-spacing) * 1.5)));
+  --_mono-radio-label-font: var(--mono-radio-label-font-sm, 0.8125rem);
+  --_mono-radio-description-font: var(--mono-radio-description-font-sm, var(--mono-text-xs));
+}
+
+[mono-radio][mono-size="lg"] {
+  --_mono-radio-control: var(--mono-radio-size-lg, calc(var(--mono-control-height-lg) * 4 / 9));
+  --_mono-radio-gap: var(--mono-radio-gap, var(--mono-radio-gap-lg, calc(var(--mono-spacing) * 2.5)));
+  --_mono-radio-label-font: var(--mono-radio-label-font-lg, var(--mono-text-base));
+  --_mono-radio-description-font: var(--mono-radio-description-font-lg, var(--mono-text-sm));
+  /* 16px text rounds its ascent such that the circle lands ~0.35px low */
+  --_mono-radio-optical-nudge: -0.35px;
+}
+
+[mono-radio][mono-size="xl"] {
+  --_mono-radio-control: var(--mono-radio-size-xl, calc(var(--mono-control-height-xl) * 4 / 9));
+  --_mono-radio-gap: var(--mono-radio-gap, var(--mono-radio-gap-xl, calc(var(--mono-spacing) * 3)));
+  --_mono-radio-label-font: var(--mono-radio-label-font-xl, var(--mono-text-lg));
+  --_mono-radio-description-font: var(--mono-radio-description-font-xl, var(--mono-text-base));
+}
+
+[mono-radio][mono-size="xxl"] {
+  --_mono-radio-control: var(--mono-radio-size-xxl, calc(var(--mono-control-height-xxl) * 4 / 9));
+  --_mono-radio-gap: var(--mono-radio-gap, var(--mono-radio-gap-xxl, calc(var(--mono-spacing) * 3.5)));
+  --_mono-radio-label-font: var(--mono-radio-label-font-xxl, var(--mono-text-xl));
+  --_mono-radio-description-font: var(--mono-radio-description-font-xxl, var(--mono-text-lg));
+  /* 20px text rounds the other way, leaving the circle ~1.1px high */
+  --_mono-radio-optical-nudge: 1.1px;
+}
+
+/* =========================================
+   Colours — EXTENSION: the checked fill in the role's colour
+   ========================================= */
+
+[mono-radio]:is(:not([mono-color]), [mono-color="primary"]) {
+  --_mono-radio-accent-preset: var(--_mono-radio-primary);
+  --_mono-radio-dot-preset: var(--_mono-radio-primary-foreground);
+}
+[mono-radio][mono-color="secondary"] {
+  --_mono-radio-accent-preset: var(--secondary-foreground);
+  --_mono-radio-dot-preset: var(--secondary);
+}
+[mono-radio][mono-color="success"] {
+  --_mono-radio-accent-preset: var(--success);
+  --_mono-radio-dot-preset: var(--success-foreground);
+}
+[mono-radio][mono-color="danger"] {
+  --_mono-radio-accent-preset: var(--destructive);
+  --_mono-radio-dot-preset: var(--destructive-foreground);
+}
+[mono-radio][mono-color="warning"] {
+  --_mono-radio-accent-preset: var(--warning);
+  --_mono-radio-dot-preset: var(--warning-foreground);
+}
+[mono-radio][mono-color="info"] {
+  --_mono-radio-accent-preset: var(--info);
+  --_mono-radio-dot-preset: var(--info-foreground);
+}
+[mono-radio][mono-color="teal"] {
+  --_mono-radio-accent-preset: var(--teal);
+  --_mono-radio-dot-preset: var(--teal-foreground);
+}
+[mono-radio][mono-color="purple"] {
+  --_mono-radio-accent-preset: var(--purple);
+  --_mono-radio-dot-preset: var(--purple-foreground);
+}
+[mono-radio][mono-color="neutral"] {
+  --_mono-radio-accent-preset: var(--neutral);
+  --_mono-radio-dot-preset: var(--neutral-foreground);
+}
+[mono-radio][mono-color="dark"] {
+  --_mono-radio-accent-preset: var(--dark);
+  --_mono-radio-dot-preset: var(--dark-foreground);
+}
+
+/* =========================================
+   States on the root
+   ========================================= */
+
+/* basecoat@1.0.2 components/radio.css .field > input[type='radio'], .input[type='radio']
+   — disabled:cursor-not-allowed disabled:opacity-50 */
+[mono-radio][mono-disabled],
+[mono-radio]:has(> [mono-input]:disabled) {
+  cursor: not-allowed;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* the native input is the accessible control; the circle is its painted twin */
+:where([mono-radio]) [mono-input] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  /* the UA gives an <input> its own font; inside a shadow root nothing resets it,
+     so the hidden control ended up with a different computed font in the two
+     builds. It paints nothing either way — this just keeps them identical. */
+  font: inherit;
+  color: inherit;
+}
+
+/* =========================================
+   The circle
+   ========================================= */
+
+/* basecoat@1.0.2 components/radio.css .field > input[type='radio'], .input[type='radio']
+   — relative shrink-0 appearance-none border outline-none */
+/* basecoat@1.0.2 styles/vega.css .field > input[type='radio'], .input[type='radio']
+   — flex size-4 rounded-full border-input (dark:bg-input/30 via --mono-mode-surface);
+   checked:bg-primary checked:border-primary checked:text-primary-foreground;
+   mono: `--tw-ring-*` flattened to the ring + shadow slots */
+:where([mono-radio]) > [mono-circle] {
+  --_mono-radio-ring: 0 0 #0000;
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-radio-control-px);
+  height: var(--_mono-radio-control-px);
+  border: var(--_mono-radio-border-width) solid var(--_mono-radio-border-color);
+  border-radius: var(--_mono-radio-radius);
+  background-color: var(--_mono-radio-bg);
+  box-shadow: var(--_mono-radio-ring), var(--_mono-radio-shadow);
+  /* the circle's own ink is the ACCENT — a flavor that leaves the checked circle
+     hollow (sera) then sets `--mono-radio-dot-color: currentColor` to paint the
+     dot in the role colour, using public knobs alone */
+  color: var(--_mono-radio-accent);
+  transition-property: box-shadow, background-color, border-color;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+}
+
+/* focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 */
+:where([mono-radio]) > [mono-input]:focus-visible + [mono-circle] {
+  border-color: var(--_mono-radio-ring-color);
+  --_mono-radio-ring: 0 0 0 var(--_mono-radio-ring-width) color-mix(in oklab, var(--_mono-radio-ring-color) var(--_mono-radio-ring-alpha), transparent);
+}
+
+/* aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20
+   (dark: /50, /40 via the mode tokens) */
+[mono-radio][mono-invalid] > [mono-circle],
+:where([mono-radio]) > [mono-input][aria-invalid="true"] + [mono-circle] {
+  border-color: var(--mono-mode-invalid-border);
+  --_mono-radio-ring: 0 0 0 var(--_mono-radio-ring-width) var(--mono-mode-invalid-ring);
+}
+
+/* checked:bg-primary checked:border-primary — generalised per hue.
+   `--mono-radio-checked-bg` is the flavor slot: sera keeps the circle hollow. */
+[mono-radio][mono-checked] > [mono-circle],
+:where([mono-radio]) > [mono-input]:checked + [mono-circle] {
+  border-color: var(--_mono-radio-accent);
+  background-color: var(--mono-radio-checked-bg, var(--_mono-radio-accent));
+}
+
+/* aria-invalid:checked:border-primary — a chosen option is not the error */
+[mono-radio][mono-invalid][mono-checked] > [mono-circle],
+:where([mono-radio]) > [mono-input][aria-invalid="true"]:checked + [mono-circle] {
+  border-color: var(--_mono-radio-accent);
+}
+
+/* =========================================
+   The dot — `:checked:before` upstream. The element renders [mono-dot] (it is a
+   `cssClass` slot); hand-written markup may leave the circle empty and take the
+   pseudo-element instead. Both are out of flow (`inset: 0; margin: auto`) so the
+   circle keeps a stable synthesised baseline.
+   ========================================= */
+
+/* basecoat@1.0.2 components/radio.css .field > input[type='radio'], .input[type='radio'] >> &:checked:before
+   — absolute top-1/2 left-1/2 content-[''] -translate-x/y-1/2 rounded-full */
+/* basecoat@1.0.2 styles/vega.css :is(.field > input[type='radio'], .input[type='radio']):checked:before
+   — size-2 bg-primary-foreground (mono: that share of the box, so it tracks every step) */
+:where([mono-radio]) > [mono-circle] > [mono-dot],
+:where([mono-radio]) > [mono-circle]:not(:has([mono-dot]))::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: var(--_mono-radio-dot);
+  height: var(--_mono-radio-dot);
+  border-radius: var(--mono-radio-dot-radius, var(--mono-radius-full));
+  background-color: var(--_mono-radio-dot-color);
+  transform: scale(0);
+  opacity: 0;
+  transition-property: transform, opacity, background-color;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+}
+
+[mono-radio][mono-checked] > [mono-circle] > [mono-dot],
+[mono-radio][mono-checked] > [mono-circle]:not(:has([mono-dot]))::before,
+:where([mono-radio]) > [mono-input]:checked + [mono-circle] > [mono-dot],
+:where([mono-radio]) > [mono-input]:checked + [mono-circle]:not(:has([mono-dot]))::before {
+  transform: scale(1);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([mono-radio]) > [mono-circle],
+  :where([mono-radio]) > [mono-circle] > [mono-dot],
+  :where([mono-radio]) > [mono-circle]::before {
+    transition: none;
+  }
+}
+
+/* =========================================
+   Label
+   ========================================= */
+
+:where([mono-radio]) > [mono-label] {
+  min-width: 0;
+}
+
+/* basecoat@1.0.2 styles/vega.css .field > label, .label — text-sm leading-snug font-medium;
+   `block` so the first line box is exactly font × line-height */
+:where([mono-radio]) [mono-label-text] {
+  display: block;
+  font-size: var(--_mono-radio-label-font);
+  line-height: var(--_mono-radio-label-line-height);
+  font-weight: var(--mono-radio-label-font-weight, var(--mono-label-font-weight, var(--mono-font-weight-medium)));
+  color: var(--_mono-radio-text);
+}
+
+/* basecoat@1.0.2 styles/vega.css .fieldset legend + p, .field > p, .field section > p
+   — text-sm text-muted-foreground leading-normal font-normal; EXTENSION: one step
+   under the label per size */
+:where([mono-radio]) [mono-description] {
+  display: block;
+  margin-top: calc(var(--mono-spacing) * 0.5);
+  font-size: var(--_mono-radio-description-font);
+  line-height: var(--mono-leading-normal);
+  font-weight: var(--mono-font-weight-normal);
+  color: var(--_mono-radio-description);
+}

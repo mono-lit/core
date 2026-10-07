@@ -1,0 +1,816 @@
+/* Load Roboto for the Material theme preview. The theme-material
+   selector references "Roboto" first in its font-family stack; without this
+   import the browser falls back to system-ui and the typography swap is
+   invisible. Only the weights actually used (400/500/700) are loaded. */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+/* Load Poppins for the ONE theme preview. Guide v2 switched ONE from Plus
+   Jakarta Sans to Poppins; `uno.config.ts` still ships Plus Jakarta Sans as its
+   `sans` web font, so without this import the theme-one typography swap would
+   silently fall back and look unchanged. Preview only — consumers of the library
+   get no such help: the EJI guide requires the .woff2 files to be self-hosted,
+   because the system runs on an internal 192.168.x network where font CDNs are
+   unreachable. */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+/* ----------------------------------------------------------------------------
+   Brand palette — violet accent, indigo partner
+   ---------------------------------------------------------------------------- */
+:root {
+  --vp-c-brand-1: #7c3aed;
+  --vp-c-brand-2: #6d28d9;
+  --vp-c-brand-3: #8b5cf6;
+  --vp-c-brand-soft: rgba(124, 58, 237, 0.14);
+
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: #ffffff;
+  --vp-button-brand-bg: var(--vp-c-brand-1);
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: #ffffff;
+  --vp-button-brand-hover-bg: var(--vp-c-brand-2);
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-active-text: #ffffff;
+  --vp-button-brand-active-bg: var(--vp-c-brand-3);
+
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(
+    120deg,
+    #7c3aed 30%,
+    #4f46e5
+  );
+  --vp-home-hero-image-background-image: linear-gradient(
+    -45deg,
+    #7c3aed55 50%,
+    #4f46e555 50%
+  );
+  --vp-home-hero-image-filter: blur(56px);
+
+  --vp-custom-block-tip-border: transparent;
+  --vp-custom-block-tip-text: #5b21b6;
+  --vp-custom-block-tip-bg: var(--vp-c-brand-soft);
+  --vp-custom-block-tip-code-bg: var(--vp-c-brand-soft);
+}
+
+.dark {
+  --vp-c-brand-1: #a78bfa;
+  --vp-c-brand-2: #8b5cf6;
+  --vp-c-brand-3: #c4b5fd;
+  --vp-c-brand-soft: rgba(167, 139, 250, 0.16);
+
+  --vp-custom-block-tip-text: #c4b5fd;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --vp-home-hero-image-filter: blur(72px);
+  }
+}
+@media (min-width: 960px) {
+  :root {
+    --vp-home-hero-image-filter: blur(96px);
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   Subtle global polish
+   ---------------------------------------------------------------------------- */
+.VPHero .name {
+  letter-spacing: -0.02em;
+}
+
+.VPFeature {
+  border-radius: 14px !important;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.VPFeature:hover {
+  border-color: var(--vp-c-brand-1) !important;
+  transform: translateY(-2px);
+}
+.VPFeature .icon {
+  background: var(--vp-c-brand-soft) !important;
+  border-radius: 10px !important;
+}
+
+.vp-doc h1 {
+  letter-spacing: -0.025em;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  background: linear-gradient(120deg, var(--vp-c-text-1) 0%, color-mix(in srgb, var(--vp-c-brand-1) 60%, var(--vp-c-text-1)) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.vp-doc h2 {
+  letter-spacing: -0.015em;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  font-size: 1.5rem;
+}
+
+/* Lead paragraph — first <p> after h1 */
+.vp-doc h1 + p {
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--vp-c-text-2);
+  margin-top: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+/* Demo card heading inside .vp-doc shouldn't get the auto-anchor */
+.vp-doc .mono-demo h3 {
+  border: none;
+  margin: 0;
+  padding-top: 0;
+}
+.vp-doc .mono-demo h3 .header-anchor {
+  display: none !important;
+}
+
+/* Inline code — slightly softer */
+.vp-doc :not(pre) > code {
+  background-color: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.875em;
+}
+.dark .vp-doc :not(pre) > code {
+  color: var(--vp-c-brand-3);
+}
+
+/* Rounded corners on Mermaid flowchart node boxes (rx/ry are SVG geometry
+   properties; border-radius does not apply to <rect>). Applies to every
+   diagram globally. */
+.mermaid .node rect,
+.mermaid .node .label-container {
+  rx: 12px;
+  ry: 12px;
+}
+
+/* ----------------------------------------------------------------------------
+   Restore native mono-table rendering inside VitePress doc chrome. `.vp-doc table`
+   defaults (display:block, overflow-x, margin, zebra tr backgrounds, cell borders)
+   would otherwise style any `[mono-table]` living inside `.vp-doc` — notably a
+   `<mono-shadow-dropdown-table>`'s SLOTTED table — differently from a light
+   `<mono-dropdown-table>` whose table is portaled to <body> (outside .vp-doc).
+   Global (not page-coupled) so every mono-table matches.
+   ---------------------------------------------------------------------------- */
+.vp-doc table[mono-table] {
+  display: table;
+  width: 100%;
+  margin: 0;
+  overflow: visible;
+}
+.vp-doc table[mono-table] thead {
+  display: table-header-group;
+}
+.vp-doc table[mono-table] tbody {
+  display: table-row-group;
+}
+.vp-doc table[mono-table] tr {
+  display: table-row;
+  border-top: 0;
+}
+
+/* NOTE: deliberately no `background` reset for mono table rows here.
+   There used to be `background: transparent` on the rule above. That selector is
+   (0,2,2) — an exact TIE with `.mono-table tbody tr:nth-child(even)` and
+   `…tr:hover` in table.css — and custom.css is imported after the library
+   (theme/index.ts), so the tie went to transparent and BOTH the zebra and the
+   row hover were dead in the docs, while every higher-specificity mono rule
+   (sticky cells, group rows, selected/editing, the flavor sheets) kept painting.
+   That mix of transparent and grey rows was the bug.
+
+   No reset is needed for BODY rows: VitePress's own row rules are `.vp-doc tr` (0,1,1) and
+   `.vp-doc tr:nth-child(2n)` (0,2,1), and every mono rule that decides a row
+   colour already out-specifies the one that can reach the same row — the base
+   `[mono-table] tbody tr` is (0,1,2) and the zebra is (0,2,2). Adding anything
+   here only breaks that. */
+/* VitePress draws all four sides of every cell (`.vp-doc td, .vp-doc th`,
+   (0,1,1)). The sheet states the sides it means — a body cell's bottom rule, a
+   header cell's bottom rule, a footer cell's top rule — at (0,1,2), which beats
+   that on its own. So these clear ONLY the sides mono never sets. A blanket
+   `border: 0` here used to sit at (0,2,2), above the sheet, and took the
+   footer's rule and every row separator with it. */
+.vp-doc table[mono-table] td,
+.vp-doc table[mono-table] th {
+  display: table-cell;
+  border-inline: 0;
+}
+.vp-doc table[mono-table] thead th,
+.vp-doc table[mono-table] tbody td {
+  border-top: 0;
+}
+.vp-doc table[mono-table] tfoot td,
+.vp-doc table[mono-table] tfoot th {
+  border-bottom: 0;
+}
+
+:where(.vp-doc) table[mono-table] td {
+  /* `.vp-doc th/td` is (0,1,1) and TIES the sheet's own `[mono-table] td`, so
+     the inset has to be restated — through the sheet's TOKEN, not a literal,
+     or a flavour that retunes it (maia, luma and sera all do) would move every
+     table except the ones in these docs. The SHORTHAND, always: ONE's pad is
+     two values, and a longhand of it is invalid. The sticky footer's scrollbar
+     band survives this because `:where(.vp-doc)` keeps THIS at (0,1,2): above
+     VitePress, below every component state rule. */
+  padding: var(--_mono-table-cell-pad);
+}
+
+:where(.vp-doc) table[mono-table] th {
+  padding: 0 var(--_mono-table-th-pad-x);
+}
+
+/*
+ * Header cells, on the other hand, DO need the background reset that rows do not.
+ *
+ * mono paints its header on `thead` — a light gradient — and sets no background
+ * on `th` at all (table.css:1042 and the note at :1601). VitePress's
+ * `.vp-doc th { background-color: var(--vp-c-bg-soft) }` then paints every header
+ * CELL, covering that gradient completely. In light mode the two were both
+ * near-white so nobody noticed; with dark mode enabled the token became
+ * `#16102e` and the header went near-black while mono's navy header text stayed
+ * put — measured 22,16,46 behind 30,58,110.
+ *
+ * Unlike the row case above there is no rule to tie with, because mono paints no
+ * `th` background — EXCEPT the sticky ones, which do
+ * (`.mono-table thead th.mono-table-sticky-left`, also (0,2,2), and this file
+ * loads later, so it would win the tie and blank them). Hence the `:not()`:
+ * it lifts this rule to (0,3,2) AND stops it matching pinned cells at all.
+ *
+ * `thead` is load-bearing too. Without it the rule reaches `tfoot th` as well —
+ * and a summary footer built from `<th>` cells DOES paint its own background
+ * (`[mono-table] tfoot td, tfoot th`, table.css:538, at (0,1,2)).
+ * This rule out-specifies that, so an unscoped version blanked the totals row
+ * and let whatever sits behind the table show through it.
+ */
+/* No header-cell background reset any more. VitePress paints `th` with its
+   soft surface at (0,1,1); the sheet now paints the head on the CELL at
+   (0,1,2) — transparent at rest, opaque when the head is sticky — so it beats
+   that on its own. The reset that used to live here was (0,3,2): it beat the
+   sheet too, and made a frozen header see-through in these docs alone. */
+
+/*
+ * ...and the header ROW needs it too, which is the exception to the tbody note
+ * above. mono paints the header band on the `thead` SECTION and leaves the
+ * header `<tr>` transparent on purpose — grep table.css: there are rules for
+ * `[mono-table] thead` and for `[mono-table] tbody tr`, but none anywhere for
+ * `thead tr`. So `.vp-doc tr { background-color: var(--vp-c-bg) }` has nothing
+ * to tie with here; it fills the header row, and a row paints ON TOP of its
+ * section's background, hiding the gradient underneath.
+ *
+ * That is why fixing `th` alone was not enough: the cells went transparent, and
+ * the row behind them stayed `--vp-c-bg` — white in light mode (so it looked
+ * fixed) and rgb(13,8,32) in dark. Scoped to `thead` because the same reset on
+ * `tbody tr` would be (0,3,2) and would out-specify mono's own row painting,
+ * killing the zebra, hover and pinned-cell backgrounds.
+ */
+.vp-doc table[mono-table] thead tr {
+  background-color: transparent;
+}
+
+/*
+ * The FOOTER row needs the same reset, for the same reason.
+ *
+ * mono paints the summary footer on its CELLS (`.mono-table tfoot td, .mono-table
+ * tfoot th`, table.css:538) and, exactly as with `thead`, never on the `tfoot`
+ * `<tr>` — grep table.css: there is no `tfoot tr` rule anywhere. So `.vp-doc tr`
+ * owns that row unopposed and fills it with `--vp-c-bg`, which goes near-black in
+ * dark mode. Any pixel of the row the cells do not cover — the gap a horizontally
+ * scrollable table leaves below the totals (table.css:529), a cell whose
+ * background is in transition — shows it.
+ *
+ * Safe to reset here precisely because mono paints nothing on this row, unlike
+ * BODY rows (see the long note above, where a reset killed the zebra and hover).
+ */
+.vp-doc table[mono-table] tfoot tr {
+  background-color: transparent;
+}
+
+/* ----------------------------------------------------------------------------
+   Purple nav bar — the same violet-to-indigo the landing page sections use
+   ---------------------------------------------------------------------------- */
+
+/*
+ * VitePress paints the bar from `--vp-nav-bg-color` in several rules, and when a
+ * sidebar is present it ALSO gives `.title` and `.content-body` their own
+ * backgrounds. So a gradient on `.VPNavBar` alone gets painted over by those two
+ * segments — they have to be made transparent as well.
+ *
+ * `.home.top` is transparent by default (the landing page fades its bar in on
+ * scroll); overriding it keeps the bar purple there too.
+ */
+.VPNavBar,
+.VPNavBar.screen-open {
+  background: linear-gradient(140deg, #6d28d9 0%, #7c3aed 42%, #4f46e5 100%) !important;
+  border-bottom-color: transparent !important;
+}
+.VPNavBar .title,
+.VPNavBar .content-body {
+  background: transparent !important;
+}
+.VPNavBar .divider-line {
+  background-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+/* Everything sitting on the bar goes light. Scoped to `.VPNavBar` rather than
+   done by redefining `--vp-c-text-1` on it: the theme switcher's dropdown lives
+   inside the bar, and a white text token would make its panel unreadable. */
+.VPNavBar .VPNavBarTitle .title {
+  color: #ffffff;
+}
+.VPNavBar .VPNavBarHamburger .top,
+.VPNavBar .VPNavBarHamburger .middle,
+.VPNavBar .VPNavBarHamburger .bottom {
+  background-color: #ffffff;
+}
+.VPNavBar .VPNavBarHamburger:hover .top,
+.VPNavBar .VPNavBarHamburger:hover .middle,
+.VPNavBar .VPNavBarHamburger:hover .bottom {
+  background-color: rgba(255, 255, 255, 0.75);
+}
+
+/* The theme switcher trigger only — its dropdown panel keeps the page palette. */
+.VPNavBar .mono-theme-switcher-trigger {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+.VPNavBar .mono-theme-switcher-trigger:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* ----------------------------------------------------------------------------
+   Landing page tail
+   ---------------------------------------------------------------------------- */
+
+/*
+ * The default theme gives `.VPHome` a 96px bottom margin (128px from 768px up)
+ * to sit under the stock features grid. This landing page ends with its own
+ * footer rule instead, so that margin is just dead space BELOW the footer —
+ * which is what made a 30px footer read as a tall empty block.
+ *
+ * `!important` because the theme's rule is scoped (`.VPHome[data-v-…]`) and so
+ * out-specifies a plain class selector here.
+ */
+.VPHome {
+  margin-bottom: 0 !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Color swatches (ui/color.md)
+
+   A real grid, not a table: role down the side, theme across the top. The chip
+   border is load-bearing rather than decoration — the palette includes #ffffff
+   and several near-white surfaces that are invisible against the page without it.
+   ---------------------------------------------------------------------------- */
+.vp-doc .color-grid {
+  display: grid;
+  /* minmax(0,…) lets the six columns share whatever width there is, so all
+     six themes are always visible. A fixed minimum made the last one (ONE)
+     fall off the right edge behind a scrollbar. */
+  grid-template-columns: max-content repeat(var(--color-grid-cols, 6), minmax(0, 1fr));
+  gap: 0.7rem;
+  align-items: end;
+  margin: 1.5rem 0 2rem;
+  /* The doc column is narrower than seven columns want to be. Pull into the
+     gutters on wide viewports only — below that the sidebar leaves no room and
+     the grid scrolls instead of pushing the page sideways. */
+  margin-inline: -2.5rem;
+  overflow-x: auto;
+  padding-inline: 2.5rem;
+  padding-bottom: 0.25rem;
+}
+@media (max-width: 959px) {
+  .vp-doc .color-grid {
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+}
+
+.vp-doc .color-grid__corner {
+  content: '';
+}
+.vp-doc .color-grid__theme {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--vp-c-text-2);
+  text-align: center;
+  padding-bottom: 0.15rem;
+}
+.vp-doc .color-grid__role {
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  padding-right: 0.6rem;
+  padding-bottom: 1.55rem; /* sits level with the swatch, not its caption */
+}
+
+/* Shared by the grid and the flat token lists below it. */
+.vp-doc .color-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+.vp-doc .color-cell .color-chip {
+  display: block;
+  width: auto;
+  height: 58px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+.vp-doc .color-cell code {
+  background: none;
+  color: var(--vp-c-text-2);
+  padding: 0;
+  font-size: 0.7rem;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.vp-doc .color-cell .color-name {
+  font-size: 0.68rem;
+  color: var(--vp-c-text-3, var(--vp-c-text-2));
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* Token -> value cards (the Material / ONE tone overrides, ONE's pillars). */
+.vp-doc .color-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.7rem;
+  margin: 1.25rem 0;
+}
+
+/* Inline mention outside a grid cell (the -contrast line under Tones). */
+.vp-doc .color-chip {
+  display: inline-block;
+  width: 1.05em;
+  height: 1.05em;
+  border-radius: 4px;
+  vertical-align: -0.18em;
+  margin-right: 0.15em;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+/* ----------------------------------------------------------------------------
+   Dark mode
+   ----------------------------------------------------------------------------
+
+   `appearance: true` in config.ts turns the switch on, so VitePress toggles
+   `.dark` on <html> and its default theme brings a full dark palette with it.
+   What follows only replaces the parts that should be violet-tinted rather than
+   the stock neutral grey — on an indigo ground, neutral grey text reads dirty.
+
+   THE MONO COMPONENTS ARE DELIBERATELY LEFT OUT OF ALL OF THIS. The library has
+   no dark theme yet, so every `mono-*` element keeps its real light look in both
+   modes, and nothing here sets a `--theme-*` token at document level. The three
+   landing sections that use cards purely as chrome opt in explicitly at the
+   bottom of this file; the Basic UI showcase never does, because its whole job
+   is showing the components as they actually ship.
+   ---------------------------------------------------------------------------- */
+
+html.dark {
+  --vp-c-bg: #0d0820;
+  --vp-c-bg-alt: #0a0619;
+  --vp-c-bg-soft: #16102e;
+  --vp-c-bg-elv: #1c1638;
+
+  --vp-c-divider: #2e2456;
+  --vp-c-gutter: #2e2456;
+
+  --vp-c-text-1: #ede9fe;
+  --vp-c-text-2: #b9aee0;
+  --vp-c-text-3: #8578ad;
+
+  --vp-button-brand-text: #0b0518;
+}
+
+/* ----------------------------------------------------------------------------
+   Landing page — purple-indigo cyberpunk skin
+   ----------------------------------------------------------------------------
+
+   Scoped to the landing route by `pageClass: mono-cyber` in `docs/index.md`,
+   which VitePress puts on `.Layout` — an ancestor of both the nav bar and the
+   content.
+
+   The page is built entirely from the `--cyber-*` tokens below, declared twice:
+   once for the light theme and once for dark. So the switch reskins the front
+   page along with everything else — light mode keeps the original bright violet
+   look, dark mode is the cyberpunk one, and no component needs a second rule.
+   ---------------------------------------------------------------------------- */
+
+.Layout.mono-cyber {
+  position: relative;
+  min-height: 100vh;
+  background: var(--vp-c-bg);
+
+  /* Light: the motifs are present but dialled right down — a faint grid, a soft
+     wash, no scanlines. Scanlines on white read as a printing fault, so the
+     token goes fully transparent rather than being drawn faintly. */
+  --cyber-grid: rgba(124, 58, 237, 0.1);
+  --cyber-edge: rgba(124, 58, 237, 0.2);
+  --cyber-edge-hi: rgba(124, 58, 237, 0.38);
+  --cyber-glow: rgba(124, 58, 237, 0.22);
+  --cyber-scan: transparent;
+  --cyber-inner-hi: rgba(255, 255, 255, 0.7);
+
+  --cyber-band: linear-gradient(140deg, #6d28d9 0%, #7c3aed 42%, #4f46e5 100%);
+  --cyber-band-end: #4f46e5;
+
+  --cyber-aurora-1: rgba(124, 58, 237, 0.16);
+  --cyber-aurora-2: rgba(79, 70, 229, 0.12);
+  --cyber-aurora-3: rgba(139, 92, 246, 0.08);
+
+  --cyber-wordmark: linear-gradient(120deg, #7c3aed 30%, #4f46e5);
+  --cyber-cta: linear-gradient(120deg, #8b5cf6, #7c3aed 55%, #4f46e5);
+  --cyber-cta-ink: #ffffff;
+
+  --cyber-node: var(--vp-c-bg-soft);
+  --cyber-node-leaf: var(--vp-c-bg);
+
+  --cyber-accent-1: #a855f7;
+  --cyber-accent-2: #7c3aed;
+  --cyber-accent-3: #4f46e5;
+
+  --cyber-card: #ffffff;
+  --cyber-card-edge: rgba(255, 255, 255, 0.6);
+  --cyber-card-ink: #1f2937;
+  --cyber-card-shadow: 0 26px 54px -24px rgba(15, 23, 42, 0.55);
+}
+
+/*
+ * The landing page goes deeper than the rest of the site in dark mode: the docs
+ * need a comfortable reading ground, the front page wants to feel like it is
+ * lit from inside.
+ *
+ * `html.dark:has(…)` rather than a rule on the wrapper, because
+ * `body { background: var(--vp-c-bg) }` comes from VitePress with the token on
+ * `:root` — body is an ANCESTOR of `.Layout`, so redefining it further down
+ * cannot repaint it and white leaks on overscroll.
+ */
+html.dark:has(.Layout.mono-cyber) {
+  --vp-c-bg: #07030f;
+  --vp-c-bg-alt: #0b0518;
+  --vp-c-bg-soft: #100a24;
+  --vp-c-bg-elv: #16102e;
+  --vp-c-divider: #2a1e52;
+  --vp-c-gutter: #2a1e52;
+}
+
+html.dark .Layout.mono-cyber {
+  --cyber-grid: rgba(167, 139, 250, 0.11);
+  --cyber-edge: rgba(167, 139, 250, 0.3);
+  --cyber-edge-hi: rgba(196, 181, 253, 0.55);
+  --cyber-glow: rgba(124, 58, 237, 0.45);
+  --cyber-scan: rgba(167, 139, 250, 0.035);
+  --cyber-inner-hi: rgba(196, 181, 253, 0.14);
+
+  --cyber-band: linear-gradient(140deg, #1b0f3f 0%, #2a1566 45%, #1e1a63 100%);
+  --cyber-band-end: #1e1a63;
+
+  --cyber-aurora-1: rgba(124, 58, 237, 0.4);
+  --cyber-aurora-2: rgba(79, 70, 229, 0.32);
+  --cyber-aurora-3: rgba(139, 92, 246, 0.18);
+
+  --cyber-wordmark: linear-gradient(120deg, #c4b5fd 10%, #a78bfa 45%, #818cf8 100%);
+  --cyber-cta: linear-gradient(120deg, #a78bfa, #7c66f0 55%, #6366f1);
+  --cyber-cta-ink: #0b0518;
+
+  --cyber-node: rgba(16, 10, 36, 0.82);
+  --cyber-node-leaf: rgba(7, 3, 15, 0.72);
+
+  --cyber-accent-1: #d8b4fe;
+  --cyber-accent-2: #a78bfa;
+  --cyber-accent-3: #818cf8;
+
+  --cyber-card: rgba(11, 5, 24, 0.72);
+  --cyber-card-edge: var(--cyber-edge-hi);
+  --cyber-card-ink: #cfc6f0;
+  --cyber-card-shadow:
+    0 26px 54px -24px rgba(0, 0, 0, 0.7),
+    0 0 48px -14px var(--cyber-glow);
+}
+
+/*
+ * Scanlines. One fixed overlay for the whole page rather than per-section, so
+ * the pitch never shifts as sections scroll past. `pointer-events: none` keeps
+ * it purely optical, and in light mode `--cyber-scan` is transparent so the
+ * layer costs nothing.
+ *
+ * 0.035 alpha at 3px is the ceiling before body text starts to shimmer — this
+ * should be felt, not seen.
+ */
+.Layout.mono-cyber::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--cyber-scan) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+/* ── Nav bar, landing page only ─────────────────────────────────────────────
+   The violet bar is painted with `!important` earlier in this file, including
+   on `.home.top` where VitePress would otherwise make it transparent. On the
+   landing page it becomes glass instead: fully transparent over the hero so the
+   grid and glow run behind it, solidifying once the page scrolls (VitePress
+   drops `.top` on scroll — that is the whole mechanism).
+
+   Its contents have to come off the forced white too, since in light mode the
+   bar is now over a pale hero rather than a violet slab.                    */
+
+.mono-cyber .VPNavBar,
+.mono-cyber .VPNavBar.screen-open {
+  background: color-mix(in srgb, var(--vp-c-bg) 78%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(160%);
+  border-bottom-color: var(--cyber-edge) !important;
+}
+.mono-cyber .VPNavBar.home.top {
+  background: transparent !important;
+  backdrop-filter: none;
+  border-bottom-color: transparent !important;
+}
+.mono-cyber .VPNavBar .divider-line {
+  background-color: var(--cyber-edge) !important;
+}
+.mono-cyber .VPNavBar .VPNavBarTitle .title {
+  color: var(--vp-c-text-1);
+}
+.mono-cyber .VPNavBar .VPNavBarHamburger .top,
+.mono-cyber .VPNavBar .VPNavBarHamburger .middle,
+.mono-cyber .VPNavBar .VPNavBarHamburger .bottom {
+  background-color: var(--vp-c-text-1);
+}
+.mono-cyber .VPNavBar .VPNavBarMenuLink,
+.mono-cyber .VPNavBar .VPNavBarMenuGroup .button {
+  color: var(--vp-c-text-2);
+}
+.mono-cyber .VPNavBar .VPNavBarMenuLink:hover,
+.mono-cyber .VPNavBar .VPNavBarMenuGroup .button:hover {
+  color: var(--vp-c-brand-1);
+}
+.mono-cyber .VPNavBar .mono-theme-switcher-trigger {
+  border-color: var(--cyber-edge);
+  background: color-mix(in srgb, var(--vp-c-brand-1) 12%, transparent);
+  color: var(--vp-c-text-1);
+}
+
+/* ----------------------------------------------------------------------------
+   Chrome cards on the landing page
+   ----------------------------------------------------------------------------
+
+   The ONLY place a `--theme-*` token is set anywhere on this site.
+
+   Auth, Data fetching and Sync use `mono-card` as a container — page furniture,
+   not a demonstration — so in dark mode they take a dark surface rather than
+   punching three white slabs through the page. The tokens are declared on those
+   three sections specifically and never at document level, which means:
+
+     · the Basic UI showcase is untouched and renders the genuine library look,
+       which is the whole point of that section; and
+     · `<mono-dropdown>` — which relocates its open panel into a body portal and
+       so inherits from <body>, not from the page — also stays light, because
+       <body> never sees these.
+   ---------------------------------------------------------------------------- */
+
+html.dark .mono-auth,
+html.dark .mono-fetch,
+html.dark .mono-sync {
+  --theme-surface: #140c2e;
+  --theme-surface-soft: #1a1038;
+  --theme-background: #0d0722;
+  --theme-text: #ede9fe;
+  --theme-text-rgb: 237, 233, 254;
+  --theme-border: #372a63;
+  --theme-border-rgb: 55, 42, 99;
+  --theme-purple: #a78bfa;
+  --theme-purple-rgb: 167, 139, 250;
+  --theme-primary: #8b5cf6;
+  --theme-primary-rgb: 139, 92, 246;
+  --theme-neutral: #6d5f96;
+  --theme-neutral-rgb: 109, 95, 150;
+
+  /* The stock elevations are tuned for a light page and vanish on this one. */
+  --theme-elev-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --theme-elev-2: 0 3px 12px rgba(0, 0, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --theme-elev-3: 0 5px 20px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --theme-elev-4: 0 10px 24px rgba(0, 0, 0, 0.62), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --theme-elev-5: 0 14px 34px rgba(0, 0, 0, 0.66), 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* ----------------------------------------------------------------------------
+   Appearance switch — a plain icon, always in the bar
+   ----------------------------------------------------------------------------
+
+   Out of the box VitePress ships this toggle twice, and neither placement is
+   what we want:
+
+     < 768px    neither is shown; it lives inside the hamburger nav screen
+     768-1279   .VPNavBarExtra — a "..." FLYOUT you have to open to reach it
+     >= 1280    .VPNavBarAppearance — a 40x22 pill switch with a sliding knob
+
+   So below 1280px the dark toggle was hidden behind a dropdown. Here the plain
+   control is shown everywhere the flyout used to be, and the flyout is retired
+   outright — it held nothing else, since no socialLinks are configured.
+
+   The two display rules need !important because VitePress' own are scoped
+   (.VPNavBarExtra[data-v-...], specificity 0,2,0) and would otherwise win.
+   ---------------------------------------------------------------------------- */
+
+@media (min-width: 768px) {
+  .VPNavBarAppearance {
+    display: flex !important;
+    align-items: center;
+  }
+}
+.VPNavBarExtra {
+  display: none !important;
+}
+
+/*
+ * Flatten the pill into an icon button.
+ *
+ * The knob (.check) and its 18px window (.icon) keep doing their job — the sun
+ * and moon live inside and cross-fade on opacity, so tearing that apart would
+ * mean re-implementing the icon swap. All that goes is the pill around them,
+ * the knob's own fill and shadow, and the 18px slide.
+ *
+ * transform:none carries !important only because VitePress marks its own
+ * "transition: transform .25s" as important on the very same element.
+ */
+.VPSwitch.VPSwitchAppearance {
+  width: 34px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background-color: transparent;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.VPSwitch.VPSwitchAppearance:hover {
+  border-color: rgba(255, 255, 255, 0.32);
+  background-color: rgba(255, 255, 255, 0.14);
+}
+.VPSwitch.VPSwitchAppearance .check {
+  /* (34 - 22) / 2 — centred, rather than parked at one end of a track. */
+  top: 6px;
+  left: 6px;
+  width: 22px;
+  height: 22px;
+  background-color: transparent;
+  box-shadow: none;
+  transform: none !important;
+}
+/*
+ * The glyphs themselves. VitePress draws them at 12px inside an 18px round
+ * window and sets their colour on THIS inner rule — which is why setting
+ * `color` on the button did nothing, and why the sun washed out on the nav.
+ *
+ * border-radius has to go to 0 as well: the window clips to a circle, and a
+ * full-bleed sun would lose the tips of its diagonal rays to that clip.
+ */
+.VPSwitch.VPSwitchAppearance .icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 0;
+}
+.VPSwitch.VPSwitchAppearance .icon [class^="vpi-"],
+.dark .VPSwitch.VPSwitchAppearance .icon [class^="vpi-"] {
+  top: 0;
+  left: 0;
+  width: 22px;
+  height: 22px;
+}
+
+/* The docs nav bar is a violet gradient in BOTH themes, so its icon is white
+   like every other control on that bar. --vp-c-text-2 sat almost invisibly
+   against the purple. Scoped to .VPNavBar so the mobile nav screen, which is
+   on the page ground rather than the bar, keeps the theme colour. */
+.VPNavBar .VPSwitch.VPSwitchAppearance .icon [class^="vpi-"],
+.dark .VPNavBar .VPSwitch.VPSwitchAppearance .icon [class^="vpi-"] {
+  color: #ffffff;
+}
+
+/* Except on the landing page, where the bar is glass over the hero. */
+.mono-cyber .VPNavBar .VPSwitch.VPSwitchAppearance .icon [class^="vpi-"],
+.dark .mono-cyber .VPNavBar .VPSwitch.VPSwitchAppearance .icon [class^="vpi-"] {
+  color: var(--vp-c-text-2);
+}
+.mono-cyber .VPNavBar .VPSwitch.VPSwitchAppearance:hover .icon [class^="vpi-"] {
+  color: var(--vp-c-text-1);
+}
+
+/* On the landing page the bar is glass over the hero, so the button follows the
+   page ink rather than the docs chrome. */
+.mono-cyber .VPNavBar .VPSwitch.VPSwitchAppearance:hover {
+  border-color: var(--cyber-edge);
+  background-color: color-mix(in srgb, var(--vp-c-brand-1) 12%, transparent);
+}

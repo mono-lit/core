@@ -1,0 +1,5 @@
+{
+  "@mono-lit/helper": ["!0.0.1"],
+  "@mono-lit/utility": ["!0.0.1"],
+  "@mono-lit/devextreme": ["!0.0.1"]
+}

@@ -1,0 +1,606 @@
+/* =========================================================================
+   mono-file-upload — a port of Basecoat's `.empty` (the dropzone) and `.item`
+   (the file rows) inside a `.field` (basecoat-css@1.0.2, vega style).
+
+   Styled by ATTRIBUTE, like Basecoat — and the attributes mirror the element's
+   props one for one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-file-upload variant="compact" label="Docs" title="Drop here" subtitle="PDF, DOCX">
+     <div mono-file-upload mono-variant="compact">
+       <label mono-label>Docs</label>
+       <label mono-dropzone>
+         <span mono-icon><span mono-glyph class="i-mdi-cloud-upload-outline"></span></span>
+         <span mono-title>Drop here</span>
+         <span mono-subtitle>PDF, DOCX</span>
+         <input mono-native type="file" />
+       </label>
+       <div mono-list>
+         <div mono-item>
+           <span mono-thumb>…</span>
+           <span mono-file><span mono-name>a.pdf</span><span mono-meta>12 KB</span></span>
+           <button mono-remove type="button">…</button>
+         </div>
+       </div>
+       <div mono-message="helper">…</div>
+     </div>
+
+   An absent attribute is the prop's default (`:not([mono-variant])` = default,
+   no `mono-validation-state` = default). The element renders these on its root
+   (both builds) plus the states `mono-disabled` / `mono-required` /
+   `mono-multiple` / `mono-no-dragdrop` (drag-drop is ON by default, so the
+   attribute marks the exception) and the live `mono-dragover`. The old
+   classes (`.mono-file-upload.compact.invalid`) are still emitted as inert
+   hooks until 2.0 but no rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-file-upload]              ≡ .field (flex w-full flex-col gap-3)
+     [mono-label]                    ≡ .field > label / .label (text-sm leading-snug font-medium)
+     [mono-dropzone]                 ≡ .empty (flex flex-col items-center justify-center text-center
+                                       text-balance, gap-4 rounded-lg border-dashed p-12) — the border
+                                       WIDTH is the `border` utility upstream puts in the markup, and
+                                       the gap is `.empty > header`'s gap-2 because our title and
+                                       subtext are flat siblings, not a nested <header>
+     [mono-icon]                     ≡ .empty figure + .empty figure:has(> svg:only-child)
+                                       (mb-2, bg-muted text-foreground size-10 rounded-lg, glyph size-6)
+     [mono-title]                    ≡ .empty :is(h2, h3, h4) (text-lg font-medium tracking-tight)
+     [mono-subtitle]/[mono-subtext]  ≡ .empty > header > p (text-sm/relaxed text-muted-foreground)
+     [mono-native]                   ≡ .field > input[type='file'] — HIDDEN here: the whole dropzone
+                                       is the picker, so the native control never shows
+     [mono-list]                     ≡ .item-group (flex w-full flex-col, gap-2.5 beside sm items)
+     [mono-item]                     ≡ .item[data-variant='outline'][data-size='sm']
+                                       (flex flex-wrap items-center border-border rounded-md text-sm,
+                                        gap-2.5 px-3 py-2.5, transition-colors)
+     [mono-thumb]                    ≡ .item > figure:has(> img) at sm (size-8 rounded-sm overflow-hidden,
+                                       img size-full object-cover) + figure:has(> svg:only-child) (glyph size-4)
+     [mono-file]                     ≡ .item > section (flex flex-1 flex-col gap-1)
+     [mono-name]                     ≡ .item :is(h2, h3, h4) (line-clamp-1 text-sm/snug font-medium)
+     [mono-meta]                     ≡ .item p (text-sm/normal text-muted-foreground line-clamp-2)
+     [mono-remove]                   ≡ .btn[data-variant='ghost'][data-size='icon-sm']
+                                       (size-8 rounded-[min(radius-md,10px)] hover:bg-muted, glyph size-4)
+     [mono-message="…"]              ≡ .field > p / .field [role='alert'] (text-sm, destructive when invalid)
+     [mono-validation-state="invalid"] ≡ aria-invalid:border-destructive aria-invalid:ring-destructive/20
+     [mono-validation-state="valid|warning"] ≡ EXTENSION (the same treatment in --success / --warning)
+     [mono-variant="compact"]        ≡ the `.empty` + `.item` metrics the COMPACT styles use
+                                       (nova/lyra/mira: .empty p-6, figure size-8 with a size-4 glyph,
+                                        title text-sm; rows drop to .item[data-size='xs'])
+     [mono-dragover]                 ≡ EXTENSION (the .item focus-visible treatment: border-ring +
+                                       ring-[3px] ring-ring/50, plus an accent tint)
+     [mono-disabled]                 ≡ .btn disabled:opacity-50
+
+   Upstream's dropzone is genuinely large — `.empty` is `p-12` — so this port is
+   TALLER than the pre-Basecoat uploader (which padded 1.2rem). `compact` is the
+   short one, and `--mono-file-upload-dropzone-padding` is one line either way.
+
+   Specificity contract (same as the pre-port class sheet): a part's RESTING rule
+   is exactly one attribute strong — `:where([mono-file-upload]) [mono-item]` =
+   (0,1,0) — so a utility class handed in through `cssClass` wins by source
+   order, while the prop and state rules stay heavier and win over it.
+
+   The two variants own SEPARATE public knobs (`-dropzone-padding` vs
+   `-compact-padding`, `-item-padding-x` vs `-compact-item-padding-x`, …): a
+   flavor writing one shared knob would repaint both looks at once, which is the
+   bug that made every style's `underlined` textarea come out filled.
+
+   FLAVORS set `--mono-file-upload-{radius,dropzone-padding,dropzone-gap,
+   icon-offset,icon-size,icon-glyph-size,icon-radius,title-font-size,
+   title-transform,item-radius,item-padding-*,item-gap,list-gap,thumb-size,
+   thumb-radius,…}` — the DEFAULT variant's set; `compact` has its own
+   `--mono-file-upload-compact-*` twins so one look never repaints the other; every fallback
+   here is vega's value
+   (`node scripts/basecoat-styles.mjs --varying "^\.(empty|item)"`).
+   ========================================================================= */
+
+mono-file-upload {
+  display: block;
+}
+
+[mono-file-upload] {
+  /* ── palette: each slot is a public knob over a Basecoat token ─────────── */
+  --_mono-file-upload-text: var(--mono-file-upload-text, var(--foreground));
+  --_mono-file-upload-muted: var(--mono-file-upload-muted, var(--muted-foreground));
+  /* the accent: the dropzone glyph, and the ring the dragover state paints */
+  --_mono-file-upload-primary: var(--mono-file-upload-primary, var(--primary));
+  --_mono-file-upload-success: var(--mono-file-upload-success, var(--success));
+  --_mono-file-upload-danger: var(--mono-file-upload-danger, var(--destructive));
+  --_mono-file-upload-warning: var(--mono-file-upload-warning, var(--warning));
+
+  /* `-border` is the pre-Basecoat public name for the dropzone edge — kept as
+     the fallback so a consumer that set it keeps working */
+  --_mono-file-upload-border-color: var(--mono-file-upload-border-color, var(--mono-file-upload-border, var(--border)));
+  --_mono-file-upload-border-width: var(--mono-file-upload-border-width, var(--mono-border-width));
+  --_mono-file-upload-border-style: var(--mono-file-upload-border-style, dashed);
+  /* .empty has no fill of its own; `-background` is the pre-Basecoat name */
+  --_mono-file-upload-dropzone-bg: var(--mono-file-upload-dropzone-bg, var(--mono-file-upload-background, transparent));
+  /* hover: the ghost treatment (bg-muted, dark:bg-muted/50) */
+  --_mono-file-upload-dropzone-hover-bg: var(--mono-file-upload-dropzone-hover-bg, var(--mono-mode-ghost-hover));
+  --_mono-file-upload-radius: var(--mono-file-upload-radius, var(--mono-radius-lg));
+
+  --_mono-file-upload-ring-color: var(--mono-file-upload-ring-color, var(--ring));
+  --_mono-file-upload-ring-width: var(--mono-file-upload-ring-width, var(--mono-ring-width));
+  --_mono-file-upload-ring-alpha: var(--mono-file-upload-ring-alpha, var(--mono-ring-alpha));
+
+  /* the icon plate — .empty figure:has(> svg:only-child) is a muted square */
+  --_mono-file-upload-icon-bg: var(--mono-file-upload-icon-bg, var(--muted));
+  --_mono-file-upload-icon-color: var(--mono-file-upload-icon-color, var(--_mono-file-upload-text));
+  --_mono-file-upload-icon-radius: var(--mono-file-upload-icon-radius, var(--mono-radius-lg));
+
+  /* the file rows — .item[data-variant='outline'] rings, it does not fill.
+     `-surface` is the pre-Basecoat name for the row background. */
+  --_mono-file-upload-item-bg: var(--mono-file-upload-item-bg, var(--mono-file-upload-surface, transparent));
+  --_mono-file-upload-item-border-color: var(--mono-file-upload-item-border-color, var(--border));
+  --_mono-file-upload-item-border-width: var(--mono-file-upload-item-border-width, var(--mono-border-width));
+  --_mono-file-upload-item-radius: var(--mono-file-upload-item-radius, var(--mono-radius-md));
+  --_mono-file-upload-thumb-bg: var(--mono-file-upload-thumb-bg, var(--muted));
+  --_mono-file-upload-thumb-radius: var(--mono-file-upload-thumb-radius, var(--mono-radius-sm));
+
+  /* ── the DEFAULT variant's metrics; `compact` re-points every preset ───────
+     basecoat@1.0.2 styles/vega.css .empty — gap-4 rounded-lg border-dashed p-12;
+     .empty figure — mb-2; .empty figure:has(> svg:only-child) — size-10 rounded-lg
+     with a size-6 glyph; .empty :is(h2,h3,h4) — text-lg; .item[data-size='sm'] —
+     gap-2.5 px-3 py-2.5 with a size-8 image figure; .item-group — gap-2.5 */
+  --_mono-file-upload-dropzone-padding: var(--_mono-file-upload-dropzone-padding-preset, calc(var(--mono-spacing) * 12));
+  --_mono-file-upload-dropzone-gap: var(--_mono-file-upload-dropzone-gap-preset, calc(var(--mono-spacing) * 2));
+  --_mono-file-upload-icon-offset: var(--_mono-file-upload-icon-offset-preset, calc(var(--mono-spacing) * 4));
+  --_mono-file-upload-icon-size: var(--_mono-file-upload-icon-size-preset, calc(var(--mono-spacing) * 10));
+  --_mono-file-upload-icon-glyph-size: var(--_mono-file-upload-icon-glyph-size-preset, calc(var(--mono-spacing) * 6));
+  --_mono-file-upload-title-font-size: var(--_mono-file-upload-title-font-size-preset, var(--mono-text-lg));
+  --_mono-file-upload-title-line-height: var(--_mono-file-upload-title-line-height-preset, var(--mono-text-lg--lh));
+  --_mono-file-upload-list-gap: var(--_mono-file-upload-list-gap-preset, calc(var(--mono-spacing) * 2.5));
+  --_mono-file-upload-item-gap: var(--_mono-file-upload-item-gap-preset, calc(var(--mono-spacing) * 2.5));
+  --_mono-file-upload-item-padding-x: var(--_mono-file-upload-item-padding-x-preset, calc(var(--mono-spacing) * 3));
+  --_mono-file-upload-item-padding-y: var(--_mono-file-upload-item-padding-y-preset, calc(var(--mono-spacing) * 2.5));
+  --_mono-file-upload-file-gap: var(--_mono-file-upload-file-gap-preset, var(--mono-spacing));
+  --_mono-file-upload-thumb-size: var(--_mono-file-upload-thumb-size-preset, calc(var(--mono-spacing) * 8));
+  --_mono-file-upload-meta-font-size: var(--_mono-file-upload-meta-font-size-preset, var(--mono-text-sm));
+
+  /* basecoat@1.0.2 components/field.css .field — flex w-full flex-col;
+     styles/vega.css .field — gap-3 */
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+  gap: var(--mono-file-upload-gap, calc(var(--mono-spacing) * 3));
+  color: var(--_mono-file-upload-text);
+  font-family: inherit;
+}
+
+[mono-file-upload] *,
+[mono-file-upload] *::before,
+[mono-file-upload] *::after {
+  box-sizing: border-box;
+}
+
+/* The shadow build renders every region and marks the empty ones; this hides
+   them. It must out-specify the region rules below, hence the root attribute. */
+[mono-file-upload] :is([mono-label], [mono-icon], [mono-title], [mono-subtitle], [mono-subtext], [mono-list], [mono-message])[mono-empty] {
+  display: none;
+}
+
+/* =========================================
+   Variants — the DEFAULT look, and the compact one
+   ========================================= */
+
+/* `default` is vega's `.empty` + `.item[data-size='sm']`. The knobs are scoped
+   to the variant so a flavor can restyle one look without touching the other. */
+[mono-file-upload]:not([mono-variant="compact"]) {
+  --_mono-file-upload-dropzone-padding-preset: var(--mono-file-upload-dropzone-padding);
+  --_mono-file-upload-dropzone-gap-preset: var(--mono-file-upload-dropzone-gap);
+  --_mono-file-upload-icon-offset-preset: var(--mono-file-upload-icon-offset);
+  --_mono-file-upload-icon-size-preset: var(--mono-file-upload-icon-size);
+  --_mono-file-upload-icon-glyph-size-preset: var(--mono-file-upload-icon-glyph-size);
+  --_mono-file-upload-title-font-size-preset: var(--mono-file-upload-title-font-size);
+  --_mono-file-upload-title-line-height-preset: var(--mono-file-upload-title-line-height);
+  --_mono-file-upload-list-gap-preset: var(--mono-file-upload-list-gap);
+  --_mono-file-upload-item-gap-preset: var(--mono-file-upload-item-gap);
+  --_mono-file-upload-item-padding-x-preset: var(--mono-file-upload-item-padding-x);
+  --_mono-file-upload-item-padding-y-preset: var(--mono-file-upload-item-padding-y);
+  --_mono-file-upload-file-gap-preset: var(--mono-file-upload-file-gap);
+  --_mono-file-upload-thumb-size-preset: var(--mono-file-upload-thumb-size);
+  --_mono-file-upload-meta-font-size-preset: var(--mono-file-upload-meta-font-size);
+}
+
+/* basecoat@1.0.2 styles/nova.css .empty — rounded-xl p-6;
+   styles/nova.css .empty figure:has(> svg:only-child) — size-8 with a size-4 glyph;
+   styles/nova.css .empty :is(h2, h3, h4) — text-sm;
+   styles/vega.css .item[data-size='xs'] — gap-2 px-2.5 py-2;
+   styles/vega.css .item[data-size='xs'] > section — gap-0;
+   styles/vega.css .item[data-size='xs'] p — text-xs;
+   styles/vega.css .item[data-size='xs'] > figure:has(> img) — size-6;
+   styles/vega.css .item-group:has(> .item[data-size='xs']) — gap-2
+   — DEVIATION: the radius stays the default variant's (a flavor owns that axis). */
+[mono-file-upload][mono-variant="compact"] {
+  --_mono-file-upload-dropzone-padding-preset: var(--mono-file-upload-compact-padding, calc(var(--mono-spacing) * 6));
+  --_mono-file-upload-dropzone-gap-preset: var(--mono-file-upload-compact-gap, var(--mono-spacing));
+  --_mono-file-upload-icon-offset-preset: var(--mono-file-upload-compact-icon-offset, calc(var(--mono-spacing) * 3));
+  --_mono-file-upload-icon-size-preset: var(--mono-file-upload-compact-icon-size, calc(var(--mono-spacing) * 8));
+  --_mono-file-upload-icon-glyph-size-preset: var(--mono-file-upload-compact-icon-glyph-size, calc(var(--mono-spacing) * 4));
+  --_mono-file-upload-title-font-size-preset: var(--mono-file-upload-compact-title-font-size, var(--mono-text-sm));
+  --_mono-file-upload-title-line-height-preset: var(--mono-file-upload-compact-title-line-height, var(--mono-leading-snug));
+  --_mono-file-upload-list-gap-preset: var(--mono-file-upload-compact-list-gap, calc(var(--mono-spacing) * 2));
+  --_mono-file-upload-item-gap-preset: var(--mono-file-upload-compact-item-gap, calc(var(--mono-spacing) * 2));
+  --_mono-file-upload-item-padding-x-preset: var(--mono-file-upload-compact-item-padding-x, calc(var(--mono-spacing) * 2.5));
+  --_mono-file-upload-item-padding-y-preset: var(--mono-file-upload-compact-item-padding-y, calc(var(--mono-spacing) * 2));
+  --_mono-file-upload-file-gap-preset: var(--mono-file-upload-compact-file-gap, 0px);
+  --_mono-file-upload-thumb-size-preset: var(--mono-file-upload-compact-thumb-size, calc(var(--mono-spacing) * 6));
+  --_mono-file-upload-meta-font-size-preset: var(--mono-file-upload-compact-meta-font-size, var(--mono-text-xs));
+}
+
+/* =========================================
+   Label
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .field > label, .label — text-sm leading-snug font-medium */
+:where([mono-file-upload]) > [mono-label] {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  gap: calc(var(--mono-spacing) * 1);
+  font-size: var(--mono-file-upload-label-font-size, var(--mono-text-sm));
+  line-height: var(--mono-file-upload-label-line-height, var(--mono-leading-snug));
+  font-weight: var(--mono-file-upload-label-font-weight, var(--mono-label-font-weight, var(--mono-font-weight-medium)));
+  color: var(--mono-file-upload-label-color, var(--_mono-file-upload-text));
+}
+
+[mono-file-upload][mono-validation-state="invalid"] > [mono-label] {
+  color: var(--mono-file-upload-label-color, var(--_mono-file-upload-danger));
+}
+
+:where([mono-file-upload]) [mono-required-mark] {
+  color: var(--mono-file-upload-required-color, var(--destructive));
+}
+
+/* =========================================
+   Dropzone — `.empty`
+   ========================================= */
+
+/* basecoat@1.0.2 components/empty.css .empty — flex w-full min-w-0 flex-col
+   items-center justify-center text-center text-balance;
+   styles/vega.css .empty — gap-4 rounded-lg border-dashed p-12
+   — the border WIDTH comes from the `border` utility upstream writes in markup,
+   so it is a knob here; `transition-[color,box-shadow]` is the field treatment. */
+:where([mono-file-upload]) [mono-dropzone] {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-wrap: balance;
+  gap: var(--_mono-file-upload-dropzone-gap);
+  padding: var(--_mono-file-upload-dropzone-padding);
+  border: var(--_mono-file-upload-border-width) var(--_mono-file-upload-border-style)
+    var(--_mono-file-upload-border-color);
+  border-radius: var(--_mono-file-upload-radius);
+  background-color: var(--_mono-file-upload-dropzone-bg);
+  cursor: pointer;
+  transition:
+    color var(--mono-duration) var(--mono-ease),
+    background-color var(--mono-duration) var(--mono-ease),
+    border-color var(--mono-duration) var(--mono-ease),
+    box-shadow var(--mono-duration) var(--mono-ease);
+  /* the two-slot stack the ports share: the ring is written by a state rule */
+  box-shadow: var(--_mono-file-upload-ring, 0 0 #0000);
+}
+
+/* basecoat@1.0.2 styles/vega.css .btn[data-variant='ghost'] — hover:bg-muted
+   (dark:hover:bg-muted/50), carried by --mono-mode-ghost-hover */
+@media (hover: hover) {
+  [mono-file-upload]:not([mono-disabled]) [mono-dropzone]:hover {
+    border-color: var(--mono-file-upload-hover-border-color, var(--_mono-file-upload-primary));
+    background-color: var(--_mono-file-upload-dropzone-hover-bg);
+  }
+}
+
+/* EXTENSION — the drag-over state wears the `.item` focus treatment
+   (basecoat@1.0.2 components/item.css .item — focus-visible:border-ring
+   focus-visible:ring-[3px] focus-visible:ring-ring/50) in the accent colour */
+[mono-file-upload][mono-dragover] [mono-dropzone] {
+  border-color: var(--_mono-file-upload-primary);
+  border-style: solid;
+  background-color: color-mix(in oklab, var(--_mono-file-upload-primary) var(--mono-mode-tint), transparent);
+  --_mono-file-upload-ring: 0 0 0 var(--_mono-file-upload-ring-width)
+    color-mix(in oklab, var(--_mono-file-upload-primary) var(--_mono-file-upload-ring-alpha), transparent);
+}
+
+/* basecoat@1.0.2 components/button.css .btn — disabled:pointer-events-none disabled:opacity-50 */
+[mono-file-upload][mono-disabled] [mono-dropzone] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* basecoat@1.0.2 styles/vega.css .field > textarea, .textarea —
+   aria-invalid:border-destructive aria-invalid:ring-destructive/20 aria-invalid:ring-3
+   (dark: destructive/50 and /40, carried by the mode tokens) */
+[mono-file-upload][mono-validation-state="invalid"] [mono-dropzone] {
+  border-color: var(--mono-file-upload-invalid-border-color, var(--mono-mode-invalid-border));
+  --_mono-file-upload-ring: 0 0 0 var(--_mono-file-upload-ring-width) var(--mono-mode-invalid-ring);
+}
+
+/* EXTENSION — the same treatment in --success / --warning */
+[mono-file-upload][mono-validation-state="valid"] [mono-dropzone] {
+  border-color: var(--_mono-file-upload-success);
+  --_mono-file-upload-ring: 0 0 0 var(--_mono-file-upload-ring-width)
+    color-mix(in oklab, var(--_mono-file-upload-success) var(--mono-mode-state-ring-alpha), transparent);
+}
+
+[mono-file-upload][mono-validation-state="warning"] [mono-dropzone] {
+  border-color: var(--_mono-file-upload-warning);
+  --_mono-file-upload-ring: 0 0 0 var(--_mono-file-upload-ring-width)
+    color-mix(in oklab, var(--_mono-file-upload-warning) var(--mono-mode-state-ring-alpha), transparent);
+}
+
+/* =========================================
+   Dropzone contents — figure, title, subtext
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .empty figure — mb-2;
+   styles/vega.css .empty figure:has(> svg:only-child) — bg-muted text-foreground
+   flex size-10 shrink-0 items-center justify-center rounded-lg
+   — DEVIATION: keyed off the part attribute, not `:has(> svg:only-child)`: the
+   light build paints the glyph with an `i-*` MASK span and the shadow build with
+   an inline <svg>, so a shape test would style one build and not the other. */
+:where([mono-file-upload]) [mono-icon] {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-file-upload-icon-size);
+  height: var(--_mono-file-upload-icon-size);
+  margin-bottom: var(--_mono-file-upload-icon-offset);
+  border-radius: var(--_mono-file-upload-icon-radius);
+  background-color: var(--_mono-file-upload-icon-bg);
+  color: var(--_mono-file-upload-icon-color);
+  font-size: var(--_mono-file-upload-icon-glyph-size);
+  line-height: 1;
+  overflow: hidden;
+}
+
+/* `[&_svg:not([class*='size-'])]:size-6` — our glyph is a mask span (light) or an
+   inline SVG (shadow); both are sized by the same box. Only [mono-glyph] is
+   touched: a slotted custom icon is light DOM in BOTH builds, so a bare `svg`
+   descendant rule would reach it in light and not in shadow. */
+:where([mono-file-upload]) [mono-icon] [mono-glyph] {
+  display: block;
+  width: var(--_mono-file-upload-icon-glyph-size);
+  height: var(--_mono-file-upload-icon-glyph-size);
+  flex-shrink: 0;
+  color: inherit;
+}
+
+:where([mono-file-upload]) [mono-icon] [mono-glyph] > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* basecoat@1.0.2 styles/vega.css .empty :is(h2, h3, h4) — text-lg font-medium tracking-tight */
+:where([mono-file-upload]) [mono-title] {
+  font-size: var(--_mono-file-upload-title-font-size);
+  line-height: var(--_mono-file-upload-title-line-height);
+  font-weight: var(--mono-file-upload-title-font-weight, var(--mono-font-weight-medium));
+  letter-spacing: var(--mono-file-upload-title-tracking, var(--mono-tracking-tight));
+  text-transform: var(--mono-file-upload-title-transform, none);
+  color: var(--_mono-file-upload-text);
+}
+
+/* basecoat@1.0.2 styles/vega.css .empty > header > p — text-muted-foreground text-sm/relaxed
+   `mono-subtitle` is the current part name; the element still emits the old
+   `mono-subtext` beside it, and hand-written markup may use either. The CSS vars
+   keep their `-subtext-` names. */
+:where([mono-file-upload]) :is([mono-subtitle], [mono-subtext]) {
+  font-size: var(--mono-file-upload-subtext-font-size, var(--mono-text-sm));
+  line-height: var(--mono-file-upload-subtext-line-height, var(--mono-leading-relaxed));
+  color: var(--mono-file-upload-subtext-color, var(--_mono-file-upload-muted));
+}
+
+/* The whole dropzone IS the picker — the native control never shows. */
+:where([mono-file-upload]) [mono-native] {
+  display: none;
+}
+
+/* =========================================
+   File list — `.item-group` and `.item`
+   ========================================= */
+
+/* basecoat@1.0.2 components/item.css .item-group — flex w-full flex-col;
+   styles/vega.css .item-group:has(> .item[data-size='sm']) — gap-2.5 */
+:where([mono-file-upload]) [mono-list] {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: var(--_mono-file-upload-list-gap);
+}
+
+/* basecoat@1.0.2 components/item.css .item — flex w-full flex-wrap items-center
+   border transition-colors duration-100 outline-none;
+   styles/vega.css .item — rounded-md border text-sm;
+   styles/vega.css .item[data-variant='outline'] — border-border;
+   styles/vega.css .item[data-size='sm'] — gap-2.5 px-3 py-2.5 */
+:where([mono-file-upload]) [mono-item] {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--_mono-file-upload-item-gap);
+  padding-inline: var(--_mono-file-upload-item-padding-x);
+  padding-block: var(--_mono-file-upload-item-padding-y);
+  border: var(--_mono-file-upload-item-border-width) solid var(--_mono-file-upload-item-border-color);
+  border-radius: var(--_mono-file-upload-item-radius);
+  background-color: var(--_mono-file-upload-item-bg);
+  font-size: var(--mono-file-upload-item-font-size, var(--mono-text-sm));
+  transition:
+    background-color 100ms var(--mono-ease),
+    border-color 100ms var(--mono-ease);
+  outline: none;
+}
+
+/* basecoat@1.0.2 styles/vega.css .item[data-size='sm'] > figure:has(> img) — size-8;
+   styles/vega.css .item > figure:has(> img) — overflow-hidden rounded-sm;
+   components/item.css .item > figure:has(> img) — [&_img]:size-full [&_img]:object-cover;
+   styles/vega.css .item > figure:has(> svg:only-child) — a size-4 glyph */
+:where([mono-file-upload]) [mono-thumb] {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-file-upload-thumb-size);
+  height: var(--_mono-file-upload-thumb-size);
+  overflow: hidden;
+  border-radius: var(--_mono-file-upload-thumb-radius);
+  background-color: var(--_mono-file-upload-thumb-bg);
+  color: var(--mono-file-upload-thumb-color, var(--_mono-file-upload-muted));
+  font-size: calc(var(--mono-spacing) * 4);
+  line-height: 1;
+}
+
+:where([mono-file-upload]) [mono-thumb] > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+:where([mono-file-upload]) [mono-thumb] [mono-glyph] {
+  display: block;
+  width: calc(var(--mono-spacing) * 4);
+  height: calc(var(--mono-spacing) * 4);
+  flex-shrink: 0;
+}
+
+:where([mono-file-upload]) [mono-thumb] [mono-glyph] > svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* basecoat@1.0.2 components/item.css .item > section — flex flex-1 flex-col;
+   styles/vega.css .item > section — gap-1 (gap-0 at data-size='xs') */
+:where([mono-file-upload]) [mono-file] {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--_mono-file-upload-file-gap);
+}
+
+/* basecoat@1.0.2 components/item.css .item :is(h2, h3, h4) — line-clamp-1 flex
+   w-fit items-center;
+   styles/vega.css .item :is(h2, h3, h4) — text-sm leading-snug font-medium
+   — DEVIATION: one line ellipsised with `text-overflow`, not `line-clamp-1`: a
+   file name is a single line and must truncate mid-word, which the WebKit box
+   clamp does not do. */
+:where([mono-file-upload]) [mono-name] {
+  max-width: 100%;
+  font-size: var(--mono-file-upload-name-font-size, var(--mono-text-sm));
+  line-height: var(--mono-file-upload-name-line-height, var(--mono-leading-snug));
+  font-weight: var(--mono-file-upload-name-font-weight, var(--mono-font-weight-medium));
+  color: var(--_mono-file-upload-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* basecoat@1.0.2 components/item.css .item p — text-muted-foreground line-clamp-2
+   text-start font-normal;
+   styles/vega.css .item p — text-sm leading-normal (text-xs at data-size='xs') */
+:where([mono-file-upload]) [mono-meta] {
+  font-size: var(--_mono-file-upload-meta-font-size);
+  line-height: var(--mono-file-upload-meta-line-height, var(--mono-leading-normal));
+  font-weight: var(--mono-font-weight-normal);
+  text-align: start;
+  color: var(--mono-file-upload-meta-color, var(--_mono-file-upload-muted));
+}
+
+/* basecoat@1.0.2 styles/vega.css .btn[data-variant='ghost'] — hover:bg-muted
+   hover:text-foreground (dark:hover:bg-muted/50);
+   styles/vega.css .btn[data-size='icon-sm'] — size-8 rounded-[min(var(--radius-md),10px)]
+   — DEVIATION: the hover ink is the DANGER role, not `--foreground`: this ghost
+   button deletes the row it sits in. */
+:where([mono-file-upload]) [mono-remove] {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--mono-file-upload-remove-size, calc(var(--mono-spacing) * 8));
+  height: var(--mono-file-upload-remove-size, calc(var(--mono-spacing) * 8));
+  padding: 0;
+  border: 0;
+  border-radius: var(--mono-file-upload-remove-radius, min(var(--mono-radius-md), 10px));
+  background: transparent;
+  color: var(--_mono-file-upload-muted);
+  font: inherit;
+  font-size: calc(var(--mono-spacing) * 4);
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color var(--mono-duration) var(--mono-ease),
+    background-color var(--mono-duration) var(--mono-ease),
+    box-shadow var(--mono-duration) var(--mono-ease);
+  box-shadow: var(--_mono-file-upload-remove-ring, 0 0 #0000);
+}
+
+@media (hover: hover) {
+  :where([mono-file-upload]) [mono-remove]:hover {
+    background-color: var(--mono-mode-ghost-hover);
+    color: var(--_mono-file-upload-danger);
+  }
+}
+
+/* basecoat@1.0.2 components/item.css .item — focus-visible:border-ring
+   focus-visible:ring-[3px] focus-visible:ring-ring/50 */
+:where([mono-file-upload]) [mono-remove]:focus-visible {
+  outline: none;
+  color: var(--_mono-file-upload-text);
+  --_mono-file-upload-remove-ring: 0 0 0 var(--_mono-file-upload-ring-width)
+    color-mix(in oklab, var(--_mono-file-upload-ring-color) var(--_mono-file-upload-ring-alpha), transparent);
+}
+
+:where([mono-file-upload]) [mono-remove] [mono-glyph] {
+  display: block;
+  width: calc(var(--mono-spacing) * 4);
+  height: calc(var(--mono-spacing) * 4);
+  flex-shrink: 0;
+  color: inherit;
+}
+
+:where([mono-file-upload]) [mono-remove] [mono-glyph] > svg {
+  width: 100%;
+  height: 100%;
+}
+
+[mono-file-upload][mono-disabled] [mono-remove] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* =========================================
+   Message
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .fieldset legend + p, .field > p, .field section > p
+   — text-sm text-muted-foreground leading-normal font-normal */
+:where([mono-file-upload]) [mono-message] {
+  font-size: var(--mono-file-upload-message-font-size, var(--mono-text-sm));
+  line-height: var(--mono-file-upload-message-line-height, var(--mono-leading-normal));
+  color: var(--mono-file-upload-message-color, var(--_mono-file-upload-muted));
+}
+
+/* basecoat@1.0.2 components/field.css .field >> [role='alert'] — the invalid message
+   is the destructive one (styles/vega.css gives it text-sm) */
+:where([mono-file-upload]) [mono-message="invalid"] {
+  color: var(--_mono-file-upload-danger);
+}
+
+:where([mono-file-upload]) [mono-message="valid"] {
+  color: var(--_mono-file-upload-success);
+}
+
+:where([mono-file-upload]) [mono-message="warning"] {
+  color: var(--_mono-file-upload-warning);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([mono-file-upload]) :is([mono-dropzone], [mono-item], [mono-remove]) {
+    transition: none;
+  }
+}

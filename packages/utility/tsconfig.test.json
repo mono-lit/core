@@ -1,0 +1,16 @@
+{
+    // The main tsconfig only covers `src/` + `pkg/` (it drives the .d.ts build, and tests
+    // must not ship). Vitest's typechecker needs one that sees `tests/` too — this is it.
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "noEmit": true,
+        "emitDeclarationOnly": false,
+        "declaration": false,
+        "types": ["vitest/globals", "node"]
+    },
+    "include": [
+        "src/**/*.ts",
+        "pkg/**/*.ts",
+        "tests/**/*.ts"
+    ]
+}

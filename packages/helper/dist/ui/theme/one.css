@@ -1,0 +1,699 @@
+/* ============================================================
+   ONE theme (structure only) — radius, typography, elevation,
+   and component shapes derived from the EJI ONE Design System
+   (PT Eka Jaya Internasional, brand core #1f2664).
+
+   Colors are NOT here; they come from the default theme +
+   .theme-color-* presets in index.css. Pair with .theme-color-one
+   for the full ONE look — but this flavor composes with any
+   color preset, so every brand color below is read through
+   var(--theme-*) rather than hardcoded.
+
+   ONE is @mono-lit/helper's DEFAULT flavor: index.css imports this sheet and
+   the block below applies at :root, so nothing needs importing or
+   classing. `class="theme-one"` re-applies it inside a subtree that sits
+   under another flavor. The Basecoat styles (vega, nova, …) are the opt-in
+   ones — each of their sheets starts with a vega reset of what this file
+   sets (flavors/_vega-base.css).
+
+   The guide mandates self-hosted "Poppins" (the system runs on an
+   internal 192.168.x network where font CDNs are unreachable). We
+   only name the family; the consuming app ships the .woff2 files.
+
+   ── WHY THIS FILE IS ALMOST ALL CUSTOM PROPERTIES ──
+   A flavor must restyle BOTH the light build (`<mono-card>`) and the
+   shadow build (`<mono-shadow-card>`). A descendant rule like
+   `.theme-one .mono-card { … }` reaches only the light one: the shadow
+   host carries no class, its `.mono-card` lives INSIDE the shadow root,
+   and the `.theme-one` ancestor is outside the boundary — so the rule
+   can never match. Custom properties, by contrast, inherit THROUGH the
+   boundary. So everything themable is expressed as a var set on the
+   flavor root, and `font-family` is set once and inherited (every
+   component root declares `font-family: inherit`).
+
+   The only descendant rules left are for things that are genuinely
+   light DOM: the `<table class="mono-table">` a consumer authors, and
+   flatpickr's calendar, which renders into <body>.
+
+   -- ONE OWNS ITS GEOMETRY --
+   ONE is the DEFAULT flavor, so it follows the EJI guide's own ladder rather
+   than Basecoat's: 40px controls at md (the guide's one control height),
+   stepping 4px per size like every Basecoat style does. Text sizes for the
+   un-ported components still inherit mono's (the --theme-* literals below);
+   ported components read the Basecoat vocabulary and get 14px body text,
+   which is also the guide's base.
+
+   What ONE changes: font family, the control ladder, radius, elevation,
+   motion, border width, font WEIGHTS, focus ring, and per-component shapes.
+   Every public knob set here must have an `initial` twin in
+   flavors/_vega-base.css, or it leaks into the Basecoat styles.
+   ============================================================ */
+:root,
+.theme-one {
+  /* The one inheritable property we set directly. Every component root is
+     `font-family: inherit`, so this reaches every light AND shadow component
+     in one declaration; a consumer's own body font rule still wins below it. */
+  font-family: var(--font-sans);
+
+  /* ── Basecoat vocabulary ──────────────────────────────────────────────
+     Components ported to Basecoat read these (see src/data/theme/generated/
+     tokens.css); the --theme-* lines further down keep the un-ported ones
+     exactly as they were and go in 2.0. The EJI ladder (6/8/12/16px) is set
+     explicitly rather than derived from `--radius`. */
+  /* ONE's own family (Poppins). An imported font sheet (@mono-lit/helper/ui/font/*.css) sets
+     --mono-font-sans on :root, and that wins here and in every other theme. */
+  --font-sans: var(--mono-font-sans, "Poppins", "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
+  --radius: 0.5rem;
+  --mono-radius-sm: 0.375rem;
+  --mono-radius-md: 0.5rem;
+  --mono-radius-lg: 0.75rem;
+  --mono-radius-xl: 1rem;
+  --mono-radius-2xl: 1.25rem;
+  /* --eji-sh-* — deliberately soft */
+  --mono-shadow-xs: 0 1px 2px rgba(16, 24, 64, 0.05);
+  --mono-shadow-sm: 0 1px 2px rgba(16, 24, 64, 0.04), 0 1px 3px rgba(16, 24, 64, 0.06);
+  --mono-shadow-md: 0 2px 4px rgba(16, 24, 64, 0.04), 0 4px 12px rgba(16, 24, 64, 0.07);
+  --mono-shadow-lg: 0 8px 24px rgba(16, 24, 64, 0.1);
+  --mono-shadow-xl: 0 12px 32px rgba(16, 24, 64, 0.14);
+  --mono-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --mono-ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --mono-duration: 160ms;
+  --mono-duration-fast: 120ms;
+  --mono-duration-slow: 240ms;
+  --mono-label-font-weight: 600;
+  --mono-title-font-weight: 700;
+  --mono-border-width: 1px;
+  /* --eji-sh-focus: a 3px primary-100 halo */
+  --mono-ring-alpha: 18%;
+
+  /* EJI control ladder — the guide mandates ONE height, 40px (h-10), for
+     inputs and buttons; the other steps continue Basecoat's 4px grid around it
+     (xs h-7 … xxl h-13, the same ladder as the sera style). */
+  --mono-control-height-xs: 1.75rem;
+  --mono-control-height-sm: 2.25rem;
+  --mono-control-height-md: 2.5rem;
+  --mono-control-height-lg: 2.75rem;
+  --mono-control-height-xl: 3rem;
+  --mono-control-height-xxl: 3.25rem;
+
+  /* EJI radius scale (--eji-r-*): 6px badges, 8px controls, 12px cards,
+     16px hero surfaces. Notably flatter than mono, rounder than Material. */
+  --theme-radius-xs: 0.25rem;   /* 4px  — checkbox box, small chips */
+  --theme-radius-sm: 0.375rem;  /* 6px  — --eji-r-sm  */
+  --theme-radius-md: 0.5rem;    /* 8px  — --eji-r-md: input, button */
+  --theme-radius-lg: 0.75rem;   /* 12px — --eji-r-lg: card, panel */
+  --theme-radius-xl: 1rem;      /* 16px — --eji-r-xl: hero */
+  --theme-radius-2xl: 1.25rem;  /* 20px */
+  --theme-radius-full: 9999px;
+
+  /* EJI elevation (--eji-sh-*) — deliberately soft; the guide forbids
+     heavy drop shadows. elev-5 extrapolates one step past sh-lg for modals. */
+  --theme-elev-0: none;
+  --theme-elev-1: 0 1px 2px rgba(16, 24, 64, 0.05);
+  --theme-elev-2: 0 1px 2px rgba(16, 24, 64, 0.04), 0 1px 3px rgba(16, 24, 64, 0.06);
+  --theme-elev-3: 0 2px 4px rgba(16, 24, 64, 0.04), 0 4px 12px rgba(16, 24, 64, 0.07);
+  --theme-elev-4: 0 8px 24px rgba(16, 24, 64, 0.1);
+  --theme-elev-5: 0 12px 32px rgba(16, 24, 64, 0.14);
+
+  /* EJI motion — a single easing (--eji-transition: 160ms cubic-bezier(.4,0,.2,1)). */
+  --theme-motion-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --theme-motion-emphasized: cubic-bezier(0.4, 0, 0.2, 1);
+  --theme-duration-fast: 120ms;
+  --theme-duration-base: 160ms;
+  --theme-duration-slow: 240ms;
+
+  /* EJI spacing (--eji-sp-*) is a 4px ladder — same as the mono default. */
+  --theme-space-1: 0.25rem;
+  --theme-space-2: 0.5rem;
+  --theme-space-3: 0.75rem;
+  --theme-space-4: 1rem;
+  --theme-space-5: 1.5rem;
+  --theme-space-6: 2rem;
+
+  /* EJI typography — one family system-wide. Only the family and the weight
+     ramp are ONE's: every SIZE (base scale, control text, labels, headings,
+     subtitles) and both line-heights are left unset so they inherit Mono's.
+     See the dimensions note at the top of this file. */
+  --theme-font-family: var(--mono-font-sans, "Poppins", "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
+  --theme-font-weight-regular: 400;
+  --theme-font-weight-medium: 500;
+  --theme-font-weight-semibold: 600;
+  --theme-font-weight-bold: 700;
+  --theme-letter-spacing-button: 0; /* EJI buttons are sentence case */
+
+  /* Field labels are semibold where Mono is bold — a weight, not a size. The
+     uppercase 11px label is the guide's signature, but pinning its size would
+     break the promise above, so only the weight carries over. */
+  --theme-label-font-weight: var(--theme-font-weight-semibold);
+  --theme-title-font-weight: var(--theme-font-weight-bold);
+  --theme-subtitle-font-weight: var(--theme-font-weight-regular);
+
+  /* EJI borders are a hairline 1px; the focus ring is a 3px primary-100 halo
+     (--eji-sh-focus). Written through the rgb var, not a hardcoded #D8E0FA,
+     so the ring follows each component's `color` prop. */
+  --theme-border-width: 1px;
+  --theme-focus-ring: 0 0 0 3px rgba(var(--theme-primary-rgb), 0.18);
+  --theme-focus-ring-offset: 0;
+
+  /* ------------------------------------------------------------------ */
+  /* Component API — all inherit through the shadow boundary            */
+  /* ------------------------------------------------------------------ */
+
+  /* Form controls — EJI focus is a border-colour shift PLUS a 3px soft halo
+     (--eji-sh-focus), so unlike Material we keep the outset ring and only
+     retune its spread/alpha. These land on the wrapper in the light build and
+     inherit in the shadow build; the `underlined` variant still wins because
+     it re-declares the same vars on the field itself. Every text field is ported
+     now — they read --mono-ring-alpha above — so the only thing left here is
+     what EJI does DIFFERENTLY from Basecoat: a textarea one line shorter at md
+     (the guide's 3-row box), and the tighter control font. */
+  --mono-textarea-rows-md: 3;
+  --mono-textarea-rows-lg: 3;
+
+  /* Buttons — --eji-r-md 8px at every size (no xs/sm clamp), semibold,
+     SENTENCE CASE. The uppercase treatment is reserved for 11px labels and
+     table headers; applying it to buttons too (the Material signature) would
+     flatten that distinction. Padding is INFERRED for a 40px control (px-4,
+     icon side 3; sm px-3, lg px-5) — the guide gives no button padding. */
+  --mono-button-font-weight: var(--mono-font-weight-semibold);
+  --mono-button-text-transform: none;
+  --mono-button-md-radius: var(--mono-radius-md);
+  --mono-button-xs-radius: var(--mono-radius-md);
+  --mono-button-sm-radius: var(--mono-radius-md);
+  --mono-button-md-padding-inline: calc(var(--mono-spacing) * 4);
+  --mono-button-md-icon-padding: calc(var(--mono-spacing) * 3);
+  --mono-button-sm-padding-inline: calc(var(--mono-spacing) * 3);
+  --mono-button-sm-icon-padding: calc(var(--mono-spacing) * 2);
+  --mono-button-lg-padding-inline: calc(var(--mono-spacing) * 5);
+  --mono-button-lg-icon-padding: calc(var(--mono-spacing) * 4);
+  --mono-button-outline-shadow: var(--mono-shadow-xs);
+
+  /* Checkbox — the EJI box is a small rounded square. Deliberately NOT set here:
+     the component default is `25%`, which is ~4px on the default box and stays a
+     rounded square at every size. A fixed radius (the old `--theme-radius-xs`
+     descendant rule) clamps the small sizes into circles. */
+
+  /* Radio — ported: the accent IS the `color` prop's role token, so pinning it
+     here would freeze every radio to primary. `--mono-radio-accent-soft` and
+     `--mono-radio-ring` are no longer read (the focus ring is
+     `--mono-radio-ring-color` over `--ring`); both stay documented as no-ops
+     until 2.0.
+
+     Switch — ported: the accent IS the `color` prop's role token and the OFF
+     track is `--input` (Basecoat's `not-checked:bg-input`), so neither is pinned
+     here. EJI keeps its soft thumb shadow. `--mono-switch-track-off-hover` is no
+     longer read (Basecoat has no hover on the track); it stays documented as a
+     no-op until 2.0. */
+  --mono-switch-thumb-shadow: var(--theme-elev-1);
+
+  /* Chip — the EJI status badge: a full pill at 11px / semibold. The guide is
+     emphatic that status is a labelled badge, never coloured text. */
+  /* Chip — EJI's badge, not Basecoat's. One step taller than vega at every
+     size (24px at md, not 20px), a true pill, and a SOFT variant that carries a
+     tinted border over an opaque tint rather than a flat alpha wash. Without
+     these ONE inherits vega's badge, which is what "ONE looks like vega" meant.
+     `currentColor` in the two mixes is the chip's own role colour, so one
+     declaration covers all ten. */
+  --mono-chip-font-weight: var(--mono-font-weight-semibold);
+  /* the radius is written at the PRESET tier because the `rounded` prop drives
+     the same value — a flavor setting the public `--mono-chip-radius` would
+     out-rank the prop and freeze every chip at one shape */
+  --_mono-chip-radius-preset: var(--mono-radius-full);
+  --mono-chip-soft-bg: color-mix(in srgb, currentColor 12%, white);
+  --mono-chip-soft-border-color: color-mix(in srgb, currentColor 22%, white);
+  --mono-chip-height-xs: 1rem;
+  --mono-chip-height-sm: 1.25rem;
+  --mono-chip-height-md: 1.5rem;
+  --mono-chip-height-lg: 1.75rem;
+  --mono-chip-height-xl: 2rem;
+  --mono-chip-height-xxl: 2.25rem;
+  --mono-chip-padding-x-xs: 0.4rem;
+  --mono-chip-padding-x-sm: 0.5rem;
+  --mono-chip-padding-x-md: 0.6rem;
+  --mono-chip-padding-x-lg: 0.75rem;
+  --mono-chip-padding-x-xl: 0.88rem;
+  --mono-chip-padding-x-xxl: 1rem;
+  --mono-chip-gap-xs: 0.2rem;
+  --mono-chip-gap-sm: 0.25rem;
+  --mono-chip-gap-md: 0.3rem;
+  --mono-chip-gap-lg: 0.35rem;
+  --mono-chip-gap-xl: 0.4rem;
+  --mono-chip-gap-xxl: 0.45rem;
+  --mono-chip-font-size-xs: 0.74rem;
+  --mono-chip-font-size-sm: 0.78rem;
+  --mono-chip-font-size-md: 0.78rem;
+  --mono-chip-font-size-lg: 0.78rem;
+  --mono-chip-font-size-xl: 0.82rem;
+  --mono-chip-font-size-xxl: 0.9rem;
+  /* the ✕ and the dot were one fixed size at every step */
+  --mono-chip-glyph-size-xs: 1rem;
+  --mono-chip-glyph-size-sm: 1rem;
+  --mono-chip-glyph-size-md: 1rem;
+  --mono-chip-glyph-size-lg: 1rem;
+  --mono-chip-glyph-size-xl: 1rem;
+  --mono-chip-glyph-size-xxl: 1rem;
+  --mono-chip-dot-size: 0.42rem;
+  /* Font size deliberately NOT pinned. The guide specifies one 11px badge size
+     regardless of chip size, but that flattens chip's per-size ladder — the
+     ladder wins, per the dimensions note at the top of this file. */
+
+  /* Alert — no pre-port alert existed, so ONE's is built from the EJI rhythm the
+     card and accordion use: the 12px panel radius, the solid --border line, a
+     tighter pad than vega's px-4 py-3, and EJI's title/subtitle type (bold
+     title over the subtitle ramp). Sizes scale from these md values. */
+  --mono-alert-radius: var(--theme-radius-lg);
+  --mono-alert-padding-x: 0.875rem;
+  --mono-alert-padding-y: 0.7rem;
+  --mono-alert-font-size: var(--theme-title-font-md);
+  --mono-alert-title-weight: var(--theme-title-font-weight);
+  --mono-alert-subtitle-font-size: var(--theme-subtitle-font-md);
+
+  /* Card — the EJI card is edged AND shadowed (unlike MUI Paper, which drops the
+     edge when elevated): 12px radius, a solid 1px line, sh-sm, and a tighter
+     rhythm than Basecoat's — 16px padding, a 14.4px/700 title over a 12.8px
+     subtitle, where vega has 24px and 16px/500.
+
+     Every number here is what ONE painted before the port (measured from the
+     built CSS at bb10385c). Without them ONE inherits vega's card, which is what
+     "ONE looks like vega" meant.
+
+     `--mono-card-elevated-border-color` is no longer read (the edge is
+     `--mono-card-ring-color`, and `bordered` adds a real border on top); it
+     stays documented as a no-op until 2.0. The radius is written at the PRESET
+     tier because the `rounded` prop drives the same value — a flavor that sets
+     the public `--mono-card-radius` would out-rank the prop. */
+  --_mono-card-radius-preset: var(--mono-radius-lg);
+  --mono-card-shadow-elevated: var(--theme-elev-2);
+  /* the EJI line, not Basecoat's translucent ring */
+  --mono-card-ring-color: var(--border);
+  --mono-card-padding-xs: 0.6rem;
+  --mono-card-padding-sm: 0.8rem;
+  --mono-card-padding-md: 1rem;
+  --mono-card-padding-lg: 1.25rem;
+  --mono-card-padding-xl: 1.5rem;
+  --mono-card-padding-xxl: 1.75rem;
+  --mono-card-gap-xs: 0.6rem;
+  --mono-card-gap-sm: 0.8rem;
+  --mono-card-gap-md: 1rem;
+  --mono-card-gap-lg: 1.25rem;
+  --mono-card-gap-xl: 1.5rem;
+  --mono-card-gap-xxl: 1.75rem;
+  /* title↔subtitle, and the icon↔text / action↔action gap */
+  --mono-card-header-gap-md: 0.25rem;
+  --mono-card-actions-gap-md: 0.75rem;
+  --mono-card-title-font-weight: var(--mono-font-weight-bold);
+  /* EJI's type ramp is tighter than Basecoat's leading-normal */
+  --mono-card-title-line-height: 1.3;
+  --mono-card-subtitle-line-height: 1.45;
+  --mono-card-title-font-xs: 0.74rem;
+  --mono-card-title-font-sm: 0.82rem;
+  --mono-card-title-font-md: 0.9rem;
+  --mono-card-title-font-lg: 1rem;
+  --mono-card-title-font-xl: 1.1rem;
+  --mono-card-title-font-xxl: 1.25rem;
+  --mono-card-subtitle-font-xs: 0.66rem;
+  --mono-card-subtitle-font-sm: 0.74rem;
+  --mono-card-subtitle-font-md: 0.8rem;
+  --mono-card-subtitle-font-lg: 0.9rem;
+  --mono-card-subtitle-font-xl: 1rem;
+  --mono-card-subtitle-font-xxl: 1.1rem;
+
+
+  /* File upload — EJI's uploader, not Basecoat's `.empty`. Every number here is
+     what ONE painted before the port (measured from the built CSS at 331bef32):
+     a 2px dashed tinted box padded 1.2rem, a bare brand-coloured 2rem glyph with
+     no muted plate, a bold 0.9rem prompt, and white file rows. Without them ONE
+     inherits vega's uploader — a 3rem-padded drop target with a grey icon tile. */
+  --mono-file-upload-gap: 0.5rem;
+  --mono-file-upload-dropzone-padding: 1.2rem;
+  --mono-file-upload-dropzone-gap: 0.2rem;
+  --mono-file-upload-dropzone-bg: color-mix(in srgb, var(--background) 64%, white);
+  --mono-file-upload-border-width: 2px;
+  /* the glyph stands on its own — no plate behind it */
+  --mono-file-upload-icon-bg: transparent;
+  --mono-file-upload-icon-radius: 0;
+  --mono-file-upload-icon-size: 2rem;
+  --mono-file-upload-icon-glyph-size: 2rem;
+  --mono-file-upload-icon-color: var(--primary);
+  --mono-file-upload-icon-offset: 0.45rem;
+  --mono-file-upload-title-font-size: 0.9rem;
+  --mono-file-upload-title-line-height: 1.3;
+  --mono-file-upload-title-font-weight: var(--mono-font-weight-bold);
+  --mono-file-upload-title-tracking: normal;
+  --mono-file-upload-subtext-font-size: 0.74rem;
+  --mono-file-upload-subtext-line-height: 1.35;
+  --mono-file-upload-subtext-color: color-mix(in oklab, var(--foreground) 62%, transparent);
+  --mono-file-upload-list-gap: 0.45rem;
+  --mono-file-upload-item-bg: var(--card);
+  --mono-file-upload-item-border-color: color-mix(in srgb, var(--border) 76%, white);
+  --mono-file-upload-item-radius: 0.6rem;
+  --mono-file-upload-item-gap: 0.7rem;
+  --mono-file-upload-item-padding-x: 0.7rem;
+  --mono-file-upload-item-padding-y: 0.55rem;
+  --mono-file-upload-thumb-size: 2.25rem;
+  --mono-file-upload-thumb-radius: 0.45rem;
+  --mono-file-upload-thumb-bg: color-mix(in srgb, var(--background) 70%, white);
+  --mono-file-upload-thumb-color: color-mix(in oklab, var(--foreground) 85%, transparent);
+  --mono-file-upload-name-font-size: 0.82rem;
+  --mono-file-upload-name-line-height: 1.3;
+  --mono-file-upload-name-font-weight: var(--mono-font-weight-semibold);
+  --mono-file-upload-meta-font-size: 0.7rem;
+  --mono-file-upload-meta-line-height: 1.35;
+  --mono-file-upload-meta-color: color-mix(in oklab, var(--foreground) 56%, transparent);
+  --mono-file-upload-remove-size: 1.5rem;
+  --mono-file-upload-remove-radius: 0.35rem;
+  --mono-file-upload-message-font-size: 0.78rem;
+  --mono-file-upload-message-line-height: 1.4;
+  --mono-file-upload-message-color: color-mix(in oklab, var(--foreground) 68%, transparent);
+
+  /* Accordion — guide v2: a BORDER-ONLY panel. The previous build gave it an
+     elevation; the new spec has no shadow at all, open or closed, and a neutral
+     open state (all category colour moved onto badges). */
+  --mono-accordion-radius: var(--theme-radius-lg);
+  --mono-accordion-shadow: none;
+  --mono-accordion-open-shadow: none;
+  --mono-accordion-open-border-color: var(--theme-border);
+  --mono-accordion-open-bg: var(--theme-surface-soft);
+  /* …and the metrics the pre-port sheet had, so a ONE page keeps the panel it
+     had: a tighter row than vega's `p-4`, EJI's title/subtitle type rather than
+     `text-sm`, and no hover underline (the head tints instead). */
+  --mono-accordion-pad-x-md: 0.85rem;
+  --mono-accordion-pad-y-md: 0.55rem;
+  /* The REST of the size ladder around that tighter md. Overriding md alone left
+     md shorter than the component's default sm and a cliff up to its default lg;
+     every step here stays between its neighbours. */
+  --mono-accordion-pad-x-xs: 0.55rem;
+  --mono-accordion-pad-y-xs: 0.35rem;
+  --mono-accordion-pad-x-sm: 0.7rem;
+  --mono-accordion-pad-y-sm: 0.45rem;
+  --mono-accordion-pad-x-lg: 1rem;
+  --mono-accordion-pad-y-lg: 0.7rem;
+  --mono-accordion-pad-x-xl: 1.15rem;
+  --mono-accordion-pad-y-xl: 0.85rem;
+  --mono-accordion-pad-x-xxl: 1.3rem;
+  --mono-accordion-pad-y-xxl: 1rem;
+  --mono-accordion-title-font-xs: 0.74rem;
+  --mono-accordion-title-font-sm: 0.78rem;
+  --mono-accordion-title-font-lg: 0.9rem;
+  --mono-accordion-title-font-xl: 1rem;
+  --mono-accordion-title-font-xxl: 1.125rem;
+  --mono-accordion-body-font-xs: 0.72rem;
+  --mono-accordion-body-font-sm: 0.75rem;
+  --mono-accordion-body-font-lg: 0.85rem;
+  --mono-accordion-body-font-xl: 0.92rem;
+  --mono-accordion-body-font-xxl: 1rem;
+  --mono-accordion-gap: 0.75rem;
+  --mono-accordion-title-font-md: var(--theme-title-font-md);
+  --mono-accordion-title-weight: var(--theme-title-font-weight);
+  --mono-accordion-description-font: var(--theme-subtitle-font-md);
+  --mono-accordion-body-font-md: 0.79rem;
+  --mono-accordion-body-line-height: 1.6;
+  --mono-accordion-body-color: color-mix(in oklab, var(--foreground) 78%, transparent);
+  --mono-accordion-title-hover-decoration: none;
+  --mono-accordion-head-hover-tint: 6%;
+  --mono-accordion-arrow-size: var(--mono-icon-md);
+  --mono-accordion-group-gap: 0.55rem;
+
+  /* Tabs — EJI's strip, not Basecoat's: sentence-case medium labels, a content-
+     height row with no track padding, and the underline variant's own 2px
+     baseline rule with the active bar sitting ON it (upstream draws the bar 5px
+     BELOW a bare strip and has no rule at all). Measured off the pre-port sheet,
+     so a ONE page keeps the tabs it had. */
+  --mono-tabs-font-weight: var(--theme-font-weight-medium);
+  --mono-tabs-text-transform: none;
+  --mono-tabs-height-md: auto;
+  --mono-tabs-padding-md: 0;
+  --mono-tabs-radius-md: 0.7rem;
+  --mono-tabs-tab-radius-md: 0.55rem;
+  --mono-tabs-tab-pad-x-md: 0.75rem;
+  --mono-tabs-tab-pad-y-md: 0.4rem;
+  --mono-tabs-tab-gap-md: 0.35rem;
+  --mono-tabs-tab-font-md: var(--theme-title-font-sm);
+  --mono-tabs-icon-size-md: 0.85rem;
+  --mono-tabs-line-size: 2.5px;
+  --mono-tabs-line-offset: 0px;
+  --mono-tabs-line-track-color: var(--theme-border);
+  --mono-tabs-line-track-size: 2px;
+  --mono-tabs-badge-size: 1.1rem;
+  --mono-tabs-badge-font: 0.66rem;
+
+  /* Topbar — a white surface separated by a hairline, not a coloured glow. */
+  --mono-nav-shadow: var(--theme-elev-1);
+
+  /* Sidebar — the EJI shell signature: a deep brand-primary panel with muted
+     white menu text. Read through --theme-* so the flavor still composes with
+     any colour preset rather than pinning EJI navy.
+
+     These go to the `-preset` slot, NOT the public `--mono-sidebar-*` one. The public
+     var sits earlier in the resolver chain
+     (`var(--mono-sidebar-bg, var(--_mono-sidebar-bg-preset, …))`), so setting it here
+     beat the `color` prop's own preset and every sidebar rendered brand-navy however it
+     was configured. Writing the preset instead makes this a DEFAULT the prop can
+     override — theme < flavor < prop < a consumer's public var — while `color="surface"`
+     (which sets no preset of its own) still inherits the EJI slab. */
+  --_mono-sidebar-surface-preset: var(--theme-primary);
+  --mono-sidebar-surface-soft: rgba(255, 255, 255, 0.07);
+  --_mono-sidebar-bg-preset: var(--theme-primary);
+  --_mono-sidebar-text-preset: rgba(255, 255, 255, 0.82);
+  --_mono-sidebar-text-soft-preset: rgba(255, 255, 255, 0.58);
+  --_mono-sidebar-border-preset: rgba(255, 255, 255, 0.1);
+  --_mono-sidebar-border-lite-preset: rgba(255, 255, 255, 0.07);
+  --_mono-sidebar-accent-preset: #ffffff;
+  --mono-sidebar-shadow: var(--theme-elev-2);
+
+  /* Menu — guide v2 `.eji-menu`: a faint neutral hover that keeps the label
+     colour, and a FLAT accent-tinted active pill (no gradient, no shadow). */
+  --mono-menu-hover-bg: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --mono-menu-hover-border-color: transparent;
+  /* A TINT PERCENTAGE, not a colour. A flavor block is on <body>, where neither
+     `--_mono-menu-accent` (private, declared on `.mono-menu`) nor `--mono-menu-accent`
+     (only ever set by a consumer or by the sidebar bridge) resolves — so any value
+     naming the accent here either drops as invalid or freezes to a fallback. A plain
+     percentage inherits cleanly and `.mono-menu` does the compositing where the accent
+     actually exists, which also means the pill now follows the `color` prop. */
+  --_mono-menu-active-tint-preset: 14%;
+  /* A 14% tint is a light pill, so it is inked in the ACCENT — white on a 14%
+     tint is invisible. The port makes that the default, so only the tint is
+     left to say. */
+
+  /* Dialog — an EJI card at 12px with sh-lg, over a plain ink-900 scrim
+     (rgba(15,23,42,.5)) with no blur, and EJI's own type and density. The
+     tinted head bar is NOT restored: removing it is a decision of the port, not
+     a flavor's (see modal.css) — the knobs are there if a page wants it back. */
+  --mono-modal-radius: var(--theme-radius-lg);
+  --mono-modal-overlay-bg: rgba(var(--theme-text-rgb), 0.5);
+  --mono-modal-shadow: var(--theme-elev-4);
+  --mono-modal-overlay-backdrop-filter: none;
+  --mono-modal-pad-md: 1.4rem;
+  --mono-modal-gap-md: 1.1rem;
+  --mono-modal-header-gap-md: 0.85rem;
+  --mono-modal-footer-gap-md: 0.55rem;
+  --mono-modal-title-font-md: var(--theme-title-font-lg);
+  --mono-modal-title-weight: var(--theme-title-font-weight);
+  --mono-modal-body-font-md: var(--theme-subtitle-font-lg);
+  --mono-modal-body-line-height: 1.55;
+  --mono-modal-close-size-md: 28px;
+  --mono-modal-close-glyph: var(--mono-icon-md);
+  --mono-modal-width: min(90vw, 520px);
+  /* Drawer — the pre-port EJI panel: square, 420x50vh, sh-lg over the same
+     ink-900 scrim, EJI type and density, and the footer back to a RIGHT-ALIGNED
+     ROW (upstream's drawer footer is a stacked mobile sheet). The tinted head /
+     foot bars are NOT restored — dropping them is a decision of the port, not a
+     flavor's (see drawer.css); the knobs are there if a page wants them back. */
+  --mono-drawer-overlay-bg: rgba(var(--theme-text-rgb), 0.5);
+  --mono-drawer-overlay-backdrop-filter: none;
+  --mono-drawer-shadow: var(--theme-elev-4);
+  --mono-drawer-radius: 0px;
+  --mono-drawer-width: 420px;
+  --mono-drawer-height: 50vh;
+  --mono-drawer-pad-md: 1.4rem;
+  --mono-drawer-header-gap-md: 0.75rem;
+  --mono-drawer-footer-gap-md: 0.5rem;
+  --mono-drawer-footer-direction: row;
+  --mono-drawer-footer-align: center;
+  --mono-drawer-footer-justify: flex-end;
+  --mono-drawer-title-font-md: var(--theme-title-font-lg);
+  --mono-drawer-title-weight: var(--theme-title-font-weight);
+  --mono-drawer-title-line-height: var(--theme-title-line-height);
+  --mono-drawer-title-tracking: normal;
+  --mono-drawer-body-font-md: var(--theme-subtitle-font-lg);
+  --mono-drawer-body-line-height: 1.55;
+  --mono-drawer-close-size-md: 28px;
+  --mono-drawer-close-glyph: var(--mono-icon-md);
+  --mono-drawer-close-radius: 8px;
+  --mono-drawer-duration: 0.28s;
+  --mono-drawer-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Nav — the pre-port EJI top bar. Its density IS the port's default (56px
+     bar, 20px gutter, 12px gap, 44px extension), so only the chrome differs:
+     an EJI elevation instead of Basecoat's shadow-sm, and the softer muted ink
+     and hairline the old sheet mixed by hand. The translucent blurred (surface)
+     bar is NOT restored — dropping it is a decision of the port, not a
+     flavor's, and --mono-nav-backdrop-filter brings it back for a page that
+     wants it. */
+  --mono-nav-radius: var(--mono-radius-lg);
+  --mono-nav-shadow: var(--theme-elev-2);
+  --mono-nav-ring-color: var(--border);
+  --mono-nav-pad-x-comfortable: 1rem;
+  --mono-nav-text-soft: color-mix(in oklab, var(--foreground) 62%, transparent);
+  --mono-nav-border-lite: color-mix(in oklab, var(--border) 55%, transparent);
+
+  /* Breadcrumb — the pre-port EJI row. Upstream's segments are bare text with a
+     normal-weight current crumb; ONE padded every segment into a small chip and
+     bolded the last one, so it restores exactly that. */
+  --mono-breadcrumb-pad-x: 0.35rem;
+  --mono-breadcrumb-pad-y: 0.18rem;
+  --mono-breadcrumb-radius-md: 5px;
+  --mono-breadcrumb-gap-md: 0.25rem;
+  --mono-breadcrumb-gap-wide-md: 0.25rem;
+  --mono-breadcrumb-font-md: var(--theme-title-font-sm);
+  --mono-breadcrumb-font-weight: var(--theme-font-weight-medium);
+  --mono-breadcrumb-current-weight: var(--theme-font-weight-bold);
+  --mono-breadcrumb-icon-size-md: 0.8rem;
+  --mono-breadcrumb-sep-font-md: 0.66rem;
+
+  /* Menu — the pre-port EJI row: a rounded chip with EJI's own density, and an
+     active pill inked in the brand rather than upstream's neutral wash. */
+  --mono-menu-radius-comfortable: var(--theme-radius-md, 8px);
+  --mono-menu-pad-x-comfortable: 0.7rem;
+  --mono-menu-pad-y-comfortable: 0.45rem;
+  --mono-menu-height-comfortable: 2.2rem;
+  --mono-menu-gap-comfortable: 0.15rem;
+  --mono-menu-font-comfortable: var(--theme-subtitle-font-lg);
+  --mono-menu-icon-size-comfortable: 1.05rem;
+  --mono-menu-subheader-transform: uppercase;
+  --mono-menu-subheader-tracking: 0.06em;
+  --mono-menu-active-weight: var(--theme-font-weight-bold);
+
+  /* Sidebar — EJI's panel: its own measure and elevation, square. */
+  --mono-sidebar-width: 264px;
+  --mono-sidebar-pad-x-comfortable: 0.85rem;
+  --mono-sidebar-pad-y-comfortable: 0.85rem;
+  --mono-sidebar-gap-comfortable: 0.4rem;
+  --mono-sidebar-shadow: var(--theme-elev-3);
+  --mono-sidebar-radius: 0;
+
+  /* Table — the EJI ONE grid of the Budgeting reference (`.tw` / `thead th` /
+     `th,td` / `tr.l0` / `tr.gt` in its "EJI ONE theme overrides"):
+       - WHITE rows (`--surface`), not the grey page, and NO zebra;
+       - a hairline between rows lighter than the frame (#eef0f5 vs the #e4e7ef line);
+       - a `#f7f8fc` head band: 11px, 600, muted grey, uppercase, .08em;
+       - 12px cells at 13px, a 12px frame radius;
+       - group rows on the #f0f3fd wash, the total row on #f7f8fc. */
+  --mono-table-surface: var(--card);
+  /* cells in the full ink (the reference sets no softer body colour) */
+  --mono-table-ink-mid: var(--foreground);
+  --mono-table-zebra: var(--card);
+  --mono-table-border-lite: #eef0f5;
+  --mono-table-head-bg: var(--muted);
+  --mono-table-th-height: 2.5rem;
+  --mono-table-th-pad-x: 0.75rem;
+  --mono-table-th-font: 0.6875rem;
+  --mono-table-th-weight: var(--theme-font-weight-semibold, 600);
+  --mono-table-th-color: var(--muted-foreground);
+  --mono-table-th-transform: uppercase;
+  --mono-table-th-tracking: 0.08em;
+  --mono-table-cell-pad: 0.75rem;
+  --mono-table-font: 0.8125rem;
+  /* body cells read their own size (see table.css `[mono-table] td`) */
+  --mono-table-cell-font: 0.8125rem;
+  --mono-table-radius: var(--theme-radius-lg, 12px);
+  --mono-table-group-bg: var(--accent);
+  --mono-table-group-hover-bg: #eceffb;
+  --mono-table-soft: var(--accent);
+  --mono-table-foot-bg: var(--muted);
+
+  /* Menu / popover surfaces — guide v2 raises the panel to sh-lg (elev-4). */
+  /* Dropdown — EJI's panel, not Basecoat's. Tighter at every step (9.6/12px
+     padding and 11.84px type at md, against vega's 16/16 and 14px) and one
+     radius at every size — there is no `rounded` prop here, so the
+     size-agnostic knob is a deliberate "always --eji-r-lg", not a frozen
+     ladder. Without these ONE inherits vega's popover.
+     The ring is vega's; ONE's own elevation rides behind it. */
+  --mono-dropdown-radius: var(--theme-radius-lg);
+  --mono-dropdown-shadow: var(--theme-elev-4);
+  --mono-dropdown-pad-x-xs: 0.48rem;
+  --mono-dropdown-pad-y-xs: 0.36rem;
+  --mono-dropdown-font-xs: 0.56rem;
+  --mono-dropdown-min-width-xs: 170px;
+  --mono-dropdown-max-width-xs: 240px;
+  --mono-dropdown-pad-x-sm: 0.6rem;
+  --mono-dropdown-pad-y-sm: 0.45rem;
+  --mono-dropdown-font-sm: 0.7rem;
+  --mono-dropdown-min-width-sm: 170px;
+  --mono-dropdown-max-width-sm: 240px;
+  --mono-dropdown-pad-x-md: 0.75rem;
+  --mono-dropdown-pad-y-md: 0.6rem;
+  --mono-dropdown-font-md: 0.74rem;
+  --mono-dropdown-min-width-md: 200px;
+  --mono-dropdown-max-width-md: 280px;
+  --mono-dropdown-pad-x-lg: 1rem;
+  --mono-dropdown-pad-y-lg: 0.85rem;
+  --mono-dropdown-font-lg: 0.82rem;
+  --mono-dropdown-min-width-lg: 240px;
+  --mono-dropdown-max-width-lg: 340px;
+  --mono-dropdown-pad-x-xl: 1.15rem;
+  --mono-dropdown-pad-y-xl: 1rem;
+  --mono-dropdown-font-xl: 0.9rem;
+  --mono-dropdown-min-width-xl: 280px;
+  --mono-dropdown-max-width-xl: 420px;
+  --mono-dropdown-pad-x-xxl: 1.3rem;
+  --mono-dropdown-pad-y-xxl: 1.15rem;
+  --mono-dropdown-font-xxl: 0.98rem;
+  --mono-dropdown-min-width-xxl: 320px;
+  --mono-dropdown-max-width-xxl: 480px;
+  /* Button dropdown — EJI's action menu, not Basecoat's. Square rows with a
+     hairline gap between them, a blue-tinted hover, and ONE's own elevation
+     instead of vega's shadow-md ring. Measured off the pre-port sheet, so a
+     ONE page keeps the menu it had. The item ink rides the BASE tier: the
+     consumer tier would out-rank an entry's `color` and flatten all ten roles. */
+  --mono-button-dropdown-radius: var(--theme-radius-md);
+  --mono-button-dropdown-shadow: 0 8px 24px rgba(16, 24, 64, 0.14);
+  --mono-button-dropdown-ring-color: var(--theme-border);
+  --mono-button-dropdown-padding: 0.25rem;
+  --mono-button-dropdown-list-gap: 0.1rem;
+  --mono-button-dropdown-min-width: 9rem;
+  --mono-button-dropdown-gap: 0.35rem;
+  --mono-button-dropdown-text: var(--theme-text);
+  --mono-button-dropdown-item-radius: 0;
+  --mono-button-dropdown-item-base-hover-bg: #f0f3fd;
+  --mono-button-dropdown-item-base-hover-color: var(--theme-text);
+
+  /* Dropzone — guide v2 `.eji-dropzone`: card radius, dashed, on the bg-alt
+     tint, with a semibold label. */
+  --mono-file-upload-radius: var(--theme-radius-lg);
+  --mono-file-upload-label-font-weight: var(--theme-font-weight-semibold);
+}
+
+/* ------------------------------------------------------------------ */
+/* Light-DOM only — these have no shadow build, so a descendant rule   */
+/* is correct here.                                                    */
+/* ------------------------------------------------------------------ */
+
+/* The table's ONE look is the ported table.css driven by the `--mono-table-*`
+   knobs in the block above — no descendant rules here. The pre-port
+   `.mono-table thead/th` band rules that lived here had been dead since the
+   attribute port, and came back unasked once the legacy class aliases landed —
+   so they are gone. The table is consumer-authored markup, spelled
+   `<table mono-table>` or, on the pre-port class contract,
+   `<table class="mono-table">`; both paint the same through
+   scripts/legacy-class-alias.mjs. */
+
+/* flatpickr renders its calendar into <body>, outside any shadow root, so it is
+   styled by the global bundle in both builds. An EJI card: 12px radius, sh-md.
+   Day cells stay square-ish (6px) — EJI has no circular-day signature. */
+:is(:root, .theme-one) .flatpickr-calendar.mono-flatpickr {
+  border-radius: var(--theme-radius-lg);
+  box-shadow: var(--theme-elev-3);
+}
+
+:is(:root, .theme-one) .flatpickr-calendar.mono-flatpickr .flatpickr-day {
+  border-radius: var(--theme-radius-sm);
+}
+
+/* keep the range band continuous between the endpoints */
+:is(:root, .theme-one) .flatpickr-calendar.mono-flatpickr .flatpickr-day.inRange {
+  border-radius: 0;
+}

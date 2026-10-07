@@ -1,0 +1,621 @@
+/* =========================================================================
+   mono-card — a port of Basecoat's `.card` (basecoat-css@1.0.2, vega style).
+
+   Styled by ATTRIBUTE, like Basecoat — and the attributes mirror the element's
+   props one for one, so hand-written markup reads like the Lit / Vue tag:
+
+     <mono-card size="sm" variant="outlined" color="primary" title="Title">
+     <div mono-card mono-size="sm" mono-variant="outlined" mono-color="primary">
+       <div mono-header>
+         <div mono-header-content><h3 mono-title>Title</h3></div>
+       </div>
+       <div mono-body><p>…</p></div>
+       <div mono-footer>…</div>
+     </div>
+
+   An absent attribute is the prop's default (`:not([mono-size])` = md,
+   `:not([mono-variant])` = elevated, `:not([mono-color])` = neutral). The element
+   renders these attributes on its root (both builds) plus the STATES
+   `mono-bordered` / `mono-hoverable` / `mono-clickable` / `mono-selected` /
+   `mono-disabled` / `mono-loading`, and the negatives `mono-no-header-divider` /
+   `mono-no-footer-divider` (both dividers default ON, so the attribute marks the
+   exception). The old classes (`.mono-card.md.elevated.primary`) are still
+   emitted as inert hooks until 2.0 but no rule here reads them.
+
+   Selector map (ours ≡ upstream):
+     [mono-card]                                   ≡ .card (flex-col gap-6 py-6 rounded-xl bg-card text-card-foreground text-sm shadow-xs ring-1 ring-foreground/10 overflow-hidden)
+                                                     — the ring is drawn as an INSET box-shadow, see --_mono-card-edge-*
+     [mono-card] > [mono-header]                   ≡ .card > header (grid auto-rows-min gap-1 px-6)
+     [mono-title]                                  ≡ .card > header > :is(h2, h3, [data-title], .card-title) (text-base font-medium leading-normal)
+     [mono-subtitle]                               ≡ .card > header > :is(p, [data-description], .card-description) (text-sm text-muted-foreground)
+     [mono-body]                                   ≡ .card > section (px-6)
+     [mono-footer] / [mono-actions]                ≡ .card > footer (flex items-center px-6)
+     [mono-size="sm"]                              ≡ .card[data-size='sm'] (gap-4 py-4, px-4 on every region)
+     [mono-size="xs|lg|xl|xxl"]                    ≡ EXTENSION (the same ladder continued)
+     [mono-variant="outlined"]                     ≡ .card verbatim (the ring + shadow-xs)
+     [mono-variant="elevated|flat|tonal|glass"]    ≡ EXTENSION (shadow-md / none / an accent tint / a blurred pane)
+     [mono-color="…"]                              ≡ EXTENSION (the ring and the title in the role's colour)
+     [mono-media]                                  ≡ .card [&>img:first-child]:rounded-t-xl — a full-bleed media band
+     [mono-icon], [mono-loading], [mono-selected]  ≡ EXTENSION
+
+   `gradient` is GONE (variant and colour alike): the port drops every colour
+   gradient. `--mono-card-gradient-*` are no-ops until 2.0.
+
+   Specificity contract (same as the pre-port class sheet): a part's RESTING rule
+   is exactly one attribute strong — `:where([mono-card]) [mono-body]` = (0,1,0)
+   — so a utility class handed in through `cssClass` wins by source order, while
+   prop and state rules stay heavier and win over it.
+
+   Inner parts: [mono-media], [mono-header] > [mono-icon] / [mono-header-content]
+   > [mono-title] / [mono-subtitle], [mono-body], [mono-actions], [mono-footer],
+   [mono-loading] > [mono-spinner]. The shadow build renders every region and
+   marks the empty ones [mono-empty]; this sheet hides them.
+
+   FLAVORS set `--mono-card-{radius,shadow,ring-color,ring-width,padding-<size>,
+   gap-<size>,title-font-<size>,…}` (the per-style `.card` deltas); every fallback
+   here is vega's value (`node scripts/basecoat-styles.mjs --varying "^\.card"`).
+   ========================================================================= */
+
+mono-card {
+  display: block;
+}
+
+[mono-card] {
+  /* ── palette: each slot is a public knob over a Basecoat token ─────────── */
+  --_mono-card-bg: var(--mono-card-bg, var(--card));
+  --_mono-card-text: var(--mono-card-text, var(--card-foreground));
+  --_mono-card-subtext: var(--mono-card-subtext, var(--muted-foreground));
+  --_mono-card-accent: var(--mono-card-accent, var(--_mono-card-accent-preset, var(--neutral)));
+  /* ring-1 ring-foreground/10 — Basecoat rings the card, it does not border it;
+     `bordered` adds a real border on top (EXTENSION) */
+  --_mono-card-ring-color: var(--mono-card-ring-color, color-mix(in oklab, var(--foreground) 10%, transparent));
+  --_mono-card-ring-width: var(--mono-card-ring-width, var(--mono-border-width));
+  --_mono-card-shadow: var(--mono-card-shadow, var(--mono-shadow-xs));
+  --_mono-card-shadow-elevated: var(--mono-card-shadow-elevated, var(--mono-shadow-md));
+  --_mono-card-shadow-hover: var(--mono-card-shadow-hover, var(--mono-shadow-lg));
+  /* the ONE knob a prop also drives: `rounded` writes --_mono-card-radius-preset
+     on the element, so a FLAVOR must write that same preset tier (an inherited
+     preset loses to the element's own) while --mono-card-radius stays the
+     consumer's override and wins over both */
+  --_mono-card-radius: var(--mono-card-radius, var(--_mono-card-radius-preset, var(--mono-radius-xl)));
+  --_mono-card-border-width: var(--mono-card-border-width, var(--mono-border-width));
+  --_mono-card-border-color: var(--mono-card-border-color, var(--border));
+  --_mono-card-divider-color: var(--mono-card-divider-color, var(--border));
+  --_mono-card-focus-ring-color: var(--mono-card-focus-ring-color, var(--ring));
+  --_mono-card-focus-ring-width: var(--mono-card-focus-ring-width, var(--mono-ring-width));
+  --_mono-card-focus-ring-alpha: var(--mono-card-focus-ring-alpha, var(--mono-ring-alpha));
+
+  /* ── md metrics live on the unqualified root ON PURPOSE ────────────────────
+     basecoat@1.0.2 styles/vega.css .card — gap-6 py-6 text-sm; .card > header —
+     gap-1 px-6; .card > section / > footer — px-6 */
+  --_mono-card-padding: var(--mono-card-padding, var(--mono-card-padding-md, calc(var(--mono-spacing) * 6)));
+  --_mono-card-gap: var(--mono-card-gap, var(--mono-card-gap-md, calc(var(--mono-spacing) * 6)));
+  --_mono-card-header-gap: var(--mono-card-header-gap, var(--mono-card-header-gap-md, calc(var(--mono-spacing) * 1)));
+  --_mono-card-actions-gap: var(--mono-card-actions-gap, var(--mono-card-actions-gap-md, calc(var(--mono-spacing) * 2)));
+  --_mono-card-font: var(--mono-card-font, var(--mono-card-font-md, var(--mono-text-sm)));
+  --_mono-card-title-font: var(--mono-card-title-font, var(--mono-card-title-font-md, var(--mono-text-base)));
+  --_mono-card-subtitle-font: var(--mono-card-subtitle-font, var(--mono-card-subtitle-font-md, var(--mono-text-sm)));
+  --_mono-card-icon-size: var(--mono-card-icon-size, var(--mono-card-icon-size-md, calc(var(--mono-spacing) * 9)));
+  --_mono-card-icon-glyph: var(--mono-card-icon-glyph, 55%);
+
+  /* The edge and the elevation are independent, so a variant can drop one
+     without touching the other.
+
+     DEVIATION from upstream: Basecoat draws the edge with `ring-1`, a box-shadow
+     OUTSIDE the border box. That pixel is lost wherever the card is flush against
+     anything that clips — a container with `overflow: hidden` (every demo stage),
+     a horizontal scroller, or the viewport itself — which hid the left edge of a
+     full-width card at most widths. The same hairline drawn INSIDE the box is
+     unclippable: an INSET box-shadow, layered under the elevation. (It used to
+     be an outline with a negative offset; an outline is rasterised as a stroke
+     of its own, and on fractional display scales it landed one device pixel
+     inside the background's edge, so the card read as a DOUBLE border. An inset
+     shadow is part of the background's own box and cannot separate from it.)
+     It paints under the descendants, so a full-bleed child must stop one
+     edge-width short of the box, or cover it knowingly. */
+  --_mono-card-edge-width: var(--_mono-card-ring-width);
+  --_mono-card-edge-color: var(--_mono-card-ring-color);
+  --_mono-card-elevation: var(--_mono-card-shadow);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--_mono-card-gap);
+  position: relative;
+  min-width: 0;
+  padding-block: var(--_mono-card-padding);
+  overflow: hidden;
+  border-radius: var(--_mono-card-radius);
+  background-color: var(--_mono-card-bg);
+  color: var(--_mono-card-text);
+  font-family: inherit;
+  font-size: var(--_mono-card-font);
+  box-shadow:
+    inset 0 0 0 var(--_mono-card-edge-width) var(--_mono-card-edge-color),
+    var(--_mono-card-elevation);
+  text-decoration: none;
+  transition-property: background-color, border-color, box-shadow, transform, opacity;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+}
+
+[mono-card],
+:where([mono-card]) *,
+:where([mono-card]) *::before,
+:where([mono-card]) *::after {
+  box-sizing: border-box;
+}
+
+/* The shadow build renders EVERY region up front (so DSD can project into them
+   server-side) and marks the ones with nothing in them; the light build renders
+   only what exists. Hiding them here is what keeps the two builds identical —
+   and why the media rules below test `:not([mono-empty])`.
+
+   NOT wrapped in `:where()`, unlike the other parts: a region rule such as
+   `[mono-header] > [mono-icon]` is two attributes strong, so a zero-weight hide
+   would tie and lose on source order — the icon box kept its 36px in the shadow
+   build while the light one rendered nothing at all. */
+[mono-card] :is(
+  [mono-media],
+  [mono-header],
+  [mono-icon],
+  [mono-title],
+  [mono-subtitle],
+  [mono-body],
+  [mono-actions],
+  [mono-footer]
+)[mono-empty] {
+  display: none;
+}
+
+/* =========================================
+   Sizes — `sm` is upstream's data-size='sm'; the rest continue the ladder
+   ========================================= */
+
+[mono-card][mono-size="xs"] {
+  --_mono-card-padding: var(--mono-card-padding, var(--mono-card-padding-xs, calc(var(--mono-spacing) * 2.5)));
+  --_mono-card-gap: var(--mono-card-gap, var(--mono-card-gap-xs, calc(var(--mono-spacing) * 2.5)));
+  --_mono-card-font: var(--mono-card-font, var(--mono-card-font-xs, var(--mono-text-xs)));
+  --_mono-card-title-font: var(--mono-card-title-font, var(--mono-card-title-font-xs, 0.8125rem));
+  --_mono-card-subtitle-font: var(--mono-card-subtitle-font, var(--mono-card-subtitle-font-xs, var(--mono-text-xs)));
+  --_mono-card-icon-size: var(--mono-card-icon-size, var(--mono-card-icon-size-xs, calc(var(--mono-spacing) * 6)));
+}
+
+/* basecoat@1.0.2 styles/vega.css .card[data-size='sm'] — gap-4 py-4 (px-4 on every region) */
+[mono-card][mono-size="sm"] {
+  --_mono-card-padding: var(--mono-card-padding, var(--mono-card-padding-sm, calc(var(--mono-spacing) * 4)));
+  --_mono-card-gap: var(--mono-card-gap, var(--mono-card-gap-sm, calc(var(--mono-spacing) * 4)));
+  --_mono-card-font: var(--mono-card-font, var(--mono-card-font-sm, var(--mono-text-sm)));
+  --_mono-card-title-font: var(--mono-card-title-font, var(--mono-card-title-font-sm, var(--mono-text-sm)));
+  --_mono-card-subtitle-font: var(--mono-card-subtitle-font, var(--mono-card-subtitle-font-sm, var(--mono-text-sm)));
+  --_mono-card-icon-size: var(--mono-card-icon-size, var(--mono-card-icon-size-sm, calc(var(--mono-spacing) * 7.5)));
+}
+
+[mono-card][mono-size="lg"] {
+  --_mono-card-padding: var(--mono-card-padding, var(--mono-card-padding-lg, calc(var(--mono-spacing) * 7)));
+  --_mono-card-gap: var(--mono-card-gap, var(--mono-card-gap-lg, calc(var(--mono-spacing) * 7)));
+  /* lg keeps md's body and subtitle type by DEFAULT, but still reads its own
+     knobs — every step of the ladder has to be settable, or a flavor's value is
+     silently inert (the theme lint catches that). */
+  --_mono-card-font: var(--mono-card-font, var(--mono-card-font-lg, var(--mono-text-sm)));
+  --_mono-card-subtitle-font: var(--mono-card-subtitle-font, var(--mono-card-subtitle-font-lg, var(--mono-text-sm)));
+  --_mono-card-title-font: var(--mono-card-title-font, var(--mono-card-title-font-lg, var(--mono-text-lg)));
+  --_mono-card-icon-size: var(--mono-card-icon-size, var(--mono-card-icon-size-lg, calc(var(--mono-spacing) * 10)));
+}
+
+[mono-card][mono-size="xl"] {
+  --_mono-card-padding: var(--mono-card-padding, var(--mono-card-padding-xl, calc(var(--mono-spacing) * 8)));
+  --_mono-card-gap: var(--mono-card-gap, var(--mono-card-gap-xl, calc(var(--mono-spacing) * 8)));
+  --_mono-card-font: var(--mono-card-font, var(--mono-card-font-xl, var(--mono-text-base)));
+  --_mono-card-title-font: var(--mono-card-title-font, var(--mono-card-title-font-xl, var(--mono-text-xl)));
+  --_mono-card-subtitle-font: var(--mono-card-subtitle-font, var(--mono-card-subtitle-font-xl, var(--mono-text-base)));
+  --_mono-card-icon-size: var(--mono-card-icon-size, var(--mono-card-icon-size-xl, calc(var(--mono-spacing) * 11)));
+}
+
+[mono-card][mono-size="xxl"] {
+  --_mono-card-padding: var(--mono-card-padding, var(--mono-card-padding-xxl, calc(var(--mono-spacing) * 9)));
+  --_mono-card-gap: var(--mono-card-gap, var(--mono-card-gap-xxl, calc(var(--mono-spacing) * 9)));
+  --_mono-card-font: var(--mono-card-font, var(--mono-card-font-xxl, var(--mono-text-base)));
+  --_mono-card-title-font: var(--mono-card-title-font, var(--mono-card-title-font-xxl, calc(var(--mono-text-xl) * 1.125)));
+  --_mono-card-subtitle-font: var(--mono-card-subtitle-font, var(--mono-card-subtitle-font-xxl, var(--mono-text-lg)));
+  --_mono-card-icon-size: var(--mono-card-icon-size, var(--mono-card-icon-size-xxl, calc(var(--mono-spacing) * 12)));
+}
+
+/* =========================================
+   Corners — the library-wide radius scale
+   ========================================= */
+
+[mono-card][mono-rounded="none"] {
+  --_mono-card-radius-preset: 0;
+}
+[mono-card][mono-rounded="xs"] {
+  --_mono-card-radius-preset: var(--mono-radius-sm);
+}
+[mono-card][mono-rounded="sm"] {
+  --_mono-card-radius-preset: var(--mono-radius-sm);
+}
+[mono-card][mono-rounded="md"] {
+  --_mono-card-radius-preset: var(--mono-radius-md);
+}
+[mono-card][mono-rounded="lg"] {
+  --_mono-card-radius-preset: var(--mono-radius-lg);
+}
+[mono-card][mono-rounded="xl"] {
+  --_mono-card-radius-preset: var(--mono-radius-xl);
+}
+[mono-card][mono-rounded="xxl"] {
+  --_mono-card-radius-preset: var(--mono-radius-2xl);
+}
+[mono-card][mono-rounded="full"] {
+  --_mono-card-radius-preset: var(--mono-radius-full);
+}
+
+/* =========================================
+   Colours — EXTENSION: the ring and the title take the role's colour
+   ========================================= */
+
+[mono-card][mono-color="primary"] {
+  --_mono-card-accent-preset: var(--primary);
+}
+[mono-card][mono-color="secondary"] {
+  --_mono-card-accent-preset: var(--secondary-foreground);
+}
+[mono-card][mono-color="success"] {
+  --_mono-card-accent-preset: var(--success);
+}
+[mono-card][mono-color="danger"] {
+  --_mono-card-accent-preset: var(--destructive);
+}
+[mono-card][mono-color="warning"] {
+  --_mono-card-accent-preset: var(--warning);
+}
+[mono-card][mono-color="info"] {
+  --_mono-card-accent-preset: var(--info);
+}
+[mono-card][mono-color="teal"] {
+  --_mono-card-accent-preset: var(--teal);
+}
+[mono-card][mono-color="purple"] {
+  --_mono-card-accent-preset: var(--purple);
+}
+[mono-card][mono-color="dark"] {
+  --_mono-card-accent-preset: var(--dark);
+}
+[mono-card][mono-color="neutral"] {
+  --_mono-card-accent-preset: var(--neutral);
+}
+[mono-card][mono-color="light"] {
+  --_mono-card-accent-preset: var(--muted-foreground);
+}
+
+/* =========================================
+   Variants
+   ========================================= */
+
+/* `outlined` IS upstream's `.card`: the ring and shadow-xs already on the root */
+[mono-card][mono-variant="outlined"] {
+  --_mono-card-ring-color: var(--mono-card-ring-color, color-mix(in oklab, var(--_mono-card-accent) 34%, transparent));
+}
+
+/* EXTENSION — a lifted card; the ring stays, the elevation grows */
+[mono-card]:is(:not([mono-variant]), [mono-variant="elevated"]) {
+  --_mono-card-elevation: var(--_mono-card-shadow-elevated);
+}
+
+/* EXTENSION — no elevation at all */
+[mono-card][mono-variant="flat"] {
+  --_mono-card-elevation: 0 0 #0000;
+}
+
+/* EXTENSION — an accent wash (flat tint, never a gradient) */
+[mono-card][mono-variant="tonal"] {
+  --_mono-card-elevation: 0 0 #0000;
+  --_mono-card-ring-color: var(--mono-card-ring-color, color-mix(in oklab, var(--_mono-card-accent) 22%, transparent));
+  background-color: color-mix(in oklab, var(--_mono-card-accent) var(--mono-mode-tint), var(--_mono-card-bg));
+}
+
+/* EXTENSION — a blurred pane over whatever is behind it */
+[mono-card][mono-variant="glass"] {
+  --_mono-card-elevation: var(--mono-shadow-lg);
+  --_mono-card-ring-color: var(--mono-card-glass-border, color-mix(in oklab, var(--foreground) 12%, transparent));
+  background-color: var(--mono-card-glass-bg, color-mix(in oklab, var(--card) 45%, transparent));
+  backdrop-filter: blur(var(--mono-card-glass-blur, 12px));
+}
+
+/* =========================================
+   States
+   ========================================= */
+
+/* EXTENSION — a real border on top of the ring */
+[mono-card][mono-bordered] {
+  border: var(--_mono-card-border-width) solid var(--_mono-card-border-color);
+}
+
+[mono-card][mono-clickable] {
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  [mono-card]:is([mono-hoverable], [mono-clickable]):not([mono-disabled]):hover {
+    --_mono-card-elevation: var(--_mono-card-shadow-hover);
+  }
+}
+
+/* EXTENSION — the chosen card, in the accent (Basecoat's own `has-[:checked]`
+   treatment for a selectable label: primary/5 with a primary/30 edge) */
+[mono-card][mono-selected] {
+  --_mono-card-edge-color: color-mix(in oklab, var(--_mono-card-accent) var(--mono-mode-checked-border), transparent);
+  --_mono-card-edge-width: calc(var(--mono-border-width) * 2);
+  background-color: color-mix(in oklab, var(--_mono-card-accent) var(--mono-mode-checked-bg), var(--_mono-card-bg));
+}
+
+[mono-card][mono-disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* the focus ring is that same inside edge, recoloured and thickened — an
+   outside ring would be clipped exactly where the resting one was */
+[mono-card]:focus-visible {
+  --_mono-card-edge-width: var(--_mono-card-focus-ring-width);
+  --_mono-card-edge-color: color-mix(in oklab, var(--_mono-card-focus-ring-color) var(--_mono-card-focus-ring-alpha), transparent);
+}
+
+/* =========================================
+   Regions — every one of them is inset by the card's padding, which is how
+   upstream does it (`px-6` per region, `py-6` on the card) so a media band can
+   run full-bleed between them
+   ========================================= */
+
+/* basecoat@1.0.2 components/card.css .card >> > header
+   — grid auto-rows-min items-start (grid-cols-[1fr_auto] when an action is present) */
+/* basecoat@1.0.2 styles/vega.css .card > header — gap-1 px-6 */
+:where([mono-card]) > [mono-header] {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--_mono-card-actions-gap);
+  padding-inline: var(--_mono-card-padding);
+}
+
+:where([mono-card]) > [mono-header] > [mono-header-content] {
+  display: grid;
+  align-content: start;
+  gap: var(--_mono-card-header-gap);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* basecoat@1.0.2 styles/vega.css .card > header > :is(h2, h3, [data-title], .card-title)
+   — text-base leading-normal font-medium (upstream also sets `leading-none` in
+   components/card.css; vega's `leading-normal` wins) */
+:where([mono-card]) [mono-title] {
+  margin: 0;
+  font-size: var(--_mono-card-title-font);
+  line-height: var(--mono-card-title-line-height, var(--mono-leading-normal));
+  font-weight: var(--mono-card-title-font-weight, var(--mono-font-weight-medium));
+  letter-spacing: var(--mono-card-title-tracking, normal);
+  text-transform: var(--mono-card-title-transform, none);
+  color: var(--mono-card-title-color, var(--_mono-card-text));
+}
+
+/* the colour prop tints the title, nothing else — `color` is an accent, not a fill */
+[mono-card][mono-color]:not([mono-color="neutral"]) [mono-title] {
+  color: var(--mono-card-title-color, var(--_mono-card-accent));
+}
+
+/* A heading handed in as <h2>/<h3>/<p> brings its own margins and type, and a
+   host page styles those tags too (`.vp-doc h3` is a class selector, so it beats
+   any sane rule here). The card OWNS the header type — Basecoat's own
+   `.card > header > :is(h2, h3, …)` does the same — so both twins are important:
+   the light one to beat the page, the slotted one because an inner-tree rule
+   cannot otherwise reach outer-tree content at all. */
+:where([mono-card]) :is([mono-title], [mono-subtitle]) > * {
+  margin: 0 !important;
+  font: inherit !important;
+  letter-spacing: inherit !important;
+  color: inherit !important;
+}
+
+:where([mono-card]) :is([mono-title], [mono-subtitle]) slot::slotted(*) {
+  margin: 0 !important;
+  font: inherit !important;
+  letter-spacing: inherit !important;
+  color: inherit !important;
+}
+
+[mono-card] :is(h1, h2, h3, h4, h5, h6, p, small)[mono-title] {
+  margin: 0;
+  font-size: var(--_mono-card-title-font);
+  line-height: var(--mono-card-title-line-height, var(--mono-leading-normal));
+  font-weight: var(--mono-card-title-font-weight, var(--mono-font-weight-medium));
+  letter-spacing: var(--mono-card-title-tracking, normal);
+}
+
+[mono-card] :is(h1, h2, h3, h4, h5, h6, p, small)[mono-subtitle] {
+  margin: 0;
+  font-size: var(--_mono-card-subtitle-font);
+  line-height: var(--mono-card-subtitle-line-height, var(--mono-leading-normal));
+  font-weight: var(--mono-font-weight-normal);
+}
+
+/* basecoat@1.0.2 styles/vega.css .card > header > :is(p, [data-description], .card-description)
+   — text-muted-foreground text-sm */
+:where([mono-card]) [mono-subtitle] {
+  margin: 0;
+  font-size: var(--_mono-card-subtitle-font);
+  line-height: var(--mono-card-subtitle-line-height, var(--mono-leading-normal));
+  font-weight: var(--mono-font-weight-normal);
+  color: var(--_mono-card-subtext);
+}
+
+/* EXTENSION — the header's leading glyph box */
+:where([mono-card]) > [mono-header] > [mono-icon] {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-card-icon-size);
+  height: var(--_mono-card-icon-size);
+  border-radius: var(--mono-card-icon-radius, var(--mono-radius-md));
+  line-height: 1;
+  background-color: color-mix(in oklab, var(--_mono-card-accent) var(--mono-mode-tint), transparent);
+  color: var(--_mono-card-accent);
+  overflow: hidden;
+}
+
+/* `:not(slot)`: in the shadow build the region's only child IS a <slot>, a real
+   element that this rule would size — and then `::slotted()` would size the
+   glyph again, to 55% of that 55%. The glyph came out half the size of its light
+   twin. */
+:where([mono-card]) > [mono-header] > [mono-icon] > *:not(slot) {
+  display: block;
+  width: var(--_mono-card-icon-glyph);
+  height: var(--_mono-card-icon-glyph);
+}
+
+:where([mono-card]) > [mono-header] > [mono-icon] slot::slotted(*) {
+  display: block !important;
+  width: var(--_mono-card-icon-glyph) !important;
+  height: var(--_mono-card-icon-glyph) !important;
+}
+
+/* basecoat@1.0.2 styles/vega.css .card > section — px-6 */
+:where([mono-card]) > [mono-body] {
+  padding-inline: var(--_mono-card-padding);
+  min-width: 0;
+}
+
+[mono-card] > :is(p, ul, ol, dl, blockquote)[mono-body] {
+  margin-block: 0;
+}
+
+:where([mono-card]) > [mono-body]:empty {
+  display: none;
+}
+
+/* The body's own children keep their block margins out of the card's rhythm —
+   the card's `gap` is what spaces the regions, and content that wants paragraph
+   spacing brings its own.
+
+   ALL children, not just the first and last: in the shadow build `::slotted()`
+   sees the HOST's child order, so `:first-child` there means "first child of the
+   card element" — a body paragraph that follows a `slot="title"` heading is not
+   first, and kept the page's margins while its light twin did not.
+
+   `!important` on the slotted twins is not a style choice: a `::slotted()` rule
+   is an INNER-tree declaration, and a normal declaration from the outer tree (a
+   page's `p { margin: … }`) beats it at any specificity. Marking it important
+   inverts that order. The light twins need no such thing — they are ordinary
+   descendant rules in the same tree as the page. */
+:where([mono-card]) > [mono-body] > * {
+  margin-block: 0 !important;
+}
+
+:where([mono-card]) > [mono-body] slot::slotted(*) {
+  margin-block: 0 !important;
+}
+
+/* basecoat@1.0.2 components/card.css .card >> > footer — flex items-center */
+/* basecoat@1.0.2 styles/vega.css .card > footer — rounded-b-xl px-6 [.border-t]:pt-6 */
+:where([mono-card]) > :is([mono-actions], [mono-footer]) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--_mono-card-actions-gap);
+  padding-inline: var(--_mono-card-padding);
+}
+
+:where([mono-card]) > [mono-actions] {
+  justify-content: flex-end;
+}
+
+/* the dividers: upstream's `[.border-b]:pb-6` idiom — a divided region pays the
+   padding back on the divided edge. Both are ON by default, so the ATTRIBUTE
+   marks the exception. */
+[mono-card]:not([mono-no-header-divider]) > [mono-header]:not([mono-empty]) {
+  padding-bottom: var(--_mono-card-padding);
+  border-bottom: var(--mono-border-width) solid var(--_mono-card-divider-color);
+}
+
+[mono-card]:not([mono-no-footer-divider]) > :is([mono-actions], [mono-footer]):not([mono-empty]) {
+  padding-top: var(--_mono-card-padding);
+  border-top: var(--mono-border-width) solid var(--_mono-card-divider-color);
+}
+
+/* =========================================
+   Media — a full-bleed band; upstream gives the first/last child image the
+   card's own corners and drops the padding on that edge
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .card
+   — has-[>img:first-child]:pt-0 [&>img:first-child]:rounded-t-xl [&>img:last-child]:rounded-b-xl */
+:where([mono-card]) > [mono-media] {
+  display: block;
+  overflow: hidden;
+  line-height: 0;
+}
+
+:where([mono-card]) > [mono-media] :is(img, picture, video, canvas, svg) {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+:where([mono-card]) > [mono-media] slot::slotted(:is(img, picture, video, canvas, svg)) {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  object-fit: cover !important;
+}
+
+[mono-card]:has(> [mono-media]:not([mono-empty]):first-child) {
+  padding-top: 0;
+}
+
+[mono-card]:has(> [mono-media]:not([mono-empty]):last-child) {
+  padding-bottom: 0;
+}
+
+/* =========================================
+   Loading — EXTENSION: a blurred veil with a spinner
+   ========================================= */
+
+:where([mono-card]) > [mono-loading] {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--mono-card-loading-bg, color-mix(in oklab, var(--card) 58%, transparent));
+  backdrop-filter: blur(var(--mono-card-loading-blur, 2px));
+}
+
+:where([mono-card]) [mono-spinner] {
+  display: block;
+  width: var(--mono-card-spinner-size, calc(var(--mono-spacing) * 5.5));
+  height: var(--mono-card-spinner-size, calc(var(--mono-spacing) * 5.5));
+  border: var(--mono-card-spinner-width, 2px) solid color-mix(in oklab, var(--_mono-card-accent) 25%, transparent);
+  border-top-color: var(--_mono-card-accent);
+  border-radius: var(--mono-radius-full);
+  animation: mono-card-spin var(--mono-card-spinner-speed, 0.65s) linear infinite;
+}
+
+@keyframes mono-card-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [mono-card] {
+    transition: none;
+  }
+
+  :where([mono-card]) [mono-spinner] {
+    animation-duration: 2.4s;
+  }
+}
