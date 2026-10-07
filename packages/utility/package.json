@@ -1,6 +1,7 @@
 {
     "name": "@mono-lit/utility",
     "version": "0.0.1",
+    "license": "MIT",
     "module": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "bin": {

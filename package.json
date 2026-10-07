@@ -1,6 +1,7 @@
 {
     "name": "monorepo",
     "private": true,
+    "license": "MIT",
     "packageManager": "pnpm@10.7.0",
     "workspaces": [
         "packages/*",
