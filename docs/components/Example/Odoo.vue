@@ -1,5 +1,15 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+/**
+ * Example — Odoo Sales Order
+ * ─────────────────────────────────────────────────────────────────────────────
+ * An Odoo-style sales-order screen built from mono components and static data:
+ * a purple `mono-nav`, a status flow, a customer card, an order-lines table on
+ * the `[mono-table]` styles, and confirmation modals.
+ *
+ * It follows the site's theme (flavor + color + dark mode), so every colour
+ * below is a theme token, never a hex value.
+ */
+import { ref, computed, onBeforeUnmount } from 'vue'
 
 if (!import.meta.env.SSR) {
     import('@mono-lit/helper/ui/nav')
@@ -7,36 +17,67 @@ if (!import.meta.env.SSR) {
     import('@mono-lit/helper/ui/button')
     import('@mono-lit/helper/ui/tabs')
     import('@mono-lit/helper/ui/chip')
+    import('@mono-lit/helper/ui/card')
+    import('@mono-lit/helper/ui/alert')
     import('@mono-lit/helper/ui/modal')
     import('@mono-lit/helper/ui/dropdown')
+    import('@mono-lit/helper/ui/menu')
     import('@mono-lit/helper/ui/input')
+    import('@mono-lit/helper/ui/select')
+    import('@mono-lit/helper/ui/date')
+    import('@mono-lit/helper/ui/textarea')
 }
 
-// â”€â”€ Page-level state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Page-level state ─────────────────────────────────────────────────────────
 type Status = 'quotation' | 'quotation-sent' | 'sales-order' | 'cancelled'
+type Tone = 'info' | 'success' | 'danger'
 
 const isEditMode = ref(false)
 const activeTab = ref('order-lines')
 const currentStatus = ref<Status>('sales-order')
 const quotationNumber = ref('S00024')
 
-const toast = ref<{ text: string; tone: 'info' | 'success' | 'danger' } | null>(
-    null,
-)
+// ── Toast (a mono-alert pinned to the corner) ────────────────────────────────
+const toast = ref<{ text: string; tone: Tone } | null>(null)
 let toastTimer: ReturnType<typeof setTimeout> | null = null
-function flashToast(text: string, tone: 'info' | 'success' | 'danger' = 'info') {
+
+const TOAST_ICON: Record<Tone, string> = {
+    info: 'i-mdi-information-outline',
+    success: 'i-mdi-check-circle-outline',
+    danger: 'i-mdi-alert-circle-outline',
+}
+
+function flashToast(text: string, tone: Tone = 'info') {
     toast.value = { text, tone }
     if (toastTimer) clearTimeout(toastTimer)
     toastTimer = setTimeout(() => (toast.value = null), 2400)
 }
 
-// â”€â”€ Reactive form data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+onBeforeUnmount(() => {
+    if (toastTimer) clearTimeout(toastTimer)
+})
+
+// ── Customer form ────────────────────────────────────────────────────────────
+const GST_TREATMENTS = [
+    { label: 'Registered Business - Regular', value: 'Registered Business - Regular' },
+    { label: 'Registered Business - Composition', value: 'Registered Business - Composition' },
+    { label: 'Unregistered Business', value: 'Unregistered Business' },
+    { label: 'Consumer', value: 'Consumer' },
+]
+
+const PAYMENT_TERMS = [
+    { label: 'Immediate Payment', value: 'Immediate Payment' },
+    { label: '15 Days', value: '15 Days' },
+    { label: '30 Days', value: '30 Days' },
+    { label: 'End of Following Month', value: 'End of Following Month' },
+]
+
 const customer = ref({
     name: 'Tom',
-    address: 'Kerala KL\nIndia â€” bBE0009999',
-    gst: 'Registered Business - Regular',
-    orderDate: '06/30/2022 19:58:32',
-    paymentTerms: 'Immediate Payment',
+    address: 'Kerala KL\nIndia — BE0009999',
+    gst: 'Registered Business - Regular' as string | null,
+    orderDate: '2022-06-30',
+    paymentTerms: 'Immediate Payment' as string | null,
 })
 
 const tabItems = [
@@ -44,52 +85,64 @@ const tabItems = [
     { id: 'other-info', label: 'Other Info' },
 ]
 
-const crumbItems = [
-    { id: 'q', title: 'Quotations', href: '#' },
-    { id: 's', title: quotationNumber.value, current: true },
-]
+const crumbItems = computed(() => [
+    { id: 'quotations', title: 'Quotations', href: '#' },
+    { id: 'current', title: quotationNumber.value, current: true },
+])
+
+// ── Order lines ──────────────────────────────────────────────────────────────
+type LineKind = 'product' | 'section' | 'note'
 
 interface OrderLine {
     id: number
+    kind: LineKind
     product: string
     description: string
     quantity: number
     delivered: number
     invoiced: number
     uom: string
-    packagingQty: string
-    packaging: string
     unitPrice: number
     tax: string
 }
 
 let lineSeq = 1
-function nextLineId() {
-    return lineSeq++
+
+function makeLine(patch: Partial<OrderLine>): OrderLine {
+    return {
+        id: lineSeq++,
+        kind: 'product',
+        product: '',
+        description: '',
+        quantity: 0,
+        delivered: 0,
+        invoiced: 0,
+        uom: '',
+        unitPrice: 0,
+        tax: '',
+        ...patch,
+    }
 }
 
 const orderLines = ref<OrderLine[]>([
-    {
-        id: nextLineId(),
+    makeLine({
         product: 'CAKE',
-        description: 'CAKE',
-        quantity: 1.0,
-        delivered: 0.0,
-        invoiced: 0.0,
+        description: 'Chocolate cake, 1 kg',
+        quantity: 1,
         uom: 'Units',
-        packagingQty: '',
-        packaging: '',
-        unitPrice: 600.0,
+        unitPrice: 600,
         tax: 'GST 5%',
-    },
+    }),
 ])
 
-// â”€â”€ Totals (reactive) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/** Columns of a product row — sections and notes span all of them. */
+const COLUMN_COUNT = 8
+
+// ── Totals ───────────────────────────────────────────────────────────────────
 const totals = computed(() => {
-    const untaxed = orderLines.value.reduce(
-        (s, l) => s + l.unitPrice * l.quantity,
-        0,
-    )
+    const untaxed = orderLines.value
+        .filter((l) => l.kind === 'product')
+        .reduce((sum, l) => sum + l.unitPrice * l.quantity, 0)
     const sgst = untaxed * 0.025
     const cgst = untaxed * 0.025
     return { untaxed, sgst, cgst, total: untaxed + sgst + cgst }
@@ -104,46 +157,53 @@ const inrFormatter = new Intl.NumberFormat('en-IN', {
 const formatINR = (n: number) => inrFormatter.format(n)
 const formatQty = (n: number) => n.toFixed(2)
 
-// â”€â”€ EDIT / CREATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── EDIT / CREATE ────────────────────────────────────────────────────────────
 const newQuotationOpen = ref(false)
+
 function onEditClick() {
     isEditMode.value = true
-    flashToast('Edit mode enabled â€” fields are now editable.', 'info')
+    flashToast('Edit mode enabled — fields are now editable.')
 }
-function onCreateClick() {
-    newQuotationOpen.value = true
-}
+
 function confirmCreateNew() {
     newQuotationOpen.value = false
-    quotationNumber.value = `S${String(
-        24 + Math.floor(Math.random() * 100),
-    ).padStart(5, '0')}`
-    customer.value = {
-        name: '',
-        address: '',
-        gst: '',
-        orderDate: '',
-        paymentTerms: '',
-    }
+    quotationNumber.value = `S${String(24 + Math.floor(Math.random() * 100)).padStart(5, '0')}`
+    customer.value = { name: '', address: '', gst: null, orderDate: '', paymentTerms: null }
     orderLines.value = []
     currentStatus.value = 'quotation'
     isEditMode.value = true
-    crumbItems[1].title = quotationNumber.value
     flashToast(`New quotation ${quotationNumber.value} created.`, 'success')
 }
 
-// â”€â”€ STATUS FLOW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function saveChanges() {
+    isEditMode.value = false
+    flashToast('Changes saved.', 'success')
+}
+
+function discardChanges() {
+    isEditMode.value = false
+    flashToast('Changes discarded.', 'danger')
+}
+
+// ── STATUS FLOW ──────────────────────────────────────────────────────────────
 const statusSteps: { id: Status; label: string }[] = [
     { id: 'quotation', label: 'Quotation' },
     { id: 'quotation-sent', label: 'Quotation Sent' },
     { id: 'sales-order', label: 'Sales Order' },
 ]
+
 function goToStatus(s: Status) {
     currentStatus.value = s
-    flashToast(`Status: ${s.replace('-', ' ')}`, 'info')
+    flashToast(`Status: ${s.replace('-', ' ')}`)
 }
 
-// â”€â”€ PRIMARY ACTIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const statusChip = computed(() => {
+    if (currentStatus.value === 'cancelled') return { label: 'Cancelled', color: 'danger' }
+    const step = statusSteps.find((s) => s.id === currentStatus.value)!
+    return { label: step.label, color: currentStatus.value === 'sales-order' ? 'success' : 'info' }
+})
+
+// ── PRIMARY ACTIONS ──────────────────────────────────────────────────────────
 const invoiceOpen = ref(false)
 const emailOpen = ref(false)
 const cancelOpen = ref(false)
@@ -156,16 +216,16 @@ function openCreateInvoice() {
     }
     invoiceOpen.value = true
 }
+
 function confirmCreateInvoice() {
     invoiceOpen.value = false
-    orderLines.value = orderLines.value.map((l) => ({
-        ...l,
-        invoiced: l.quantity,
-        delivered: l.quantity,
-    }))
+    orderLines.value = orderLines.value.map((l) =>
+        l.kind === 'product' ? { ...l, invoiced: l.quantity, delivered: l.quantity } : l,
+    )
     currentStatus.value = 'sales-order'
-    flashToast('Invoice created â€” order delivered & invoiced.', 'success')
+    flashToast('Invoice created — order delivered & invoiced.', 'success')
 }
+
 function openSendByEmail() {
     emailDraft.value = {
         to: 'tom@example.com',
@@ -174,125 +234,88 @@ function openSendByEmail() {
     }
     emailOpen.value = true
 }
+
 function confirmSendEmail() {
     emailOpen.value = false
-    if (currentStatus.value === 'quotation') {
-        currentStatus.value = 'quotation-sent'
-    }
+    if (currentStatus.value === 'quotation') currentStatus.value = 'quotation-sent'
     flashToast(`Email sent to ${emailDraft.value.to}.`, 'success')
 }
-function openCancel() {
-    cancelOpen.value = true
-}
+
 function confirmCancel() {
     cancelOpen.value = false
     currentStatus.value = 'cancelled'
     flashToast('Order cancelled.', 'danger')
 }
 
-// â”€â”€ PRINT + ACTION DROPDOWN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── PRINT + ACTION MENU ──────────────────────────────────────────────────────
 const actionMenuOpen = ref(false)
-function onPrint() {
-    flashToast(`Print preview opened for ${quotationNumber.value}.`, 'info')
-}
-function runAction(name: string) {
+
+const ACTION_ITEMS = [
+    { id: 'duplicate', title: 'Duplicate', icon: 'i-mdi-content-copy' },
+    { id: 'share', title: 'Share', icon: 'i-mdi-share-variant-outline' },
+    { id: 'archive', title: 'Archive', icon: 'i-mdi-archive-outline' },
+    { id: 'sep', type: 'divider' },
+    { id: 'delete', title: 'Delete', icon: 'i-mdi-trash-can-outline' },
+]
+
+function onActionClick(event: CustomEvent) {
+    const item = event.detail.item
+    if (!item?.title) return
     actionMenuOpen.value = false
-    flashToast(`Action: ${name}.`, 'info')
+    flashToast(`Action: ${item.title}.`, item.id === 'delete' ? 'danger' : 'info')
 }
 
-// â”€â”€ STAT TILES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function onPrint() {
+    flashToast(`Print preview opened for ${quotationNumber.value}.`)
+}
+
+// ── STAT BUTTONS ─────────────────────────────────────────────────────────────
 const customerPreviewOpen = ref(false)
 const deliveryOpen = ref(false)
 const purchaseOpen = ref(false)
 
-// â”€â”€ ORDER-LINE CRUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── ORDER-LINE CRUD ──────────────────────────────────────────────────────────
 function addProduct() {
-    orderLines.value.push({
-        id: nextLineId(),
-        product: 'NEW PRODUCT',
-        description: 'New description',
-        quantity: 1,
-        delivered: 0,
-        invoiced: 0,
-        uom: 'Units',
-        packagingQty: '',
-        packaging: '',
-        unitPrice: 100,
-        tax: 'GST 5%',
-    })
+    orderLines.value.push(
+        makeLine({ product: 'NEW PRODUCT', description: 'New description', quantity: 1, uom: 'Units', unitPrice: 100, tax: 'GST 5%' }),
+    )
     flashToast('Product line added.', 'success')
 }
+
 function addShipping() {
-    orderLines.value.push({
-        id: nextLineId(),
-        product: 'SHIPPING',
-        description: 'Shipping & handling',
-        quantity: 1,
-        delivered: 0,
-        invoiced: 0,
-        uom: 'Units',
-        packagingQty: '',
-        packaging: '',
-        unitPrice: 50,
-        tax: 'GST 5%',
-    })
+    orderLines.value.push(
+        makeLine({ product: 'SHIPPING', description: 'Shipping & handling', quantity: 1, uom: 'Units', unitPrice: 50, tax: 'GST 5%' }),
+    )
     flashToast('Shipping line added.', 'success')
 }
+
 function addSection() {
-    orderLines.value.push({
-        id: nextLineId(),
-        product: 'â”€â”€ SECTION â”€â”€',
-        description: '',
-        quantity: 0,
-        delivered: 0,
-        invoiced: 0,
-        uom: '',
-        packagingQty: '',
-        packaging: '',
-        unitPrice: 0,
-        tax: '',
-    })
-    flashToast('Section added.', 'info')
+    orderLines.value.push(makeLine({ kind: 'section', description: 'New section' }))
+    flashToast('Section added.')
 }
+
 function addNote() {
-    orderLines.value.push({
-        id: nextLineId(),
-        product: 'Note',
-        description: 'Add your note here.',
-        quantity: 0,
-        delivered: 0,
-        invoiced: 0,
-        uom: '',
-        packagingQty: '',
-        packaging: '',
-        unitPrice: 0,
-        tax: '',
-    })
-    flashToast('Note added.', 'info')
+    orderLines.value.push(makeLine({ kind: 'note', description: 'Add your note here.' }))
+    flashToast('Note added.')
 }
+
 function deleteLine(id: number) {
     orderLines.value = orderLines.value.filter((l) => l.id !== id)
     flashToast('Line removed.', 'danger')
 }
-
-// â”€â”€ STATUS DERIVED â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const statusLabel = computed(() => {
-    if (currentStatus.value === 'cancelled') return 'CANCELLED'
-    return statusSteps.find((s) => s.id === currentStatus.value)!.label.toUpperCase()
-})
 </script>
 
 <template>
-    <div class="oddo-page theme-nova theme-color-basecoat min-h-screen">
+    <div class="oddo-page min-h-screen">
 
-        <!-- ===== TOP NAV (Odoo purple) ===== -->
-        <mono-nav density="comfortable" variant="flat" :sticky="true" class="oddo-nav">
-            <div slot="start" class="flex items-center gap-4 text-white">
-                <span class="i-mdi-apps text-[1.4rem] opacity-90 cursor-pointer"></span>
-                <span class="text-[1.15rem] font-semibold">Sales</span>
+        <!-- ===== TOP NAV ===== -->
+        <mono-nav density="compact" variant="flat" color="purple">
+            <div slot="start" class="flex items-center gap-3">
+                <span class="i-mdi-apps text-[1.3rem] opacity-90"></span>
+                <span class="text-[1.05rem] font-semibold">Sales</span>
             </div>
 
-            <div class="flex items-center gap-6 text-[.83rem] font-medium uppercase tracking-wide">
+            <div class="oddo-nav-links">
                 <a href="#" class="oddo-nav-link">Orders</a>
                 <a href="#" class="oddo-nav-link">To Invoice</a>
                 <a href="#" class="oddo-nav-link">Products</a>
@@ -301,91 +324,72 @@ const statusLabel = computed(() => {
             </div>
         </mono-nav>
 
-        <main class="px-7 py-5 max-w-7xl mx-auto">
+        <main class="mx-auto max-w-7xl px-4 py-5 md:px-7">
 
             <!-- ===== BREADCRUMB ===== -->
             <div class="mb-3">
                 <mono-breadcrumb :items.prop="crumbItems"></mono-breadcrumb>
             </div>
 
-            <!-- ===== PRIMARY ACTION ROW: EDIT/CREATE  +  Print/Action ===== -->
-            <div class="flex items-center justify-between mb-3 flex-wrap gap-3">
-                <div class="flex items-center gap-0 oddo-btn-group">
+            <!-- ===== EDIT / CREATE  +  Print / Action ===== -->
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
                     <mono-button
                         size="sm"
-                        color="primary"
                         :variant="isEditMode ? 'solid' : 'outline'"
                         @click="onEditClick"
-                    >EDIT</mono-button>
-                    <mono-button
-                        size="sm"
-                        color="primary"
-                        variant="outline"
-                        @click="onCreateClick"
-                    >CREATE</mono-button>
+                    >Edit</mono-button>
+                    <mono-button size="sm" variant="outline" @click="newQuotationOpen = true">
+                        Create
+                    </mono-button>
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <mono-button size="sm" variant="outline" color="primary" @click="onPrint">
-                        <span slot="icon" class="i-mdi-printer text-[1rem]"></span>
+                    <mono-button size="sm" variant="outline" color="secondary" @click="onPrint">
+                        <span slot="icon" class="i-mdi-printer-outline"></span>
                         Print
                     </mono-button>
 
                     <mono-dropdown
                         placement="bottom-end"
                         :model-value="actionMenuOpen"
-                        @change="actionMenuOpen = $event.detail.modelValue"
+                        @toggle="actionMenuOpen = $event.detail.modelValue"
                     >
-                        <mono-button slot="main" size="sm" variant="outline" color="primary">
-                            <span slot="icon" class="i-mdi-cog text-[1rem]"></span>
+                        <mono-button slot="main" size="sm" variant="outline" color="secondary">
+                            <span slot="icon" class="i-mdi-cog-outline"></span>
                             Action
                         </mono-button>
                         <div slot="body" class="oddo-menu">
-                            <button class="oddo-menu-item" @click="runAction('Duplicate')">
-                                <span class="i-mdi-content-copy"></span>
-                                Duplicate
-                            </button>
-                            <button class="oddo-menu-item" @click="runAction('Share')">
-                                <span class="i-mdi-share-variant"></span>
-                                Share
-                            </button>
-                            <button class="oddo-menu-item" @click="runAction('Archive')">
-                                <span class="i-mdi-archive-outline"></span>
-                                Archive
-                            </button>
-                            <div class="oddo-menu-sep"></div>
-                            <button class="oddo-menu-item oddo-menu-item-danger" @click="runAction('Delete')">
-                                <span class="i-mdi-trash-can-outline"></span>
-                                Delete
-                            </button>
+                            <mono-menu
+                                :items.prop="ACTION_ITEMS"
+                                :nav="false"
+                                :selectable="false"
+                                density="compact"
+                                @click="onActionClick"
+                            ></mono-menu>
                         </div>
                     </mono-dropdown>
                 </div>
             </div>
 
-            <!-- ===== STATUS FLOW ROW ===== -->
-            <div class="flex items-stretch justify-between gap-4 mb-3 flex-wrap">
-                <div class="flex items-center gap-2">
+            <!-- ===== STATUS ACTIONS + FLOW ===== -->
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex flex-wrap items-center gap-2">
                     <mono-button
                         size="sm"
-                        color="primary"
-                        variant="solid"
                         :disabled="currentStatus === 'cancelled'"
                         @click="openCreateInvoice"
-                    >CREATE INVOICE</mono-button>
+                    >Create Invoice</mono-button>
+                    <mono-button size="sm" variant="tonal" @click="openSendByEmail">
+                        Send by Email
+                    </mono-button>
                     <mono-button
                         size="sm"
-                        color="primary"
                         variant="outline"
-                        @click="openSendByEmail"
-                    >SEND BY EMAIL</mono-button>
-                    <mono-button
-                        size="sm"
                         color="danger"
-                        variant="outline"
                         :disabled="currentStatus === 'cancelled'"
-                        @click="openCancel"
-                    >CANCEL</mono-button>
+                        @click="cancelOpen = true"
+                    >Cancel</mono-button>
                 </div>
 
                 <ol class="oddo-flow">
@@ -393,172 +397,121 @@ const statusLabel = computed(() => {
                         v-for="step in statusSteps"
                         :key="step.id"
                         class="oddo-flow-step"
-                        :class="{ 'oddo-flow-step-active': step.id === currentStatus }"
+                        :data-active="step.id === currentStatus ? '' : null"
                         :title="`Move to ${step.label}`"
                         @click="goToStatus(step.id)"
                     >{{ step.label }}</li>
                     <li
                         v-if="currentStatus === 'cancelled'"
-                        class="oddo-flow-step oddo-flow-step-cancelled"
+                        class="oddo-flow-step"
+                        data-cancelled
                     >Cancelled</li>
                 </ol>
             </div>
 
-            <!-- ===== CARD WRAPPER ===== -->
-            <section class="oddo-card">
+            <!-- ===== ORDER CARD ===== -->
+            <mono-card bordered width="100%" class="oddo-card">
 
-                <!-- STATS TILES -->
-                <div class="flex justify-end gap-2 px-5 pt-4 flex-wrap">
-                    <mono-button
-                        variant="solid"
-                        color="light"
-                        size="md"
-                        class="oddo-stat-btn"
-                        @click="customerPreviewOpen = true"
-                    >
-                        <span slot="icon" class="i-mdi-earth oddo-stat-icon"></span>
-                        <span class="oddo-stat-text">
-                            <span class="oddo-stat-line1">Customer</span>
-                            <span class="oddo-stat-line2">Preview</span>
-                        </span>
+                <!-- STAT BUTTONS -->
+                <div class="flex flex-wrap justify-end gap-2 px-5 pt-4">
+                    <mono-button variant="outline" color="secondary" size="sm" @click="customerPreviewOpen = true">
+                        <span slot="icon" class="i-mdi-earth"></span>
+                        Customer Preview
                     </mono-button>
-                    <mono-button
-                        variant="solid"
-                        color="light"
-                        size="md"
-                        class="oddo-stat-btn"
-                        @click="deliveryOpen = true"
-                    >
-                        <span slot="icon" class="i-mdi-truck-outline oddo-stat-icon"></span>
-                        <span class="oddo-stat-text">
-                            <span class="oddo-stat-line1">1</span>
-                            <span class="oddo-stat-line2">Delivery</span>
-                        </span>
+                    <mono-button variant="outline" color="secondary" size="sm" badge="1" @click="deliveryOpen = true">
+                        <span slot="icon" class="i-mdi-truck-outline"></span>
+                        Delivery
                     </mono-button>
-                    <mono-button
-                        variant="solid"
-                        color="light"
-                        size="md"
-                        class="oddo-stat-btn"
-                        @click="purchaseOpen = true"
-                    >
-                        <span slot="icon" class="i-mdi-credit-card-outline oddo-stat-icon"></span>
-                        <span class="oddo-stat-text">
-                            <span class="oddo-stat-line1">1</span>
-                            <span class="oddo-stat-line2">Purchase</span>
-                        </span>
+                    <mono-button variant="outline" color="secondary" size="sm" badge="1" @click="purchaseOpen = true">
+                        <span slot="icon" class="i-mdi-credit-card-outline"></span>
+                        Purchase
                     </mono-button>
                 </div>
 
-                <div class="px-8 pt-4 pb-2 flex items-center gap-3 flex-wrap">
-                    <h1 class="m-0 text-[2.3rem] font-bold text-[var(--theme-text)] tracking-tight">{{ quotationNumber }}</h1>
-                    <mono-chip
-                        v-if="currentStatus === 'cancelled'"
-                        mode="chip"
-                        color="danger"
-                        variant="soft"
-                        shape="pill"
-                        size="sm"
-                        label="CANCELLED"
-                    ></mono-chip>
-                    <mono-chip
-                        v-else
-                        mode="chip"
-                        color="info"
-                        variant="soft"
-                        shape="pill"
-                        size="sm"
-                        :label="statusLabel"
-                    ></mono-chip>
+                <div class="flex flex-wrap items-center gap-3 px-6 pb-2 pt-4 md:px-8">
+                    <h1 class="oddo-title">{{ quotationNumber }}</h1>
+                    <mono-chip size="sm" :color="statusChip.color"><span>{{ statusChip.label }}</span></mono-chip>
                 </div>
 
                 <!-- CUSTOMER / DATES GRID -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-3 px-8 pb-6">
-                    <!-- LEFT COLUMN -->
-                    <div class="grid grid-cols-[140px_1fr] gap-y-3 items-start">
+                <div class="grid grid-cols-1 gap-x-12 gap-y-3 px-6 pb-6 md:grid-cols-2 md:px-8">
+                    <div class="oddo-fields">
                         <div class="oddo-label">Customer</div>
-                        <div>
-                            <template v-if="!isEditMode">
-                                <a href="#" class="oddo-link font-semibold">{{ customer.name || 'â€”' }}</a>
-                                <div class="mt-2 text-[.85rem] text-[var(--theme-text)] leading-snug whitespace-pre-line">{{ customer.address }}</div>
-                            </template>
-                            <template v-else>
-                                <mono-input
-                                    size="sm"
-                                    variant="outlined"
-                                    placeholder="Customer name"
-                                    :model-value="customer.name"
-                                    @input="customer.name = $event.detail.modelValue"
-                                ></mono-input>
-                                <div class="mt-2">
-                                    <mono-input
-                                        size="sm"
-                                        variant="outlined"
-                                        placeholder="Address"
-                                        :model-value="customer.address"
-                                        @input="customer.address = $event.detail.modelValue"
-                                    ></mono-input>
-                                </div>
-                            </template>
+                        <div v-if="!isEditMode">
+                            <a href="#" class="oddo-link font-semibold">{{ customer.name || '—' }}</a>
+                            <div class="mt-2 whitespace-pre-line text-[.85rem] leading-snug">{{ customer.address }}</div>
+                        </div>
+                        <div v-else class="flex flex-col gap-2">
+                            <mono-input
+                                size="sm"
+                                placeholder="Customer name"
+                                :model-value="customer.name"
+                                @input="customer.name = $event.detail.modelValue"
+                            ></mono-input>
+                            <mono-textarea
+                                size="sm"
+                                rows="2"
+                                placeholder="Address"
+                                :model-value="customer.address"
+                                @input="customer.address = $event.detail.modelValue"
+                            ></mono-textarea>
                         </div>
 
                         <div class="oddo-label">GST Treatment</div>
-                        <div>
-                            <span v-if="!isEditMode" class="text-[.85rem] text-[var(--theme-text)]">{{ customer.gst || 'â€”' }}</span>
-                            <mono-input
-                                v-else
-                                size="sm"
-                                variant="outlined"
-                                placeholder="GST Treatment"
-                                :model-value="customer.gst"
-                                @input="customer.gst = $event.detail.modelValue"
-                            ></mono-input>
-                        </div>
+                        <span v-if="!isEditMode" class="text-[.85rem]">{{ customer.gst || '—' }}</span>
+                        <mono-select
+                            v-else
+                            size="sm"
+                            placeholder="GST Treatment"
+                            clearable
+                            :items.prop="GST_TREATMENTS"
+                            key-value="value"
+                            display-value="label"
+                            :model-value="customer.gst"
+                            @change="customer.gst = $event.detail.modelValue"
+                            @clear="customer.gst = null"
+                        ></mono-select>
                     </div>
 
-                    <!-- RIGHT COLUMN -->
-                    <div class="grid grid-cols-[140px_1fr] gap-y-3 items-start">
+                    <div class="oddo-fields">
                         <div class="oddo-label">Order Date</div>
-                        <div>
-                            <span v-if="!isEditMode" class="text-[.85rem] text-[var(--theme-text)]">{{ customer.orderDate || 'â€”' }}</span>
-                            <mono-input
-                                v-else
-                                size="sm"
-                                variant="outlined"
-                                :model-value="customer.orderDate"
-                                @input="customer.orderDate = $event.detail.modelValue"
-                            ></mono-input>
-                        </div>
+                        <span v-if="!isEditMode" class="text-[.85rem]">{{ customer.orderDate || '—' }}</span>
+                        <mono-date
+                            v-else
+                            size="sm"
+                            placeholder="Order date"
+                            :model-value="customer.orderDate"
+                            @change="customer.orderDate = $event.detail.modelValue"
+                        ></mono-date>
 
                         <div class="oddo-label">Payment Terms</div>
-                        <div>
-                            <span v-if="!isEditMode" class="text-[.85rem] text-[var(--theme-text)]">{{ customer.paymentTerms || 'â€”' }}</span>
-                            <mono-input
-                                v-else
-                                size="sm"
-                                variant="outlined"
-                                :model-value="customer.paymentTerms"
-                                @input="customer.paymentTerms = $event.detail.modelValue"
-                            ></mono-input>
-                        </div>
+                        <span v-if="!isEditMode" class="text-[.85rem]">{{ customer.paymentTerms || '—' }}</span>
+                        <mono-select
+                            v-else
+                            size="sm"
+                            placeholder="Payment terms"
+                            :items.prop="PAYMENT_TERMS"
+                            key-value="value"
+                            display-value="label"
+                            :model-value="customer.paymentTerms"
+                            @change="customer.paymentTerms = $event.detail.modelValue"
+                        ></mono-select>
                     </div>
                 </div>
 
                 <!-- TABS -->
-                <div class="px-8 pt-2 border-t border-[var(--theme-border)]">
+                <div class="oddo-tabs px-6 pt-2 md:px-8">
                     <mono-tabs
                         :items.prop="tabItems"
                         :model-value="activeTab"
-                        variant="underline"
-                        color="primary"
                         @change="activeTab = $event.detail.modelValue"
                     ></mono-tabs>
                 </div>
 
-                <!-- ORDER LINES TABLE -->
-                <div v-if="activeTab === 'order-lines'" class="px-2 pt-1 pb-6">
-                    <div class="overflow-x-auto">
-                        <table class="oddo-table">
+                <!-- ORDER LINES -->
+                <div v-show="activeTab === 'order-lines'" class="px-2 pb-6 pt-1">
+                    <div mono-table-scroll>
+                        <table mono-table mono-wide class="oddo-table">
                             <thead>
                                 <tr>
                                     <th>Product</th>
@@ -567,61 +520,91 @@ const statusLabel = computed(() => {
                                     <th class="text-right">Delivered</th>
                                     <th class="text-right">Invoiced</th>
                                     <th>UoM</th>
-                                    <th class="text-right">Packaging Qty</th>
-                                    <th>Packaging</th>
                                     <th class="text-right">Unit Price</th>
                                     <th>Taxes</th>
-                                    <th v-if="isEditMode" class="text-center w-10"></th>
+                                    <th v-if="isEditMode" class="w-12"></th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="line in orderLines" :key="line.id">
-                                    <td>
-                                        <a v-if="!isEditMode" href="#" class="oddo-link">{{ line.product }}</a>
-                                        <input v-else type="text" class="oddo-cell-input" v-model="line.product" />
-                                    </td>
-                                    <td>
+                                <tr v-for="line in orderLines" :key="line.id" :data-kind="line.kind">
+
+                                    <!-- Section / note rows: one wide cell -->
+                                    <td v-if="line.kind !== 'product'" :colspan="COLUMN_COUNT">
                                         <span v-if="!isEditMode">{{ line.description }}</span>
-                                        <input v-else type="text" class="oddo-cell-input" v-model="line.description" />
-                                    </td>
-                                    <td class="text-right">
-                                        <a v-if="!isEditMode" href="#" class="oddo-link">{{ formatQty(line.quantity) }}</a>
-                                        <input v-else type="number" step="0.01" class="oddo-cell-input text-right" v-model.number="line.quantity" />
-                                    </td>
-                                    <td class="text-right">
-                                        <a href="#" class="oddo-link inline-flex items-center justify-end gap-1">
-                                            {{ formatQty(line.delivered) }}
-                                            <span v-if="line.delivered < line.quantity" class="i-mdi-chart-bar text-[var(--theme-danger)]"></span>
-                                        </a>
-                                    </td>
-                                    <td class="text-right">
-                                        <a href="#" class="oddo-link">{{ formatQty(line.invoiced) }}</a>
-                                    </td>
-                                    <td>{{ line.uom }}</td>
-                                    <td class="text-right">{{ line.packagingQty }}</td>
-                                    <td>{{ line.packaging }}</td>
-                                    <td class="text-right">
-                                        <span v-if="!isEditMode">{{ line.unitPrice.toFixed(2) }}</span>
-                                        <input v-else type="number" step="0.01" class="oddo-cell-input text-right" v-model.number="line.unitPrice" />
-                                    </td>
-                                    <td>
-                                        <mono-chip
-                                            v-if="line.tax"
-                                            mode="chip"
-                                            color="info"
-                                            variant="soft"
-                                            shape="pill"
+                                        <mono-input
+                                            v-else
                                             size="sm"
-                                            :label="line.tax"
-                                        ></mono-chip>
+                                            :model-value="line.description"
+                                            @input="line.description = $event.detail.modelValue"
+                                        ></mono-input>
                                     </td>
+
+                                    <template v-else>
+                                        <td>
+                                            <a v-if="!isEditMode" href="#" class="oddo-link">{{ line.product }}</a>
+                                            <mono-input
+                                                v-else
+                                                size="sm"
+                                                :model-value="line.product"
+                                                @input="line.product = $event.detail.modelValue"
+                                            ></mono-input>
+                                        </td>
+                                        <td>
+                                            <span v-if="!isEditMode">{{ line.description }}</span>
+                                            <mono-input
+                                                v-else
+                                                size="sm"
+                                                :model-value="line.description"
+                                                @input="line.description = $event.detail.modelValue"
+                                            ></mono-input>
+                                        </td>
+                                        <td class="text-right">
+                                            <span v-if="!isEditMode">{{ formatQty(line.quantity) }}</span>
+                                            <mono-input
+                                                v-else
+                                                size="sm"
+                                                type="number"
+                                                step="0.01"
+                                                :model-value="String(line.quantity)"
+                                                @input="line.quantity = Number($event.detail.modelValue) || 0"
+                                            ></mono-input>
+                                        </td>
+                                        <td class="text-right">
+                                            <span class="inline-flex items-center justify-end gap-1">
+                                                {{ formatQty(line.delivered) }}
+                                                <span
+                                                    v-if="line.delivered < line.quantity"
+                                                    class="i-mdi-truck-alert-outline oddo-warn"
+                                                    title="Not fully delivered"
+                                                ></span>
+                                            </span>
+                                        </td>
+                                        <td class="text-right">{{ formatQty(line.invoiced) }}</td>
+                                        <td>{{ line.uom }}</td>
+                                        <td class="text-right">
+                                            <span v-if="!isEditMode">{{ line.unitPrice.toFixed(2) }}</span>
+                                            <mono-input
+                                                v-else
+                                                size="sm"
+                                                type="number"
+                                                step="0.01"
+                                                :model-value="String(line.unitPrice)"
+                                                @input="line.unitPrice = Number($event.detail.modelValue) || 0"
+                                            ></mono-input>
+                                        </td>
+                                        <td>
+                                            <mono-chip v-if="line.tax" size="xs" color="info"><span>{{ line.tax }}</span></mono-chip>
+                                        </td>
+                                    </template>
+
                                     <td v-if="isEditMode" class="text-center">
                                         <mono-button
                                             size="xs"
-                                            variant="outline"
+                                            variant="text"
                                             color="danger"
-                                            shape="circle"
+                                            rounded="full"
                                             icon-only
+                                            tooltip="Delete line"
                                             aria-label-text="Delete line"
                                             @click="deleteLine(line.id)"
                                         >
@@ -629,85 +612,78 @@ const statusLabel = computed(() => {
                                         </mono-button>
                                     </td>
                                 </tr>
-                                <tr v-if="!orderLines.length">
-                                    <td :colspan="isEditMode ? 11 : 10" class="text-center text-[var(--theme-text-secondary)] py-6">No order lines yet â€” click "Add a product".</td>
-                                </tr>
                             </tbody>
                         </table>
                     </div>
 
-                    <div class="flex gap-2 px-4 py-3 text-[.83rem] flex-wrap">
-                        <mono-button size="sm" variant="outline" color="primary" @click="addProduct">
+                    <div v-show="!orderLines.length" mono-table-empty>
+                        <div mono-empty-title>No order lines yet</div>
+                        <div mono-empty-sub>Click "Add a product" to start the quotation.</div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2 px-4 py-3">
+                        <mono-button size="sm" variant="text" @click="addProduct">
                             <span slot="icon" class="i-mdi-plus"></span>
                             Add a product
                         </mono-button>
-                        <mono-button size="sm" variant="outline" color="primary" @click="addSection">
-                            <span slot="icon" class="i-mdi-format-list-bulleted"></span>
+                        <mono-button size="sm" variant="text" @click="addSection">
+                            <span slot="icon" class="i-mdi-format-section"></span>
                             Add a section
                         </mono-button>
-                        <mono-button size="sm" variant="outline" color="primary" @click="addNote">
+                        <mono-button size="sm" variant="text" @click="addNote">
                             <span slot="icon" class="i-mdi-note-text-outline"></span>
                             Add a note
                         </mono-button>
                     </div>
 
-                    <!-- TOTALS STRIP -->
-                    <div class="flex flex-col items-end px-6 mt-10 mb-3">
-                        <div class="mb-2">
-                            <mono-button size="sm" variant="outline" color="primary" @click="addShipping">
-                                <span slot="icon" class="i-mdi-truck-fast-outline"></span>
-                                ADD SHIPPING
-                            </mono-button>
-                        </div>
+                    <!-- TOTALS -->
+                    <div class="mb-3 mt-8 flex flex-col items-end px-6">
+                        <mono-button class="mb-2" size="sm" variant="outline" color="secondary" @click="addShipping">
+                            <span slot="icon" class="i-mdi-truck-fast-outline"></span>
+                            Add Shipping
+                        </mono-button>
 
-                        <dl class="w-80 border-t border-[var(--theme-border)] pt-3">
-                            <div class="flex justify-between py-1 text-[.88rem]">
-                                <dt class="text-[var(--theme-text)] font-medium">Untaxed Amount:</dt>
-                                <dd>{{ formatINR(totals.untaxed) }}</dd>
-                            </div>
-                            <div class="flex justify-between py-1 text-[.88rem]">
-                                <dt class="text-[var(--theme-text)] font-medium">SGST:</dt>
-                                <dd>{{ formatINR(totals.sgst) }}</dd>
-                            </div>
-                            <div class="flex justify-between py-1 text-[.88rem]">
-                                <dt class="text-[var(--theme-text)] font-medium">CGST:</dt>
-                                <dd>{{ formatINR(totals.cgst) }}</dd>
-                            </div>
-                            <div class="flex justify-between py-2 text-[1rem] border-t border-[var(--theme-border)] mt-1">
-                                <dt class="font-bold text-[var(--theme-text)]">Total:</dt>
-                                <dd class="font-bold text-[var(--theme-text)]">{{ formatINR(totals.total) }}</dd>
-                            </div>
+                        <dl class="oddo-totals">
+                            <div><dt>Untaxed Amount:</dt><dd>{{ formatINR(totals.untaxed) }}</dd></div>
+                            <div><dt>SGST:</dt><dd>{{ formatINR(totals.sgst) }}</dd></div>
+                            <div><dt>CGST:</dt><dd>{{ formatINR(totals.cgst) }}</dd></div>
+                            <div data-total><dt>Total:</dt><dd>{{ formatINR(totals.total) }}</dd></div>
                         </dl>
                     </div>
                 </div>
 
-                <div v-else class="px-8 py-12 text-[.85rem] text-[var(--theme-text)]">
-                    <h3 class="mt-0 mb-3 text-[1rem] font-semibold">Other information</h3>
-                    <dl class="grid grid-cols-[180px_1fr] gap-y-2 max-w-2xl">
+                <!-- OTHER INFO -->
+                <div v-show="activeTab === 'other-info'" class="px-6 py-10 text-[.85rem] md:px-8">
+                    <h3 class="mb-3 mt-0 text-[1rem] font-semibold">Other information</h3>
+                    <dl class="grid max-w-2xl grid-cols-[180px_1fr] gap-y-2">
                         <dt class="oddo-label">Salesperson</dt><dd>Administrator</dd>
                         <dt class="oddo-label">Sales Team</dt><dd>Direct Sales</dd>
-                        <dt class="oddo-label">Customer Reference</dt><dd>â€”</dd>
+                        <dt class="oddo-label">Customer Reference</dt><dd>—</dd>
                         <dt class="oddo-label">Tags</dt>
-                        <dd class="flex gap-2 flex-wrap">
-                            <mono-chip mode="chip" color="purple" variant="soft" shape="pill" size="sm" label="Wholesale"></mono-chip>
-                            <mono-chip mode="chip" color="success" variant="soft" shape="pill" size="sm" label="Priority"></mono-chip>
+                        <dd class="flex flex-wrap gap-2">
+                            <mono-chip size="sm" color="purple">Wholesale</mono-chip>
+                            <mono-chip size="sm" color="success">Priority</mono-chip>
                         </dd>
                     </dl>
                 </div>
-            </section>
+            </mono-card>
 
             <!-- EDIT-MODE SAVE / DISCARD BAR -->
+            <!-- A plain bar, not a mono-alert: light-DOM mono-buttons nested in
+                 another light component's slot get captured by it. -->
             <div v-if="isEditMode" class="oddo-edit-bar">
-                <span class="text-[.85rem] text-[var(--theme-text)]">Unsaved changes</span>
-                <div class="flex gap-2">
-                    <mono-button size="sm" variant="outline" color="primary" @click="isEditMode = false; flashToast('Changes discarded.', 'danger')">Discard</mono-button>
-                    <mono-button size="sm" variant="solid" color="primary" @click="isEditMode = false; flashToast('Changes saved.', 'success')">Save</mono-button>
-                </div>
+                <span class="flex items-center gap-2">
+                    <span class="i-mdi-pencil-outline"></span>
+                    <strong>Unsaved changes</strong>
+                </span>
+                <span class="flex gap-2">
+                    <mono-button size="sm" variant="outline" color="secondary" @click="discardChanges">Discard</mono-button>
+                    <mono-button size="sm" @click="saveChanges">Save</mono-button>
+                </span>
             </div>
         </main>
 
         <!-- ===== MODALS ===== -->
-
         <mono-modal
             title="Create new quotation?"
             color="info"
@@ -715,10 +691,8 @@ const statusLabel = computed(() => {
             @close="newQuotationOpen = false"
         >
             <p class="m-0">This will clear the current form and start a fresh quotation.</p>
-            <span slot="foot" class="flex justify-end gap-2">
-                <mono-button variant="outline" color="primary" @click="newQuotationOpen = false">Cancel</mono-button>
-                <mono-button variant="solid" color="primary" @click="confirmCreateNew">Create</mono-button>
-            </span>
+            <mono-button slot="footer" size="sm" variant="tonal" color="secondary" @click="newQuotationOpen = false">Cancel</mono-button>
+            <mono-button slot="footer" size="sm" @click="confirmCreateNew">Create</mono-button>
         </mono-modal>
 
         <mono-modal
@@ -728,12 +702,12 @@ const statusLabel = computed(() => {
             @close="invoiceOpen = false"
         >
             <p class="m-0 mb-2">An invoice will be generated for:</p>
-            <p class="m-0 font-bold text-[1.05rem]">{{ formatINR(totals.total) }}</p>
-            <p class="m-0 mt-2 text-[var(--theme-text-secondary)] text-[.85rem]">{{ orderLines.length }} line(s), customer: {{ customer.name || 'â€”' }}</p>
-            <span slot="foot" class="flex justify-end gap-2">
-                <mono-button variant="outline" color="primary" @click="invoiceOpen = false">Cancel</mono-button>
-                <mono-button variant="solid" color="primary" @click="confirmCreateInvoice">Create Invoice</mono-button>
-            </span>
+            <p class="m-0 text-[1.05rem] font-bold">{{ formatINR(totals.total) }}</p>
+            <p class="oddo-muted m-0 mt-2 text-[.85rem]">
+                {{ orderLines.filter((l) => l.kind === 'product').length }} line(s), customer: {{ customer.name || '—' }}
+            </p>
+            <mono-button slot="footer" size="sm" variant="tonal" color="secondary" @click="invoiceOpen = false">Cancel</mono-button>
+            <mono-button slot="footer" size="sm" color="success" @click="confirmCreateInvoice">Create Invoice</mono-button>
         </mono-modal>
 
         <mono-modal
@@ -745,7 +719,7 @@ const statusLabel = computed(() => {
             <div class="flex flex-col gap-3">
                 <mono-input
                     size="sm"
-                    variant="outlined"
+                    type="email"
                     label="To"
                     placeholder="email@example.com"
                     :model-value="emailDraft.to"
@@ -753,26 +727,23 @@ const statusLabel = computed(() => {
                 ></mono-input>
                 <mono-input
                     size="sm"
-                    variant="outlined"
                     label="Subject"
                     :model-value="emailDraft.subject"
                     @input="emailDraft.subject = $event.detail.modelValue"
                 ></mono-input>
-                <mono-input
+                <mono-textarea
                     size="sm"
-                    variant="outlined"
                     label="Message"
+                    rows="4"
                     :model-value="emailDraft.body"
                     @input="emailDraft.body = $event.detail.modelValue"
-                ></mono-input>
+                ></mono-textarea>
             </div>
-            <span slot="foot" class="flex justify-end gap-2">
-                <mono-button variant="outline" color="primary" @click="emailOpen = false">Cancel</mono-button>
-                <mono-button variant="solid" color="primary" :disabled="!emailDraft.to" @click="confirmSendEmail">
-                    <span slot="icon" class="i-mdi-send"></span>
-                    Send
-                </mono-button>
-            </span>
+            <mono-button slot="footer" size="sm" variant="tonal" color="secondary" @click="emailOpen = false">Cancel</mono-button>
+            <mono-button slot="footer" size="sm" :disabled="!emailDraft.to" @click="confirmSendEmail">
+                <span slot="icon" class="i-mdi-send"></span>
+                Send
+            </mono-button>
         </mono-modal>
 
         <mono-modal
@@ -782,11 +753,9 @@ const statusLabel = computed(() => {
             @close="cancelOpen = false"
         >
             <p class="m-0 font-semibold">This will mark {{ quotationNumber }} as cancelled.</p>
-            <p class="m-0 mt-1 opacity-80">You can still create a new quotation afterwards.</p>
-            <span slot="foot" class="flex justify-end gap-2">
-                <mono-button variant="outline" color="primary" @click="cancelOpen = false">Keep order</mono-button>
-                <mono-button variant="solid" color="danger" @click="confirmCancel">Cancel order</mono-button>
-            </span>
+            <p class="oddo-muted m-0 mt-1">You can still create a new quotation afterwards.</p>
+            <mono-button slot="footer" size="sm" variant="tonal" color="secondary" @click="cancelOpen = false">Keep order</mono-button>
+            <mono-button slot="footer" size="sm" color="danger" @click="confirmCancel">Cancel order</mono-button>
         </mono-modal>
 
         <mono-modal
@@ -796,323 +765,266 @@ const statusLabel = computed(() => {
             @close="customerPreviewOpen = false"
         >
             <dl class="grid grid-cols-[140px_1fr] gap-y-2 text-[.88rem]">
-                <dt class="oddo-label">Name</dt><dd>{{ customer.name || 'â€”' }}</dd>
-                <dt class="oddo-label">Address</dt><dd class="whitespace-pre-line">{{ customer.address || 'â€”' }}</dd>
-                <dt class="oddo-label">GST</dt><dd>{{ customer.gst || 'â€”' }}</dd>
-                <dt class="oddo-label">Payment Terms</dt><dd>{{ customer.paymentTerms || 'â€”' }}</dd>
+                <dt class="oddo-label">Name</dt><dd>{{ customer.name || '—' }}</dd>
+                <dt class="oddo-label">Address</dt><dd class="whitespace-pre-line">{{ customer.address || '—' }}</dd>
+                <dt class="oddo-label">GST</dt><dd>{{ customer.gst || '—' }}</dd>
+                <dt class="oddo-label">Payment Terms</dt><dd>{{ customer.paymentTerms || '—' }}</dd>
             </dl>
-            <span slot="foot" class="flex justify-end gap-2">
-                <mono-button variant="solid" color="primary" @click="customerPreviewOpen = false">Close</mono-button>
-            </span>
+            <mono-button slot="footer" size="sm" @click="customerPreviewOpen = false">Close</mono-button>
         </mono-modal>
 
         <mono-modal
-            title="Delivery â€” DO/00012"
+            title="Delivery — DO/00012"
             color="info"
             :model-value="deliveryOpen"
             @close="deliveryOpen = false"
         >
-            <p class="m-0 mb-2">Scheduled: <strong>07/03/2022</strong></p>
+            <p class="m-0 mb-2">Scheduled: <strong>2022-07-03</strong></p>
             <p class="m-0 mb-2">Carrier: <strong>BlueDart Express</strong></p>
-            <p class="m-0">Status: <mono-chip mode="chip" color="warning" variant="soft" shape="pill" size="sm" label="Ready"></mono-chip></p>
-            <span slot="foot" class="flex justify-end gap-2">
-                <mono-button variant="solid" color="primary" @click="deliveryOpen = false">Close</mono-button>
-            </span>
+            <p class="m-0">Status: <mono-chip size="sm" color="warning">Ready</mono-chip></p>
+            <mono-button slot="footer" size="sm" @click="deliveryOpen = false">Close</mono-button>
         </mono-modal>
 
         <mono-modal
-            title="Purchase â€” PO/00007"
+            title="Purchase — PO/00007"
             color="info"
             :model-value="purchaseOpen"
             @close="purchaseOpen = false"
         >
             <p class="m-0 mb-2">Vendor: <strong>Sweet Supplies Co.</strong></p>
             <p class="m-0 mb-2">Total: <strong>{{ formatINR(420) }}</strong></p>
-            <p class="m-0">Status: <mono-chip mode="chip" color="success" variant="soft" shape="pill" size="sm" label="Confirmed"></mono-chip></p>
-            <span slot="foot" class="flex justify-end gap-2">
-                <mono-button variant="solid" color="primary" @click="purchaseOpen = false">Close</mono-button>
-            </span>
+            <p class="m-0">Status: <mono-chip size="sm" color="success">Confirmed</mono-chip></p>
+            <mono-button slot="footer" size="sm" @click="purchaseOpen = false">Close</mono-button>
         </mono-modal>
 
         <!-- ===== TOAST ===== -->
         <transition name="oddo-toast">
-            <div v-if="toast" class="oddo-toast" :class="`oddo-toast-${toast.tone}`">
-                <span
-                    class="text-[1.05rem]"
-                    :class="{
-                        'i-mdi-information': toast.tone === 'info',
-                        'i-mdi-check-circle': toast.tone === 'success',
-                        'i-mdi-alert-circle': toast.tone === 'danger',
-                    }"
-                ></span>
-                <span>{{ toast.text }}</span>
+            <div v-if="toast" class="oddo-toast">
+                <mono-alert
+                    variant="solid"
+                    size="sm"
+                    :color="toast.tone"
+                    :icon="TOAST_ICON[toast.tone]"
+                    :title="toast.text"
+                ></mono-alert>
             </div>
         </transition>
     </div>
 </template>
 
 <style>
-/* â”€â”€ ROOT â€” material theme + MUI Blue palette via mono tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€
-   The wrapper carries .theme-material .theme-color-material so every
-   var(--theme-*) lookup inside resolves to MUI Blue + Roboto + 4px radii
-   + Material elevation, regardless of the site's outer theme switcher. */
+/* Every colour is a theme token, so the page follows the site's flavor,
+   palette and dark mode. */
 .oddo-page {
-    font-family: var(--theme-font-family);
-    color: var(--theme-text);
-    background: var(--theme-surface-soft);
-    letter-spacing: 0;
+    font-family: var(--font-sans);
+    color: var(--foreground);
+    background: var(--muted);
 }
-.oddo-page, .oddo-page * { box-sizing: border-box; }
 
-/* â”€â”€ NAV (MUI primary blue app bar) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-.oddo-page .oddo-nav {
-    background: var(--theme-primary);
-    color: var(--theme-primary-contrast);
-    box-shadow: var(--theme-elev-2);
-}
-.oddo-page .oddo-nav .mono-nav,
-.oddo-page .oddo-nav > * {
-    background: var(--theme-primary) !important;
-    color: var(--theme-primary-contrast);
-}
-.oddo-page .oddo-nav-link {
-    color: var(--theme-primary-contrast);
-    opacity: 0.92;
-    text-decoration: none;
-    transition: opacity var(--theme-duration-fast) var(--theme-motion-standard);
-}
-.oddo-page .oddo-nav-link:hover { opacity: 1; text-decoration: underline; }
-
-/* â”€â”€ BUTTON GROUP (EDIT / CREATE) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-.oddo-page .oddo-btn-group mono-button + mono-button { margin-left: -1px; }
-
-/* â”€â”€ STATUS FLOW (clickable chevron pills) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-.oddo-page .oddo-flow {
-    display: flex; list-style: none; margin: 0; padding: 0; gap: 0;
-}
-.oddo-page .oddo-flow-step {
-    position: relative;
-    padding: .55rem 1.4rem .55rem 1.7rem;
-    background: var(--theme-surface);
-    color: var(--theme-text-secondary);
-    font-size: var(--theme-font-size-xs);
-    font-weight: var(--theme-font-weight-medium);
-    letter-spacing: var(--theme-letter-spacing-button);
+/* ── NAV ─────────────────────────────────────────────────────────────────── */
+.oddo-page .oddo-nav-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    font-size: .8rem;
+    font-weight: 500;
     text-transform: uppercase;
-    border: var(--theme-border-width) solid var(--theme-border);
-    border-right: none;
-    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 14px 50%);
+    letter-spacing: .04em;
+}
+
+.oddo-page .oddo-nav-link {
+    color: inherit;
+    opacity: .9;
+    text-decoration: none;
+}
+
+.oddo-page .oddo-nav-link:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+/* ── STATUS FLOW (clickable chevrons) ────────────────────────────────────── */
+.oddo-page .oddo-flow {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.oddo-page .oddo-flow-step {
     margin-right: -10px;
+    padding: .5rem 1.4rem .5rem 1.7rem;
+    background: var(--card);
+    color: var(--muted-foreground);
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
     white-space: nowrap;
     cursor: pointer;
-    transition: background var(--theme-duration-fast) var(--theme-motion-standard),
-                color var(--theme-duration-fast) var(--theme-motion-standard);
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 14px 50%);
+    transition: background var(--mono-duration) var(--mono-ease), color var(--mono-duration) var(--mono-ease);
 }
+
 .oddo-page .oddo-flow-step:first-child {
-    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
     padding-left: 1.1rem;
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
 }
+
 .oddo-page .oddo-flow-step:hover {
-    background: var(--theme-action-hover);
-    color: var(--theme-text-primary);
-}
-.oddo-page .oddo-flow-step-active,
-.oddo-page .oddo-flow-step-active:hover {
-    background: var(--theme-primary);
-    color: var(--theme-primary-contrast);
-    border-color: var(--theme-primary);
-}
-.oddo-page .oddo-flow-step-cancelled,
-.oddo-page .oddo-flow-step-cancelled:hover {
-    background: var(--theme-danger);
-    color: var(--theme-danger-contrast);
-    border-color: var(--theme-danger);
+    background: var(--accent);
+    color: var(--foreground);
 }
 
-/* â”€â”€ STATS TILES (mono-button "solid color=light" wrapper) â”€â”€
-   variant=solid + color=light gives a light gradient bg + dark theme
-   text (button.css:449-461). Material theme uppercases button text,
-   so we explicitly opt the stat-tile labels back into natural case. */
-.oddo-page .oddo-stat-btn > button,
-.oddo-page .oddo-stat-btn > a {
-    text-transform: none !important;
-    letter-spacing: 0 !important;
-}
-.oddo-page .oddo-stat-icon {
-    color: var(--theme-text-secondary);
-    font-size: 1.25rem;
-}
-.oddo-page .oddo-stat-text {
-    display: flex; flex-direction: column; align-items: flex-start;
-    line-height: var(--theme-line-height-tight);
-    text-align: left;
-    text-transform: none;
-}
-.oddo-page .oddo-stat-line1 {
-    font-weight: var(--theme-font-weight-medium);
-    color: var(--theme-text-primary);
-    font-size: var(--theme-font-size-sm);
-}
-.oddo-page .oddo-stat-line2 {
-    color: var(--theme-text-secondary);
-    font-size: var(--theme-font-size-xs);
+.oddo-page .oddo-flow-step[data-active] {
+    background: var(--primary);
+    color: var(--primary-foreground);
 }
 
-/* â”€â”€ CARD WRAPPER (MUI Paper, elevation 1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.oddo-page .oddo-flow-step[data-cancelled] {
+    background: var(--destructive);
+    color: var(--destructive-foreground);
+}
+
+/* ── CARD ────────────────────────────────────────────────────────────────── */
 .oddo-page .oddo-card {
-    background: var(--theme-surface);
-    border-radius: var(--theme-radius-sm);
-    box-shadow: var(--theme-elev-1);
+    --mono-card-padding: 0;
 }
 
-/* â”€â”€ LABELS / LINKS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.oddo-page .oddo-title {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+
+.oddo-page .oddo-fields {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    align-items: start;
+    gap: .75rem 0;
+}
+
 .oddo-page .oddo-label {
-    font-size: var(--theme-font-size-sm);
-    font-weight: var(--theme-font-weight-medium);
-    color: var(--theme-text-secondary);
+    font-size: .85rem;
+    font-weight: 500;
+    color: var(--muted-foreground);
 }
+
+.oddo-page .oddo-muted {
+    color: var(--muted-foreground);
+}
+
 .oddo-page .oddo-link {
-    color: var(--theme-primary);
+    color: var(--primary);
     text-decoration: none;
-    cursor: pointer;
-    transition: color var(--theme-duration-fast) var(--theme-motion-standard);
 }
+
 .oddo-page .oddo-link:hover {
     text-decoration: underline;
-    color: var(--theme-primary-dark);
 }
 
-/* â”€â”€ TABLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-.oddo-page .oddo-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: var(--theme-font-size-sm);
-    min-width: 920px;
-}
-.oddo-page .oddo-table thead th {
-    text-align: left;
-    font-weight: var(--theme-font-weight-medium);
-    color: var(--theme-text-secondary);
-    padding: .75rem .75rem;
-    border-bottom: var(--theme-border-width) solid var(--theme-border);
-    background: var(--theme-surface);
-    white-space: nowrap;
-    text-transform: none;
-}
-.oddo-page .oddo-table tbody td {
-    padding: .6rem .75rem;
-    border-bottom: 1px solid var(--theme-divider);
-    color: var(--theme-text-primary);
-    vertical-align: middle;
-}
-.oddo-page .oddo-table tbody tr {
-    transition: background var(--theme-duration-fast) var(--theme-motion-standard);
-}
-.oddo-page .oddo-table tbody tr:hover { background: var(--theme-action-hover); }
-.oddo-page .oddo-table .text-right { text-align: right; }
-.oddo-page .oddo-table .text-center { text-align: center; }
-.oddo-page .oddo-cell-input {
-    width: 100%;
-    padding: .3rem .5rem;
-    border: var(--theme-border-width) solid var(--theme-border);
-    border-radius: var(--theme-radius-xs);
-    font: inherit;
-    font-family: var(--theme-font-family);
-    font-size: var(--theme-font-size-sm);
-    background: var(--theme-surface);
-    color: var(--theme-text-primary);
-    transition: border-color var(--theme-duration-fast) var(--theme-motion-standard),
-                box-shadow var(--theme-duration-fast) var(--theme-motion-standard);
-}
-.oddo-page .oddo-cell-input:focus {
-    outline: none;
-    border-color: var(--theme-primary);
-    box-shadow: var(--theme-focus-ring);
+.oddo-page .oddo-tabs {
+    border-top: 1px solid var(--border);
 }
 
-/* â”€â”€ TABS UNDERLINE TINT (uses theme primary) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-.oddo-page mono-tabs {
-    --mono-tabs-active-color: var(--theme-primary);
-    --mono-tabs-indicator-color: var(--theme-primary);
+/* ── ORDER LINES ─────────────────────────────────────────────────────────── */
+.oddo-page .oddo-table .text-right {
+    text-align: right;
 }
 
-/* â”€â”€ DROPDOWN MENU (MUI Menu look) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.oddo-page .oddo-table .text-center {
+    text-align: center;
+}
+
+.oddo-page .oddo-table tr[data-kind='section'] td {
+    font-weight: 700;
+    background: var(--muted);
+}
+
+.oddo-page .oddo-table tr[data-kind='note'] td {
+    font-style: italic;
+    color: var(--muted-foreground);
+}
+
+.oddo-page .oddo-warn {
+    color: var(--destructive);
+}
+
+.oddo-page .oddo-totals {
+    width: 20rem;
+    max-width: 100%;
+    margin: 0;
+    padding-top: .75rem;
+    border-top: 1px solid var(--border);
+    font-size: .88rem;
+}
+
+.oddo-page .oddo-totals > div {
+    display: flex;
+    justify-content: space-between;
+    padding: .25rem 0;
+}
+
+.oddo-page .oddo-totals dt {
+    font-weight: 500;
+}
+
+.oddo-page .oddo-totals dd {
+    margin: 0;
+}
+
+.oddo-page .oddo-totals > div[data-total] {
+    margin-top: .25rem;
+    padding-top: .5rem;
+    border-top: 1px solid var(--border);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+/* ── ACTION MENU PANEL ───────────────────────────────────────────────────── */
 .oddo-page .oddo-menu {
-    min-width: 180px;
-    padding: .35rem 0;
-    background: var(--theme-surface);
-    border-radius: var(--theme-radius-sm);
-}
-.oddo-page .oddo-menu-item {
-    width: 100%;
-    display: flex; align-items: center; gap: .55rem;
-    padding: .55rem 1rem;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    font: inherit;
-    font-family: var(--theme-font-family);
-    font-size: var(--theme-font-size-sm);
-    color: var(--theme-text-primary);
-    text-align: left;
-    transition: background var(--theme-duration-fast) var(--theme-motion-standard);
-}
-.oddo-page .oddo-menu-item:hover {
-    background: var(--theme-action-hover);
-    color: var(--theme-primary);
-}
-.oddo-page .oddo-menu-item-danger { color: var(--theme-danger); }
-.oddo-page .oddo-menu-item-danger:hover {
-    background: rgba(var(--theme-danger-rgb), .08);
-    color: var(--theme-danger);
-}
-.oddo-page .oddo-menu-sep {
-    height: 1px;
-    background: var(--theme-divider);
-    margin: .3rem 0;
+    min-width: 12rem;
 }
 
-/* â”€â”€ EDIT BAR (Material warning surface) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── EDIT BAR ────────────────────────────────────────────────────────────── */
 .oddo-page .oddo-edit-bar {
     position: sticky;
     bottom: 1rem;
-    margin-top: 1rem;
-    background: rgba(var(--theme-warning-rgb), .12);
-    border: var(--theme-border-width) solid var(--theme-warning);
-    border-radius: var(--theme-radius-sm);
-    padding: .65rem 1rem;
-    display: flex; align-items: center; justify-content: space-between;
-    box-shadow: var(--theme-elev-2);
-    color: var(--theme-text-primary);
     z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    margin-top: 1rem;
+    padding: .65rem 1rem;
+    background: var(--card);
+    border: 1px solid var(--warning);
+    border-left-width: 4px;
+    border-radius: var(--mono-radius-md);
+    box-shadow: var(--mono-shadow-md);
+    font-size: .85rem;
 }
 
-/* â”€â”€ TOAST (MUI Snackbar look) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── TOAST ───────────────────────────────────────────────────────────────── */
 .oddo-page .oddo-toast {
     position: fixed;
-    bottom: 1.5rem; right: 1.5rem;
-    display: flex; align-items: center; gap: .6rem;
-    padding: .75rem 1.1rem;
-    background: var(--theme-dark);
-    color: #fff;
-    border-radius: var(--theme-radius-sm);
-    font-family: var(--theme-font-family);
-    font-size: var(--theme-font-size-sm);
-    font-weight: var(--theme-font-weight-medium);
-    box-shadow: var(--theme-elev-3);
+    right: 1.5rem;
+    bottom: 1.5rem;
     z-index: 1000;
     max-width: 360px;
+    box-shadow: var(--mono-shadow-lg);
 }
-.oddo-page .oddo-toast-success { background: var(--theme-success); }
-.oddo-page .oddo-toast-danger { background: var(--theme-danger); }
+
 .oddo-toast-enter-active,
 .oddo-toast-leave-active {
-    transition: opacity var(--theme-duration-base) var(--theme-motion-standard),
-                transform var(--theme-duration-base) var(--theme-motion-standard);
+    transition: opacity var(--mono-duration) var(--mono-ease), transform var(--mono-duration) var(--mono-ease);
 }
-.oddo-toast-enter-from,
-.oddo-toast-leave-to { opacity: 0; transform: translateY(8px); }
 
-/* â”€â”€ ORDER NUMBER HEADING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-.oddo-page h1 { color: var(--theme-text-primary); }
+.oddo-toast-enter-from,
+.oddo-toast-leave-to {
+    opacity: 0;
+    transform: translateY(8px);
+}
 </style>

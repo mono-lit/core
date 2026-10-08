@@ -26,10 +26,8 @@ import DemoPreview from '../../components/DemoPreview.vue'
 import DemoSingle from '../../components/DemoSingle.vue'
 import DemoTypes from '../../components/DemoTypes.vue'
 import ThemeSwitcher from '../../components/ThemeSwitcher.vue'
-import ExampleLayout from '../../components/Example/Layout.vue'
 import LayoutRuleExample from '../../components/Example/LayoutRule.vue'
 import OddoExample from '../../components/Example/Odoo.vue'
-import LinkedInExample from '../../components/Example/LinkedIn.vue'
 import OdataExpressionDemo from '../../components/OdataExpressionDemo.vue'
 import RepoTemplates from '../../components/RepoTemplates.vue'
 import SetupWiring from '../../components/SetupWiring.vue'
@@ -52,10 +50,8 @@ export default {
     app.component('DemoSingle', DemoSingle)
     app.component('DemoTypes', DemoTypes)
     app.component('ThemeSwitcher', ThemeSwitcher)
-    app.component('ExampleLayout', ExampleLayout)
     app.component('ExampleLayoutRule', LayoutRuleExample)
     app.component('ExampleOdoo', OddoExample)
-    app.component('ExampleLinkedIn', LinkedInExample)
     app.component('OdataExpressionDemo', OdataExpressionDemo)
     app.component('RepoTemplates', RepoTemplates)
     app.component('SetupWiring', SetupWiring)

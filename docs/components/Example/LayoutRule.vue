@@ -11,10 +11,13 @@
  *   FORM RULE    page-header → form-card*, each one
  *                card-header → field-grid → form-actions
  *
- * The rule picker is a floating menu pinned to the viewport -- it selects which
- * shape is on screen, so it is kept outside `main`, given no `data-region`, and
- * left out of the region overlay. It is chrome for the demo, not part of the
- * rule the demo is showing.
+ * The rule picker is a `mono-dropdown` + `mono-menu` pinned to the viewport --
+ * it selects which shape is on screen, so it is kept outside `main`, given no
+ * `data-region`, and left out of the region overlay. It is chrome for the demo,
+ * not part of the rule the demo is showing.
+ *
+ * Every colour is a theme token, so the page follows the site's flavor,
+ * palette and dark mode.
  *
  * Both share the same skeleton: a `max-w-1400px` centred column, a 12-column
  * page header (title 8 / actions 4), and every region tagged with
@@ -29,6 +32,8 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 
 if (!import.meta.env.SSR) {
+    import('@mono-lit/helper/ui/dropdown')
+    import('@mono-lit/helper/ui/menu')
     import('@mono-lit/helper/ui/card')
     import('@mono-lit/helper/ui/accordion')
     import('@mono-lit/helper/ui/table')
@@ -57,20 +62,21 @@ const rule = ref<RuleId>('table')
 
 // -- Rule picker: a floating menu, not a region ------------------------------
 // Closed it is one pill in the corner; open it lists the available rules.
+// mono-dropdown closes itself on ESC and on an outside click.
 const ruleMenuOpen = ref(false)
 const activeRule = computed(
     () => RULE_TABS.find((t) => t.id === rule.value) ?? RULE_TABS[0],
 )
 
-function pickRule(id: RuleId): void {
-    rule.value = id
-    ruleMenuOpen.value = false
-}
+const RULE_MENU_ITEMS = [
+    { id: 'head', type: 'subheader', title: 'Rules' },
+    { id: 'table', title: 'Table Rule', icon: 'i-mdi-table' },
+    { id: 'form', title: 'Form Rule', icon: 'i-mdi-form-select' },
+]
 
-/** ESC closes the picker. Card edits handle their own ESC, on the card. */
-function onPickerKeydown(event: KeyboardEvent): void {
-    if (event.key !== 'Escape') return
-    if (!ruleMenuOpen.value) return
+function pickRule(id: string): void {
+    if (!RULE_TABS.some((t) => t.id === id)) return
+    rule.value = id as RuleId
     ruleMenuOpen.value = false
 }
 
@@ -161,6 +167,7 @@ const ROWS: RequestRow[] = [
 // A static array in, no fetcher: `controlMonoTable` wraps it in an in-memory
 // source, so search / sort / header-filter / paging all run client-side.
 const table = controlMonoTable<RequestRow>(ROWS, {
+    keyExpr: 'id',
     pageSize: 5,
     searchValue: ['no', 'title', 'requester', 'dept'],
     props: {
@@ -215,10 +222,11 @@ const activeFilterCount = computed(
         ).length,
 )
 
+// `setFilter` is one layer of the query: it is AND-ed with the search box and
+// the header filters, and it re-runs the query itself.
 function applyFilters(): void {
     if (!activeFilterCount.value) {
-        table.setFilter(null)
-        void table.reload()
+        void table.setFilter(null)
         return
     }
 
@@ -226,7 +234,7 @@ function applyFilters(): void {
     const like = (haystack: string, needle: string) =>
         !needle || haystack.toLowerCase().includes(needle.trim().toLowerCase())
 
-    table.setFilter((r: RequestRow) => {
+    void table.setFilter((r: RequestRow) => {
         if (!like(r.no, filters.no)) return false
         if (!like(r.title, filters.title)) return false
         if (!like(r.requester, filters.requester)) return false
@@ -240,8 +248,6 @@ function applyFilters(): void {
         if (filters.urgentOnly && r.priority !== 'Urgent') return false
         return true
     })
-
-    void table.reload()
 }
 
 function resetFilters(): void {
@@ -386,11 +392,9 @@ function viewText(field: FormField): string {
 
 onMounted(() => {
     void table.load()
-    document.addEventListener('keydown', onPickerKeydown)
 })
 
 onBeforeUnmount(() => {
-    document.removeEventListener('keydown', onPickerKeydown)
     off()
     table.dispose()
     for (const id of Object.keys(flashTimers)) clearTimeout(flashTimers[id])
@@ -451,8 +455,8 @@ onBeforeUnmount(() => {
                 <mono-accordion
                     data-region="filter-accordion"
                     color="primary"
-                    label="Filters"
-                    description="Narrow the grid before searching inside it"
+                    title="Filters"
+                    subtitle="Narrow the grid before searching inside it"
                     :model-value="filterOpen"
                     @toggle="filterOpen = $event.detail.modelValue"
                 >
@@ -480,6 +484,7 @@ onBeforeUnmount(() => {
                                 clearable
                                 :model-value="filters.no"
                                 @input="filters.no = $event.detail.modelValue"
+                                @clear="filters.no = ''"
                             ></mono-input>
 
                             <mono-input
@@ -489,6 +494,7 @@ onBeforeUnmount(() => {
                                 clearable
                                 :model-value="filters.title"
                                 @input="filters.title = $event.detail.modelValue"
+                                @clear="filters.title = ''"
                             ></mono-input>
 
                             <mono-select
@@ -501,6 +507,7 @@ onBeforeUnmount(() => {
                                 display-value="label"
                                 :model-value="filters.dept"
                                 @change="filters.dept = $event.detail.modelValue"
+                                @clear="filters.dept = null"
                             ></mono-select>
 
                             <mono-input
@@ -510,6 +517,7 @@ onBeforeUnmount(() => {
                                 clearable
                                 :model-value="filters.requester"
                                 @input="filters.requester = $event.detail.modelValue"
+                                @clear="filters.requester = ''"
                             ></mono-input>
 
                             <mono-select
@@ -522,6 +530,7 @@ onBeforeUnmount(() => {
                                 display-value="label"
                                 :model-value="filters.status"
                                 @change="filters.status = $event.detail.modelValue"
+                                @clear="filters.status = null"
                             ></mono-select>
 
                             <mono-select
@@ -534,6 +543,7 @@ onBeforeUnmount(() => {
                                 display-value="label"
                                 :model-value="filters.priority"
                                 @change="filters.priority = $event.detail.modelValue"
+                                @clear="filters.priority = null"
                             ></mono-select>
 
                             <mono-select
@@ -546,6 +556,7 @@ onBeforeUnmount(() => {
                                 display-value="label"
                                 :model-value="filters.warehouse"
                                 @change="filters.warehouse = $event.detail.modelValue"
+                                @clear="filters.warehouse = null"
                             ></mono-select>
 
                             <mono-date
@@ -572,6 +583,7 @@ onBeforeUnmount(() => {
                                 clearable
                                 :model-value="filters.minAmount"
                                 @input="filters.minAmount = $event.detail.modelValue"
+                                @clear="filters.minAmount = ''"
                             ></mono-input>
                         </div>
 
@@ -654,8 +666,8 @@ onBeforeUnmount(() => {
                             data-region="table-content"
                             class="lr-subblock overflow-hidden"
                         >
-                            <div class="mono-table-scroll">
-                                <table class="mono-table mono-table-wide lr-table">
+                            <div mono-table-scroll>
+                                <table mono-table mono-wide class="lr-table">
                                     <caption>
                                         <mono-table-loading :control-table.prop="table" />
                                     </caption>
@@ -803,12 +815,12 @@ onBeforeUnmount(() => {
 
                             <div
                                 v-show="!rows.length && !loading"
-                                class="mono-table-empty"
+                                mono-table-empty
                             >
-                                <div class="mono-table-empty-title">
+                                <div mono-empty-title>
                                     No requests match
                                 </div>
-                                <div class="mono-table-empty-sub">
+                                <div mono-empty-sub>
                                     Reset the filters or clear the search box.
                                 </div>
                             </div>
@@ -905,7 +917,7 @@ onBeforeUnmount(() => {
                                 variant="tonal"
                                 color="primary"
                                 icon-only
-                                round
+                                rounded="full"
                                 tooltip="Edit this card"
                                 @click="enterEdit(card.id)"
                             >
@@ -1025,80 +1037,68 @@ onBeforeUnmount(() => {
              Deliberately not inside `main` and deliberately not a region:
              it chooses the rule, so it must not read as part of one. -->
         <div class="lr-rulemenu">
-            <div
-                v-show="ruleMenuOpen"
-                class="lr-rulemenu-backdrop"
-                @click="ruleMenuOpen = false"
-            ></div>
-
-            <div v-show="ruleMenuOpen" class="lr-rulemenu-panel" role="menu">
-                <div class="lr-rulemenu-head">Rules</div>
-
-                <button
-                    v-for="tab in RULE_TABS"
-                    :key="tab.id"
-                    type="button"
-                    role="menuitem"
-                    class="lr-rulemenu-item"
-                    :data-active="rule === tab.id ? '1' : null"
-                    @click="pickRule(tab.id)"
-                >
-                    <span class="lr-rulemenu-dot"></span>
-                    <span>{{ tab.label }}</span>
-                    <span
-                        v-show="rule === tab.id"
-                        class="i-mdi-check lr-rulemenu-check"
-                    ></span>
-                </button>
-            </div>
-
-            <button
-                type="button"
-                class="lr-rulemenu-fab"
-                :aria-expanded="ruleMenuOpen"
-                aria-haspopup="menu"
-                @click="ruleMenuOpen = !ruleMenuOpen"
+            <mono-dropdown
+                placement="top-end"
+                :model-value="ruleMenuOpen"
+                @toggle="ruleMenuOpen = $event.detail.modelValue"
             >
-                <span
-                    :class="ruleMenuOpen ? 'i-mdi-close' : 'i-mdi-format-list-bulleted-square'"
-                ></span>
-                <span class="lr-rulemenu-label">{{ activeRule.label }}</span>
-            </button>
+                <mono-button
+                    slot="main"
+                    variant="outline"
+                    color="secondary"
+                    rounded="full"
+                    class="lr-rulemenu-fab"
+                    :aria-expanded="ruleMenuOpen"
+                >
+                    <span
+                        slot="icon"
+                        :class="ruleMenuOpen ? 'i-mdi-close' : 'i-mdi-format-list-bulleted-square'"
+                    ></span>
+                    <span class="lr-rulemenu-label">{{ activeRule.label }}</span>
+                </mono-button>
+
+                <div slot="body" class="lr-rulemenu-panel">
+                    <mono-menu
+                        :items.prop="RULE_MENU_ITEMS"
+                        :nav="false"
+                        density="compact"
+                        :model-value="rule"
+                        @change="pickRule($event.detail.value)"
+                    ></mono-menu>
+                </div>
+            </mono-dropdown>
         </div>
     </div>
 </template>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+/* Every colour below is a theme token (shadcn/Basecoat vocabulary), so the
+   page follows the site's flavor, palette and dark mode. */
 
 /* ── Page shell ──────────────────────────────────────────────────────────── */
 .lr-page {
-    background: #f4f8fc;
-    color: #1a2d42;
-}
-
-.lr-page,
-.lr-page * {
-    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    background: var(--muted);
+    color: var(--foreground);
+    font-family: var(--font-sans);
 }
 
 /* Region panels. `lr-block` is a page-level region, `lr-subblock` a region
    inside a card — the two levels are what keeps the rule readable at a glance
    without every block turning into a card of its own. */
 .lr-page .lr-block {
-    background: #fff;
-    border: 1px solid #dbeafe;
-    border-radius: 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--mono-radius-lg);
 }
 
 .lr-page .lr-subblock {
-    background: #f8fbff;
-    border: 1px solid #e8f2f8;
-    border-radius: 10px;
+    background: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: var(--mono-radius-md);
 }
 
 .lr-page .lr-title {
-    background: linear-gradient(135deg, #eff6ff 0%, #fff 60%);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--card) 60%);
 }
 
 .lr-page .lr-table-card,
@@ -1115,11 +1115,11 @@ onBeforeUnmount(() => {
     justify-content: center;
     gap: 0.35rem;
     min-height: 88px;
-    padding: 0.7rem 0.9rem;
-    background: #f8fbff;
-    border: 1px solid #e8f2f8;
-    border-radius: 10px;
     min-width: 0;
+    padding: 0.7rem 0.9rem;
+    background: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: var(--mono-radius-md);
 }
 
 .lr-page .lr-field-label {
@@ -1127,7 +1127,7 @@ onBeforeUnmount(() => {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: rgba(26, 45, 66, 0.5);
+    color: var(--muted-foreground);
 }
 
 .lr-page .lr-field-value {
@@ -1138,19 +1138,18 @@ onBeforeUnmount(() => {
 }
 
 .lr-page .lr-kbd {
-    font-family: 'DM Mono', ui-monospace, monospace;
+    font-family: ui-monospace, monospace;
     font-size: 0.68rem;
     padding: 1px 5px;
-    border: 1px solid #dbeafe;
+    border: 1px solid var(--border);
     border-bottom-width: 2px;
-    border-radius: 5px;
-    background: #fff;
+    border-radius: var(--mono-radius-sm);
+    background: var(--card);
 }
 
 /* ── View / edit switch — CSS, not v-if ──────────────────────────────────
    `data-mode` sits on the mono-card, so the whole card flips at once and the
-   light-DOM children of the card are never torn down. This is the original
-   wireframe's rule, unchanged. */
+   light-DOM children of the card are never torn down. */
 .lr-page [data-mode='view'] .fld-edit,
 .lr-page [data-mode='view'] [data-region='form-actions'],
 .lr-page [data-mode='view'] [data-badge='editing'] {
@@ -1164,7 +1163,6 @@ onBeforeUnmount(() => {
 
 /* ── Table ───────────────────────────────────────────────────────────────── */
 .lr-page .lr-table {
-    width: max-content;
     min-width: 1180px;
 }
 
@@ -1181,20 +1179,14 @@ onBeforeUnmount(() => {
     min-width: 15rem;
 }
 
-.lr-page .lr-col-dept {
-    width: 10rem;
-}
-
-.lr-page .lr-col-user {
+.lr-page .lr-col-dept,
+.lr-page .lr-col-user,
+.lr-page .lr-col-amount {
     width: 10rem;
 }
 
 .lr-page .lr-col-date {
     width: 7.5rem;
-}
-
-.lr-page .lr-col-amount {
-    width: 10rem;
 }
 
 .lr-page .lr-col-prio {
@@ -1212,13 +1204,13 @@ onBeforeUnmount(() => {
 
 .lr-page .lr-cell-muted {
     text-align: center;
-    color: rgba(26, 45, 66, 0.45);
+    color: var(--muted-foreground);
     font-variant-numeric: tabular-nums;
 }
 
 .lr-page .lr-cell-key {
     font-weight: 700;
-    color: #2563a8;
+    color: var(--primary);
     font-variant-numeric: tabular-nums;
 }
 
@@ -1235,7 +1227,7 @@ onBeforeUnmount(() => {
    each one is outlined and labelled where it sits. */
 .lr-page.show-regions [data-region] {
     position: relative;
-    outline: 1px dashed rgba(37, 99, 168, 0.5);
+    outline: 1px dashed var(--primary);
     outline-offset: 2px;
 }
 
@@ -1246,139 +1238,14 @@ onBeforeUnmount(() => {
     right: 0;
     z-index: 3;
     padding: 1px 6px;
-    font-family: 'DM Mono', ui-monospace, monospace;
+    font-family: ui-monospace, monospace;
     font-size: 9px;
     line-height: 1.5;
     letter-spacing: 0.04em;
-    color: #fff;
-    background: #2563a8;
+    color: var(--primary-foreground);
+    background: var(--primary);
     border-radius: 0 0 0 6px;
     pointer-events: none;
-}
-
-/* -- Rule picker: floating chrome, never a region -----------------------
-   Pinned to the viewport so it costs the layout nothing: the skeleton below
-   it is exactly the rule, with no picker row wedged into the flow. */
-.lr-page .lr-rulemenu {
-    position: fixed;
-    right: 20px;
-    bottom: 20px;
-    z-index: 60;
-}
-
-.lr-page .lr-rulemenu-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 34, 56, 0.12);
-}
-
-.lr-page .lr-rulemenu-fab {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    height: 44px;
-    padding: 0 1rem;
-    border: 1px solid #cfe3f7;
-    border-radius: 999px;
-    background: #fff;
-    color: #1a2d42;
-    font-size: 0.78rem;
-    font-weight: 700;
-    cursor: pointer;
-    box-shadow: 0 10px 26px rgba(26, 45, 66, 0.16);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.lr-page .lr-rulemenu-fab:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 14px 30px rgba(26, 45, 66, 0.22);
-}
-
-/* Matches on the collection name alone, deliberately WITHOUT the icon-utility
-   prefix. UnoCSS extracts the string inside an attribute selector as a utility
-   token, so writing the prefixed form here handed presetIcons a collection with
-   no icon name after it and every build logged
-   `[unocss] failed to load icon "mdi"`. Keep the prefix out of this selector —
-   and out of this comment, which is scanned too. */
-.lr-page .lr-rulemenu-fab [class*='mdi-'] {
-    font-size: 1.05rem;
-    color: #2563a8;
-}
-
-.lr-page .lr-rulemenu-panel {
-    position: absolute;
-    right: 0;
-    bottom: 56px;
-    z-index: 1;
-    width: 232px;
-    padding: 0.4rem;
-    background: #fff;
-    border: 1px solid #dbeafe;
-    border-radius: 14px;
-    box-shadow: 0 18px 44px rgba(26, 45, 66, 0.2);
-}
-
-.lr-page .lr-rulemenu-head {
-    padding: 0.35rem 0.6rem 0.45rem;
-    font-family: 'DM Mono', ui-monospace, monospace;
-    font-size: 0.62rem;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    color: rgba(26, 45, 66, 0.45);
-}
-
-.lr-page .lr-rulemenu-item {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    width: 100%;
-    padding: 0.55rem 0.6rem;
-    border: 0;
-    border-radius: 10px;
-    background: transparent;
-    color: #1a2d42;
-    font-size: 0.82rem;
-    font-weight: 600;
-    text-align: left;
-    cursor: pointer;
-}
-
-.lr-page .lr-rulemenu-item:hover,
-.lr-page .lr-rulemenu-item[data-active='1'] {
-    background: #eff6ff;
-}
-
-.lr-page .lr-rulemenu-item[data-active='1'] {
-    color: #2563a8;
-}
-
-.lr-page .lr-rulemenu-dot {
-    width: 7px;
-    height: 7px;
-    flex: none;
-    border-radius: 999px;
-    background: #cfe3f7;
-}
-
-.lr-page .lr-rulemenu-item[data-active='1'] .lr-rulemenu-dot {
-    background: #2563a8;
-}
-
-.lr-page .lr-rulemenu-check {
-    margin-left: auto;
-    color: #2563a8;
-}
-
-@media (max-width: 520px) {
-    .lr-page .lr-rulemenu-label {
-        display: none;
-    }
-
-    .lr-page .lr-rulemenu-fab {
-        padding: 0 0.85rem;
-    }
 }
 
 /* Container regions take the accent AND the opposite corner. A container and
@@ -1396,7 +1263,34 @@ onBeforeUnmount(() => {
     bottom: 0;
     left: 0;
     right: auto;
-    background: #7c3aed;
+    color: var(--purple-foreground);
+    background: var(--purple);
     border-radius: 0 6px 0 0;
+}
+
+/* ── Rule picker: floating chrome, never a region ───────────────────────
+   Pinned to the viewport so it costs the layout nothing: the skeleton below
+   it is exactly the rule, with no picker row wedged into the flow. */
+.lr-page .lr-rulemenu {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 60;
+}
+
+.lr-page .lr-rulemenu-fab {
+    background: var(--card);
+    box-shadow: var(--mono-shadow-md);
+    border-radius: 999px;
+}
+
+.lr-page .lr-rulemenu-panel {
+    min-width: 13rem;
+}
+
+@media (max-width: 520px) {
+    .lr-page .lr-rulemenu-label {
+        display: none;
+    }
 }
 </style>

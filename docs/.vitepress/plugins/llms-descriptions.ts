@@ -11,6 +11,9 @@
 //      drop here is the belt-and-braces half.)
 //   4. drops the `example/` demo pages entirely (EXCLUDED) — they stay on the
 //      site, but a `### Example` group never reaches the llms.txt index.
+//   5. puts the READ_FIRST doc (the migration guide) first: a notice at the top,
+//      rank #1 in the reading order, its group leading the index — and moves
+//      that page to the top of llms-full.txt too.
 //
 // The summary is the doc's frontmatter `description` if present, else the whole
 // intro: every line from the top of the page up to (not including) the FIRST
@@ -37,6 +40,7 @@ const LINK_RE = /^(\s*-\s+\[[^\]]+\]\()([^)]+)(\))(.*)$/
  * not listed here stay unflagged (reachable via the grouped index, read on demand).
  */
 const READING_ORDER: string[] = [
+  'migration', // package rename (mono-* → @mono-lit/*) — everything else assumes the new names
   'ai/template', // the contract the AI follows when writing code
   'ai/ref-llms', // read a library's official llms-full.txt before coding
   'repo/getting-started', // what the mono-repo is
@@ -55,6 +59,15 @@ const READING_ORDER: string[] = [
   'ai/prompting', // how to drive the assistant
 ]
 const priorityMap = new Map<string, number>(READING_ORDER.map((p, i) => [p, i + 1]))
+
+/**
+ * The doc an AI must read before anything else. llms.txt gets a notice above
+ * the reading order and lists its sidebar group first; llms-full.txt moves the
+ * page to the very top, so a model reading either file top-down meets the
+ * package rename before any page that uses the new names.
+ */
+const READ_FIRST = 'migration'
+const READ_FIRST_GROUP = 'Migration'
 
 /** Strip inline markdown to plain text and collapse to a single line. */
 function clean(text: string): string {
@@ -174,12 +187,43 @@ function sidebarGroups(sidebar: unknown): Array<{ text: string; paths: string[] 
   if (Array.isArray(sidebar)) groups = sidebar as SidebarItem[]
   else if (sidebar && typeof sidebar === 'object')
     groups = Object.values(sidebar as Record<string, SidebarItem[]>).flat()
-  return groups.map((g) => {
+  const out = groups.map((g) => {
     const paths: string[] = []
     if (g.link) paths.push(normPath(g.link))
     collectPaths(g.items, paths)
     return { text: g.text ?? '', paths }
   })
+  // The read-first group leads the index, whatever its place in the sidebar.
+  const first = out.findIndex((g) => g.text === READ_FIRST_GROUP)
+  if (first > 0) out.unshift(...out.splice(first, 1))
+  return out
+}
+
+/**
+ * Move the READ_FIRST page to the top of llms-full.txt. llmstxt concatenates
+ * every page as `---\nURL: "…"\n…\n---\n<page>`, so a page runs from its
+ * `URL:` block's opening `---` up to the next page's.
+ */
+function moveReadFirstToTop(fullTxt: string): void {
+  if (!existsSync(fullTxt)) return
+  const lines = readFileSync(fullTxt, 'utf8').split(/\r?\n/)
+  const starts: number[] = []
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i - 1].trim() === '---' && /^URL:\s*"/.test(lines[i])) starts.push(i - 1)
+  }
+  const idx = starts.findIndex((s) => {
+    const url = lines[s + 1].match(/^URL:\s*"([^"]+)"/)?.[1]
+    return url ? urlToPath(url) === READ_FIRST : false
+  })
+  if (idx <= 0) return // missing, or already first
+  const from = starts[idx]
+  const to = starts[idx + 1] ?? lines.length
+  const page = lines.slice(from, to)
+  while (page.length && page[page.length - 1].trim() === '') page.pop()
+  const rest = [...lines.slice(0, from), ...lines.slice(to)]
+  const head = rest.slice(0, starts[0])
+  const out = [...head, ...page, '', '', ...rest.slice(starts[0])]
+  writeFileSync(fullTxt, out.join('\n'), 'utf8')
 }
 
 export function llmsDescriptionsPlugin(): Plugin {
@@ -288,6 +332,11 @@ export function llmsDescriptionsPlugin(): Plugin {
   }
 
   const postProcess = (outDir: string, srcDir: string, sidebar: unknown): void => {
+    try {
+      moveReadFirstToTop(join(outDir, 'llms-full.txt'))
+    } catch {
+      /* ignore — non-fatal for the build */
+    }
     const txt = join(outDir, 'llms.txt')
     if (!outDir || !srcDir || !existsSync(txt)) return
     try {
@@ -319,8 +368,21 @@ export function llmsDescriptionsPlugin(): Plugin {
 
       const readingOrder = buildReadingOrder(llmBody, srcDir)
 
+      // A notice above everything else, pointing at the read-first doc.
+      const readFirst = llmBody.map(parseLink).find((p) => p?.path === READ_FIRST)
+      const notice = readFirst
+        ? [
+            '',
+            `> **Read first:** [${readFirst.title}](${fixUrl(readFirst.url)}). The packages were renamed ` +
+              '(`mono-helper` → `@mono-lit/helper`, `mono-utils` → `@mono-lit/utility`, ' +
+              '`mono-devextreme` → `@mono-lit/devextreme`) and every page below uses the new names. ' +
+              'If the code you are working on still imports `mono-*`, migrate it before following any other page.',
+          ]
+        : []
+
       const out = [
         ...header,
+        ...notice,
         ...(readingOrder.length ? ['', ...readingOrder] : []),
         '',
         '## LLMs links',

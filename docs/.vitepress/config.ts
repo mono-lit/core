@@ -293,12 +293,6 @@ export default withMermaid({
           text: 'Example',
           items: [
             {
-              text: 'Layout',
-              link: '/example/layout',
-              target: '_blank',
-              rel: 'noopener',
-            },
-            {
               text: 'Layout Rule',
               link: '/example/layout-rule',
               target: '_blank',
@@ -310,12 +304,12 @@ export default withMermaid({
               target: '_blank',
               rel: 'noopener',
             },
-            {
-              text: 'LinkedIn Feed',
-              link: '/example/linkedin',
-              target: '_blank',
-              rel: 'noopener',
-            },
+          ],
+        },
+        {
+          text: 'Migration',
+          items: [
+            { text: 'mono-* to @mono-lit/*', link: '/migration' },
           ],
         },
       ],
