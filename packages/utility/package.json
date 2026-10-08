@@ -1,7 +1,27 @@
 {
     "name": "@mono-lit/utility",
     "version": "0.0.1",
+    "description": "Mono config, fetching, auth/token, Nuxt/Vite integration and shared helpers for the @mono-lit ecosystem.",
+    "keywords": [
+        "vue",
+        "nuxt",
+        "vite",
+        "odata",
+        "devextreme",
+        "config",
+        "mono-lit"
+    ],
+    "author": "Nemure231",
     "license": "MIT",
+    "homepage": "https://github.com/mono-lit/core/tree/main/packages/utility#readme",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/mono-lit/core.git",
+        "directory": "packages/utility"
+    },
+    "bugs": {
+        "url": "https://github.com/mono-lit/core/issues"
+    },
     "module": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "bin": {
@@ -12,28 +32,28 @@
     ],
     "exports": {
         ".": {
-            "import": "./dist/index.js",
-            "types": "./dist/index.d.ts"
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
         },
         "./runtime": {
-            "import": "./dist/runtime.js",
-            "types": "./dist/runtime.d.ts"
+            "types": "./dist/runtime.d.ts",
+            "import": "./dist/runtime.js"
         },
         "./config": {
-            "import": "./dist/config.js",
-            "types": "./dist/config.d.ts"
+            "types": "./dist/config.d.ts",
+            "import": "./dist/config.js"
         },
         "./config/node": {
             "types": "./dist/config-node.d.ts",
             "import": "./dist/config-node.js"
         },
         "./fetching": {
-            "import": "./dist/fetching.js",
-            "types": "./dist/fetching.d.ts"
+            "types": "./dist/fetching.d.ts",
+            "import": "./dist/fetching.js"
         },
         "./mock-db": {
-            "import": "./dist/mock-db.js",
-            "types": "./dist/mock-db.d.ts"
+            "types": "./dist/mock-db.d.ts",
+            "import": "./dist/mock-db.js"
         },
         "./nuxt": {
             "types": "./dist/nuxt.d.ts",
@@ -61,7 +81,8 @@
         "prepack": "pnpm build"
     },
     "publishConfig": {
-        "registry": "https://mono-libs.netlify.app/npm/"
+        "access": "public",
+        "registry": "https://registry.npmjs.org/"
     },
     "peerDependencies": {
         "@nuxt/kit": "^4.5.0",
@@ -71,7 +92,7 @@
         "dotenv-cli": "^11.0.0",
         "h3": "^1.15.1",
         "jwt-decode": "^4.0.0",
-        "@mono-lit/devextreme": "workspace:*",
+        "@mono-lit/devextreme": "workspace:^",
         "notivue": "^2.4.5",
         "vue": "3.5.24",
         "vue-router": "5.0.4",

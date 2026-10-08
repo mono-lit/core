@@ -14,34 +14,20 @@ A comprehensive utility library for Vue.js applications built around DevExtreme 
 
 ## Installation
 
-### Internal Team Installation
-
-For internal team use, install directly from the GitHub monorepo:
+**From npmjs (public):**
 
 ```bash
-npm install https://<GITHUB_TOKEN>@github.com/your-org/libs.git#main:packages/utility
+pnpm add @mono-lit/utility
 ```
 
-Replace `<GITHUB_TOKEN>` with your personal GitHub access token.
+**From the Netlify registry:** add this to your project's `.npmrc`, then run the same `pnpm add`:
 
-### Alternative: Using Environment Variable
-
-Set your GitHub token as an environment variable:
-
-```bash
-export GITHUB_TOKEN=your_token_here
-npm install https://github.com/your-org/libs.git#main:packages/utility
+```ini
+@mono-lit:registry=https://mono-libs.netlify.app/npm/
+//mono-libs.netlify.app/npm/:_authToken=<REGISTRY_DOWNLOAD_TOKEN>
 ```
 
-### For Package Development
-
-If you're working on the package itself, use:
-
-```bash
-npm install
-```
-
-**Note:** This package is intended for internal team use and is not published to npm public registry.
+See the [repository README](https://github.com/mono-lit/core#install-in-your-project) for details.
 
 ## Dependencies
 

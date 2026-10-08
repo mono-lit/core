@@ -1,7 +1,24 @@
 {
   "name": "@mono-lit/devextreme",
   "version": "0.0.1",
+  "description": "DevExtreme data layer (DataSource, stores) re-exported from one place for the @mono-lit packages.",
+  "keywords": [
+    "devextreme",
+    "datasource",
+    "odata",
+    "mono-lit"
+  ],
+  "author": "Nemure231",
   "license": "MIT",
+  "homepage": "https://github.com/mono-lit/core/tree/main/packages/devextreme#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mono-lit/core.git",
+    "directory": "packages/devextreme"
+  },
+  "bugs": {
+    "url": "https://github.com/mono-lit/core/issues"
+  },
   "type": "module",
   "files": [
     "dist"
@@ -15,9 +32,9 @@
   ],
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {
@@ -25,7 +42,8 @@
     "prepack": "pnpm build"
   },
   "publishConfig": {
-    "registry": "https://mono-libs.netlify.app/npm/"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
     "devextreme": "25.1.6"
