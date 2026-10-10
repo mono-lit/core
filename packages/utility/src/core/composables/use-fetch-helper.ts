@@ -10,6 +10,7 @@ import type { LoadOptions } from 'devextreme/data';
 import { Deferred } from 'devextreme/core/utils/deferred';
 import { useMyToken, useMyCookie, useMyJwt, MonoFetchCookieOptions } from '../../token'
 import { markRaw } from 'vue'
+import { armPrefetchServe, captureProvider, getPrefetchBridge, learnPrefetch, PREFETCH_SUPPORT, type MonoPrefetchCapture, type MonoPrefetchRequest } from './prefetch-bridge'
 declare global {
     interface Window {
         helper?: any
@@ -303,6 +304,20 @@ function tokenFollowsCookie(token: string | undefined, config?: ConfigType, toke
     if (!token) return true
     const api = apiCookieRef(config, tokenOptions)
     return token === getCookieToken(api.name, api.split) || token === getCookieToken(config?.jwtName, true)
+}
+
+/**
+ * For the `prefetch` option: the cookie a request's Bearer came from, so the prefetch host can
+ * read the same cookie off the page request itself — the token is never reported. A token that
+ * matches no cookie (the caller's own) gets no hint: the host's replay then goes without auth
+ * and the browser fetches as usual if that fails.
+ */
+function prefetchAuthFor(token: string | null | undefined, config?: ConfigType, tokenOptions?: MonoFetchCookieOptions): MonoPrefetchRequest['auth'] {
+    if (!token) return undefined
+    const api = apiCookieRef(config, tokenOptions)
+    if (api.name && token === getCookieToken(api.name, api.split)) return api.split ? { cookie: api.name, split: true } : { cookie: api.name }
+    if (config?.jwtName && token === getCookieToken(config.jwtName, true)) return { cookie: config.jwtName, split: true }
+    return undefined
 }
 
 /**
@@ -1088,17 +1103,20 @@ export const useFetchOData = async <T = any>({
     payload = { data: null, keyValue: null, keyName: '', keyType: '' },
     config,
     tokenOptions,
-    tanstack
-}: OdataFetchTypes): Promise<{
+    tanstack,
+    prefetch,
+    __capture,
+}: OdataFetchTypes & { __capture?: MonoPrefetchCapture }): Promise<{
     data: T | null,
     dataSource: DataSource<T> | null,
     statusCode: number,
     error: { message: string, stack: string, response: any } | null
 }> => {
 
-    const helper = window.helper || useHelper();
+    // `window` is absent when the call is described on a server (`.prefetch()` twins).
+    const helper = (typeof window !== 'undefined' && window.helper) || useHelper();
 
-    const isNotif = typeof notif === 'boolean' && notif === true ? helper.notif : notif;
+    const isNotif = __capture ? undefined : (typeof notif === 'boolean' && notif === true ? helper.notif : notif);
 
     type ZeroGuard = 'all' | string[];
 
@@ -1141,7 +1159,8 @@ export const useFetchOData = async <T = any>({
 
     try {
         // proactively refresh the (refresh) token before any request is built
-        token = await ensureFreshToken({ token, config, tokenOptions }) ?? undefined
+        // A described call (`__capture`) never refreshes: nothing is sent from here.
+        if (!__capture) token = await ensureFreshToken({ token, config, tokenOptions }) ?? undefined
 
         // Decided ONCE, after the proactive refresh above may have replaced `token` with the
         // value it just stored: a cookie-derived token follows the cookie for the life of the
@@ -1195,7 +1214,7 @@ export const useFetchOData = async <T = any>({
                     return;
                 }
 
-                if (expiredBehaviour === 'refresh') window.location.reload();
+                if (expiredBehaviour === 'refresh' && typeof window !== 'undefined') window.location.reload();
             })
         }
 
@@ -1210,6 +1229,38 @@ export const useFetchOData = async <T = any>({
         const tanstackFlag = Symbol.for('mono.tanstack');
         const odsTanstack = tanstack && (ods as any)?.[tanstackFlag] ? { tanstack } : {};
         const csTanstack = tanstack && (cs as any)?.[tanstackFlag] ? { tanstack } : {};
+        // `prefetch`: handed to store classes that implement it (`@mono-lit/data`), which report
+        // their first load to the prefetch host and take its copy. Plain DevExtreme: a no-op.
+        // `__capture` (a `.prefetch()` twin on the server): the store's first load is handed to
+        // the capture instead of the network — exactly as the browser will send it.
+        if (__capture && !(ods as any)?.[PREFETCH_SUPPORT]) {
+            throw new Error('[@mono-lit/utility] .prefetch() needs a data layer that supports it (@mono-lit/data stores)')
+        }
+        const odsPrefetch = __capture
+            ? { prefetch: { auth: __capture.auth, provider: captureProvider(__capture.emit) } }
+            : prefetch && (ods as any)?.[PREFETCH_SUPPORT]
+                ? { prefetch: { auth: prefetchAuthFor(readToken(), config, tokenOptions) } }
+                : {};
+
+        // Plain DevExtreme stores (`@mono-lit/devextreme`) can't report themselves: their FIRST
+        // collection load is reported from `beforeSend` exactly as it goes out (learned requests —
+        // replayed by the prefetch host from the next visit). Later pages / sorts / filters and byKey
+        // are not. Any GET the host has a result for is armed to be answered from it (see
+        // `armPrefetchServe`) — serving needs no flag, like the data layer's.
+        let firstLoadReported = false
+        const learnFirstLoad = (req: any, latestToken: string | null | undefined) => {
+            if (__capture || (ods as any)?.[PREFETCH_SUPPORT] || !getPrefetchBridge()) return
+            if (String(req?.method ?? 'get').toLowerCase() !== 'get') return
+            if (prefetch !== false) armPrefetchServe(req.url, req.params)
+            if (!prefetch || firstLoadReported || req?.url !== urls) return
+            firstLoadReported = true
+            learnPrefetch({
+                url: req.url,
+                query: req.params,
+                headers: req.headers,
+                auth: prefetchAuthFor(latestToken, config, tokenOptions),
+            })
+        }
 
         const keyName = payload?.keyName || (options as any)?.key || 'Id';
         const isFake = type === 'fakedatasource' || type === 'fakedata';
@@ -1404,6 +1455,7 @@ export const useFetchOData = async <T = any>({
 
 
                             override?.dataSource?.beforeSend?.(req);
+                            learnFirstLoad(req, latestToken);
                         } catch { }
                     },
                     errorHandler: (err: any) => {
@@ -1416,6 +1468,7 @@ export const useFetchOData = async <T = any>({
                         if (p.status === 401) onStore401(err);
                     },
                     ...odsTanstack,
+                    ...odsPrefetch,
                     ...override?.dataSource,
                 });
 
@@ -1539,6 +1592,7 @@ export const useFetchOData = async <T = any>({
                         };
                         stripZeroParams(req.params, allowZero, zeroGuardFields);
                         override?.dataSource?.beforeSend?.(req);
+                        learnFirstLoad(req, latestToken);
                         // What actually went out — the load override below re-uses the compiled
                         // $filter (search + filters, exactly as the page query had them).
                         lastSent = { params: { ...(req.params || {}) }, headers: { ...(req.headers || {}) } };
@@ -1550,6 +1604,7 @@ export const useFetchOData = async <T = any>({
                     if (p.status === 401) onStore401(err);
                 },
                 ...odsTanstack,
+                ...odsPrefetch,
                 ...override?.dataSource
             });
 
@@ -1783,7 +1838,8 @@ export const useFetchOData = async <T = any>({
         //
         // `inflightStore` is a module-level singleton shared by every store in the
         // app, so this was never scoped to one grid or one page.
-        manageRequest.patchDxStore(
+        // A described call never shares in-flight loads: on a server they would cross users.
+        if (!__capture) manageRequest.patchDxStore(
             store,
             override?.dataSource
                 ? `${urls}::${nextStoreId()}`
@@ -1907,6 +1963,14 @@ export const useFetchOData = async <T = any>({
 
         // --- reads ---
         if (method === 'GET') {
+            if (__capture) {
+                // Described on the server: run the first load (`data`: what the call loads;
+                // `datasource`: the first page a bound widget loads) — the store captures it.
+                // `load` (`.prefetchLoad()`): ONE store load with exactly these load options instead.
+                if (__capture.load) await dataSource.store().load(__capture.load);
+                else await dataSource.load();
+                return { dataSource: null, data: null, statusCode: 200, error: null };
+            }
             if (type === 'data' || type === 'fakedata') {
                 // Now safe to use DataSource.load() (options are sanitized).
                 const usedToken = readToken();
@@ -2039,11 +2103,33 @@ export async function useNormalFetch<T>(url: string, options: NormalFetchOptions
         const {
             token,
             tokenOptions,
+            prefetch,
             ...fetchOptions
         } = options
 
         // proactively refresh the (refresh) token before the request goes out
         const freshToken = await ensureFreshToken({ token, config, tokenOptions }) ?? undefined
+
+        // `prefetch`: report this GET (served or not — the host stores what the last visit used)
+        // and take the prefetched body when the host has one.
+        const fullUrl = (options?.baseUrl ?? '') + url
+        const isGet = String(fetchOptions.method ?? 'GET').toUpperCase() === 'GET' && fetchOptions.body == null
+        // Served whenever the host prefetched it (`definePrefetch`); `prefetch: true` also
+        // reports it (learned requests); `prefetch: false` opts out.
+        const bridge = prefetch !== false && isGet ? getPrefetchBridge() : null
+        if (bridge) {
+            if (prefetch) learnPrefetch({
+                url: fullUrl,
+                headers: options?.headers as Record<string, string> | undefined,
+                auth: prefetchAuthFor(freshToken ?? token, config, tokenOptions),
+            })
+            const hit = bridge.expects('GET', fullUrl) ? await bridge.take('GET', fullUrl) : undefined
+            if (hit) {
+                const body: any = hit.data
+                // Exactly the success shape of a fetched response.
+                return { data: body?.data, statusCode: 200, message: body?.message || null, all: body }
+            }
+        }
 
         response = await manageRequest.smartFetch({
             url: (options?.baseUrl) + url,
@@ -2068,7 +2154,7 @@ export async function useNormalFetch<T>(url: string, options: NormalFetchOptions
 
                 if (options?.expiredBehaviour === 'refresh' && !options?.unauthCall) {
 
-                    window.location.reload();
+                    if (typeof window !== 'undefined') window.location.reload();
 
                 }
             }
@@ -2127,7 +2213,7 @@ export async function tryCatchDatasource<T>({
     finallyCallback,
     notif
 }: TryCatchDatasourceParams<T>): Promise<T> {
-    const helper = window.helper || useHelper();
+    const helper = (typeof window !== 'undefined' && window.helper) || useHelper();
 
     const isNotif = typeof notif === 'boolean' && notif === true ? helper.notif : notif;
 

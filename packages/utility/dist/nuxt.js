@@ -5,9 +5,9 @@ import { t as getMonoConfig } from "./config-node-UzJrXg0Z.js";
 import { d as resolveFederatedRoots, n as extractConfig, o as formatMissingApps, s as monoAlias, t as assertAppSources, u as monoStubAliases } from "./mono-alias-DNDm-jB_.js";
 import { a as defaultMonoExpose, i as monoRouterLinkToNuxtLink, l as remoteGate, o as sanitizeForExpose, s as parsePageMeta } from "./mono-link-YlOQ2PVS.js";
 import { r as registerMonoNuxtLayers, t as monoLayerCandidates } from "./nuxt-layers-DP1m7f1-.js";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
-import { addComponentsDir, addImportsDir, addPlugin, addPluginTemplate, addRouteMiddleware, addVitePlugin, defineNuxtModule, extendPages, extendViteConfig } from "@nuxt/kit";
+import { addComponentsDir, addImportsDir, addPlugin, addPluginTemplate, addRouteMiddleware, addTemplate, addVitePlugin, defineNuxtModule, extendPages, extendViteConfig } from "@nuxt/kit";
 
 //#region src/nuxt/nuxt-ecosystem.ts
 /**
@@ -245,6 +245,7 @@ const monoNuxtModule = defineNuxtModule({
 		const hasExtends = rawConfig.extends != null;
 		const activeNames = resolveExtendsAppNames(rawConfig);
 		const activeApps = hasExtends ? (rawConfig.apps ?? []).filter((a) => activeNames.includes(a.name)) : rawConfig.apps ?? [];
+		const activeRoots = appRoots.filter((r) => activeApps.some((a) => a.name === r.name));
 		const extendsEcosystems = resolveExtendsEcosystems(rawConfig);
 		const monoConfig = {
 			...resolveMonoConfig(rawConfig),
@@ -387,8 +388,156 @@ const monoNuxtModule = defineNuxtModule({
 				"})"
 			].join("\n")
 		});
+		if (usesPreFetchModule(nuxt)) {
+			defaultPreFetchLearning(nuxt);
+			registerPreFetchLearning(nuxt, monoConfig);
+			registerPreFetchDirs(nuxt, activeRoots);
+			registerPreFetchServer(nuxt, sanitizeForExpose((u.expose ?? defaultMonoExpose)(monoConfig)) ?? {});
+			addPluginTemplate({
+				filename: "mono-prefetch-bridge.client.mjs",
+				mode: "client",
+				getContents: () => [
+					"import { monoSetPrefetchBridge } from \"@mono-lit/utility/fetching\"",
+					"// Runs after @mono-lit/nuxt-pre-fetch's `pre` plugin, which provides $nuxtPreFetch.",
+					"export default defineNuxtPlugin({",
+					"  name: \"mono:prefetch-bridge\",",
+					"  setup(nuxtApp) {",
+					"    const api = nuxtApp.$nuxtPreFetch",
+					"    if (api && api.serving) monoSetPrefetchBridge(api)",
+					"  },",
+					"})"
+				].join("\n")
+			});
+		}
 	}
 });
+function usesPreFetchModule(nuxt) {
+	return (nuxt.options.modules ?? []).map((entry) => Array.isArray(entry) ? entry[0] : entry).some((name) => typeof name === "string" && name.includes("nuxt-pre-fetch")) || nuxt.options.nuxtPreFetch !== void 0;
+}
+/**
+* Learning follows the data layer the app installs, unless the app sets `nuxtPreFetch.learn.enabled`
+* itself: `@mono-lit/data` describes a page's OData calls on the server (`definePrefetch`), so the
+* first visit is prefetched and nothing needs learning; plain DevExtreme stores can't, so their calls
+* marked `prefetch: true` are learned and prefetched from the next visit. (This module runs before
+* nuxt-pre-fetch, which reads the option with the default in place.)
+*/
+function defaultPreFetchLearning(nuxt) {
+	const options = nuxt.options.nuxtPreFetch ??= {};
+	options.learn ??= {};
+	if (typeof options.learn.enabled === "boolean") return;
+	options.learn.enabled = !dataLayerDescribesRequests(nuxt);
+}
+/**
+* Whether `@mono-lit/devextreme` — as this app resolves it: an alias, a pnpm override, or the package
+* itself — is `@mono-lit/data`, the data layer that describes its requests on the server.
+*/
+function dataLayerDescribesRequests(nuxt) {
+	const DATA_LAYER = "@mono-lit/devextreme";
+	try {
+		const aliased = nuxt.options.alias[DATA_LAYER];
+		let dir = aliased && isAbsolute(aliased) ? aliased : realpathSync(resolve(nuxt.options.rootDir, "node_modules", DATA_LAYER));
+		for (let i = 0; i < 6; i++) {
+			const manifest = join(dir, "package.json");
+			if (existsSync(manifest)) return JSON.parse(readFileSync(manifest, "utf8")).name === "@mono-lit/data";
+			dir = resolve(dir, "..");
+		}
+	} catch {}
+	return false;
+}
+/**
+* The pages of every merged app are compiled into this one, so their `definePrefetch` files are
+* too: each active app's `app/prefetch` (or `src/prefetch`) is appended to nuxt-pre-fetch's
+* `prefetchDir` (this module runs before it, so the option is read with them).
+*/
+function registerPreFetchDirs(nuxt, roots) {
+	const dirs = roots.flatMap(({ root }) => ["app/prefetch", "src/prefetch"].map((dir) => resolve(root, dir))).filter((dir) => existsSync(dir));
+	if (!dirs.length) return;
+	const options = nuxt.options.nuxtPreFetch ??= {};
+	const own = options.prefetchDir ?? "prefetch";
+	options.prefetchDir = [...new Set([...Array.isArray(own) ? own : [own], ...dirs])];
+}
+/** Hosts of every `fetching.api` entry and the auth cookie names, for learned requests. */
+function registerPreFetchLearning(nuxt, monoConfig) {
+	const fetching = monoConfig.fetching;
+	const hosts = /* @__PURE__ */ new Set();
+	for (const entry of Object.values(fetching?.api ?? {})) {
+		if (typeof entry?.url !== "string") continue;
+		try {
+			hosts.add(new URL(entry.url).host.toLowerCase());
+		} catch {}
+	}
+	const auth = fetching?.auth ?? {};
+	const use = auth.use && typeof auth.use === "object" ? auth.use : {};
+	const cookies = [
+		auth.token,
+		auth.tokenRefresh,
+		use.apiRequest,
+		use.refreshTokenRequest
+	].filter((name) => typeof name === "string" && !!name);
+	const headers = Object.keys(fetching?.headers ?? {}).map((name) => name.toLowerCase());
+	const runtimeConfig = nuxt.options.runtimeConfig;
+	runtimeConfig.nuxtPreFetch ??= {};
+	const dynamic = runtimeConfig.nuxtPreFetch.dynamic ??= {};
+	const merge = (current, add) => [...new Set([...Array.isArray(current) ? current : [], ...add])];
+	dynamic.allowedHosts = merge(dynamic.allowedHosts, [...hosts]);
+	dynamic.authCookies = merge(dynamic.authCookies, cookies);
+	if (headers.length) dynamic.forwardHeaders = merge(dynamic.forwardHeaders ?? ["accept"], headers);
+}
+/**
+* `definePrefetch` files call `monoFetch.prefetch` / `monoFetchOdata.prefetch` on the SERVER:
+* Nitro needs the same (exposed) mono config the browser gets, and has to bundle the packages
+* whose folder-style deep imports (`devextreme/core/utils/deferred`) plain Node can't load.
+*/
+function registerPreFetchServer(nuxt, exposed) {
+	const plugin = addTemplate({
+		filename: "mono/prefetch-init.mjs",
+		write: true,
+		getContents: () => [
+			"import { initMono } from \"@mono-lit/utility/runtime\"",
+			"import config from \"#mono/config\"",
+			"export default function monoPrefetchInit() { initMono(config) }"
+		].join("\n")
+	});
+	nuxt.hook("nitro:config", (nitroConfig) => {
+		nitroConfig.virtual ??= {};
+		nitroConfig.virtual["#mono/config"] = () => `export default ${JSON.stringify(exposed)}`;
+		nitroConfig.plugins ??= [];
+		nitroConfig.plugins.push(plugin.dst);
+		nitroConfig.alias = {
+			...appPackageAliases(nuxt.options.rootDir, "@mono-lit/utility"),
+			...nitroConfig.alias
+		};
+		nitroConfig.externals ??= {};
+		nitroConfig.externals.inline = [
+			...nitroConfig.externals.inline ?? [],
+			"@mono-lit/utility",
+			"@mono-lit/devextreme",
+			"@mono-lit/data",
+			"devextreme",
+			plugin.dst
+		];
+	});
+}
+/**
+* `<pkg>` and each of its `exports` subpaths, resolved to the copy THIS app links (its
+* `node_modules/<pkg>`, symlinks followed): exact-path aliases that pin one instance. Empty when
+* the app doesn't link it.
+*/
+function appPackageAliases(rootDir, pkg) {
+	try {
+		const dir = realpathSync(resolve(rootDir, "node_modules", pkg));
+		const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+		const aliases = {};
+		for (const [subpath, target] of Object.entries(manifest.exports ?? {})) {
+			const entry = typeof target === "string" ? target : target?.import ?? target?.default;
+			if (typeof entry !== "string" || subpath.includes("*")) continue;
+			aliases[subpath === "." ? pkg : `${pkg}${subpath.slice(1)}`] = resolve(dir, entry);
+		}
+		return aliases;
+	} catch {
+		return {};
+	}
+}
 /**
 * Register every `.vue` under the given remote `dirs` as a Nuxt route, skipping
 * files matching any `exclude` glob and never clobbering an existing host route.

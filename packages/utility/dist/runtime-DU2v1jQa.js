@@ -1,5 +1,5 @@
 import { a as resolveEnv, c as resolveMonoConfig } from "./create-config-DdL3Fh6T.js";
-import { c as useMyToken, n as monoJwt, s as useMyCookie, t as monoCookie, u as useMyJwt } from "./universal-BNTo_83u.js";
+import { c as useMyToken, d as useMyJwt, n as monoJwt, s as useMyCookie, t as monoCookie } from "./universal-SQvYjTsQ.js";
 import { Fragment, computed, createBlock, createCommentVNode, createElementBlock, createElementVNode, defineComponent, isRef, markRaw, normalizeStyle, onBeforeUnmount, openBlock, reactive, readonly, ref, renderList, toDisplayString, watch, withCtx } from "vue";
 import { Notifications, Notivue, pastelTheme, push } from "notivue";
 import { Deferred } from "devextreme/core/utils/deferred";
@@ -3946,8 +3946,151 @@ var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
 }));
 
 //#endregion
-//#region src/core/composables/use-fetch-helper.ts
+//#region src/core/composables/prefetch-bridge.ts
 var import_lib = require_lib();
+/** Store classes that implement the `prefetch` option themselves (`@mono-lit/data`). */
+const PREFETCH_SUPPORT = Symbol.for("mono.prefetch");
+let bridge = null;
+function setPrefetchBridge(next) {
+	bridge = next;
+}
+function getPrefetchBridge() {
+	return bridge;
+}
+const CREDENTIAL_HEADERS = new Set([
+	"authorization",
+	"cookie",
+	"set-cookie",
+	"proxy-authorization",
+	"x-api-key"
+]);
+function safeHeaders(headers) {
+	if (!headers || typeof headers !== "object") return void 0;
+	const out = {};
+	for (const [name, value] of Object.entries(headers)) {
+		if (CREDENTIAL_HEADERS.has(name.toLowerCase()) || typeof value !== "string") continue;
+		out[name] = value;
+	}
+	return Object.keys(out).length ? out : void 0;
+}
+/** Reports a request (credential headers stripped). A no-op without a bridge. */
+function learnPrefetch(request) {
+	if (!bridge || !request?.url) return;
+	try {
+		const headers = safeHeaders(request.headers);
+		bridge.learn({
+			url: request.url,
+			...request.query && Object.keys(request.query).length ? { query: { ...request.query } } : {},
+			...headers ? { headers } : {},
+			...request.auth ? { auth: request.auth } : {}
+		});
+	} catch {}
+}
+/**
+* A per-store `@mono-lit/data` prefetch provider that captures the store's first load exactly as
+* it would be sent, and answers it with an empty result (nothing is fetched here).
+*/
+function captureProvider(emit) {
+	return {
+		learn: (request) => emit(request),
+		expects: () => true,
+		take: async () => ({ data: {
+			"value": [],
+			"@odata.count": 0
+		} })
+	};
+}
+/**
+* Serving plain DevExtreme stores (`@mono-lit/devextreme`), which can't serve by themselves.
+*
+* DevExtreme's OData stores call the store's `beforeSend(request)` and then, synchronously in the
+* same call, open and send ONE XMLHttpRequest for it. So utility's own `beforeSend` arms the
+* request the bridge expects ({@link armPrefetchServe}), and the very next `send()` of a GET to that
+* URL is answered from the prefetched result instead of the network — DevExtreme then parses it
+* exactly like a response (dates, `@odata.count`, `map`). This needs no access to DevExtreme's own
+* modules (in Vite dev the data layer is pre-bundled with its OWN copy of DevExtreme's internals,
+* out of reach of an `ajax.inject` from here). Every other XHR is untouched; a missing result (e.g.
+* it failed on the server) is sent normally — the request was opened but not yet sent.
+*/
+let armed = null;
+const opened = /* @__PURE__ */ new WeakMap();
+let xhrPatched = false;
+function patchXhr() {
+	if (xhrPatched) return true;
+	const proto = globalThis.XMLHttpRequest?.prototype;
+	if (!proto || typeof proto.open !== "function" || typeof proto.send !== "function") return false;
+	xhrPatched = true;
+	const { open, send, abort } = proto;
+	proto.open = function(method, url, ...rest) {
+		opened.set(this, {
+			method: String(method).toUpperCase(),
+			url: String(url)
+		});
+		return open.call(this, method, url, ...rest);
+	};
+	proto.send = function(body) {
+		const request = opened.get(this);
+		const hit = armed;
+		armed = null;
+		if (!hit || request?.method !== "GET" || !request.url.startsWith(hit.url)) return send.call(this, body);
+		const xhr = this;
+		let aborted = false;
+		xhr.abort = function() {
+			aborted = true;
+			return abort.call(xhr);
+		};
+		const passThrough = () => {
+			if (!aborted) send.call(xhr, body);
+		};
+		hit.bridge.take("GET", hit.url, hit.query).then((result) => {
+			if (aborted) return;
+			if (!result) return passThrough();
+			const text = JSON.stringify(result.data);
+			for (const [name, value] of Object.entries({
+				readyState: 4,
+				status: 200,
+				statusText: "OK",
+				responseText: text,
+				response: text,
+				responseURL: request.url
+			})) Object.defineProperty(xhr, name, {
+				configurable: true,
+				value
+			});
+			xhr.onreadystatechange?.(new Event("readystatechange"));
+			xhr.onload?.(new Event("load"));
+			xhr.onloadend?.(new Event("loadend"));
+		}, passThrough);
+	};
+	return true;
+}
+/**
+* Called from a plain DevExtreme store's `beforeSend` with the final request: when the bridge has a
+* result for this GET, the XHR DevExtreme sends right after is answered from it. Returns whether
+* it was armed.
+*/
+function armPrefetchServe(url, query) {
+	armed = null;
+	const current = bridge;
+	if (!current || typeof url !== "string" || !url) return false;
+	try {
+		if (!current.expects("GET", url, query) || !patchXhr()) return false;
+	} catch {
+		return false;
+	}
+	armed = {
+		url,
+		query,
+		bridge: current
+	};
+	queueMicrotask(() => {
+		if (armed?.url === url) armed = null;
+	});
+	return true;
+}
+
+//#endregion
+//#region src/core/composables/use-fetch-helper.ts
 /**
 * Deterministic serialization of a value, for request-dedupe keys.
 *
@@ -4166,6 +4309,24 @@ function tokenFollowsCookie(token, config, tokenOptions) {
 	if (!token) return true;
 	const api = apiCookieRef(config, tokenOptions);
 	return token === getCookieToken(api.name, api.split) || token === getCookieToken(config?.jwtName, true);
+}
+/**
+* For the `prefetch` option: the cookie a request's Bearer came from, so the prefetch host can
+* read the same cookie off the page request itself — the token is never reported. A token that
+* matches no cookie (the caller's own) gets no hint: the host's replay then goes without auth
+* and the browser fetches as usual if that fails.
+*/
+function prefetchAuthFor(token, config, tokenOptions) {
+	if (!token) return void 0;
+	const api = apiCookieRef(config, tokenOptions);
+	if (api.name && token === getCookieToken(api.name, api.split)) return api.split ? {
+		cookie: api.name,
+		split: true
+	} : { cookie: api.name };
+	if (config?.jwtName && token === getCookieToken(config.jwtName, true)) return {
+		cookie: config.jwtName,
+		split: true
+	};
 }
 /**
 * The Bearer for a request.
@@ -4586,9 +4747,9 @@ const useFetchOData = async ({ url, options, source, type = "datasource", params
 	keyValue: null,
 	keyName: "",
 	keyType: ""
-}, config, tokenOptions, tanstack }) => {
-	const helper = window.helper || useHelper();
-	const isNotif = typeof notif === "boolean" && notif === true ? helper.notif : notif;
+}, config, tokenOptions, tanstack, prefetch, __capture }) => {
+	const helper = typeof window !== "undefined" && window.helper || useHelper();
+	const isNotif = __capture ? void 0 : typeof notif === "boolean" && notif === true ? helper.notif : notif;
 	const zeroGuardFields = "all";
 	const isZeroVal = (v) => v === 0 || v === "0";
 	const shouldStripZero = (k, v, allowZero, guard) => !allowZero && !k.startsWith("$") && isZeroVal(v) && (guard === "all" || Array.isArray(guard) && guard.includes(k));
@@ -4609,7 +4770,7 @@ const useFetchOData = async ({ url, options, source, type = "datasource", params
 		return false;
 	}
 	try {
-		token = await ensureFreshToken({
+		if (!__capture) token = await ensureFreshToken({
 			token,
 			config,
 			tokenOptions
@@ -4646,7 +4807,7 @@ const useFetchOData = async ({ url, options, source, type = "datasource", params
 					callUnauth(unauthCall);
 					return;
 				}
-				if (expiredBehaviour === "refresh") window.location.reload();
+				if (expiredBehaviour === "refresh" && typeof window !== "undefined") window.location.reload();
 			});
 		};
 		const urls = `${selfProxy ? selfProxy : baseUrl}${url}`;
@@ -4656,6 +4817,25 @@ const useFetchOData = async ({ url, options, source, type = "datasource", params
 		const tanstackFlag = Symbol.for("mono.tanstack");
 		const odsTanstack = tanstack && ods?.[tanstackFlag] ? { tanstack } : {};
 		const csTanstack = tanstack && cs?.[tanstackFlag] ? { tanstack } : {};
+		if (__capture && !ods?.[PREFETCH_SUPPORT]) throw new Error("[@mono-lit/utility] .prefetch() needs a data layer that supports it (@mono-lit/data stores)");
+		const odsPrefetch = __capture ? { prefetch: {
+			auth: __capture.auth,
+			provider: captureProvider(__capture.emit)
+		} } : prefetch && ods?.[PREFETCH_SUPPORT] ? { prefetch: { auth: prefetchAuthFor(readToken(), config, tokenOptions) } } : {};
+		let firstLoadReported = false;
+		const learnFirstLoad = (req, latestToken) => {
+			if (__capture || ods?.[PREFETCH_SUPPORT] || !getPrefetchBridge()) return;
+			if (String(req?.method ?? "get").toLowerCase() !== "get") return;
+			if (prefetch !== false) armPrefetchServe(req.url, req.params);
+			if (!prefetch || firstLoadReported || req?.url !== urls) return;
+			firstLoadReported = true;
+			learnPrefetch({
+				url: req.url,
+				query: req.params,
+				headers: req.headers,
+				auth: prefetchAuthFor(latestToken, config, tokenOptions)
+			});
+		};
 		const keyName = payload?.keyName || options?.key || "Id";
 		const isFake = type === "fakedatasource" || type === "fakedata";
 		function isZeroKey(v) {
@@ -4827,6 +5007,7 @@ const useFetchOData = async ({ url, options, source, type = "datasource", params
 					};
 					stripZeroParams(req.params, allowZero, zeroGuardFields);
 					override?.dataSource?.beforeSend?.(req);
+					learnFirstLoad(req, latestToken);
 				} catch {}
 			},
 			errorHandler: (err) => {
@@ -4838,6 +5019,7 @@ const useFetchOData = async ({ url, options, source, type = "datasource", params
 				if (p.status === 401) onStore401(err);
 			},
 			...odsTanstack,
+			...odsPrefetch,
 			...override?.dataSource
 		});
 		else store = new cs({
@@ -4947,6 +5129,7 @@ const useFetchOData = async ({ url, options, source, type = "datasource", params
 						};
 						stripZeroParams(req.params, allowZero, zeroGuardFields);
 						override?.dataSource?.beforeSend?.(req);
+						learnFirstLoad(req, latestToken);
 						lastSent = {
 							params: { ...req.params || {} },
 							headers: { ...req.headers || {} }
@@ -4962,6 +5145,7 @@ const useFetchOData = async ({ url, options, source, type = "datasource", params
 					if (p.status === 401) onStore401(err);
 				},
 				...odsTanstack,
+				...odsPrefetch,
 				...override?.dataSource
 			});
 			/**
@@ -5112,7 +5296,7 @@ const useFetchOData = async ({ url, options, source, type = "datasource", params
 				}
 			} else store = odsInst;
 		}
-		manageRequest.patchDxStore(store, override?.dataSource ? `${urls}::${nextStoreId()}` : `${urls}?${paramsIdentity(params)}::${stable(headers)}::${method}${force ? "::force" : ""}`, "share");
+		if (!__capture) manageRequest.patchDxStore(store, override?.dataSource ? `${urls}::${nextStoreId()}` : `${urls}?${paramsIdentity(params)}::${stable(headers)}::${method}${force ? "::force" : ""}`, "share");
 		applyByKeyGuardAndCache(store, {
 			allowZero,
 			cache
@@ -5253,6 +5437,16 @@ const useFetchOData = async ({ url, options, source, type = "datasource", params
 			}
 		}
 		if (method === "GET") {
+			if (__capture) {
+				if (__capture.load) await dataSource.store().load(__capture.load);
+				else await dataSource.load();
+				return {
+					dataSource: null,
+					data: null,
+					statusCode: 200,
+					error: null
+				};
+			}
 			if (type === "data" || type === "fakedata") {
 				const usedToken = readToken();
 				try {
@@ -5375,12 +5569,32 @@ async function useNormalFetch(url, options, config) {
 	const { notif } = useHelper();
 	const isNotif = typeof options?.notif === "boolean" && options.notif === true ? notif : options?.notif;
 	try {
-		const { token, tokenOptions, ...fetchOptions } = options;
+		const { token, tokenOptions, prefetch, ...fetchOptions } = options;
 		const freshToken = await ensureFreshToken({
 			token,
 			config,
 			tokenOptions
 		}) ?? void 0;
+		const fullUrl = (options?.baseUrl ?? "") + url;
+		const isGet = String(fetchOptions.method ?? "GET").toUpperCase() === "GET" && fetchOptions.body == null;
+		const bridge = prefetch !== false && isGet ? getPrefetchBridge() : null;
+		if (bridge) {
+			if (prefetch) learnPrefetch({
+				url: fullUrl,
+				headers: options?.headers,
+				auth: prefetchAuthFor(freshToken ?? token, config, tokenOptions)
+			});
+			const hit = bridge.expects("GET", fullUrl) ? await bridge.take("GET", fullUrl) : void 0;
+			if (hit) {
+				const body = hit.data;
+				return {
+					data: body?.data,
+					statusCode: 200,
+					message: body?.message || null,
+					all: body
+				};
+			}
+		}
 		response = await manageRequest.smartFetch({
 			url: options?.baseUrl + url,
 			init: {
@@ -5397,7 +5611,9 @@ async function useNormalFetch(url, options, config) {
 		if (!response.ok) {
 			if (response.status === 401) {
 				callUnauth(options?.unauthCall);
-				if (options?.expiredBehaviour === "refresh" && !options?.unauthCall) window.location.reload();
+				if (options?.expiredBehaviour === "refresh" && !options?.unauthCall) {
+					if (typeof window !== "undefined") window.location.reload();
+				}
 			}
 			const raw = await response.text();
 			let errorResponse = null;
@@ -5448,7 +5664,7 @@ async function useNormalFetch(url, options, config) {
 	}
 }
 async function tryCatchDatasource({ tryCallback, catchCallback, finallyCallback, notif }) {
-	const helper = window.helper || useHelper();
+	const helper = typeof window !== "undefined" && window.helper || useHelper();
 	const isNotif = typeof notif === "boolean" && notif === true ? helper.notif : notif;
 	try {
 		return await tryCallback();
@@ -5814,4 +6030,4 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
 var MonoNotivue_default = /*#__PURE__*/ export_helper_default(_sfc_main, [["render", _sfc_render], ["__file", "C:\\Users\\VCT-DEV\\Desktop\\libs\\packages\\utility\\src\\components\\MonoNotivue.vue"]]);
 
 //#endregion
-export { monoEnv as C, monoStateReset as E, monoConfig as S, monoStatePatch as T, monoUseState as _, createUniqueFetcher as a, createMono as b, tryCatchDatasource as c, useHelper as d, createStaticDatasource as f, clearNuxtState as g, defineLayout as h, createFetcher as i, useFetchOData as l, monoProvide as m, useMonoUtility as n, loadChuckStore as o, monoInject as p, Notif_default as r, promiseWrapper as s, MonoNotivue_default as t, useNormalFetch as u, nuxtStateKeys as v, monoState as w, initMono as x, useState as y };
+export { createMono as C, monoState as D, monoEnv as E, monoStatePatch as O, useState as S, monoConfig as T, monoProvide as _, createUniqueFetcher as a, monoUseState as b, tryCatchDatasource as c, PREFETCH_SUPPORT as d, getPrefetchBridge as f, monoInject as g, createStaticDatasource as h, createFetcher as i, monoStateReset as k, useFetchOData as l, useHelper as m, useMonoUtility as n, loadChuckStore as o, setPrefetchBridge as p, Notif_default as r, promiseWrapper as s, MonoNotivue_default as t, useNormalFetch as u, defineLayout as v, initMono as w, nuxtStateKeys as x, clearNuxtState as y };

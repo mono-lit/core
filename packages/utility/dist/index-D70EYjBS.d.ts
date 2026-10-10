@@ -270,6 +270,13 @@ type NormalFetchOptions = RequestInit & {
   unauthCall?: () => void;
   expiredBehaviour?: 'refresh';
   tokenOptions?: MonoFetchCookieOptions;
+  /**
+   * Instant first load in a Nuxt app with `@mono-lit/nuxt-pre-fetch` (learned requests): this
+   * GET is reported to Nitro, which replays it on the next visit of the page while producing
+   * the HTML; the call then gets its answer without a network round trip. No effect without
+   * the module.
+   */
+  prefetch?: boolean;
 };
 type NormalFetchResult<T> = {
   statusCode: number;
@@ -300,6 +307,12 @@ interface OdataFetchTypes<T = any> extends FetchOData<T>, FetchRequestConfig {
   tokenOptions?: MonoFetchCookieOptions;
   /** Opt-in TanStack Query behaviour for the stores this fetch builds (see TanstackFetchOptions). */
   tanstack?: TanstackFetchOptions;
+  /**
+   * Instant first load in a Nuxt app with `@mono-lit/nuxt-pre-fetch` (learned requests): the
+   * store's FIRST load is reported to Nitro and answered from its copy on the next visit.
+   * Needs a data layer that implements it (`@mono-lit/data`); a no-op with plain DevExtreme.
+   */
+  prefetch?: boolean;
 }
 //#endregion
 //#region src/core/types/column.d.ts
@@ -386,6 +399,44 @@ type DTO_FromQ<Q> = { [K in keyof Mutable<GetInstance<Q>> as Mutable<GetInstance
 type Ctor<T = any> = new (...args: any) => T;
 type OdataMapTypes<Q, Overrides extends Record<string, Ctor<any> | Ctor<any>[]> = {}> = Omit<DTO_FromQ<Q>, keyof Overrides> & { [K in keyof Overrides]: Overrides[K] extends Ctor<infer _> ? DTO_FromQ<Overrides[K]> : Overrides[K] extends Array<infer U> ? DTO_FromQ<U>[] : never };
 //#endregion
+//#region src/core/composables/prefetch-bridge.d.ts
+/** One GET request as reported to the prefetch host. */
+interface MonoPrefetchRequest {
+  /** Absolute or app-relative URL (may carry a query string). */
+  url: string;
+  query?: Record<string, unknown>;
+  /** Non-credential headers only (Authorization / Cookie are dropped). */
+  headers?: Record<string, string>;
+  /** The cookie the Bearer token is read from on the host (`split`: chunked cookie). */
+  auth?: {
+    cookie: string;
+    split?: boolean;
+  };
+}
+/** What a prefetch host provides (shape of `useNuxtApp().$nuxtPreFetch`). */
+interface MonoPrefetchBridge {
+  /** Synchronous: a prefetched result is available (or arriving) for this request. */
+  expects: (method: string, url: string, query?: Record<string, unknown> | null) => boolean;
+  /** The prefetched result, once (`undefined` = fetch it yourself). */
+  take: (method: string, url: string, query?: Record<string, unknown> | null) => Promise<{
+    data: unknown;
+  } | undefined>;
+  /** Reports a request the page sent (served ones too). */
+  learn: (request: MonoPrefetchRequest) => void;
+}
+declare function setPrefetchBridge(next: MonoPrefetchBridge | null): void;
+declare function getPrefetchBridge(): MonoPrefetchBridge | null;
+/**
+ * Describing a call on a server (`.prefetch()` twins): where the store's first load goes
+ * instead of the network. `auth` is the cookie the browser's Bearer lives in.
+ */
+interface MonoPrefetchCapture {
+  emit: (request: MonoPrefetchRequest) => void;
+  auth?: MonoPrefetchRequest['auth'];
+  /** Describe ONE `store.load(load)` instead of the call's own first load (`.prefetchLoad()`). */
+  load?: Record<string, unknown>;
+}
+//#endregion
 //#region src/core/composables/use-fetch-helper.d.ts
 declare global {
   interface Window {
@@ -425,8 +476,12 @@ declare const useFetchOData: <T = any>({
   payload,
   config,
   tokenOptions,
-  tanstack
-}: OdataFetchTypes) => Promise<{
+  tanstack,
+  prefetch,
+  __capture
+}: OdataFetchTypes & {
+  __capture?: MonoPrefetchCapture;
+}) => Promise<{
   data: T | null;
   dataSource: DataSource<T> | null;
   statusCode: number;
@@ -515,4 +570,4 @@ type __VLS_Props = {
 declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
 declare const _default: typeof __VLS_export;
 //#endregion
-export { GroupTemplate as A, useHelper as B, SchemaType as C, ValidateErrorSingle as D, ValidateErrorItem as E, FetchParam as F, UseOdataStaticOpts as G, MonoNotifActionProps as H, NormalFetchOptions as I, createStaticDatasource as K, NormalFetchResult as L, PathValue as M, FetchLoading as N, ValidateSchema as O, FetchOData as P, OdataFetchTypes as R, SchemaObject as S, ValidateErrorComplex as T, MonoNotifActionTypes as U, NotifProps as V, MonoNotifButton as W, DataGrid as _, TryCatchDatasourceParams as a, HeaderFilter as b, extractErrorMessage as c, promiseWrapper as d, tryCatchDatasource as f, CustomSummary as g, OdataMapTypes as h, OdataFetchUniqueTypes as i, LoopTemplate as j, Col as k, loadChuckStore as l, useNormalFetch as m, FetchOverrides as n, createFetcher as o, useFetchOData as p, LoadChunkStoreArgs as r, createUniqueFetcher as s, _default as t, parseDxError as u, FilterExpression as v, ValidateError as w, Schema as x, Format as y, TanstackFetchOptions as z };
+export { ValidateErrorItem as A, NormalFetchOptions as B, Format as C, SchemaType as D, SchemaObject as E, LoopTemplate as F, NotifProps as G, OdataFetchTypes as H, PathValue as I, MonoNotifButton as J, MonoNotifActionProps as K, FetchLoading as L, ValidateSchema as M, Col as N, ValidateError as O, GroupTemplate as P, FetchOData as R, FilterExpression as S, Schema as T, TanstackFetchOptions as U, NormalFetchResult as V, useHelper as W, createStaticDatasource as X, UseOdataStaticOpts as Y, getPrefetchBridge as _, TryCatchDatasourceParams as a, CustomSummary as b, extractErrorMessage as c, promiseWrapper as d, tryCatchDatasource as f, MonoPrefetchRequest as g, MonoPrefetchBridge as h, OdataFetchUniqueTypes as i, ValidateErrorSingle as j, ValidateErrorComplex as k, loadChuckStore as l, useNormalFetch as m, FetchOverrides as n, createFetcher as o, useFetchOData as p, MonoNotifActionTypes as q, LoadChunkStoreArgs as r, createUniqueFetcher as s, _default as t, parseDxError as u, setPrefetchBridge as v, HeaderFilter as w, DataGrid as x, OdataMapTypes as y, FetchParam as z };

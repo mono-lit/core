@@ -1,4 +1,4 @@
-import { a as setMonoEventResolver } from "./universal-BNTo_83u.js";
+import { a as setMonoEventResolver } from "./universal-SQvYjTsQ.js";
 import { createStorage, defineDriver } from "unstorage";
 import { deleteCookie, getCookie, parseCookies, setCookie } from "h3";
 

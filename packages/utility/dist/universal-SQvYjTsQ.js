@@ -596,4 +596,4 @@ function monoStorage(options) {
 }
 
 //#endregion
-export { setMonoEventResolver as a, useMyToken as c, monoToken as i, useMyFetch as l, monoJwt as n, useMyStorage as o, monoStorage as r, useMyCookie as s, monoCookie as t, useMyJwt as u };
+export { setMonoEventResolver as a, useMyToken as c, useMyJwt as d, monoToken as i, useMyFetch as l, monoJwt as n, useMyStorage as o, monoStorage as r, useMyCookie as s, monoCookie as t, decodeJwt as u };

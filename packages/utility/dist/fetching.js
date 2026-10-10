@@ -1,5 +1,5 @@
-import { S as monoConfig, T as monoStatePatch, a as createUniqueFetcher, c as tryCatchDatasource, f as createStaticDatasource, i as createFetcher, l as useFetchOData, o as loadChuckStore, s as promiseWrapper, u as useNormalFetch, w as monoState } from "./runtime-C_IWNrAG.js";
-import { t as monoCookie } from "./universal-BNTo_83u.js";
+import { D as monoState, O as monoStatePatch, T as monoConfig, a as createUniqueFetcher, c as tryCatchDatasource, d as PREFETCH_SUPPORT, f as getPrefetchBridge, h as createStaticDatasource, i as createFetcher, l as useFetchOData, o as loadChuckStore, p as setPrefetchBridge, s as promiseWrapper, u as useNormalFetch } from "./runtime-DU2v1jQa.js";
+import { t as monoCookie, u as decodeJwt } from "./universal-SQvYjTsQ.js";
 import { i as matchMockRoute } from "./generate-CJ7MtcDd.js";
 import { c as executeQuery, f as parseQuery, l as parseExpand, n as monoMockDb, r as resetMonoMockDb } from "./mock-db-5mJTObSC.js";
 import * as monoDevextremeModule from "@mono-lit/devextreme";
@@ -713,23 +713,60 @@ function getFetchingRuntime(configBaseUrl) {
 const useCreateFetcher = (base) => {
 	const { configBaseUrl, ...rest } = base;
 	const mockRoute = resolveMockRoute(configBaseUrl, base.url);
-	if (mockRoute) return { async response(option) {
-		return await serveFromMock(mockRoute, {
-			type: option?.type ?? base.type ?? "datasource",
-			method: option?.method ?? base.method,
-			params: option?.params ?? base.params,
-			payload: option?.payload ?? base.payload,
-			options: option?.options ?? base.options
-		});
-	} };
-	return createFetcher({
+	if (mockRoute) return {
+		prefetch: (_option) => describePrefetch(() => {}),
+		prefetchLoad: (_loadOptions, _option) => describePrefetch(() => {}),
+		async response(option) {
+			return await serveFromMock(mockRoute, {
+				type: option?.type ?? base.type ?? "datasource",
+				method: option?.method ?? base.method,
+				params: option?.params ?? base.params,
+				payload: option?.payload ?? base.payload,
+				options: option?.options ?? base.options
+			});
+		}
+	};
+	const resolved = (overrides = {}) => createFetcher({
 		...authArgs(configBaseUrl),
 		...rest,
 		token: getRequestToken(base.token),
 		notif: resolveNotif(Boolean(base.notif)),
 		baseUrl: getODataBaseUrl(configBaseUrl, base.baseUrl),
-		source: getODataSource(configBaseUrl, base.source)
+		source: getODataSource(configBaseUrl, base.source),
+		...overrides
 	});
+	let fetcher;
+	/** The same fetcher in capture mode (`definePrefetch` twins): nothing is sent, no token is read. */
+	const capturing = (emit, load) => createFetcher({
+		...authArgs(configBaseUrl),
+		...rest,
+		token: PREFETCH_CAPTURE_TOKEN,
+		baseUrl: getODataBaseUrl(configBaseUrl, base.baseUrl),
+		source: getODataSource(configBaseUrl, base.source),
+		__capture: {
+			emit,
+			auth: prefetchAuthHint(),
+			...load ? { load } : {}
+		}
+	});
+	return {
+		response: (option) => (fetcher ??= resolved()).response(option),
+		/**
+		* `definePrefetch` twin of `.response(option)`: describes the first load the browser's
+		* `.response(option)` (and the widget bound to it) will send, without sending anything.
+		*/
+		prefetch: (option) => describeOData(configBaseUrl, base.source, async (emit) => {
+			await capturing(emit).response(option);
+		}),
+		/**
+		* `definePrefetch` twin of `(await .response(option)).dataSource.store().load(loadOptions)`:
+		* describes ONE store load with exactly these load options (e.g. a session cache that keeps
+		* the store and loads it per query). `loadOptions` as DevExtreme's `store.load()` takes them.
+		*/
+		prefetchLoad: (loadOptions = {}, option) => describeOData(configBaseUrl, base.source, async (emit) => {
+			await capturing(emit, loadOptions).response(option);
+		})
+	};
 };
 function useTryCatchDatasource(opt) {
 	return tryCatchDatasource({
@@ -862,6 +899,117 @@ async function useMyFetch(url, opt) {
 const loadChuckStores = async (opt) => {
 	return await loadChuckStore(opt);
 };
+/** Marks a `definePrefetch` descriptor (@mono-lit/nuxt-pre-fetch's protocol; no import needed). */
+const PREFETCH_DESCRIPTOR = Symbol.for("nuxt-pre-fetch.descriptor");
+/** Stands in for the token while a call is described (it never leaves the server). */
+const PREFETCH_CAPTURE_TOKEN = "mono-prefetch-capture";
+function describePrefetch(run) {
+	return {
+		[PREFETCH_DESCRIPTOR]: true,
+		collect: async (_context, emit) => {
+			await run(emit);
+		}
+	};
+}
+/**
+* An OData twin. Describing an OData call on the server needs a data layer that builds its exact
+* request there (`@mono-lit/data`, whose stores carry `Symbol.for('mono.prefetch')`). With plain
+* DevExtreme stores (`@mono-lit/devextreme`) the twin describes nothing — no store is built, no
+* error — and the call is learned instead (`prefetch: true`, see host-nuxt).
+*/
+function describeOData(configBaseUrl, source, run) {
+	return describePrefetch(async (emit) => {
+		if (!describesRequests(configBaseUrl, source)) return;
+		await run(emit);
+	});
+}
+/** The cookie API requests carry their Bearer from (`fetching.auth`) — read by the server per request. */
+function prefetchAuthHint() {
+	const { apiCookie } = resolveAuthCookies();
+	if (!apiCookie) return void 0;
+	return getRefreshRequestOptions()?.splitCookie ?? cookieSplit(apiCookie) ? {
+		cookie: apiCookie,
+		split: true
+	} : { cookie: apiCookie };
+}
+/**
+* `definePrefetch` twin of `monoFetch(url, opt)`: the same arguments, nothing sent — describes
+* the GET the browser's call will send (base url, headers and auth from `fetching` config).
+*/
+function prefetchMonoFetch(url, opt = {}) {
+	return describePrefetch((emit) => {
+		if (resolveMockRoute(opt.configBaseUrl, url)) return;
+		if (String(opt.method ?? "GET").toUpperCase() !== "GET" || opt.body != null) return;
+		emit({
+			url: getRestBaseUrl(opt.configBaseUrl, opt.baseUrl) + url,
+			headers: mergeHeaders(getGlobalHeaders(), opt.headers),
+			auth: prefetchAuthHint()
+		});
+	});
+}
+/**
+* `definePrefetch` twin of `monoFetchOdata(params)`: runs the same call in capture mode —
+* the store builds exactly the request the browser will send (`data`: what the call loads;
+* `datasource`: the first page a bound widget loads), nothing is fetched.
+*/
+function prefetchMonoFetchOdata(params) {
+	return describeOData(params.configBaseUrl, params.source, async (emit) => {
+		await useMyFetchOData({
+			...params,
+			token: PREFETCH_CAPTURE_TOKEN,
+			notif: false,
+			__capture: {
+				emit,
+				auth: prefetchAuthHint()
+			}
+		});
+	});
+}
+/** Whether the data layer these OData calls use can describe its requests (its ODataStore is flagged). */
+function describesRequests(configBaseUrl, source) {
+	return !!(getODataSource(configBaseUrl, source)?.ODataStore)?.[PREFETCH_SUPPORT];
+}
+/** `monoFetch` with its `definePrefetch` twin: `monoFetch.prefetch(url, opt)`. */
+const monoFetch = Object.assign(useMyFetch, { prefetch: prefetchMonoFetch });
+/** `monoFetchOdata` / `monoOdataFetch` with `.prefetch(params)`. */
+const monoFetchOdata = Object.assign(useMyFetchOData, { prefetch: prefetchMonoFetchOdata });
+/**
+* Installs the `prefetch` host (e.g. `useNuxtApp().$nuxtPreFetch` from @mono-lit/nuxt-pre-fetch;
+* `@mono-lit/utility/nuxt` does it for you). REST calls use it here; OData stores use it through
+* the data layer when it supports it (`@mono-lit/data`'s `setPrefetchProvider`, detected like
+* `tanstackRun`). `null` removes it.
+*/
+function monoSetPrefetchBridge(next) {
+	setPrefetchBridge(next);
+	const setProvider = Reflect.get(monoDevextremeModule, "setPrefetchProvider");
+	if (typeof setProvider === "function") setProvider(next);
+}
+/**
+* Inside `definePrefetch(pattern, ctx => …)`: what the browser's `monoState()` would hold for
+* this request — the claims of every `jwt` entry of `mono.config` (decoded from the page
+* request's cookies; split cookies joined) and a cookie reader that understands `split`.
+*/
+function monoPrefetchContext(context) {
+	const cookies = context?.cookies ?? {};
+	const cookie = (name, split) => {
+		if (split ?? cookieSplit(name)) {
+			const prefix = `${name}_split_`;
+			const chunks = Object.keys(cookies).filter((key) => key.startsWith(prefix) && /^\d+$/.test(key.slice(prefix.length))).sort((a, b) => Number(a.slice(prefix.length)) - Number(b.slice(prefix.length))).map((key) => cookies[key]);
+			if (chunks.length) return chunks.join("");
+		}
+		return cookies[name] || void 0;
+	};
+	const jwt = {};
+	for (const [key, entry] of Object.entries(monoConfig()?.jwt ?? {})) {
+		if (!entry) continue;
+		if (typeof entry.name === "object" && entry.name) jwt[key] = { ...entry.name };
+		else if (typeof entry.name === "string") jwt[key] = { ...decodeJwt(cookie(entry.name, Boolean(entry.split))) ?? {} };
+	}
+	return {
+		jwt,
+		cookie
+	};
+}
 
 //#endregion
-export { createFetcher, configureFetching as monoConfigureFetching, useCreateFetcher as monoCreateFetcher, useMyFetch as monoFetch, useMyFetchOData as monoFetchOdata, useMyFetchOData as monoOdataFetch, useFetchOdataUnique as monoFetchOdataUnique, useFetchOdataUnique as monoOdataFetchUnique, getFetchingRuntime as monoFetchingRuntime, loadChuckStores as monoLoadChuckStores, monoMockDb, getODataBaseUrl as monoOdataBaseUrl, getODataSource as monoOdataSource, getRequestToken as monoRequestToken, resetFetchingConfig as monoResetFetchingConfig, getRestBaseUrl as monoRestBaseUrl, createStaticDataSource as monoStaticDataSource, useTryCatchDatasource as monoTryCatchDatasource, promiseWrapper, resetMonoMockDb };
+export { createFetcher, configureFetching as monoConfigureFetching, useCreateFetcher as monoCreateFetcher, monoFetch, monoFetchOdata, monoFetchOdata as monoOdataFetch, useFetchOdataUnique as monoFetchOdataUnique, useFetchOdataUnique as monoOdataFetchUnique, getFetchingRuntime as monoFetchingRuntime, loadChuckStores as monoLoadChuckStores, monoMockDb, getODataBaseUrl as monoOdataBaseUrl, getODataSource as monoOdataSource, getPrefetchBridge as monoPrefetchBridge, monoPrefetchContext, getRequestToken as monoRequestToken, resetFetchingConfig as monoResetFetchingConfig, getRestBaseUrl as monoRestBaseUrl, monoSetPrefetchBridge, createStaticDataSource as monoStaticDataSource, useTryCatchDatasource as monoTryCatchDatasource, promiseWrapper, resetMonoMockDb };

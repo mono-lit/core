@@ -140,6 +140,13 @@ export type NormalFetchOptions = RequestInit & {
     unauthCall?: () => void,
     expiredBehaviour?: 'refresh',
     tokenOptions?: MonoFetchCookieOptions,
+    /**
+     * Instant first load in a Nuxt app with `@mono-lit/nuxt-pre-fetch` (learned requests): this
+     * GET is reported to Nitro, which replays it on the next visit of the page while producing
+     * the HTML; the call then gets its answer without a network round trip. No effect without
+     * the module.
+     */
+    prefetch?: boolean,
 }
 
 export type NormalFetchResult<T> = {
@@ -170,5 +177,11 @@ export interface OdataFetchTypes<T =  any> extends FetchOData<T>, FetchRequestCo
     tokenOptions?: MonoFetchCookieOptions,
     /** Opt-in TanStack Query behaviour for the stores this fetch builds (see TanstackFetchOptions). */
     tanstack?: TanstackFetchOptions
+    /**
+     * Instant first load in a Nuxt app with `@mono-lit/nuxt-pre-fetch` (learned requests): the
+     * store's FIRST load is reported to Nitro and answered from its copy on the next visit.
+     * Needs a data layer that implements it (`@mono-lit/data`); a no-op with plain DevExtreme.
+     */
+    prefetch?: boolean
 }
 

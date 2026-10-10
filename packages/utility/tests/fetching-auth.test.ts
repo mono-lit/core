@@ -230,8 +230,18 @@ describe('what the core receives', () => {
         expect(props.token).toBe('manual')
     })
 
+    it('passes `prefetch` through to the core (monoFetch, monoFetchOdata, monoCreateFetcher)', async () => {
+        await monoOdataFetch({ url: 'Users', configBaseUrl: 'main', prefetch: true } as any)
+        await monoCreateFetcher({ url: 'Users', configBaseUrl: 'main', prefetch: true } as any).response()
+        await monoFetch('/me', { configBaseUrl: 'main', prefetch: true } as any)
+
+        expect(coreCalls.fetchOData[0][0].prefetch).toBe(true)
+        expect(coreCalls.createFetcher[0][0].prefetch).toBe(true)
+        expect(coreCalls.fetchNormal[0][1].prefetch).toBe(true)
+    })
+
     it('gives createFetcher and createUniqueFetcher the same arguments', async () => {
-        monoCreateFetcher({ url: 'Users', configBaseUrl: 'main' })
+        await monoCreateFetcher({ url: 'Users', configBaseUrl: 'main' }).response()
         await import('../pkg/wrapper-fetching').then(({ monoOdataFetchUnique }) =>
             monoOdataFetchUnique({ url: 'Users', unique: 'u', configBaseUrl: 'main' } as any),
         )
@@ -354,5 +364,83 @@ describe('the mock backend', () => {
         await monoFetch('/flow-mock/nodes', {} as any)
 
         expect(coreCalls.fetchNormal).toHaveLength(0)
+    })
+})
+
+describe('`.prefetch()` twins (described on the server for definePrefetch, nothing sent)', () => {
+    const collect = async (descriptor: any) => {
+        expect(descriptor[Symbol.for('nuxt-pre-fetch.descriptor')]).toBe(true)
+        const emitted: any[] = []
+        await descriptor.collect({}, (request: any) => emitted.push(request))
+        return emitted
+    }
+
+    it('monoFetch.prefetch emits the GET the browser call sends, with the api cookie as auth', async () => {
+        const emitted = await collect(monoFetch.prefetch('/me', { configBaseUrl: 'main' } as any))
+        expect(emitted).toEqual([{ url: 'https://api.test/me', headers: {}, auth: { cookie: API_COOKIE } }])
+        expect(coreCalls.fetchNormal).toEqual([])
+        // writes are never prefetched
+        expect(await collect(monoFetch.prefetch('/me', { configBaseUrl: 'main', method: 'POST', body: '{}' } as any))).toEqual([])
+    })
+
+    /** An OData entry whose stores support describing (what @mono-lit/data's classes are flagged with). */
+    const withDataLayer = () => {
+        class DataLayerStore {}
+        ;(DataLayerStore as any)[Symbol.for('mono.prefetch')] = true
+        config = authConfig()
+        config.fetching.api.od = { type: 'odata', url: 'https://api.test/odata' }
+        config.fetching.source = { oDataStore: DataLayerStore }
+    }
+
+    it('monoFetchOdata.prefetch runs the same call in capture mode (no token read, no notif)', async () => {
+        withDataLayer()
+        const descriptor = monoFetchOdata.prefetch({ url: 'Users', configBaseUrl: 'od', type: 'data', options: { key: 'Id' } } as any)
+        await descriptor.collect({}, () => {})
+        const [props] = coreCalls.fetchOData[0]
+        expect(props.__capture.auth).toEqual({ cookie: API_COOKIE })
+        expect(typeof props.__capture.emit).toBe('function')
+        expect(props.token).toBe('mono-prefetch-capture')
+        expect(props.notif).toBe(false)
+        expect(props.url).toBe('Users')
+    })
+
+    it('monoCreateFetcher(...).prefetch(option) captures `.response(option)`', async () => {
+        withDataLayer()
+        const fetcher = monoCreateFetcher({ url: 'Users', configBaseUrl: 'od' })
+        expect(coreCalls.createFetcher).toEqual([]) // resolved lazily: describing never reads a token
+        await fetcher.prefetch({ options: { pageSize: 25 } } as any).collect({}, () => {})
+        const [props] = coreCalls.createFetcher[0]
+        expect(props.__capture.auth).toEqual({ cookie: API_COOKIE })
+        expect(props.token).toBe('mono-prefetch-capture')
+    })
+
+    it('plain DevExtreme (@mono-lit/devextreme): OData twins describe nothing and never throw — no store built; REST twins still work', async () => {
+        config.fetching.api.od = { type: 'odata', url: 'https://api.test/odata' }
+        expect(await collect(monoFetchOdata.prefetch({ url: 'Users', configBaseUrl: 'od', type: 'data' } as any))).toEqual([])
+        expect(await collect(monoCreateFetcher({ url: 'Users', configBaseUrl: 'od' }).prefetch())).toEqual([])
+        expect(await collect(monoCreateFetcher({ url: 'Users', configBaseUrl: 'od' }).prefetchLoad({ take: 5 }))).toEqual([])
+        expect(coreCalls.fetchOData).toEqual([])
+        expect(coreCalls.createFetcher).toEqual([])
+        expect(await collect(monoFetch.prefetch('/me', { configBaseUrl: 'main' } as any))).toHaveLength(1)
+    })
+
+    it('monoCreateFetcher(...).prefetchLoad(loadOptions, option) captures ONE store load with exactly those options', async () => {
+        withDataLayer()
+        await monoCreateFetcher({ url: 'Users', configBaseUrl: 'od' })
+            .prefetchLoad({ filter: ['Id', '=', 1], take: 1 }, { options: { key: 'Id' } } as any)
+            .collect({ learn: false }, () => {})
+        const [props] = coreCalls.createFetcher[0]
+        expect(props.__capture.load).toEqual({ filter: ['Id', '=', 1], take: 1 })
+        expect(props.token).toBe('mono-prefetch-capture')
+    })
+
+    it('monoPrefetchContext: the JWT claims the browser state would hold, from the request cookies', async () => {
+        const { monoPrefetchContext } = await import('../pkg/wrapper-fetching')
+        const payload = btoa(JSON.stringify({ COMPANY_ID: '3', IS_SUPERADMIN: '0' })).replace(/=+$/, '')
+        const token = `eyJhbGciOiJIUzI1NiJ9.${payload}.c2lnbmF0dXJl`
+        config = { ...authConfig(), jwt: { token: { name: REFRESH_COOKIE, split: true } } }
+        const ctx = monoPrefetchContext({ cookies: { [`${REFRESH_COOKIE}_split_1`]: token.slice(20), [`${REFRESH_COOKIE}_split_0`]: token.slice(0, 20), [API_COOKIE]: 'api' } })
+        expect(ctx.jwt.token).toMatchObject({ COMPANY_ID: '3', IS_SUPERADMIN: '0' })
+        expect(ctx.cookie(API_COOKIE)).toBe('api')
     })
 })

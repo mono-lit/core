@@ -48,6 +48,13 @@ export {
 } from "./composables/use-fetch-helper";
 
 
+export {
+    setPrefetchBridge,
+    getPrefetchBridge,
+    type MonoPrefetchBridge,
+    type MonoPrefetchRequest,
+} from './composables/prefetch-bridge'
+
 export { default as MonoNotifAction } from './components/Notif.vue'
 
 export type {

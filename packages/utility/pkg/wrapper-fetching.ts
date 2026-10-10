@@ -18,6 +18,7 @@ import {
     type MonoOdataFetchTypes,
     type MonoTryCatchDatasourceTypes,
     type MonoStoreChunkTypes,
+    type MonoFetchOverrides,
 } from '../src/core'
 
 import {
@@ -37,6 +38,8 @@ import {
     monoCookie,
 } from './runtime'
 
+import { setPrefetchBridge, getPrefetchBridge, PREFETCH_SUPPORT, type MonoPrefetchBridge, type MonoPrefetchRequest } from '../src/core/composables/prefetch-bridge'
+import { decodeJwt } from '../src/token'
 import { monoMockDb, matchMockRoute, parseQuery, type ODataQuery } from './mock-db'
 import { createMockDataSource, loadOptionsToQuery } from './mock-db/devextreme'
 import type { MonoAuthConfig, MonoMockDbConfig } from '../src/composables/create-config'
@@ -787,6 +790,9 @@ const useCreateFetcher = <T>(base: MonoCreateFetcherParams) => {
     const mockRoute = resolveMockRoute(configBaseUrl, base.url)
     if (mockRoute) {
         return {
+            // A mock-backed endpoint never reaches the network: nothing to prefetch.
+            prefetch: (_option?: MonoFetchOverrides) => describePrefetch(() => {}),
+            prefetchLoad: (_loadOptions?: Record<string, unknown>, _option?: MonoFetchOverrides) => describePrefetch(() => {}),
             async response(option?: any): FetchResult<T> {
                 return await serveFromMock<T>(mockRoute, {
                     type: option?.type ?? base.type ?? 'datasource',
@@ -801,7 +807,7 @@ const useCreateFetcher = <T>(base: MonoCreateFetcherParams) => {
         }
     }
 
-    return createFetcher<T>({
+    const resolved = (overrides: Record<string, any> = {}) => createFetcher<T>({
         // token refresh comes from `fetching.auth`; a caller's own config/tokenOptions wins
         ...authArgs(configBaseUrl),
         ...rest,
@@ -812,7 +818,37 @@ const useCreateFetcher = <T>(base: MonoCreateFetcherParams) => {
         // @mono-lit/utility always supplies @mono-lit/devextreme ctors here (see getSharedSource);
         // config/inline source overrides them per field.
         source: getODataSource(configBaseUrl, base.source) as any,
-    })
+        ...overrides,
+    } as any)
+    // Resolved on first use (the token is read then): `.prefetch()` on a server never reads one.
+    let fetcher: ReturnType<typeof createFetcher<T>> | undefined
+    /** The same fetcher in capture mode (`definePrefetch` twins): nothing is sent, no token is read. */
+    const capturing = (emit: (request: MonoPrefetchRequest) => void, load?: Record<string, unknown>) => createFetcher<T>({
+        ...authArgs(configBaseUrl),
+        ...rest,
+        token: PREFETCH_CAPTURE_TOKEN,
+        baseUrl: getODataBaseUrl(configBaseUrl, base.baseUrl),
+        source: getODataSource(configBaseUrl, base.source) as any,
+        __capture: { emit, auth: prefetchAuthHint(), ...(load ? { load } : {}) },
+    } as any)
+    return {
+        response: (option?: MonoFetchOverrides) => (fetcher ??= resolved()).response(option),
+        /**
+         * `definePrefetch` twin of `.response(option)`: describes the first load the browser's
+         * `.response(option)` (and the widget bound to it) will send, without sending anything.
+         */
+        prefetch: (option?: MonoFetchOverrides) => describeOData(configBaseUrl, base.source, async (emit) => {
+            await capturing(emit).response(option)
+        }),
+        /**
+         * `definePrefetch` twin of `(await .response(option)).dataSource.store().load(loadOptions)`:
+         * describes ONE store load with exactly these load options (e.g. a session cache that keeps
+         * the store and loads it per query). `loadOptions` as DevExtreme's `store.load()` takes them.
+         */
+        prefetchLoad: (loadOptions: Record<string, unknown> = {}, option?: MonoFetchOverrides) => describeOData(configBaseUrl, base.source, async (emit) => {
+            await capturing(emit, loadOptions).response(option)
+        }),
+    }
 }
 
 function useTryCatchDatasource<T>(opt: MonoTryCatchDatasourceTypes<T>) {
@@ -1024,14 +1060,96 @@ const loadChuckStores = async <T>(opt: MonoStoreChunkTypes<T>) => {
     return await loadChuckStore(opt)
 }
 
+/** Marks a `definePrefetch` descriptor (@mono-lit/nuxt-pre-fetch's protocol; no import needed). */
+const PREFETCH_DESCRIPTOR = Symbol.for('nuxt-pre-fetch.descriptor')
+/** Stands in for the token while a call is described (it never leaves the server). */
+const PREFETCH_CAPTURE_TOKEN = 'mono-prefetch-capture'
+
+/** A call described for `definePrefetch` (`monoFetch.prefetch`, …): emits the request(s) it would send. */
+export interface MonoPrefetchDescriptor {
+    readonly [PREFETCH_DESCRIPTOR]: true
+    collect: (context: unknown, emit: (request: MonoPrefetchRequest) => void) => Promise<void>
+}
+
+function describePrefetch(run: (emit: (request: MonoPrefetchRequest) => void) => void | Promise<void>): MonoPrefetchDescriptor {
+    return {
+        [PREFETCH_DESCRIPTOR]: true,
+        collect: async (_context, emit) => { await run(emit) },
+    } as MonoPrefetchDescriptor
+}
+
+/**
+ * An OData twin. Describing an OData call on the server needs a data layer that builds its exact
+ * request there (`@mono-lit/data`, whose stores carry `Symbol.for('mono.prefetch')`). With plain
+ * DevExtreme stores (`@mono-lit/devextreme`) the twin describes nothing — no store is built, no
+ * error — and the call is learned instead (`prefetch: true`, see host-nuxt).
+ */
+function describeOData(configBaseUrl: string | undefined, source: any, run: (emit: (request: MonoPrefetchRequest) => void) => Promise<void>): MonoPrefetchDescriptor {
+    return describePrefetch(async (emit) => {
+        if (!describesRequests(configBaseUrl, source)) return
+        await run(emit)
+    })
+}
+
+/** The cookie API requests carry their Bearer from (`fetching.auth`) — read by the server per request. */
+function prefetchAuthHint(): MonoPrefetchRequest['auth'] {
+    const { apiCookie } = resolveAuthCookies()
+    if (!apiCookie) return undefined
+    const split = getRefreshRequestOptions()?.splitCookie ?? cookieSplit(apiCookie)
+    return split ? { cookie: apiCookie, split: true } : { cookie: apiCookie }
+}
+
+/**
+ * `definePrefetch` twin of `monoFetch(url, opt)`: the same arguments, nothing sent — describes
+ * the GET the browser's call will send (base url, headers and auth from `fetching` config).
+ */
+function prefetchMonoFetch(url: string, opt: MonoNormalFetchParams = {} as MonoNormalFetchParams): MonoPrefetchDescriptor {
+    return describePrefetch((emit) => {
+        if (resolveMockRoute(opt.configBaseUrl, url)) return
+        if (String((opt as any).method ?? 'GET').toUpperCase() !== 'GET' || (opt as any).body != null) return
+        emit({
+            url: getRestBaseUrl(opt.configBaseUrl, opt.baseUrl) + url,
+            headers: mergeHeaders(getGlobalHeaders(), opt.headers as Record<string, any> | undefined),
+            auth: prefetchAuthHint(),
+        })
+    })
+}
+
+/**
+ * `definePrefetch` twin of `monoFetchOdata(params)`: runs the same call in capture mode —
+ * the store builds exactly the request the browser will send (`data`: what the call loads;
+ * `datasource`: the first page a bound widget loads), nothing is fetched.
+ */
+function prefetchMonoFetchOdata(params: MonoOdataFetchParams): MonoPrefetchDescriptor {
+    return describeOData(params.configBaseUrl, params.source, async (emit) => {
+        await useMyFetchOData({
+            ...params,
+            token: PREFETCH_CAPTURE_TOKEN,
+            notif: false,
+            __capture: { emit, auth: prefetchAuthHint() },
+        } as any)
+    })
+}
+
+/** Whether the data layer these OData calls use can describe its requests (its ODataStore is flagged). */
+function describesRequests(configBaseUrl?: string, source?: any): boolean {
+    const store = (getODataSource(configBaseUrl, source) as any)?.ODataStore
+    return !!store?.[PREFETCH_SUPPORT]
+}
+
+/** `monoFetch` with its `definePrefetch` twin: `monoFetch.prefetch(url, opt)`. */
+const monoFetch = Object.assign(useMyFetch, { prefetch: prefetchMonoFetch })
+/** `monoFetchOdata` / `monoOdataFetch` with `.prefetch(params)`. */
+const monoFetchOdata = Object.assign(useMyFetchOData, { prefetch: prefetchMonoFetchOdata })
+
 export {
-    useMyFetch as monoFetch,
+    monoFetch,
     // Each OData helper is exported under TWO names for the same function: the
     // original `mono...Fetch` spelling, kept so existing apps keep working, and
     // the `monoFetch...` spelling the docs standardize on. Neither is deprecated
     // -- they are aliases, not a migration.
-    useMyFetchOData as monoOdataFetch,
-    useMyFetchOData as monoFetchOdata,
+    monoFetchOdata as monoOdataFetch,
+    monoFetchOdata,
     useFetchOdataUnique as monoOdataFetchUnique,
     useFetchOdataUnique as monoFetchOdataUnique,
     useCreateFetcher as monoCreateFetcher,
@@ -1058,3 +1176,53 @@ export type { MonoMockDb, MonoMockRequest, MonoMockResponse } from './mock-db'
 // `createFetcher` here is the unwrapped one (no `fetching` config resolution);
 // use `monoCreateFetcher` for that.
 export { promiseWrapper, createFetcher } from '../src/core'
+
+/**
+ * Installs the `prefetch` host (e.g. `useNuxtApp().$nuxtPreFetch` from @mono-lit/nuxt-pre-fetch;
+ * `@mono-lit/utility/nuxt` does it for you). REST calls use it here; OData stores use it through
+ * the data layer when it supports it (`@mono-lit/data`'s `setPrefetchProvider`, detected like
+ * `tanstackRun`). `null` removes it.
+ */
+function monoSetPrefetchBridge(next: MonoPrefetchBridge | null): void {
+    setPrefetchBridge(next)
+    // Looked up dynamically, like `tanstackRun`: plain DevExtreme has no such export.
+    const setProvider = Reflect.get(monoDevextremeModule, 'setPrefetchProvider')
+    if (typeof setProvider === 'function') setProvider(next)
+    // Plain DevExtreme stores (`@mono-lit/devextreme`) are served from their `beforeSend` instead
+    // (`armPrefetchServe` in useFetchOData).
+}
+
+export { monoSetPrefetchBridge, getPrefetchBridge as monoPrefetchBridge }
+export type { MonoPrefetchBridge, MonoPrefetchRequest }
+
+/**
+ * Inside `definePrefetch(pattern, ctx => …)`: what the browser's `monoState()` would hold for
+ * this request — the claims of every `jwt` entry of `mono.config` (decoded from the page
+ * request's cookies; split cookies joined) and a cookie reader that understands `split`.
+ */
+function monoPrefetchContext(context: { cookies?: Record<string, string> }): {
+    jwt: Record<string, Record<string, any>>
+    cookie: (name: string, split?: boolean) => string | undefined
+} {
+    const cookies = context?.cookies ?? {}
+    const cookie = (name: string, split?: boolean) => {
+        if (split ?? cookieSplit(name)) {
+            const prefix = `${name}_split_`
+            const chunks = Object.keys(cookies)
+                .filter((key) => key.startsWith(prefix) && /^\d+$/.test(key.slice(prefix.length)))
+                .sort((a, b) => Number(a.slice(prefix.length)) - Number(b.slice(prefix.length)))
+                .map((key) => cookies[key])
+            if (chunks.length) return chunks.join('')
+        }
+        return cookies[name] || undefined
+    }
+    const jwt: Record<string, Record<string, any>> = {}
+    for (const [key, entry] of Object.entries((monoConfig()?.jwt ?? {}) as Record<string, any>)) {
+        if (!entry) continue
+        if (typeof entry.name === 'object' && entry.name) jwt[key] = { ...entry.name }
+        else if (typeof entry.name === 'string') jwt[key] = { ...(decodeJwt<Record<string, any>>(cookie(entry.name, Boolean(entry.split))) ?? {}) }
+    }
+    return { jwt, cookie }
+}
+
+export { monoPrefetchContext }
