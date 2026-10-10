@@ -38,15 +38,9 @@ export default defineConfig({
       'lib:utility-base': buildIn('packages/utility', ['lib:devextreme']),
       'lib:helper': buildIn('packages/helper', ['lib:utility-base']),
       'lib:utility': buildIn('packages/utility', ['lib:helper']),
-      // packages/data is a local-only folder (not in git). A filter that matches nothing
-      // exits 0 with "No projects matched", so clones without it just skip this step.
-      'lib:data': {
-        command: 'pnpm --filter @mono-lit/data run build',
-        cache: false,
-      },
       'lib:all': {
         command: 'node -e "console.log(\'libraries built\')"',
-        dependsOn: ['lib:utility', 'lib:data'],
+        dependsOn: ['lib:utility'],
         cache: false,
       },
 
