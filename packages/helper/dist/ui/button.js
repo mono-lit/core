@@ -1,4 +1,4 @@
-import { t as MonoButton } from "../mono-button-CoVnBLav.js";
+import { t as MonoButton } from "../mono-button-simcTQdW.js";
 //#region src/components/button/button-utils.ts
 /**
 * Generate badge CSS classes

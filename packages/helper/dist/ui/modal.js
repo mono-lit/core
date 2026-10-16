@@ -6,7 +6,7 @@ import { t as customElement } from "../mono-element-B0kP_96P.js";
 import { a as defineHybridPropAliases, i as defineHybridPropAlias, r as booleanStringConverter, s as optionalNumberConverter, t as __decorate } from "../decorate-DEXtNagw.js";
 import { t as dispatchMonoEvent } from "../mono-event-Bi1qP9uN.js";
 import { a as parkDetachedNodes, i as guardHostTextContent, s as placeSlotNode } from "../light-slots-DW1WgfgT.js";
-import "../mono-button-CoVnBLav.js";
+import "../mono-button-simcTQdW.js";
 import { i as pathOwnedBy } from "../popup-portal-BziRX1yG.js";
 import { n as isBelowBreakpoint, r as resolveAutoFullscreen, t as autoFullscreenConverter } from "../breakpoints-CAbhDUht.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";

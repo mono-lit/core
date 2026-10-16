@@ -733,7 +733,7 @@ export const MonoButtonCore = <T extends Constructor<LitElement>>(
         ?mono-icon-only=${this._isIconOnlyLike}
         ?mono-glass=${Boolean(this.glass)}
         ?mono-loading=${this._effectiveLoading}
-        ?mono-pending=${this._isPendingOnly}
+        ?mono-waiting=${this._isPendingOnly}
         ?mono-sized=${this._hasSize}
       >${inner}</div>`
     }

@@ -1,4 +1,4 @@
-import { r as MonoButtonCore, t as MonoButtonShadow } from "../../mono-button.shadow-FfP_hMH4.js";
+import { r as MonoButtonCore, t as MonoButtonShadow } from "../../mono-button.shadow-B_rKOY9N.js";
 //#region src/components/button/button-utils.ts
 /**
 * Generate badge CSS classes

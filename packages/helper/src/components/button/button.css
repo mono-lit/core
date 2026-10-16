@@ -805,13 +805,14 @@ mono-button {
   opacity: 0.85;
 }
 
-/* `pending` = self-driven loading that is still only WAITING (the debounce
-   timer or the throttle queue). Clicks are let back through on purpose: a
-   debounce has to SEE the repeat clicks to reset its timer. */
-[mono-button][mono-loading][mono-pending] > :is(button, a) {
+/* `waiting` = self-driven loading that is still only WAITING (the debounce
+   timer or the throttle queue). It LOOKS like any other loading — only the
+   clicks are let back through on purpose: a debounce has to SEE the repeat
+   clicks to reset its timer (`_handleClick` swallows them). Not `mono-pending`:
+   that attribute is the skeleton addon's global selector and would paint the
+   whole button as a skeleton block. */
+[mono-button][mono-loading][mono-waiting] > :is(button, a) {
   pointer-events: auto;
-  cursor: not-allowed;
-  opacity: 0.5;
 }
 
 /* ── The spinner — drawn INSIDE the icon box, so it replaces the icon, follows
