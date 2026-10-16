@@ -243,3 +243,42 @@ describe('declarative mono-tooltip-* attributes', () => {
     expect(bubble()).toBeNull()
   })
 })
+
+describe('focus trigger vs hideOnClick', () => {
+  const click = (el: Element) => el.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }))
+
+  // A text field matches `:focus-visible` on a MOUSE focus too: mousedown opened the
+  // focus tooltip and the click (mouseup) closed it again — a flash.
+  it('a click into the focused field keeps its focus tooltip', async () => {
+    const tip = controlMonoTooltip('input', { content: 'x', trigger: 'focus' })
+    const input = document.createElement('input')
+    document.body.append(input)
+    input.focus()
+    await vi.waitFor(() => expect(tip.isOpen).toBe(true))
+    click(input)
+    await new Promise((r) => setTimeout(r, 50))
+    expect(tip.isOpen).toBe(true)
+  })
+
+  it('neither the click nor a pointer nudge cancels a pending focus open', async () => {
+    const tip = controlMonoTooltip('input', { content: 'x', trigger: 'focus' })
+    const input = document.createElement('input')
+    document.body.append(input)
+    input.focus()
+    hover(document.body)
+    click(input)
+    await vi.waitFor(() => expect(tip.isOpen).toBe(true))
+    input.blur()
+    await vi.waitFor(() => expect(tip.isOpen).toBe(false))
+  })
+
+  it('a click still closes a hover tooltip', async () => {
+    const tip = controlMonoTooltip('button', { content: 'x', delay: 0 })
+    const b = document.createElement('button')
+    document.body.append(b)
+    hover(b)
+    await vi.waitFor(() => expect(tip.isOpen).toBe(true))
+    click(b)
+    expect(tip.isOpen).toBe(false)
+  })
+})

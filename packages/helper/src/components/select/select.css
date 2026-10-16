@@ -385,7 +385,7 @@ mono-select {
 
 /* dark:hover:bg-input/50 (light: none) — carried by --mono-mode-field-hover-bg */
 @media (hover: hover) {
-  [mono-select]:not([mono-disabled]):not([mono-readonly]) > [mono-trigger]:hover {
+  [mono-select]:not([mono-disabled]):not([mono-readonly]):not([mono-ds-loading]) > [mono-trigger]:hover {
     background: var(--_mono-select-hover-bg);
   }
 }
@@ -406,6 +406,22 @@ mono-select {
 [mono-select][mono-validation-state="warning"] > [mono-trigger] {
   --_mono-select-bc: color-mix(in oklab, var(--_mono-select-warning) var(--mono-mode-state-border-alpha), transparent);
   --_mono-select-ring: 0 0 0 var(--_mono-select-ring-width) color-mix(in oklab, var(--_mono-select-warning) var(--mono-mode-state-ring-alpha), transparent);
+}
+
+/* EXTENSION — the bound dataSource failed: the invalid outline ONLY. Label,
+   message and validation state stay as they are; it is not a validation error. */
+[mono-select][mono-ds-error] > [mono-trigger] {
+  --_mono-select-bc: var(--mono-select-ds-error-border, var(--mono-mode-invalid-border));
+  --_mono-select-ring: 0 0 0 var(--_mono-select-ring-width) var(--mono-select-ds-error-ring, var(--mono-mode-invalid-ring));
+}
+
+[mono-select] [mono-value][mono-ds-error-text] {
+  color: var(--mono-select-ds-error-text, var(--_mono-select-invalid));
+}
+
+/* EXTENSION — the first load (or a retry) is in flight: read-only, no hover */
+[mono-select][mono-ds-loading] > [mono-trigger] {
+  cursor: progress;
 }
 
 /* EXTENSION — readonly: focusable, on a muted surface, no gestures */
@@ -522,7 +538,9 @@ mono-select {
 /* basecoat@1.0.2 components/combobox.css .combobox [data-clear] — size-6 border-0
    bg-transparent p-0 text-current */
 [mono-select] [mono-arrow],
-[mono-select] [mono-clear] {
+[mono-select] [mono-clear],
+[mono-select] [mono-ds-retry],
+[mono-select] [mono-ds-spinner] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -543,7 +561,7 @@ mono-select {
   transition-duration: var(--mono-duration);
 }
 
-[mono-select] :is([mono-arrow], [mono-clear]) > :is(svg, .mono-icon, [mono-icon]) {
+[mono-select] :is([mono-arrow], [mono-clear], [mono-ds-retry], [mono-ds-spinner]) > :is(svg, .mono-icon, [mono-icon]) {
   display: block;
   width: var(--_mono-select-icon);
   height: var(--_mono-select-icon);
@@ -558,9 +576,35 @@ mono-select {
 /* basecoat@1.0.2 styles/vega.css .btn[data-variant='ghost'] — hover:bg-muted
    hover:text-foreground (dark:hover:bg-muted/50 via --mono-mode-ghost-hover) */
 @media (hover: hover) {
-  [mono-select] :is([mono-arrow], [mono-clear]):hover {
+  [mono-select] :is([mono-arrow], [mono-clear], [mono-ds-retry]):hover {
     background: var(--mono-mode-ghost-hover);
     color: var(--_mono-select-text);
+  }
+}
+
+/* EXTENSION — dataSource state glyphs: the busy arc spins, the ↻ wears the
+   error colour so it reads as the way out of the red field */
+[mono-select] [mono-ds-spinner] {
+  cursor: progress;
+}
+
+[mono-select] [mono-ds-spinner] > svg {
+  animation: mono-select-spin 0.7s linear infinite;
+}
+
+[mono-select] [mono-ds-retry] {
+  color: var(--mono-select-ds-error-text, var(--_mono-select-invalid));
+}
+
+@keyframes mono-select-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [mono-select] [mono-ds-spinner] > svg {
+    animation-duration: 2.4s;
   }
 }
 

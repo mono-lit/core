@@ -32,8 +32,9 @@ import {
 } from '../../composables/hybird-prop'
 import { dispatchMonoEvent } from '../../composables/mono-event'
 import { DataSourceController } from '../../composables/data-source-controller'
+import { describeError, errorText, errorTitle, type DescribedError } from '../../utils/normalize-error'
 import { ChipStripController } from '../../composables/chip-strip'
-import { caretIcon, chevronIcon } from '../../composables/field-icons'
+import { caretIcon, chevronIcon, refreshIcon, spinnerIcon } from '../../composables/field-icons'
 import { buildSizeStyle, toCssSize, type CssSizeValue } from '../../composables/css-size'
 import { PopupPortalController } from '../../composables/popup-portal'
 import { LateSlotWatcher } from '../../composables/light-slots'
@@ -84,6 +85,8 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
 
     defineHybridPropAliases(this, [
       'modelValue',
+      'loadingText',
+      'loadingError',
       'helperText',
       'validationState',
       'validationMessage',
@@ -197,6 +200,8 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
     return [
       ...base,
       'modelvalue',
+      'loadingtext',
+      'loadingerror',
       'helpertext',
       'validationstate',
       'validationmessage',
@@ -228,6 +233,16 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
 
     if (name === 'modelvalue') {
       this.modelValue = this._normalizeValue(newValue)
+      return
+    }
+
+    if (name === 'loadingtext') {
+      this.loadingText = newValue ?? 'Loading…'
+      return
+    }
+
+    if (name === 'loadingerror') {
+      this.loadingError = newValue
       return
     }
 
@@ -342,6 +357,34 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
 
   @property({ type: String })
   placeholder = 'Add tag...'
+
+  /**
+   * Shown in the field while the bound `dataSource` answers its first request
+   * (or a retry). The field is fully read-only meanwhile.
+   */
+  @property({ type: String, attribute: 'loading-text' })
+  loadingText = 'Loading…'
+
+  /** Accessible name of the ↻ button shown after the `dataSource` failed. */
+  @property({ type: String, attribute: 'retry-label' })
+  retryLabel = 'Retry'
+
+  /**
+   * The app is still fetching this field's options (e.g. the source is built
+   * after an `await`): the field shows `loadingText` + a spinner and is fully
+   * read-only, exactly as while a bound `dataSource` loads. Bind with
+   * `:loading.prop` from Vue (see the hydration note on `mono-button`).
+   */
+  @property({ converter: booleanStringConverter })
+  loading = false
+
+  /**
+   * The app's own fetch failed: a string, or the error itself (its messages are
+   * collected like `monoFetch` does). The field paints the failure + ↻ like a
+   * failed `dataSource`; ↻ fires `retry` for the app to re-run its fetch.
+   */
+  @property({ attribute: 'loading-error' })
+  loadingError: unknown = null
 
   @property({ type: String, attribute: 'helper-text' })
   helperText = ''
@@ -865,7 +908,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
     // coerce so render() sees real booleans and hydration matches.
     // (see project_shadow_boolean_prop_ssr)
     for (const key of [
-      'disabled', 'readonly', 'required', 'clearable',
+      'disabled', 'loading', 'readonly', 'required', 'clearable',
       'allowCustom', 'checkable', 'immediate', 'group', 'groupSticky', 'searchable',
       'stayOpen', 'selectAll', 'groupSelectAll',
     ] as const) {
@@ -873,6 +916,18 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
       if (typeof v !== 'boolean') {
         ;(this as unknown as Record<string, unknown>)[key] = this._toBoolean(v)
       }
+    }
+
+    if (changed.has('loadingError')) {
+      const v = this.loadingError
+      this._appFailure = v == null || v === false || v === '' ? null : describeError(v === true ? undefined : v)
+    }
+
+    // The source is loading for the first time, or failed: no panel. Drop the
+    // typed query locally — `_close()` would re-query a source that just failed.
+    if (this._open && this._dsInert) {
+      this._open = false
+      this._dropQuery()
     }
 
     // Store RAW targets, not the consumer's reactive proxies. Spreading a deep
@@ -1410,13 +1465,21 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
     return !!this.dataSource
   }
 
-  /** Run the server search, reset to page 0. */
+  /** Run the server search, reset to page 0. A failure becomes the field's error. */
   private async _applySearch(query: string): Promise<void> {
     if (!this._serverSearch()) return
+    await this._pushSearch(query).catch((err: unknown) => {
+      this._ds.setError(err)
+    })
+  }
+
+  /** Push `query` onto the source and reload it; rejects when the load fails. */
+  private _pushSearch(query: string): Promise<unknown> {
+    this._appliedQuery = query
     // `MonoSourceSearch` picks the strategy: plain columns ride the source's own
     // `searchValue` folding, while paths / `*` patterns / customs are compiled to
     // a `$filter` and AND-ed onto the consumer's own filter.
-    await this._sourceSearch.apply(this.dataSource, {
+    return this._sourceSearch.apply(this.dataSource, {
       query,
       searchValue: this.searchValue,
       fallbackFields: this._fallbackSearchFields(),
@@ -1425,6 +1488,68 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
       defaultToWildcard: true,
       operation: this.searchOperation || 'contains',
     })
+  }
+
+  /** The query last pushed onto the source — a retry after a failed search clears it. */
+  private _appliedQuery = ''
+
+  /** Forget the typed query without touching the source. */
+  private _dropQuery(): void {
+    if (this._searchTimer) {
+      clearTimeout(this._searchTimer)
+      this._searchTimer = undefined
+    }
+    this._inputValue = ''
+    this._activeIndex = -1
+  }
+
+  /** `loading-error`, described — null when the app reports no failure. */
+  private _appFailure: DescribedError | null = null
+
+  /** Loading: the app says so (`loading`), or the bound source's first load / retry. */
+  private get _busy(): boolean {
+    return this.loading || (!!this.dataSource && this._ds.busy)
+  }
+
+  /** The failure to paint: the app's `loading-error`, else the source's own; none while busy. */
+  private get _failure(): DescribedError | null {
+    if (this._busy) return null
+    return this._appFailure ?? (this.dataSource ? this._ds.error : null)
+  }
+
+  /**
+   * ↻: always announced as `retry`. A failure of the bound source is also
+   * re-run here (without the failed search query); an app-reported
+   * `loading-error` is the app's to re-fetch.
+   */
+  private _retry = (event: Event): void => {
+    event.preventDefault()
+    event.stopPropagation()
+    const error = this._failure
+    if (this.disabled || this._busy || !error) return
+    const fromApp = !!this._appFailure
+    dispatchMonoEvent(this, 'retry', { error, source: fromApp ? 'app' : 'dataSource' })
+    if (fromApp || !this.dataSource || !this._ds.error) return
+    const clearSearch = !!this._appliedQuery && this._serverSearch()
+    void this._ds.retry(clearSearch ? () => this._pushSearch('') : undefined)
+  }
+
+  /** Enter / Space on the focused field retries a failure. */
+  private _retryKey(event: KeyboardEvent): boolean {
+    if (event.key !== 'Enter' && event.key !== ' ') return false
+    if (!this._failure || this.disabled) return false
+    this._retry(event)
+    return true
+  }
+
+  /** Loading, or failed: the field refuses every gesture but ↻. */
+  private get _dsInert(): boolean {
+    return this._busy || !!this._failure
+  }
+
+  /** Every interaction is off: disabled, read-only, or the source isn't usable. */
+  private get _inert(): boolean {
+    return this.disabled || this.readonly || this._dsInert
   }
 
   /**
@@ -1784,10 +1909,22 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
   return (
     this.clearable &&
     this._hasValue &&
-    !this.disabled &&
-    !this.readonly &&
+    !this._inert &&
     !((this._selectionLimits.min ?? 0) > 0)
   )
+ }
+
+ /** The input's placeholder: the source's state while it isn't usable, else the prompt. */
+ private get _inputPlaceholder(): string | undefined {
+  if (this._busy) return this.loadingText
+  if (this._failure) return errorText(this._failure)
+  return this._hasValue ? undefined : this.placeholder
+ }
+
+ /** Full error text (detail first) on hover, since the placeholder may truncate. */
+ private get _dsErrorTitle(): string | undefined {
+  const err = this._failure
+  return err ? errorTitle(err) : undefined
  }
 
  private get _fieldClasses(): string {
@@ -1991,7 +2128,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
   }
 
   private _addValue(value: TagInputValue, event?: Event): void {
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
     // At the cap the add is REJECTED — the list stays open and usable (to
     // deselect, or just to look), the typed tag is dropped and the query reset so
     // no filter is left behind for a pick that can never land.
@@ -2016,7 +2153,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
    * (and the typed filter intact), so the user can check several rows in a row.
    */
   private _toggleValue(value: TagInputValue, event?: Event): void {
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
 
     const selected = this._selectedValues.some((v) => this._isSameValue(v, value))
 
@@ -2185,6 +2322,9 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
         sourceEvent: event,
         emitAdd: true,
       })
+    } catch (err) {
+      // The drain is a request like any other: its failure is the field's error.
+      this._ds.setError(err)
     } finally {
       this._selectAllPending = false
       // Same as every other bulk toggle: the panel stays open so the user can keep
@@ -2241,7 +2381,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
    * `<mono-table-checkbox>` gives its own clear.
    */
   private _clearAllFromServer(event?: Event): void {
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
     if (!this._selectedValues.length) return
 
     this._setValue([], { sourceEvent: event, emitRemove: true })
@@ -2260,7 +2400,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
    * saying nothing (`modelValue` and `oldValue` carry the full before/after).
    */
   private _toggleMany(items: TagInputItem[], event?: Event): void {
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
 
     const usable = items.filter((item) => this._isSelectable(item))
     if (!usable.length) return
@@ -2297,7 +2437,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
   private _removeValue(value: TagInputValue, event?: Event): void {
     event?.stopPropagation()
 
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
     if (!this._canRemoveMore) return
 
     this._setValue(
@@ -2315,7 +2455,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
   private _clear(event: Event): void {
     event.stopPropagation()
 
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
 
     this._setValue(this._keepFloor([]), {
       sourceEvent: event,
@@ -2327,7 +2467,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
   }
 
   private _handleInput(event: Event): void {
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
 
     const input = event.currentTarget as HTMLInputElement
 
@@ -2367,7 +2507,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
    * so there the click TOGGLES: a second click on the field closes the list.
    */
   private _handleFieldClick(): void {
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
 
     this._inputEl?.focus()
     this._moreOpen = false
@@ -2379,7 +2519,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
   /** The chevron: the one mouse gesture that both opens and closes. */
   private _toggleFromCaret(event: Event): void {
     event.stopPropagation()
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
     this._moreOpen = false
     if (this._open) {
       this._close()
@@ -2390,7 +2530,8 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
   }
 
   private _handleKeydown(event: KeyboardEvent): void {
-    if (this.disabled || this.readonly) return
+    if (this._retryKey(event)) return
+    if (this._inert) return
 
     const items = this._filteredItems
 
@@ -2639,7 +2780,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
     const label = this._getLabelByValue(value)
     // At the `min` floor the chips lose their ✕: the removal would be rejected
     // anyway, so the button must not promise one.
-    const canRemove = removable && !this.disabled && !this.readonly && this._canRemoveMore
+    const canRemove = removable && !this._inert && this._canRemoveMore
 
     return html`
       <div
@@ -2801,6 +2942,29 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
     `
   }
 
+  /** Spinner while the source first loads, ↻ after it failed; else nothing. */
+  private _renderSourceState(): TemplateResult | typeof nothing {
+    if (this._busy) {
+      return html`<span mono-ds-spinner role="status" aria-label=${this.loadingText}>${spinnerIcon()}</span>`
+    }
+    if (this._failure && !this.disabled) {
+      return html`
+        <button
+          type="button"
+          tabindex="-1"
+          mono-ds-retry
+          aria-label=${this.retryLabel}
+          title=${this.retryLabel}
+          @mousedown=${(event: MouseEvent) => event.preventDefault()}
+          @click=${this._retry}
+        >
+          ${refreshIcon()}
+        </button>
+      `
+    }
+    return nothing
+  }
+
   private _renderActions(): TemplateResult {
     const inline = this._chipBehaviour === 'inline'
     // BOTH buttons render together, or neither — never one. They sit in the same
@@ -2830,7 +2994,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
     // so a caret would promise an open it never delivers. The actions row still
     // renders — the gutter (and the scroll pair, which keeps paging the chips so
     // they can at least be read) stays exactly where it was.
-    const showArrow = !this._showClear && !this.disabled && !this.readonly
+    const showArrow = !this._showClear && !this._inert
     return html`
       <div class=${this._cls('mono-tag-input-actions', 'actions')} mono-actions>
         ${showScroll
@@ -2868,6 +3032,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
               </span>
             `
         : nothing}
+        ${this._renderSourceState()}
       </div>
     `
   }
@@ -3344,7 +3509,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
   }
 
   private _renderEmpty(): TemplateResult {
-      const text = this.dataSource && this._ds.loading ? 'Loading…' : 'No items'
+      const text = this.dataSource && this._ds.loading ? this.loadingText : 'No items'
     return html`<div class=${this._cls('mono-tag-input-empty', 'empty')} mono-empty-row>${text}</div>`
   }
 
@@ -3613,7 +3778,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
    * The walk starts at `event.target`, which may be an icon or a span deep inside the row.
    */
   protected _onListSlotClick = (event: Event): void => {
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
 
     const target = event.target as Element | null
     const entry = target ? this._entryFromNode(target) : undefined
@@ -3750,6 +3915,9 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
         ?mono-clearable=${this.clearable}
         ?mono-checkable=${this.checkable}
         ?mono-searchable=${this.searchable}
+        ?mono-ds-loading=${this._busy}
+        ?mono-ds-error=${!!this._failure}
+        aria-busy=${this._busy ? 'true' : nothing}
       >
         ${this._renderLabel()}
 
@@ -3769,11 +3937,10 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
             type="text"
             .value=${this._inputValue}
             name=${ifDefined(this.name || undefined)}
-            placeholder=${ifDefined(
-      this._hasValue ? undefined : this.placeholder,
-    )}
+            placeholder=${ifDefined(this._inputPlaceholder)}
+            title=${ifDefined(this._dsErrorTitle)}
             ?disabled=${this.disabled}
-            ?readonly=${this.readonly || !this.searchable}
+            ?readonly=${this.readonly || !this.searchable || this._dsInert}
             ?required=${this.required && !this._hasValue}
             aria-label=${ifDefined(ariaLabel)}
             aria-invalid=${this._resolvedValidationState === 'invalid'
@@ -3831,7 +3998,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
   }
 
   public open(): void {
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
     // Cursor placement is handled by the open-edge latch in `updated()`.
     this._open = true
     this._inputEl?.focus()
@@ -3847,7 +4014,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
   }
 
   public clearTags(): void {
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
 
     this._setValue(this._keepFloor([]), {
       emitClear: true,

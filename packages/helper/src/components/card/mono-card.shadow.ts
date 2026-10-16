@@ -122,7 +122,12 @@ export class MonoCardShadow extends withShadowUtilityStyles(MonoCardCore(LitElem
 
   private _renderHeader(): TemplateResult {
     return html`
-      <div class=${this._cls('mono-card-header', 'header')} mono-header ?mono-empty=${!this._hasHeader}>
+      <div
+        class=${this._cls('mono-card-header', 'header')}
+        mono-header
+        ?mono-empty=${!this._hasHeader}
+        ?mono-no-subtitle=${this._noSubtitle}
+      >
         <!-- slot="header" replaces the icon as well as the title/subtitle -->
         <div
           class=${this._cls('card-icon', 'icon')} mono-icon

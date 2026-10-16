@@ -71,3 +71,40 @@ export function chevronIcon(dir: -1 | 1): TemplateResult {
     <path fill-rule="evenodd" d=${d} clip-rule="evenodd" />
   </svg>`
 }
+
+/**
+ * Busy arc for a field whose data source is still answering. Spun by the
+ * component's own CSS (`[mono-ds-spinner] > svg`) so a reduced-motion rule can
+ * stop it.
+ */
+export function spinnerIcon(): TemplateResult {
+  return html`<svg
+    mono-icon
+    viewBox="0 0 24 24"
+    width="16"
+    height="16"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.5"
+    stroke-linecap="round"
+    aria-hidden="true"
+  >
+    <path d="M12 3a9 9 0 1 0 9 9" />
+  </svg>`
+}
+
+/** ↻ — the retry affordance a field shows after its data source failed. */
+export function refreshIcon(): TemplateResult {
+  return html`<svg
+    mono-icon
+    viewBox="0 0 24 24"
+    width="16"
+    height="16"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path
+      d="M17.65 6.35A8 8 0 1 0 19.73 14h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"
+    />
+  </svg>`
+}

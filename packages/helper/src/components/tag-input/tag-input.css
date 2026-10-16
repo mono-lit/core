@@ -397,6 +397,23 @@ mono-tag-input {
   --_mono-tag-input-ring: 0 0 0 var(--_mono-tag-input-ring-width) color-mix(in oklab, var(--_mono-tag-input-warning) var(--mono-mode-state-ring-alpha), transparent);
 }
 
+/* EXTENSION — the bound dataSource failed: the invalid outline ONLY. Label,
+   message and validation state stay as they are; it is not a validation error. */
+[mono-tag-input][mono-ds-error] > [mono-field] {
+  --_mono-tag-input-bc: var(--mono-tag-input-ds-error-border, var(--mono-mode-invalid-border));
+  --_mono-tag-input-ring: 0 0 0 var(--_mono-tag-input-ring-width) var(--mono-tag-input-ds-error-ring, var(--mono-mode-invalid-ring));
+}
+
+[mono-tag-input][mono-ds-error] [mono-native]::placeholder {
+  color: var(--mono-tag-input-ds-error-text, var(--_mono-tag-input-invalid));
+}
+
+/* EXTENSION — the first load (or a retry) is in flight: read-only */
+[mono-tag-input][mono-ds-loading] > [mono-field],
+[mono-tag-input][mono-ds-loading] [mono-native] {
+  cursor: progress;
+}
+
 /* EXTENSION — readonly: a muted surface */
 [mono-tag-input][mono-readonly] > [mono-field] {
   background: var(--mono-tag-input-readonly-bg, var(--muted));
@@ -683,7 +700,9 @@ mono-tag-input {
    text-muted-foreground), the pager the same box. Painted as .btn[data-variant='ghost']. */
 [mono-tag-input] [mono-clear],
 [mono-tag-input] [mono-arrow],
-[mono-tag-input] [mono-scroll] {
+[mono-tag-input] [mono-scroll],
+[mono-tag-input] [mono-ds-retry],
+[mono-tag-input] [mono-ds-spinner] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -705,7 +724,7 @@ mono-tag-input {
   transition-duration: var(--mono-duration);
 }
 
-[mono-tag-input] :is([mono-clear], [mono-arrow], [mono-scroll]) > :is(svg, .mono-icon, [mono-icon]) {
+[mono-tag-input] :is([mono-clear], [mono-arrow], [mono-scroll], [mono-ds-retry], [mono-ds-spinner]) > :is(svg, .mono-icon, [mono-icon]) {
   display: block;
   width: var(--_mono-tag-input-icon);
   height: var(--_mono-tag-input-icon);
@@ -719,7 +738,7 @@ mono-tag-input {
 
 /* basecoat@1.0.2 styles/vega.css .btn[data-variant='ghost'] — hover:bg-muted hover:text-foreground */
 @media (hover: hover) {
-  [mono-tag-input] :is([mono-clear], [mono-arrow], [mono-scroll]):hover {
+  [mono-tag-input] :is([mono-clear], [mono-arrow], [mono-scroll], [mono-ds-retry]):hover {
     background: var(--mono-mode-ghost-hover);
     color: var(--_mono-tag-input-text);
   }
@@ -728,6 +747,26 @@ mono-tag-input {
 /* EXTENSION — the caret turns while the panel is open */
 [mono-tag-input][mono-open] [mono-arrow] > :is(svg, .mono-icon, [mono-icon]) {
   transform: rotate(180deg);
+}
+
+/* EXTENSION — dataSource state glyphs: the busy arc spins, the ↻ wears the
+   error colour so it reads as the way out of the red field */
+[mono-tag-input] [mono-ds-spinner] {
+  cursor: progress;
+}
+
+[mono-tag-input] [mono-ds-spinner] > svg {
+  animation: mono-tag-input-spin 0.7s linear infinite;
+}
+
+[mono-tag-input] [mono-ds-retry] {
+  color: var(--mono-tag-input-ds-error-text, var(--_mono-tag-input-invalid));
+}
+
+@keyframes mono-tag-input-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* At an end of the strip the pager keeps its box but disappears — hiding it with
@@ -1151,5 +1190,9 @@ mono-tag-input {
   [mono-tag-input] [mono-item],
   [mono-tag-input] [mono-chip-close] {
     transition: none;
+  }
+
+  [mono-tag-input] [mono-ds-spinner] > svg {
+    animation-duration: 2.4s;
   }
 }

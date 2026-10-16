@@ -1,6 +1,6 @@
 import type { MonoDataSource } from '../../composables/data-source-controller'
 import { monoArraySource } from './array-source'
-import { describeError, type MonoErrorMessages } from '../../utils/normalize-error'
+import { describeError, isCanceled, type MonoErrorMessages } from '../../utils/normalize-error'
 import {
   buildGroups,
   collectGroupPaths,
@@ -1905,16 +1905,6 @@ export interface MonoTableController<T = any> {
    * otherwise it's `String(row[keyExpr])`.
    */
   rowKey(row: T): string
-}
-
-function isCanceled(err: any): boolean {
-  if (!err) return false
-  return (
-    err === 'canceled' ||
-    err.name === 'canceled' ||
-    err.message === 'canceled' ||
-    err.__id === 'canceled'
-  )
 }
 
 /**

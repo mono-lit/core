@@ -1,4 +1,3 @@
-| `--mono-tag-input-option-spacing` | `2px` | The seam between two rows, so a hovered row under the selected one stays a separate wash |
 # Tag input
 
 A multi-value tag entry with optional autocomplete suggestions, validation states, `min` / `max` selection limits, and slot-overridable label/helper. Tags are added with **Enter**, **,** or **Tab**, and removed with **×** or **Backspace** on an empty input. Toggle **Vue / CSS** to switch the live demo and source together.
@@ -163,6 +162,27 @@ Bind a live devextreme `DataSource` with `:data-source.prop`. Suggestions come s
 
 <ClientOnly>
 <DemoSingle name="tag-input" id="datasource" />
+</ClientOnly>
+
+## Loading & errors
+
+A bound `dataSource` paints its request state in the field itself. While the **first** load (or a retry) is in flight the field reads `Loading…` with a spinner and is fully read-only. Once the source answers, the field works normally. A later search or load-more doesn't lock it again; those keep the in-panel loading row.
+
+When a load fails, the error text takes the placeholder's place, the outline turns the invalid colour and a ↻ button appears at the end. Click it, or press Enter / Space on the focused field, to re-run the request. A failed search is retried without the query. The text is what the server said, collected like `monoFetch` does: every `message` / `errorMessage` / OData `{ message: { value } }` in the response, each distinct message once, joined with ` · `. When the server said nothing, the generic text for the status shows instead (e.g. 500 → *Something went wrong on the server…*, 403 → *You do not have permission…*). Hovering shows the full text.
+
+It is **not** a validation error. `validation-state`, `aria-invalid`, the label and the message are untouched, and the outline clears as soon as a retry succeeds. The wrapper carries `mono-ds-loading` / `mono-ds-error`; restyle through `--mono-tag-input-ds-error-border`, `--mono-tag-input-ds-error-ring` and `--mono-tag-input-ds-error-text`. A failed server select-all lands here too.
+
+| Prop | Default | |
+| --- | --- | --- |
+| `loading-text` | `'Loading…'` | Shown in the field during the first load |
+| `retry-label` | `'Retry'` | Accessible name of the ↻ button |
+| `loading` | `false` | The APP is still fetching the options (the source is built after an `await`): same Loading… state, with or without a `dataSource`. Bind `:loading.prop` |
+| `loading-error` / `loadingError` | `null` | The app's fetch failed: a string or the error itself (messages collected the same way). Painted like a failed source |
+
+↻ always fires `retry` (`mno-retry` / `mnoRetry` too) with `{ error, source }`. When `source` is `'dataSource'` the field already re-runs the bound source; when it is `'app'` (a `loading-error`), re-run your own fetch. Through a form controller: `form.setProp({ key, props: { loading: true, onRetry } })`.
+
+<ClientOnly>
+<DemoSingle name="tag-input" id="load-state" />
 </ClientOnly>
 
 ## Checkable + max-visible

@@ -1,5 +1,175 @@
 import { a as parseFieldPath, c as toODataClause, n as isPath, t as getFieldValue } from "./field-path-C92eGLg3.js";
-import { i as joinFilters, r as compileFilterPredicate, t as andFilters } from "./filter-eval-DIfU2EAn.js";
+//#region src/search/filter-eval.ts
+/**
+* Compile a devextreme filter expression (the array form `monoFilterBuilder`
+* emits via `changed({ type: 'array' })`) into a client-side row predicate, so a
+* built filter can narrow an array-backed grid the same way a remote store would
+* narrow from a `$filter`. Remote devextreme stores read the array directly; this
+* is the client-side mirror for sources that only accept a `(row) => boolean`.
+*
+* The grammar handled is exactly the subset `treeToArray` produces: `[field, op,
+* value]` triples, `'and'` / `'or'` joined groups, `['!', expr]` negation, with
+* `between` / `in` / blank checks already expanded to those primitives.
+*/
+function compileFilterPredicate(expr) {
+	if (!Array.isArray(expr) || expr.length === 0) return null;
+	const fn = build(expr);
+	return (row) => !!fn(row);
+}
+/** AND-combine two optional devextreme filter expressions (either may be null). */
+function andFilters(a, b) {
+	if (a == null && b == null) return null;
+	if (a == null) return b;
+	if (b == null) return a;
+	return [
+		a,
+		"and",
+		b
+	];
+}
+/**
+* AND-combine optional row predicates — the array-source twin of `andFilters`.
+*
+* Returns the lone member UNWRAPPED when only one is present, so a caller that
+* compares the result by reference (the grid's compose memo) sees the same
+* function back and does not treat "nothing changed" as a change.
+*/
+function andPredicates(...fns) {
+	const kept = fns.filter((f) => typeof f === "function");
+	if (!kept.length) return null;
+	if (kept.length === 1) return kept[0];
+	return (row, index) => kept.every((f) => f(row, index));
+}
+/**
+* Join expressions with `and` / `or`, dropping nulls and returning a lone member
+* unwrapped — devextreme's filter arrays interleave the join token between
+* members (`[a, 'or', b, 'or', c]`) rather than nesting pairs.
+*/
+function joinFilters(parts, join) {
+	const kept = parts.filter((p) => p != null);
+	if (!kept.length) return null;
+	if (kept.length === 1) return kept[0];
+	const out = [];
+	kept.forEach((p, i) => {
+		if (i) out.push(join);
+		out.push(p);
+	});
+	return out;
+}
+var CMP = new Set([
+	"=",
+	"<>",
+	">",
+	">=",
+	"<",
+	"<=",
+	"==",
+	"!=",
+	"eq",
+	"ne",
+	"gt",
+	"ge",
+	"lt",
+	"le"
+]);
+var STR = new Set([
+	"contains",
+	"notcontains",
+	"startswith",
+	"endswith"
+]);
+/** A triple is `[field, op, value]`; a group starts with an array member. */
+function isTriple(node) {
+	return Array.isArray(node) && node.length === 3 && typeof node[0] === "string" && typeof node[1] === "string" && (CMP.has(node[1]) || STR.has(String(node[1]).toLowerCase()));
+}
+function build(expr) {
+	if (!Array.isArray(expr) || expr.length === 0) return () => true;
+	if (expr.length === 2 && (expr[0] === "!" || expr[0] === "not")) {
+		const inner = build(expr[1]);
+		return (row) => !inner(row);
+	}
+	if (isTriple(expr)) {
+		const [field, op, value] = expr;
+		return (row) => match(getFieldValue(row, field), op, value);
+	}
+	const members = [];
+	const joins = [];
+	for (const part of expr) {
+		const t = typeof part === "string" ? part.toLowerCase() : "";
+		if (t === "and" || t === "&" || t === "or" || t === "|") {
+			joins.push(t === "or" || t === "|" ? "or" : "and");
+			continue;
+		}
+		members.push(part);
+	}
+	const fns = members.map((m) => build(m));
+	if (!fns.length) return () => true;
+	return (row) => {
+		let acc = fns[0](row);
+		for (let i = 0; i < joins.length; i += 1) {
+			const next = fns[i + 1](row);
+			acc = joins[i] === "or" ? acc || next : acc && next;
+		}
+		return acc;
+	};
+}
+/** Coerce two values for ordered comparison: numbers when both parse, else strings. */
+function pair(a, b) {
+	const na = Number(a);
+	const nb = Number(b);
+	if (a !== "" && b !== "" && !Number.isNaN(na) && !Number.isNaN(nb)) return [na, nb];
+	return [String(a ?? ""), String(b ?? "")];
+}
+/** OData keyword → the symbol token the switch below is written against. */
+var OP_ALIAS = {
+	eq: "=",
+	ne: "<>",
+	gt: ">",
+	ge: ">=",
+	lt: "<",
+	le: "<="
+};
+function match(raw, op, value) {
+	const lower = op.toLowerCase();
+	const token = OP_ALIAS[lower] ?? lower;
+	if (value === null || value === void 0) {
+		const blank = raw === null || raw === void 0 || raw === "";
+		return token === "=" || token === "==" ? blank : !blank;
+	}
+	const raws = String(raw ?? "");
+	const vals = String(value ?? "");
+	switch (token) {
+		case "=":
+		case "==": {
+			const [a, b] = pair(raw, value);
+			return a === b;
+		}
+		case "<>":
+		case "!=": {
+			const [a, b] = pair(raw, value);
+			return a !== b;
+		}
+		case ">":
+		case ">=":
+		case "<":
+		case "<=": {
+			const [a, b] = pair(raw, value);
+			if (typeof a === "string" && typeof b === "string") {}
+			switch (token) {
+				case ">": return a > b;
+				case ">=": return a >= b;
+				case "<": return a < b;
+				default: return a <= b;
+			}
+		}
+		case "contains": return raws.toLowerCase().includes(vals.toLowerCase());
+		case "notcontains": return !raws.toLowerCase().includes(vals.toLowerCase());
+		case "startswith": return raws.toLowerCase().startsWith(vals.toLowerCase());
+		case "endswith": return raws.toLowerCase().endsWith(vals.toLowerCase());
+		default: return false;
+	}
+}
+//#endregion
 //#region src/search/search-expr.ts
 /**
 * Search-expression entries: the fields a typed term is matched against.
@@ -570,4 +740,348 @@ var MonoSourceSearch = class {
 	}
 };
 //#endregion
-export { searchEntryFor as S, hasWildcardSearch as _, isFoldableSearch as a, plainSearchColumns as b, plainSearchFields as c, searchRemoteFilter as d, searchRowPredicate as f, hasCustomSearch as g, expandWildcard as h, SEARCH_FIELDS_KEYS as i, readSearchField as l, customRemoteClause as m, DEFAULT_SEARCH_OPERATION as n, mergeSearchFields as o, customPredicate as p, MonoSourceSearch as r, parseSearchValue as s, DEFAULT_SEARCH_FIELDS as t, resolveSearchFields as u, isWildcardPattern as v, resolveSearchEntries as x, normalizeSearchExpr as y };
+//#region src/utils/normalize-error.ts
+/** Fields worth reading off an object that is not an `Error`. */
+var MESSAGE_KEYS = [
+	"message",
+	"statusText",
+	"errorMessage",
+	"error",
+	"detail"
+];
+var text = (value) => typeof value === "string" && value.trim() ? value.trim() : "";
+var isObject = (value) => value !== null && typeof value === "object";
+/**
+* A readable message for `raw`, or `fallback` when nothing legible can be found.
+*
+* Never throws, and never returns an empty string — a caller rendering this into
+* an error bar has to have something to render, and a blank bar is worse than a
+* generic one.
+*/
+function normalizeError(raw, fallback = "Request failed") {
+	if (raw == null) return fallback;
+	if (raw instanceof Error) {
+		const own = text(raw.message);
+		if (own) return own;
+	} else {
+		if (typeof raw === "string") return text(raw) || fallback;
+		if (typeof raw === "number" || typeof raw === "boolean") return String(raw);
+	}
+	if (isObject(raw)) {
+		const obj = raw;
+		for (const key of MESSAGE_KEYS) {
+			const hit = text(obj[key]);
+			if (hit) return hit;
+		}
+		const response = obj.response;
+		if (isObject(response)) {
+			const nested = text(response.statusText) || text(response.message);
+			if (nested) return nested;
+		}
+		const status = errorStatus(obj);
+		if (status !== void 0 && status > 0) return `HTTP ${status}`;
+		if (raw instanceof Error) return text(raw.name) || fallback;
+		return fallback;
+	}
+	return text(String(raw)) || fallback;
+}
+/**
+* What the bar says for a status. English; an app puts its own language in
+* ONCE with `setErrorMessages()` rather than on every table.
+*/
+var DEFAULT_ERROR_MESSAGES = Object.freeze({
+	network: "Could not reach the server. Check your connection and try again.",
+	400: "The server rejected the request.",
+	401: "Your session has expired. Please sign in again.",
+	403: "You do not have permission to view this data.",
+	404: "The requested data could not be found.",
+	408: "The server took too long to respond. Please try again.",
+	409: "The request conflicts with the current state of the data.",
+	422: "The server could not process the request.",
+	429: "Too many requests. Please wait a moment and try again.",
+	500: "Something went wrong on the server. Please try again later.",
+	502: "The server is temporarily unavailable. Please try again later.",
+	503: "The server is temporarily unavailable. Please try again later.",
+	504: "The server took too long to respond. Please try again later.",
+	default: "Request failed"
+});
+var globalMessages = null;
+/**
+* App-wide wording, merged over the defaults; `null` restores them. A grid's own
+* `errorMessages` merges over this in turn, so a single table can still differ.
+*/
+function setErrorMessages(messages) {
+	globalMessages = messages ? { ...messages } : null;
+}
+/** Defaults ← app-wide ← `local`, same shape as the filter builder's `resolveTexts`. */
+function resolveErrorMessages(local) {
+	const merged = { ...DEFAULT_ERROR_MESSAGES };
+	for (const layer of [globalMessages, local]) {
+		if (!layer) continue;
+		for (const key of Object.keys(layer)) {
+			const value = layer[key];
+			if (typeof value === "string" && value.trim()) merged[key] = value;
+		}
+	}
+	return merged;
+}
+/**
+* The standard reason phrases. Not shown to anyone — they are what `describeError`
+* uses to recognise that an error's text is ONLY the phrase for its status
+* (`Error('Forbidden')` + `httpStatus: 403`), which adds nothing to the preset and
+* so is not a detail worth appending.
+*/
+var REASON_PHRASES = {
+	400: "Bad Request",
+	401: "Unauthorized",
+	402: "Payment Required",
+	403: "Forbidden",
+	404: "Not Found",
+	405: "Method Not Allowed",
+	408: "Request Timeout",
+	409: "Conflict",
+	410: "Gone",
+	412: "Precondition Failed",
+	413: "Payload Too Large",
+	415: "Unsupported Media Type",
+	422: "Unprocessable Entity",
+	429: "Too Many Requests",
+	500: "Internal Server Error",
+	501: "Not Implemented",
+	502: "Bad Gateway",
+	503: "Service Unavailable",
+	504: "Gateway Timeout"
+};
+/** Texts a transport mints for "no answer at all" — a status of 0 in words. */
+var NETWORK_TEXTS = [
+	"failed to fetch",
+	"networkerror when attempting to fetch resource",
+	"load failed",
+	"network error",
+	"unspecified network error",
+	"network connection timeout",
+	"network request failed"
+];
+var toStatus = (value) => {
+	if (value === null || value === void 0 || value === "") return void 0;
+	const n = Number(value);
+	return Number.isInteger(n) && n >= 0 && n < 1e3 ? n : void 0;
+};
+/**
+* The HTTP status an error carries, `0` for a network failure, `undefined` when
+* it has none.
+*
+* Reads the fields the common transports use — devextreme's `httpStatus`, a
+* fetch `Response` / axios error's `status` and `response.status`, ofetch's
+* `statusCode`, an OData error body's numeric `code` — on an `Error` instance as
+* readily as on a plain object, since devextreme `extend()`s them onto an
+* `Error`.
+*/
+function errorStatus(raw) {
+	if (!isObject(raw)) return void 0;
+	const response = isObject(raw.response) ? raw.response : void 0;
+	const direct = toStatus(raw.httpStatus) ?? toStatus(raw.status) ?? toStatus(raw.statusCode) ?? toStatus(response?.status) ?? toStatus(response?.statusCode);
+	if (direct !== void 0) return direct;
+	const code = toStatus((isObject(raw.errorDetails) ? raw.errorDetails : void 0)?.code);
+	if (code !== void 0 && code >= 400) return code;
+	const own = (raw instanceof Error ? text(raw.message) : text(raw.message)).toLowerCase();
+	if (own && NETWORK_TEXTS.some((t) => own.includes(t))) return 0;
+}
+/** A JSON response body handed over as text (an XHR's `responseText`), parsed; else undefined. */
+function parseBody(value) {
+	if (typeof value !== "string") return void 0;
+	const s = value.trim();
+	if (!s.startsWith("{") && !s.startsWith("[")) return void 0;
+	try {
+		return JSON.parse(s);
+	} catch {
+		return;
+	}
+}
+/** The "same message" key: case, spacing and trailing punctuation do not make two texts different. */
+var messageKey = (value) => value.toLowerCase().replace(/\s+/g, " ").replace(/[\s.!:;,]+$/, "").trim();
+/**
+* Keep each message once. Two texts are the same message when they match after
+* {@link messageKey}, and a text another kept one already CONTAINS adds nothing
+* ("Not found" next to "Not found: Order 42") — the longer, more specific one wins
+* and keeps its place in the order the messages were found.
+*/
+function uniqueMessages(found) {
+	const kept = [];
+	for (const t of found) {
+		const key = messageKey(t);
+		if (!key) continue;
+		if (kept.some((k) => k.key.includes(key))) continue;
+		const swallowed = kept.findIndex((k) => key.includes(k.key));
+		if (swallowed >= 0) {
+			kept[swallowed] = {
+				text: t,
+				key
+			};
+			for (let i = kept.length - 1; i > swallowed; i--) if (key.includes(kept[i].key)) kept.splice(i, 1);
+			continue;
+		}
+		kept.push({
+			text: t,
+			key
+		});
+	}
+	return kept.map((k) => k.text);
+}
+/**
+* Every message an error carries, combined the way `monoFetch`'s
+* `extractErrorMessage` does it: each key whose name contains "message"
+* (`message`, `errorMessage`, `Message`, …) holding text — or OData's
+* `{ message: { value } }` — at any depth up to 3, plus a JSON body still in
+* `responseText` / `responseJSON` / `response`, plus an `Error`'s own
+* (non-enumerable) `message`. The usual body fields `detail` / `title` and a
+* plain-text `response.data` count too.
+*
+* Deduplicated by {@link uniqueMessages}, transport boilerplate ("Bad Request",
+* "Failed to fetch") dropped, in the order found.
+*/
+function collectErrorMessages(raw, status = errorStatus(raw)) {
+	const found = [];
+	const add = (value) => {
+		const t = text(value);
+		if (t) found.push(t);
+	};
+	const seen = /* @__PURE__ */ new Set();
+	const visit = (val, depth) => {
+		if (!isObject(val) || depth > 3 || seen.has(val)) return;
+		seen.add(val);
+		if (val instanceof Error) add(val.message);
+		for (const [k, v] of Object.entries(val)) {
+			if (/message/i.test(k)) {
+				if (typeof v === "string") add(v);
+				else if (isObject(v) && typeof v.value === "string") add(v.value);
+			} else if (k === "detail" || k === "title" || k === "errorDetail") add(v);
+			else if (k === "responseText" || k === "response" || k === "data" || k === "_data") {
+				if (typeof v === "string") {
+					const body = parseBody(v);
+					if (body !== void 0) visit(body, depth + 1);
+					else if (k !== "response") add(v);
+				}
+			}
+			if (isObject(v)) visit(v, depth + 1);
+		}
+	};
+	if (typeof raw === "string") add(raw);
+	else visit(raw, 0);
+	return uniqueMessages(found).filter((t) => !isBoilerplate(t, status));
+}
+/** Is `value` nothing more than the reason phrase / a generic label for `status`? */
+function isBoilerplate(value, status) {
+	const v = value.toLowerCase();
+	if (!v || v === "error" || v === "unknown error" || v === "request failed") return true;
+	if (/^http\s*\d{3}$/.test(v)) return true;
+	if (NETWORK_TEXTS.some((t) => v.includes(t))) return true;
+	if (status !== void 0) {
+		const phrase = REASON_PHRASES[status]?.toLowerCase();
+		if (phrase && (v === phrase || v === `${status} ${phrase}` || v === `${status}`)) return true;
+		if (v === String(status)) return true;
+	}
+	return Object.values(REASON_PHRASES).some((p) => p.toLowerCase() === v);
+}
+/**
+* The one line a field shows for `err`: what the server said, every distinct
+* message combined (`monoFetch` style), or the headline when it said nothing.
+*/
+function errorText(err, separator = " · ") {
+	return err.messages.length ? err.messages.join(separator) : err.message;
+}
+/** The hover text: the headline, then everything the server said, each once. */
+function errorTitle(err) {
+	return uniqueMessages([err.message, ...err.messages]).join("\n");
+}
+/**
+* The line a person should read for `raw`.
+*
+* Order: a preset for the status (`'network'` for 0) → the error's own text →
+* `messages.default`. When a preset is the headline, whatever the server said
+* on top of the status becomes `detail`; without a preset, the raw text IS the
+* headline and only a distinct server body is a detail. Never throws, never
+* returns an empty `message`.
+*/
+function describeError(raw, messages) {
+	const texts = resolveErrorMessages(messages);
+	const status = errorStatus(raw);
+	const fallback = texts.default || DEFAULT_ERROR_MESSAGES.default;
+	const rawText = normalizeError(raw, fallback);
+	const preset = status === void 0 ? void 0 : status === 0 ? texts.network : texts[status];
+	const said = collectErrorMessages(raw, status).filter((m) => m !== preset);
+	if (preset) {
+		const out = {
+			message: preset,
+			status,
+			messages: said
+		};
+		if (said.length) out.detail = said.join("\n\n");
+		return out;
+	}
+	const message = rawText || fallback;
+	const rest = said.filter((m) => messageKey(m) !== messageKey(message));
+	const out = {
+		message,
+		messages: said
+	};
+	if (status !== void 0) out.status = status;
+	if (rest.length) out.detail = rest.join("\n\n");
+	return out;
+}
+/**
+* A load a newer load superseded (devextreme rejects it with `'canceled'`).
+* Not a failure — nothing should be shown for it.
+*/
+function isCanceled(err) {
+	if (!err) return false;
+	return err === "canceled" || err.name === "canceled" || err.message === "canceled" || err.__id === "canceled";
+}
+//#endregion
+//#region src/composables/reactive.ts
+/**
+* Unwrap a `ref()` / `computed()` wrapper and a `reactive()` proxy to the raw
+* target underneath. Returns the value unchanged when it isn't reactive.
+*/
+function unwrapReactive(value) {
+	let out = value;
+	if (out && typeof out === "object" && out.__v_isRef) out = out.value;
+	if (out && typeof out === "object" && out.__v_raw) out = out.__v_raw;
+	return out;
+}
+/**
+* Read a {@link MaybeReactive} option: call a getter, unwrap a ref/computed or a
+* reactive proxy, unbox a plain `{ value }`. Never caches — the caller decides
+* when "now" is.
+*/
+function resolveMaybeReactive(option) {
+	if (option === void 0 || option === null) return void 0;
+	if (typeof option === "function") return option();
+	const raw = unwrapReactive(option);
+	if (raw && typeof raw === "object") {
+		const keys = Object.keys(raw);
+		if (keys.length === 1 && keys[0] === "value") return unwrapReactive(raw.value);
+	}
+	return raw;
+}
+/**
+* {@link unwrapReactive}, then — for an **array** — unwrap each element too.
+*
+* Reading an index off a deep-reactive array yields a proxy of that element, so
+* unwrapping only the container still leaves proxies inside. One level of
+* elements is all the value models here need; this deliberately does not recurse
+* into nested objects, which would rewrite data the consumer owns.
+*/
+function unwrapReactiveDeep(value) {
+	const out = unwrapReactive(value);
+	if (!Array.isArray(out)) return out;
+	let changed = false;
+	const items = out.map((item) => {
+		const raw = unwrapReactive(item);
+		if (raw !== item) changed = true;
+		return raw;
+	});
+	return changed ? items : out;
+}
+//#endregion
+export { compileFilterPredicate as A, isWildcardPattern as C, searchEntryFor as D, resolveSearchEntries as E, andFilters as O, hasWildcardSearch as S, plainSearchColumns as T, searchRowPredicate as _, describeError as a, expandWildcard as b, errorTitle as c, resolveErrorMessages as d, setErrorMessages as f, resolveSearchFields as g, mergeSearchFields as h, DEFAULT_ERROR_MESSAGES as i, joinFilters as j, andPredicates as k, isCanceled as l, MonoSourceSearch as m, unwrapReactive as n, errorStatus as o, DEFAULT_SEARCH_FIELDS as p, unwrapReactiveDeep as r, errorText as s, resolveMaybeReactive as t, normalizeError as u, customPredicate as v, normalizeSearchExpr as w, hasCustomSearch as x, customRemoteClause as y };

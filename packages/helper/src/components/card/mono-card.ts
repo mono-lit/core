@@ -70,7 +70,11 @@ export class MonoCard extends MonoCardCore(LitElement) {
     if (!this._hasHeader) return nothing
 
     return html`
-      <div class=${this._cls('mono-card-header', 'header')} mono-header>
+      <div
+        class=${this._cls('mono-card-header', 'header')}
+        mono-header
+        ?mono-no-subtitle=${this._noSubtitle}
+      >
         ${this._hasIcon && !this._hasHeaderSlot
           ? // slot="header" replaces the icon too — the whole left side of the header
             html`

@@ -1,4 +1,5 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit'
+import { describeError, isCanceled, type DescribedError } from '../utils/normalize-error'
 
 /**
  * Minimal structural shape of a devextreme DataSource. Declared locally so
@@ -60,6 +61,12 @@ export class DataSourceController<T = unknown> implements ReactiveController {
   private _loadingMore = false
   private _isLastPage = false
 
+  // Network state the field paints: the last failure (described for a person),
+  // whether the source has answered at least once, and an in-flight retry.
+  private _error: DescribedError | null = null
+  private _hasLoaded = false
+  private _retrying = false
+
   // Array-mode paging: how many of `items` are currently revealed.
   private _visibleCount: number
 
@@ -100,6 +107,9 @@ export class DataSourceController<T = unknown> implements ReactiveController {
 
     this._detach()
     this._bound = ds
+    this._error = null
+    this._retrying = false
+    this._hasLoaded = !!ds && (ds.items?.() ?? []).length > 0
 
     if (!ds) {
       this._dsItems = []
@@ -111,7 +121,7 @@ export class DataSourceController<T = unknown> implements ReactiveController {
 
     ds.on('changed', this._onChanged)
     ds.on('loadingChanged', this._onLoadingChanged)
-    ds.on('loadError', this._onLoadingChanged)
+    ds.on('loadError', this._onLoadError)
 
     this._sync() // seed from any already-loaded items
     this.maybeImmediateLoad()
@@ -176,13 +186,46 @@ export class DataSourceController<T = unknown> implements ReactiveController {
       await Promise.resolve(ds.load())
       this._dsItems = [...this._dsItems, ...(ds.items?.() ?? [])]
       this._isLastPage = ds.isLastPage?.() ?? false
-    } catch {
+      this._error = null
+    } catch (err) {
       ds.pageIndex(current) // roll back on failure
+      this.setError(err)
     } finally {
       this._loadingMore = false
       this._internalLoad = false
       this._changed()
     }
+  }
+
+  /**
+   * Re-run the request after a failure. Reloads the source as it stands, so a
+   * failed search is retried with the same query. While it runs the field is
+   * {@link busy} again.
+   *
+   * `load` replaces the plain `ds.load()` — a host whose failed request was a
+   * search passes one that clears the query on the source and reloads.
+   */
+  async retry(load?: () => unknown): Promise<void> {
+    if (!this._bound) return
+    this._error = null
+    this._retrying = true
+    this._changed()
+    try {
+      await this._loadFirstPage(load)
+    } finally {
+      this._retrying = false
+      this._changed()
+    }
+  }
+
+  /**
+   * Record a failure from a request the host drove itself (e.g. a server
+   * select-all drain). Cancelled loads are ignored.
+   */
+  setError(raw: unknown): void {
+    if (isCanceled(raw)) return
+    this._error = describeError(raw)
+    this._changed()
   }
 
   // --- reactive reads ------------------------------------------------------
@@ -208,6 +251,20 @@ export class DataSourceController<T = unknown> implements ReactiveController {
     return this._loadingMore
   }
 
+  /**
+   * The field must be locked: the FIRST load (or a retry) is in flight. A
+   * search / filter reload after the source has answered once does not count —
+   * the person is typing into the field and it must stay usable.
+   */
+  get busy(): boolean {
+    return !!this._bound && ((this._dsLoading && !this._hasLoaded) || this._retrying)
+  }
+
+  /** The last load failure, described for a person; null once a load succeeds. */
+  get error(): DescribedError | null {
+    return this._error
+  }
+
   /** load-more is driving a plain `items` array (no DataSource bound). */
   get isArrayLoadMore(): boolean {
     return !this.opts.getDataSource() && !!this.opts.getLoadMoreMode()
@@ -226,6 +283,7 @@ export class DataSourceController<T = unknown> implements ReactiveController {
   private readonly _onChanged = (): void => {
     // Our own paged loads handle accumulation inline; ignore their echo.
     if (this._internalLoad) return
+    this._markLoaded()
 
     if (this.opts.getLoadMoreMode()) {
       // External reload (e.g. consumer changed the filter) → restart paging
@@ -246,6 +304,17 @@ export class DataSourceController<T = unknown> implements ReactiveController {
     this._changed()
   }
 
+  private readonly _onLoadError = (err?: unknown): void => {
+    this._dsLoading = this._bound?.isLoading?.() ?? false
+    this.setError(err ?? new Error('Request failed'))
+  }
+
+  /** A load answered: the source is usable and any earlier failure is over. */
+  private _markLoaded(): void {
+    this._hasLoaded = true
+    this._error = null
+  }
+
   private _sync(): void {
     const ds = this._bound
     this._dsItems = ds ? [...(ds.items?.() ?? [])] : []
@@ -255,7 +324,7 @@ export class DataSourceController<T = unknown> implements ReactiveController {
   }
 
   /** Load the first page, replacing the accumulated list. */
-  private async _loadFirstPage(): Promise<void> {
+  private async _loadFirstPage(load?: () => unknown): Promise<void> {
     const ds = this._bound
     if (!ds) return
 
@@ -267,11 +336,13 @@ export class DataSourceController<T = unknown> implements ReactiveController {
         ds.paginate?.(true)
         ds.pageIndex?.(0)
       }
-      await Promise.resolve(ds.load())
+      await Promise.resolve(load ? load() : ds.load())
       this._dsItems = [...(ds.items?.() ?? [])]
       this._isLastPage = ds.isLastPage?.() ?? false
-    } catch {
-      // keep whatever was already shown
+      this._markLoaded()
+    } catch (err) {
+      // Keep whatever was already shown; the field paints the failure.
+      this.setError(err)
     } finally {
       this._dsLoading = ds.isLoading?.() ?? false
       this._internalLoad = false
@@ -284,7 +355,7 @@ export class DataSourceController<T = unknown> implements ReactiveController {
     if (!ds) return
     ds.off('changed', this._onChanged)
     ds.off('loadingChanged', this._onLoadingChanged)
-    ds.off('loadError', this._onLoadingChanged)
+    ds.off('loadError', this._onLoadError)
     this._bound = null
   }
 

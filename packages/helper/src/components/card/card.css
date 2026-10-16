@@ -377,6 +377,13 @@ mono-card {
   padding-inline: var(--_mono-card-padding);
 }
 
+/* No subtitle: the title is a single line beside a taller icon chip, so
+   top-aligning pinned it to the chip's top edge. Centre the row instead.
+   With a subtitle the row stays top-aligned (icon level with the title). */
+:where([mono-card]) > [mono-header][mono-no-subtitle] {
+  align-items: center;
+}
+
 :where([mono-card]) > [mono-header] > [mono-header-content] {
   display: grid;
   align-content: start;

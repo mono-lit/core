@@ -1,4 +1,5 @@
 import type { PanelSizeProps } from '../../composables/css-size'
+import type { DescribedError } from '../../utils/normalize-error'
 
 /**
  * Sizes the popup PANEL only, independent of the field — the same object
@@ -293,6 +294,20 @@ export interface SelectProps extends VisibilityProps {
   /** Shows a clear button to reset the selected value. */
   clearable?: boolean
 
+  /** Show "Loading…" + a spinner and lock the select — the app is still fetching its options. */
+  loading?: boolean
+  /** Text shown while loading (default `'Loading…'`). */
+  loadingText?: string
+  'loading-text'?: string
+  loadingtext?: string
+  /** The app's fetch failed: a string or the error itself. Painted with ↻, which fires `retry`. */
+  loadingError?: unknown
+  'loading-error'?: unknown
+  loadingerror?: unknown
+  /** Accessible name of the ↻ button (default `'Retry'`). */
+  retryLabel?: string
+  'retry-label'?: string
+
   /** Accessible label used when no visible label is present. */
   ariaLabelText?: string
   ariaLabel?: string
@@ -323,13 +338,23 @@ export interface SelectProps extends VisibilityProps {
   'css-class'?: SelectCssClass | string
 }
 
+/**
+ * ↻ was pressed on a failed field. `source: 'dataSource'` — the bound source
+ * failed and is already being re-run; `'app'` — it was `loading-error`, so the
+ * app re-runs its own fetch.
+ */
+export type MonoRetryEvent = CustomEvent<{ error: DescribedError; source: 'app' | 'dataSource' }>
+
 export interface SelectEvents {
   // The plain names — what a template listens to (`@change`, `@click`, …).
   change: SelectModelEvent
   clear: SelectModelEvent
+  retry: MonoRetryEvent
   // Kept as aliases for existing code: the `mno-` prefix and its camel twin.
   'mno-change': SelectModelEvent
   mnoChange: SelectModelEvent
   'mno-clear': SelectModelEvent
   mnoClear: SelectModelEvent
+  'mno-retry': MonoRetryEvent
+  mnoRetry: MonoRetryEvent
 }

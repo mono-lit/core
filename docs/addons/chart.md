@@ -92,6 +92,16 @@ With `groupBy` and explicit `series`, a remote **OData** store is not drained at
 <DemoSingle name="chart" id="datasource" />
 </ClientOnly>
 
+### Loading & errors
+
+While the controller's **first** load (or a retry) is in flight, the chart shows a spinner and `loading-text` over the still-sized canvas. A later reload only dims the plot.
+
+When a load fails, the failure lands on `chart.error` (a `describeError` result). The element shows what the server said (every distinct message, combined like `monoFetch` does; the generic text for the status when it said nothing) with a ↻ (`retry-label`) that calls `chart.retry()`, and outlines the plot in the invalid colour. Restyle it through `--mono-chart-ds-error-border`, `--mono-chart-ds-error-ring` and `--mono-chart-ds-error-text`. This covers drains, `reload()`, `odata` fetches and the source's own `loadError`.
+
+<ClientOnly>
+<DemoSingle name="chart" id="load-state" />
+</ClientOnly>
+
 ## Server-side roll-up (`$apply`)
 
 Draining is the wrong shape for a summary chart: a country-total over 100k rows would be ~1000 paged requests carrying every column, to produce a dozen bars. Point the controller at the endpoint with `odata` and give it an `aggregate` — the server groups with OData's `$apply` and returns one row per bucket, in a single request. A filter folds *inside* the clause, so it's applied before the aggregation.
@@ -243,6 +253,8 @@ const chart = controlMonoChart(source, options)
 | --- | --- |
 | `items` | Rows currently backing the chart |
 | `loading` | True while the source loads |
+| `error` / `hasLoaded` | The last load failure (`{ message, status?, detail? }`, null once a load succeeds) / whether the source has answered yet |
+| `retry()` | `reload()` that never rejects — the failure lands on `error` |
 | `data()` / `options()` | The projected chart.js data / merged options |
 | `props()` / `setProps(patch)` | Read / merge the central element props |
 | `setType` / `setSeries` / `setColors` / `setData` | Reproject |

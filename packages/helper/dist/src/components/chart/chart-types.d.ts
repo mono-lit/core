@@ -2,6 +2,7 @@ import { CssSizeValue } from '../../composables/css-size';
 import { MonoGridSource } from '../table/mono-data-grid.js';
 import { MaybeReactive } from '../../composables/reactive.js';
 import { MonoDataSourceOptions, MonoOdataOptions } from '../../utils/data-source-options.js';
+import { DescribedError } from '../../utils/normalize-error.js';
 /** Chart.js chart types the addon exposes. */
 export type MonoChartType = 'bar' | 'line' | 'pie' | 'doughnut' | 'radar' | 'polarArea' | 'scatter' | 'bubble';
 /** Aggregate applied to a series' values when rows are bucketed by `groupBy`. */
@@ -200,6 +201,13 @@ export interface MonoChartController<T = any> {
     readonly items: T[];
     /** True while the bound source is loading. */
     loading: boolean;
+    /**
+     * The last load failure, described for a person (`describeError`); null once
+     * a load succeeds. The chart element paints it with a ↻ that calls {@link retry}.
+     */
+    readonly error: DescribedError | null;
+    /** True once the source has answered at least once (or raw data was set). */
+    readonly hasLoaded: boolean;
     /** Current chart type. */
     type: MonoChartType;
     /** The bound source, or null. */
@@ -234,6 +242,8 @@ export interface MonoChartController<T = any> {
     reload(): Promise<void>;
     /** Alias of `reload()` — the call to make after the reactive state behind a base getter changed. */
     refresh(): Promise<void>;
+    /** `reload()` after a failure; never rejects (the failure lands on {@link error}). */
+    retry(): Promise<void>;
     /** Replace `dataSourceOptions` and reload. */
     setDataSourceOptions(next: MaybeReactive<MonoDataSourceOptions> | undefined): Promise<void>;
     /** Replace `odataOptions` and reload. */
@@ -277,6 +287,15 @@ export interface ChartCssClass {
  * itself, so setting them *from* the controller would be circular.
  */
 export interface MonoChartProps {
+    /** Spinner + `loadingText` over the plot — the app is still fetching what it shows. */
+    loading?: boolean;
+    loadingText?: string;
+    'loading-text'?: string;
+    /** The app's fetch failed: a string or the error itself. Painted with ↻, which fires `retry`. */
+    loadingError?: unknown;
+    'loading-error'?: unknown;
+    retryLabel?: string;
+    'retry-label'?: string;
     /**
      * Chart type. Ignored by the presets, which fix their own. When a controller
      * is bound this overrides the controller's `type`.

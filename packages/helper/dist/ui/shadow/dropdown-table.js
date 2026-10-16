@@ -5,9 +5,9 @@ import { n as detachEventHandlers, t as applyProps } from "../../element-props-C
 import { t as MonoFormControlCore } from "../../form-control-core-B8d7k6vk.js";
 import { n as applyPopupPlacement, r as computePopupPlacement, t as PopupPortalController } from "../../popup-portal-BziRX1yG.js";
 import { t as createNotifier } from "../../notifier-CE4yxMUQ.js";
-import { t as monoDataGrid } from "../../mono-data-grid-CLBK8clE.js";
+import { t as monoDataGrid } from "../../mono-data-grid-CjkEqxgE.js";
 import { n as resolveChipLimit, r as visibleChipCap, t as ChipStripController } from "../../chip-strip-Cw3gyz0q.js";
-import { n as chevronIcon, r as closeIcon, t as caretIcon } from "../../field-icons-BoOG6KrL.js";
+import { n as chevronIcon, r as closeIcon, t as caretIcon } from "../../field-icons-DELrSdqJ.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { property } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";

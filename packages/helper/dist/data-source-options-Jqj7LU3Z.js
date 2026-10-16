@@ -1,7 +1,7 @@
 import { n as isPath, r as mergePatch, t as getFieldValue } from "./field-path-C92eGLg3.js";
 import { i as searchFilterOf, s as flattenLeaves, t as isDataSourceLike } from "./data-source-read-DL88aH8t.js";
 import { n as andPredicates, r as compileFilterPredicate, t as andFilters } from "./filter-eval-DIfU2EAn.js";
-import { o as mergeSearchFields } from "./data-search-Bwo5bg8K.js";
+import { h as mergeSearchFields } from "./normalize-error-Gcgmgh5i.js";
 import { t as resolveMaybeReactive } from "./reactive-D3EERqgO.js";
 import { s as odataStringToArray, t as arrayToODataString } from "./filter-odata-C1vSGZaY.js";
 //#region src/components/table/array-source.ts

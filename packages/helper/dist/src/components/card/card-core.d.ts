@@ -55,6 +55,7 @@ export declare class MonoCardCoreInterface {
     protected get _isInteractive(): boolean;
     protected get _isDisabled(): boolean;
     protected get _hasHeader(): boolean;
+    protected get _noSubtitle(): boolean;
     protected get _cardClasses(): string;
     protected _handleClick(event: MouseEvent): void;
     protected _handleKeyDown(event: KeyboardEvent): void;

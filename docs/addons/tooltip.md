@@ -105,11 +105,11 @@ While our tooltip is open, a native `title` is moved aside so the browser's own 
 | `trigger` | Opens on | Closes on |
 | --- | --- | --- |
 | `'hover'` | pointer enters (mouse and pen; a touch tap counts as a click) | pointer leaves |
-| `'focus'` | **keyboard** focus (`:focus-visible`) | blur |
+| `'focus'` | **keyboard** focus (`:focus-visible`; clicking into a text field counts too) | blur |
 | `'click'` | click on the anchor | a second click, or a click outside |
 | `'manual'` | `tip.show()` | `tip.hide()` |
 
-The default is `['hover', 'focus']`. `Escape` closes the tooltip; if a modal is open underneath, the next `Escape` closes the modal. With `hideOnClick` (on by default), clicking the anchor closes a hover tooltip, and it stays closed until the pointer leaves the anchor.
+The default is `['hover', 'focus']`. `Escape` closes the tooltip; if a modal is open underneath, the next `Escape` closes the modal. With `hideOnClick` (on by default), clicking the anchor closes a hover tooltip, and it stays closed until the pointer leaves the anchor. It never closes a tooltip that focus is holding open.
 
 ## Mono components (light + shadow)
 

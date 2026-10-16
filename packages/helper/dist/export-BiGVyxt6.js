@@ -1,6 +1,6 @@
 import { a as stripDirectives, d as __toESM, i as escapeCellText, n as parseMarkdown, r as encodeDirective, u as __commonJSMin } from "./markdown-DfqrfOJN.js";
-import { n as unwrapReactive } from "./reactive-BHsqVjRh.js";
-import { n as isReadableSource, r as readAllRows } from "./data-source-read-CUX-lgrQ.js";
+import { n as unwrapReactive } from "./reactive-Di3mTMnV.js";
+import { n as isReadableSource, r as readAllRows } from "./data-source-read-B4DGp6UQ.js";
 //#region src/export/download.ts
 /**
 * Browser download helper. Kept separate (and DOM-guarded) so the report engine

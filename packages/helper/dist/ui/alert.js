@@ -2,7 +2,7 @@ import { t as customElement } from "../mono-element-B0kP_96P.js";
 import { a as defineHybridPropAliases, i as defineHybridPropAlias, r as booleanStringConverter, t as __decorate } from "../decorate-DEXtNagw.js";
 import { a as parkDetachedNodes, n as bucketHasContent, o as placeLightSlots, r as captureLightSlots } from "../light-slots-DW1WgfgT.js";
 import { t as isIconifyClass } from "../icon-dVhYJUIH.js";
-import { r as closeIcon } from "../field-icons-BoOG6KrL.js";
+import { r as closeIcon } from "../field-icons-DELrSdqJ.js";
 import { LitElement, html, nothing, unsafeCSS } from "lit";
 import { property, state } from "lit/decorators.js";
 //#region src/components/alert/alert-core.ts

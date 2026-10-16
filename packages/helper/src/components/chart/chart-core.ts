@@ -15,6 +15,9 @@ import {
 import { toCssSize, type CssSizeValue } from '../../composables/css-size'
 import { applyProps, detachEventHandlers } from '../../composables/element-props'
 import { monoPendingGrace } from '../../composables/mono-skeleton'
+import { refreshIcon, spinnerIcon } from '../../composables/field-icons'
+import { describeError, errorText, errorTitle, type DescribedError } from '../../utils/normalize-error'
+import { dispatchMonoEvent } from '../../composables/mono-event'
 import type {
   ChartCssClass,
   MonoChartColor,
@@ -132,7 +135,7 @@ export const MonoChartCore = <T extends Constructor<LitElement>>(superClass: T) 
   class MonoChartCoreClass extends superClass {
     constructor(...args: any[]) {
       super(...args)
-      defineHybridPropAliases(this, ['dataChart', 'chartOptions', 'aspectRatio', 'cssClass'])
+      defineHybridPropAliases(this, ['dataChart', 'chartOptions', 'aspectRatio', 'cssClass', 'loadingText', 'loadingError'])
       // Renamed controller binding — `:control-chart` / `:controlChart` alias the
       // canonical `dataChart` (no breaking change; both spellings work).
       defineHybridPropAlias(this, 'controlChart', 'dataChart')
@@ -221,6 +224,31 @@ export const MonoChartCore = <T extends Constructor<LitElement>>(superClass: T) 
 
     @property({ attribute: false })
     cssClassName = ''
+
+    /** Shown over the chart while the bound source answers its first request (or a retry). */
+    @property({ type: String, attribute: 'loading-text' })
+    loadingText = 'Loading…'
+
+    /** Accessible name of the ↻ button shown after the source failed. */
+    @property({ type: String, attribute: 'retry-label' })
+    retryLabel = 'Retry'
+
+    /**
+     * The app is still fetching what this chart shows: the spinner + `loadingText`
+     * cover the plot exactly as during the controller's first load.
+     */
+    @property({ converter: booleanStringConverter })
+    loading = false
+
+    /**
+     * The app's own fetch failed: a string, or the error itself. Painted like a
+     * failed load; ↻ fires `retry` for the app to re-run its fetch.
+     */
+    @property({ attribute: 'loading-error' })
+    loadingError: unknown = null
+
+    /** `loading-error`, described — null when the app reports no failure. */
+    protected _appFailure: DescribedError | null = null
 
     /** Set when the optional peer is missing or chart.js threw. */
     @state()
@@ -372,6 +400,10 @@ export const MonoChartCore = <T extends Constructor<LitElement>>(superClass: T) 
     }
 
     override willUpdate(changed: Map<string, unknown>): void {
+      if (changed.has('loadingError')) {
+        const v = this.loadingError
+        this._appFailure = v == null || v === false || v === '' ? null : describeError(v === true ? undefined : v)
+      }
       // @ts-ignore — optional on the generic base
       super.willUpdate?.(changed)
       if (changed.has('dataChart')) this._subscribe()
@@ -452,6 +484,59 @@ export const MonoChartCore = <T extends Constructor<LitElement>>(superClass: T) 
 
     protected get _loading(): boolean {
       return !!this.dataChart?.loading
+    }
+
+    /** The FIRST load (or a retry) is in flight — nothing to show yet, so a spinner. */
+    protected get _dsBusy(): boolean {
+      if (this.loading) return true
+      const c = this.dataChart
+      return !this.data && !!c && c.loading && !c.hasLoaded && !c.error
+    }
+
+    /** The app's `loading-error`, else the controller's failed load (the peer-load `_error` is separate). */
+    protected get _dsError(): DescribedError | null {
+      if (this.loading) return null
+      return this._appFailure ?? (this.data ? null : this.dataChart?.error ?? null)
+    }
+
+    /** ↻: always announced as `retry`; the controller's own failure is also re-run here. */
+    private _onRetry = (event: Event): void => {
+      event.stopPropagation()
+      const error = this._dsError
+      if (!error) return
+      const fromApp = !!this._appFailure
+      dispatchMonoEvent(this, 'retry', { error, source: fromApp ? 'app' : 'dataSource' })
+      if (!fromApp) void this.dataChart?.retry()
+    }
+
+    /** Spinner over the first load; the failure + ↻ after one failed. */
+    protected _renderSourceState(): TemplateResult | typeof nothing {
+      const err = this._dsError
+      if (err) {
+        return html`
+          <div class="mono-chart-state" mono-ds-state="error" role="alert">
+            <span class="mono-chart-state-text" title=${errorTitle(err)}>${errorText(err)}</span>
+            <button
+              type="button"
+              mono-ds-retry
+              aria-label=${this.retryLabel}
+              title=${this.retryLabel}
+              @click=${this._onRetry}
+            >
+              ${refreshIcon()}
+            </button>
+          </div>
+        `
+      }
+      if (this._dsBusy) {
+        return html`
+          <div class="mono-chart-state" mono-ds-state="loading" role="status">
+            <span mono-ds-spinner>${spinnerIcon()}</span>
+            <span class="mono-chart-state-text">${this.loadingText}</span>
+          </div>
+        `
+      }
+      return nothing
     }
 
     protected get _empty(): boolean {
@@ -910,7 +995,12 @@ export const MonoChartCore = <T extends Constructor<LitElement>>(superClass: T) 
 
     protected renderChart(): TemplateResult {
       return html`
-        <div class=${this._rootClasses}>
+        <div
+          class=${this._rootClasses}
+          ?mono-ds-loading=${this._dsBusy}
+          ?mono-ds-error=${!!this._dsError}
+          aria-busy=${this._dsBusy ? 'true' : nothing}
+        >
           ${this._error
             ? html`<div class=${this._cls('mono-chart-message error', 'message')} role="alert">
                 ${this._error}
@@ -919,6 +1009,7 @@ export const MonoChartCore = <T extends Constructor<LitElement>>(superClass: T) 
           <div class="mono-chart-canvas-wrap" style=${styleMap(this._wrapStyle())}>
             <canvas class=${this._cls('', 'canvas')} role="img"></canvas>
             <div class="mono-chart-tooltip" role="tooltip" aria-hidden="true"></div>
+            ${this._renderSourceState()}
           </div>
         </div>
       `

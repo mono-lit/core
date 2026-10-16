@@ -1,12 +1,14 @@
 import { a as __decorate, c as defineHybridPropAlias, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration, u as numberStringConverter, v as monoPendingGrace } from "../../hydration-flush-RB5Tz5nl.js";
+import { t as dispatchMonoEvent } from "../../mono-event-Bi1qP9uN.js";
 import { n as toCssSize } from "../../css-size-DhHSVZJK.js";
 import { n as detachEventHandlers, t as applyProps } from "../../element-props-CLB6yvbm.js";
 import { t as createNotifier } from "../../notifier-CE4yxMUQ.js";
 import { n as isPath, t as getFieldValue } from "../../field-path-C92eGLg3.js";
-import { b as andPredicates, x as compileFilterPredicate, y as andFilters } from "../../reactive-BHsqVjRh.js";
-import { r as readAllRows } from "../../data-source-read-CUX-lgrQ.js";
-import { a as resolveDataSourceOptions, d as createApplyGate, f as isRolledUp, h as monoArraySource, i as normalizeSortList, n as extraLoadOptions, o as toList, p as loadApply, r as mergeDataSourceOptions, u as summaryFilterOf } from "../../data-source-options-BTpfrOZ_.js";
+import { A as compileFilterPredicate, O as andFilters, a as describeError, c as errorTitle, k as andPredicates, l as isCanceled, s as errorText } from "../../reactive-Di3mTMnV.js";
+import { r as readAllRows } from "../../data-source-read-B4DGp6UQ.js";
+import { a as resolveDataSourceOptions, d as createApplyGate, f as isRolledUp, h as monoArraySource, i as normalizeSortList, n as extraLoadOptions, o as toList, p as loadApply, r as mergeDataSourceOptions, u as summaryFilterOf } from "../../data-source-options-CP-X62Pa.js";
 import { t as arrayToODataString } from "../../filter-odata-C1vSGZaY.js";
+import { a as spinnerIcon, i as refreshIcon } from "../../field-icons-DELrSdqJ.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { property, query, state } from "lit/decorators.js";
 import { styleMap } from "lit/directives/style-map.js";
@@ -94,6 +96,11 @@ var MonoChartCore = (superClass) => {
 			this.stacked = false;
 			this.cssClass = {};
 			this.cssClassName = "";
+			this.loadingText = "Loading…";
+			this.retryLabel = "Retry";
+			this.loading = false;
+			this.loadingError = null;
+			this._appFailure = null;
 			this._error = "";
 			this._chart = null;
 			this._buildToken = 0;
@@ -108,6 +115,17 @@ var MonoChartCore = (superClass) => {
 				});
 			};
 			this._applyQueued = false;
+			this._onRetry = (event) => {
+				event.stopPropagation();
+				const error = this._dsError;
+				if (!error) return;
+				const fromApp = !!this._appFailure;
+				dispatchMonoEvent(this, "retry", {
+					error,
+					source: fromApp ? "app" : "dataSource"
+				});
+				if (!fromApp) this.dataChart?.retry();
+			};
 			this._externalTooltip = (context) => {
 				const el = this._tooltipEl;
 				if (!el) return;
@@ -147,7 +165,9 @@ var MonoChartCore = (superClass) => {
 				"dataChart",
 				"chartOptions",
 				"aspectRatio",
-				"cssClass"
+				"cssClass",
+				"loadingText",
+				"loadingError"
 			]);
 			defineHybridPropAlias(this, "controlChart", "dataChart");
 			for (const alias of ["css-class", "cssclass"]) Object.defineProperty(this, alias, {
@@ -267,6 +287,10 @@ var MonoChartCore = (superClass) => {
 			this._modeQuery?.addEventListener?.("change", this._onThemeChanged);
 		}
 		willUpdate(changed) {
+			if (changed.has("loadingError")) {
+				const v = this.loadingError;
+				this._appFailure = v == null || v === false || v === "" ? null : describeError(v === true ? void 0 : v);
+			}
 			super.willUpdate?.(changed);
 			if (changed.has("dataChart")) this._subscribe();
 		}
@@ -336,6 +360,42 @@ var MonoChartCore = (superClass) => {
 		}
 		get _loading() {
 			return !!this.dataChart?.loading;
+		}
+		/** The FIRST load (or a retry) is in flight — nothing to show yet, so a spinner. */
+		get _dsBusy() {
+			if (this.loading) return true;
+			const c = this.dataChart;
+			return !this.data && !!c && c.loading && !c.hasLoaded && !c.error;
+		}
+		/** The app's `loading-error`, else the controller's failed load (the peer-load `_error` is separate). */
+		get _dsError() {
+			if (this.loading) return null;
+			return this._appFailure ?? (this.data ? null : this.dataChart?.error ?? null);
+		}
+		/** Spinner over the first load; the failure + ↻ after one failed. */
+		_renderSourceState() {
+			const err = this._dsError;
+			if (err) return html`
+          <div class="mono-chart-state" mono-ds-state="error" role="alert">
+            <span class="mono-chart-state-text" title=${errorTitle(err)}>${errorText(err)}</span>
+            <button
+              type="button"
+              mono-ds-retry
+              aria-label=${this.retryLabel}
+              title=${this.retryLabel}
+              @click=${this._onRetry}
+            >
+              ${refreshIcon()}
+            </button>
+          </div>
+        `;
+			if (this._dsBusy) return html`
+          <div class="mono-chart-state" mono-ds-state="loading" role="status">
+            <span mono-ds-spinner>${spinnerIcon()}</span>
+            <span class="mono-chart-state-text">${this.loadingText}</span>
+          </div>
+        `;
+			return nothing;
 		}
 		get _empty() {
 			const d = this._data;
@@ -680,13 +740,19 @@ var MonoChartCore = (superClass) => {
 		}
 		renderChart() {
 			return html`
-        <div class=${this._rootClasses}>
+        <div
+          class=${this._rootClasses}
+          ?mono-ds-loading=${this._dsBusy}
+          ?mono-ds-error=${!!this._dsError}
+          aria-busy=${this._dsBusy ? "true" : nothing}
+        >
           ${this._error ? html`<div class=${this._cls("mono-chart-message error", "message")} role="alert">
                 ${this._error}
               </div>` : nothing}
           <div class="mono-chart-canvas-wrap" style=${styleMap(this._wrapStyle())}>
             <canvas class=${this._cls("", "canvas")} role="img"></canvas>
             <div class="mono-chart-tooltip" role="tooltip" aria-hidden="true"></div>
+            ${this._renderSourceState()}
           </div>
         </div>
       `;
@@ -709,6 +775,16 @@ var MonoChartCore = (superClass) => {
 	__decorate([property({ attribute: false })], MonoChartCoreClass.prototype, "colors", void 0);
 	__decorate([property({ attribute: false })], MonoChartCoreClass.prototype, "cssClass", void 0);
 	__decorate([property({ attribute: false })], MonoChartCoreClass.prototype, "cssClassName", void 0);
+	__decorate([property({
+		type: String,
+		attribute: "loading-text"
+	})], MonoChartCoreClass.prototype, "loadingText", void 0);
+	__decorate([property({
+		type: String,
+		attribute: "retry-label"
+	})], MonoChartCoreClass.prototype, "retryLabel", void 0);
+	__decorate([property({ converter: booleanStringConverter })], MonoChartCoreClass.prototype, "loading", void 0);
+	__decorate([property({ attribute: "loading-error" })], MonoChartCoreClass.prototype, "loadingError", void 0);
 	__decorate([state()], MonoChartCoreClass.prototype, "_error", void 0);
 	__decorate([query("canvas")], MonoChartCoreClass.prototype, "_canvas", void 0);
 	__decorate([query(".mono-chart-tooltip")], MonoChartCoreClass.prototype, "_tooltipEl", void 0);
@@ -726,7 +802,7 @@ function deepMerge(base, over) {
 }
 //#endregion
 //#region src/components/chart/chart.css?raw
-var chart_default = "/* ============================================================================\r\n   mono-chart — a Chart.js canvas driven by `monoChart(...)` (or a raw chart.js\r\n   `data` object). The library is an OPTIONAL peer, loaded on demand; until it\r\n   resolves the element renders an empty, correctly-sized box so nothing jumps.\r\n\r\n   NOT attribute-styled, on purpose: the chart is a bitmap. This sheet declares\r\n   the palette and the inks as custom properties over the Basecoat tokens, and\r\n   the ELEMENT reads them back at mount (`_resolveColor`, `_themeColors`) and\r\n   hands Chart.js real values — a canvas cannot resolve `var()`. The two boxes\r\n   this sheet does paint (the message, the loading veil) keep their classes.\r\n\r\n   Tokens (ours → Basecoat):\r\n     --_mono-chart-1 … -5                  ≡ --chart-1 … --chart-5 (the default palette, in that order)\r\n     --_mono-chart-primary                 ≡ --primary\r\n     --_mono-chart-secondary               ≡ --muted-foreground (the \"secondary\" ink every field uses)\r\n     --_mono-chart-accent                  ≡ --chart-2 (Basecoat's --accent is a surface, not a series colour)\r\n     --_mono-chart-success/warning/danger/info ≡ --success / --warning / --destructive / --info\r\n     --_mono-chart-text                    ≡ --foreground (legend, title)\r\n     --_mono-chart-muted                   ≡ --muted-foreground (axis ticks, the empty message)\r\n     --_mono-chart-grid                    ≡ --border\r\n     --_mono-chart-surface                 ≡ --background (the hairline between slices)\r\n     --_mono-chart-tooltip-*               ≡ the select panel's popover: --mono-select-dropdown-{bg,color,radius,ring,shadow} → --popover … (the tooltip IS an element, painted here)\r\n     --_mono-chart-font                    ≡ text-xs, in the page font (inherited)\r\n     --_mono-chart-radius                  ≡ --mono-radius-md (tooltip corner, message box)\r\n     --_mono-chart-bar-radius              ≡ the field's corner chain (--mono-input-outline-radius → --mono-input-radius → --mono-radius-md)\r\n\r\n   Every `--mono-chart-<k>` is a public override; the flavours carry nothing —\r\n   the tokens they retune (border, foreground, popover, chart-n) reach the chart\r\n   through these chains. Dark mode is the same tokens flipped; the element\r\n   watches the mode class and repaints.\r\n   ============================================================================ */\r\n\r\nmono-chart,\r\nmono-chart-bar,\r\nmono-chart-line,\r\nmono-chart-pie,\r\nmono-chart-doughnut {\r\n  display: block;\r\n  width: 100%;\r\n}\r\n\r\nmono-chart *,\r\nmono-chart-bar *,\r\nmono-chart-line *,\r\nmono-chart-pie *,\r\nmono-chart-doughnut * {\r\n  box-sizing: border-box;\r\n}\r\n\r\n.mono-chart {\r\n  position: relative;\r\n  width: 100%;\r\n  color: var(--_mono-chart-text);\r\n  /* the canvas inherits nothing; the element READS these two off this box */\r\n  font-family: var(--_mono-chart-font-family);\r\n  font-size: var(--_mono-chart-font);\r\n\r\n  /* Public customization API → private resolvers. The ELEMENT also reads these\r\n     at mount time and hands the resolved colors to Chart.js: canvas painting\r\n     can't resolve `var()`, so the palette has to cross into JS as real values. */\r\n  --_mono-chart-1: var(--mono-chart-1, var(--chart-1));\r\n  --_mono-chart-2: var(--mono-chart-2, var(--chart-2));\r\n  --_mono-chart-3: var(--mono-chart-3, var(--chart-3));\r\n  --_mono-chart-4: var(--mono-chart-4, var(--chart-4));\r\n  --_mono-chart-5: var(--mono-chart-5, var(--chart-5));\r\n\r\n  --_mono-chart-primary: var(--mono-chart-primary, var(--primary));\r\n  --_mono-chart-secondary: var(--mono-chart-secondary, var(--muted-foreground));\r\n  --_mono-chart-accent: var(--mono-chart-accent, var(--chart-2));\r\n  --_mono-chart-success: var(--mono-chart-success, var(--success));\r\n  --_mono-chart-warning: var(--mono-chart-warning, var(--warning));\r\n  --_mono-chart-danger: var(--mono-chart-danger, var(--destructive));\r\n  --_mono-chart-info: var(--mono-chart-info, var(--info));\r\n\r\n  --_mono-chart-text: var(--mono-chart-text, var(--foreground));\r\n  --_mono-chart-muted: var(--mono-chart-muted, var(--muted-foreground));\r\n  --_mono-chart-grid: var(--mono-chart-grid, var(--border));\r\n  --_mono-chart-surface: var(--mono-chart-surface, var(--background));\r\n\r\n  /* basecoat@1.0.2 styles/vega.css .combobox [data-popover] — bg-popover text-popover-foreground ring-foreground/10 rounded-md shadow-md ring-1\r\n     (a tooltip is a popover: the same chrome, at text-xs). It is the FLAVOUR's\r\n     popover: the corner, ring and shadow read the select panel's public knobs,\r\n     which every flavour writes (luma 3xl + shadow-lg, lyra 0, maia 2xl …). */\r\n  --_mono-chart-tooltip-bg: var(--mono-chart-tooltip-bg, var(--mono-select-dropdown-bg, var(--popover)));\r\n  --_mono-chart-tooltip-color: var(--mono-chart-tooltip-color, var(--mono-select-dropdown-color, var(--popover-foreground)));\r\n  --_mono-chart-tooltip-border: var(--mono-chart-tooltip-border, var(--border));\r\n  --_mono-chart-tooltip-radius: var(--mono-chart-tooltip-radius, var(--mono-select-dropdown-radius, var(--mono-radius-md)));\r\n  --_mono-chart-tooltip-ring: var(--mono-chart-tooltip-ring, var(--mono-select-dropdown-ring, 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent)));\r\n  --_mono-chart-tooltip-shadow: var(--mono-chart-tooltip-shadow, var(--mono-select-dropdown-shadow, var(--mono-shadow-md)));\r\n\r\n  --_mono-chart-font: var(--mono-chart-font, var(--mono-text-xs));\r\n  /* INHERIT, not --font-sans: every other mono control inherits the page font\r\n     for its labels, and a chart sits among them */\r\n  --_mono-chart-font-family: var(--mono-chart-font-family, inherit);\r\n  --_mono-chart-radius: var(--mono-chart-radius, var(--mono-radius-md));\r\n  /* The bars' corner IS the flavour's field corner — lyra squares a field through\r\n     `--mono-input-radius`, sera through `--mono-input-outline-radius`, maia and\r\n     luma pill it through the same knob — so bars are square where the fields are\r\n     and round where they are, with nothing set. Chart.js clamps it to half a bar. */\r\n  --_mono-chart-bar-radius: var(--mono-chart-bar-radius, var(--mono-input-outline-radius, var(--mono-input-radius, var(--mono-radius-md))));\r\n\r\n  /* Chart.js wants PIXELS and a custom property's computed value is still the\r\n     token string (`calc(…)`, `2rem`), so the two radii are painted onto real,\r\n     invisible border-radius properties here and read back computed. */\r\n  border-radius: var(--_mono-chart-radius);\r\n}\r\n\r\n/* The canvas box. Chart.js sets the canvas' intrinsic width/height itself; this\r\n   wrapper owns the LAYOUT size so `responsive: true` has something to measure. */\r\n.mono-chart-canvas-wrap {\r\n  position: relative;\r\n  width: 100%;\r\n  /* the bar corner, in px — see the root */\r\n  border-radius: var(--_mono-chart-bar-radius);\r\n}\r\n\r\n.mono-chart canvas {\r\n  display: block;\r\n  width: 100%;\r\n  max-width: 100%;\r\n}\r\n\r\n/* The tooltip — an HTML popover placed over the canvas by the element\r\n   (Chart.js's `tooltip.external`), not the bitmap one: a canvas can take a\r\n   colour and a corner, not the flavour's ring and shadow. Positioned from the\r\n   caret; `data-side` says which way it opened. */\r\n.mono-chart-tooltip {\r\n  position: absolute;\r\n  left: 0;\r\n  top: 0;\r\n  z-index: 2;\r\n  display: none;\r\n  flex-direction: column;\r\n  gap: calc(var(--mono-spacing) * 0.5);\r\n  /* basecoat@1.0.2 styles/vega.css .combobox [data-popover] — bg-popover text-popover-foreground ring-foreground/10 rounded-md shadow-md ring-1; px-3 py-1.5 text-xs */\r\n  padding: calc(var(--mono-spacing) * 1.5) calc(var(--mono-spacing) * 3);\r\n  border-radius: var(--_mono-chart-tooltip-radius);\r\n  background: var(--_mono-chart-tooltip-bg);\r\n  color: var(--_mono-chart-tooltip-color);\r\n  box-shadow: var(--_mono-chart-tooltip-ring), var(--_mono-chart-tooltip-shadow);\r\n  font-size: var(--_mono-chart-font);\r\n  line-height: var(--mono-text-xs--lh);\r\n  white-space: nowrap;\r\n  pointer-events: none;\r\n  transform: translate(-50%, calc(-100% - calc(var(--mono-spacing) * 2)));\r\n  opacity: 0;\r\n  transition: opacity var(--mono-duration-fast, 100ms) var(--mono-ease);\r\n}\r\n\r\n.mono-chart-tooltip[data-open] {\r\n  display: flex;\r\n  opacity: 1;\r\n}\r\n\r\n/* no room above the point: open below it */\r\n.mono-chart-tooltip[data-side='bottom'] {\r\n  transform: translate(-50%, calc(var(--mono-spacing) * 2));\r\n}\r\n\r\n.mono-chart-tooltip-title {\r\n  font-weight: var(--mono-font-weight-medium);\r\n}\r\n\r\n.mono-chart-tooltip-row {\r\n  display: flex;\r\n  align-items: center;\r\n  gap: calc(var(--mono-spacing) * 2);\r\n}\r\n\r\n/* the series swatch — a rounded chip, like the legend's */\r\n.mono-chart-tooltip-swatch {\r\n  flex: 0 0 auto;\r\n  width: calc(var(--mono-spacing) * 2.5);\r\n  height: calc(var(--mono-spacing) * 2.5);\r\n  border-radius: var(--mono-radius-sm);\r\n}\r\n\r\n.mono-chart-tooltip-value {\r\n  margin-inline-start: auto;\r\n  font-variant-numeric: tabular-nums;\r\n  padding-inline-start: calc(var(--mono-spacing) * 3);\r\n}\r\n\r\n@media (prefers-reduced-motion: reduce) {\r\n  .mono-chart-tooltip {\r\n    transition: none;\r\n  }\r\n}\r\n\r\n/* Shown while the optional peer loads, when there is no data, or on error —\r\n   basecoat's empty-state idiom: a dashed hairline, muted text. */\r\n.mono-chart-message {\r\n  display: flex;\r\n  align-items: center;\r\n  justify-content: center;\r\n  min-height: 6rem;\r\n  padding: calc(var(--mono-spacing) * 4);\r\n  font-size: var(--mono-text-sm);\r\n  line-height: var(--mono-text-sm--lh);\r\n  color: var(--_mono-chart-muted);\r\n  text-align: center;\r\n  border: var(--mono-border-width) dashed var(--_mono-chart-grid);\r\n  border-radius: var(--_mono-chart-radius);\r\n}\r\n\r\n.mono-chart-message.error {\r\n  color: var(--_mono-chart-danger);\r\n  border-color: color-mix(in oklab, var(--_mono-chart-danger) 45%, var(--_mono-chart-grid));\r\n}\r\n\r\n/* Loading veil — the canvas stays mounted so Chart.js keeps its size. */\r\n.mono-chart.loading .mono-chart-canvas-wrap {\r\n  opacity: 0.55;\r\n  transition: opacity var(--mono-duration) var(--mono-ease);\r\n}\r\n\r\n@media (prefers-reduced-motion: reduce) {\r\n  .mono-chart.loading .mono-chart-canvas-wrap {\r\n    transition: none;\r\n  }\r\n}\r\n";
+var chart_default = "/* ============================================================================\r\n   mono-chart — a Chart.js canvas driven by `monoChart(...)` (or a raw chart.js\r\n   `data` object). The library is an OPTIONAL peer, loaded on demand; until it\r\n   resolves the element renders an empty, correctly-sized box so nothing jumps.\r\n\r\n   NOT attribute-styled, on purpose: the chart is a bitmap. This sheet declares\r\n   the palette and the inks as custom properties over the Basecoat tokens, and\r\n   the ELEMENT reads them back at mount (`_resolveColor`, `_themeColors`) and\r\n   hands Chart.js real values — a canvas cannot resolve `var()`. The two boxes\r\n   this sheet does paint (the message, the loading veil) keep their classes.\r\n\r\n   Tokens (ours → Basecoat):\r\n     --_mono-chart-1 … -5                  ≡ --chart-1 … --chart-5 (the default palette, in that order)\r\n     --_mono-chart-primary                 ≡ --primary\r\n     --_mono-chart-secondary               ≡ --muted-foreground (the \"secondary\" ink every field uses)\r\n     --_mono-chart-accent                  ≡ --chart-2 (Basecoat's --accent is a surface, not a series colour)\r\n     --_mono-chart-success/warning/danger/info ≡ --success / --warning / --destructive / --info\r\n     --_mono-chart-text                    ≡ --foreground (legend, title)\r\n     --_mono-chart-muted                   ≡ --muted-foreground (axis ticks, the empty message)\r\n     --_mono-chart-grid                    ≡ --border\r\n     --_mono-chart-surface                 ≡ --background (the hairline between slices)\r\n     --_mono-chart-tooltip-*               ≡ the select panel's popover: --mono-select-dropdown-{bg,color,radius,ring,shadow} → --popover … (the tooltip IS an element, painted here)\r\n     --_mono-chart-font                    ≡ text-xs, in the page font (inherited)\r\n     --_mono-chart-radius                  ≡ --mono-radius-md (tooltip corner, message box)\r\n     --_mono-chart-bar-radius              ≡ the field's corner chain (--mono-input-outline-radius → --mono-input-radius → --mono-radius-md)\r\n\r\n   Every `--mono-chart-<k>` is a public override; the flavours carry nothing —\r\n   the tokens they retune (border, foreground, popover, chart-n) reach the chart\r\n   through these chains. Dark mode is the same tokens flipped; the element\r\n   watches the mode class and repaints.\r\n   ============================================================================ */\r\n\r\nmono-chart,\r\nmono-chart-bar,\r\nmono-chart-line,\r\nmono-chart-pie,\r\nmono-chart-doughnut {\r\n  display: block;\r\n  width: 100%;\r\n}\r\n\r\nmono-chart *,\r\nmono-chart-bar *,\r\nmono-chart-line *,\r\nmono-chart-pie *,\r\nmono-chart-doughnut * {\r\n  box-sizing: border-box;\r\n}\r\n\r\n.mono-chart {\r\n  position: relative;\r\n  width: 100%;\r\n  color: var(--_mono-chart-text);\r\n  /* the canvas inherits nothing; the element READS these two off this box */\r\n  font-family: var(--_mono-chart-font-family);\r\n  font-size: var(--_mono-chart-font);\r\n\r\n  /* Public customization API → private resolvers. The ELEMENT also reads these\r\n     at mount time and hands the resolved colors to Chart.js: canvas painting\r\n     can't resolve `var()`, so the palette has to cross into JS as real values. */\r\n  --_mono-chart-1: var(--mono-chart-1, var(--chart-1));\r\n  --_mono-chart-2: var(--mono-chart-2, var(--chart-2));\r\n  --_mono-chart-3: var(--mono-chart-3, var(--chart-3));\r\n  --_mono-chart-4: var(--mono-chart-4, var(--chart-4));\r\n  --_mono-chart-5: var(--mono-chart-5, var(--chart-5));\r\n\r\n  --_mono-chart-primary: var(--mono-chart-primary, var(--primary));\r\n  --_mono-chart-secondary: var(--mono-chart-secondary, var(--muted-foreground));\r\n  --_mono-chart-accent: var(--mono-chart-accent, var(--chart-2));\r\n  --_mono-chart-success: var(--mono-chart-success, var(--success));\r\n  --_mono-chart-warning: var(--mono-chart-warning, var(--warning));\r\n  --_mono-chart-danger: var(--mono-chart-danger, var(--destructive));\r\n  --_mono-chart-info: var(--mono-chart-info, var(--info));\r\n\r\n  --_mono-chart-text: var(--mono-chart-text, var(--foreground));\r\n  --_mono-chart-muted: var(--mono-chart-muted, var(--muted-foreground));\r\n  --_mono-chart-grid: var(--mono-chart-grid, var(--border));\r\n  --_mono-chart-surface: var(--mono-chart-surface, var(--background));\r\n\r\n  /* basecoat@1.0.2 styles/vega.css .combobox [data-popover] — bg-popover text-popover-foreground ring-foreground/10 rounded-md shadow-md ring-1\r\n     (a tooltip is a popover: the same chrome, at text-xs). It is the FLAVOUR's\r\n     popover: the corner, ring and shadow read the select panel's public knobs,\r\n     which every flavour writes (luma 3xl + shadow-lg, lyra 0, maia 2xl …). */\r\n  --_mono-chart-tooltip-bg: var(--mono-chart-tooltip-bg, var(--mono-select-dropdown-bg, var(--popover)));\r\n  --_mono-chart-tooltip-color: var(--mono-chart-tooltip-color, var(--mono-select-dropdown-color, var(--popover-foreground)));\r\n  --_mono-chart-tooltip-border: var(--mono-chart-tooltip-border, var(--border));\r\n  --_mono-chart-tooltip-radius: var(--mono-chart-tooltip-radius, var(--mono-select-dropdown-radius, var(--mono-radius-md)));\r\n  --_mono-chart-tooltip-ring: var(--mono-chart-tooltip-ring, var(--mono-select-dropdown-ring, 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent)));\r\n  --_mono-chart-tooltip-shadow: var(--mono-chart-tooltip-shadow, var(--mono-select-dropdown-shadow, var(--mono-shadow-md)));\r\n\r\n  --_mono-chart-font: var(--mono-chart-font, var(--mono-text-xs));\r\n  /* INHERIT, not --font-sans: every other mono control inherits the page font\r\n     for its labels, and a chart sits among them */\r\n  --_mono-chart-font-family: var(--mono-chart-font-family, inherit);\r\n  --_mono-chart-radius: var(--mono-chart-radius, var(--mono-radius-md));\r\n  /* The bars' corner IS the flavour's field corner — lyra squares a field through\r\n     `--mono-input-radius`, sera through `--mono-input-outline-radius`, maia and\r\n     luma pill it through the same knob — so bars are square where the fields are\r\n     and round where they are, with nothing set. Chart.js clamps it to half a bar. */\r\n  --_mono-chart-bar-radius: var(--mono-chart-bar-radius, var(--mono-input-outline-radius, var(--mono-input-radius, var(--mono-radius-md))));\r\n\r\n  /* Chart.js wants PIXELS and a custom property's computed value is still the\r\n     token string (`calc(…)`, `2rem`), so the two radii are painted onto real,\r\n     invisible border-radius properties here and read back computed. */\r\n  border-radius: var(--_mono-chart-radius);\r\n}\r\n\r\n/* The canvas box. Chart.js sets the canvas' intrinsic width/height itself; this\r\n   wrapper owns the LAYOUT size so `responsive: true` has something to measure. */\r\n.mono-chart-canvas-wrap {\r\n  position: relative;\r\n  width: 100%;\r\n  /* the bar corner, in px — see the root */\r\n  border-radius: var(--_mono-chart-bar-radius);\r\n}\r\n\r\n.mono-chart canvas {\r\n  display: block;\r\n  width: 100%;\r\n  max-width: 100%;\r\n}\r\n\r\n/* The tooltip — an HTML popover placed over the canvas by the element\r\n   (Chart.js's `tooltip.external`), not the bitmap one: a canvas can take a\r\n   colour and a corner, not the flavour's ring and shadow. Positioned from the\r\n   caret; `data-side` says which way it opened. */\r\n.mono-chart-tooltip {\r\n  position: absolute;\r\n  left: 0;\r\n  top: 0;\r\n  z-index: 2;\r\n  display: none;\r\n  flex-direction: column;\r\n  gap: calc(var(--mono-spacing) * 0.5);\r\n  /* basecoat@1.0.2 styles/vega.css .combobox [data-popover] — bg-popover text-popover-foreground ring-foreground/10 rounded-md shadow-md ring-1; px-3 py-1.5 text-xs */\r\n  padding: calc(var(--mono-spacing) * 1.5) calc(var(--mono-spacing) * 3);\r\n  border-radius: var(--_mono-chart-tooltip-radius);\r\n  background: var(--_mono-chart-tooltip-bg);\r\n  color: var(--_mono-chart-tooltip-color);\r\n  box-shadow: var(--_mono-chart-tooltip-ring), var(--_mono-chart-tooltip-shadow);\r\n  font-size: var(--_mono-chart-font);\r\n  line-height: var(--mono-text-xs--lh);\r\n  white-space: nowrap;\r\n  pointer-events: none;\r\n  transform: translate(-50%, calc(-100% - calc(var(--mono-spacing) * 2)));\r\n  opacity: 0;\r\n  transition: opacity var(--mono-duration-fast, 100ms) var(--mono-ease);\r\n}\r\n\r\n.mono-chart-tooltip[data-open] {\r\n  display: flex;\r\n  opacity: 1;\r\n}\r\n\r\n/* no room above the point: open below it */\r\n.mono-chart-tooltip[data-side='bottom'] {\r\n  transform: translate(-50%, calc(var(--mono-spacing) * 2));\r\n}\r\n\r\n.mono-chart-tooltip-title {\r\n  font-weight: var(--mono-font-weight-medium);\r\n}\r\n\r\n.mono-chart-tooltip-row {\r\n  display: flex;\r\n  align-items: center;\r\n  gap: calc(var(--mono-spacing) * 2);\r\n}\r\n\r\n/* the series swatch — a rounded chip, like the legend's */\r\n.mono-chart-tooltip-swatch {\r\n  flex: 0 0 auto;\r\n  width: calc(var(--mono-spacing) * 2.5);\r\n  height: calc(var(--mono-spacing) * 2.5);\r\n  border-radius: var(--mono-radius-sm);\r\n}\r\n\r\n.mono-chart-tooltip-value {\r\n  margin-inline-start: auto;\r\n  font-variant-numeric: tabular-nums;\r\n  padding-inline-start: calc(var(--mono-spacing) * 3);\r\n}\r\n\r\n@media (prefers-reduced-motion: reduce) {\r\n  .mono-chart-tooltip {\r\n    transition: none;\r\n  }\r\n}\r\n\r\n/* Shown while the optional peer loads, when there is no data, or on error —\r\n   basecoat's empty-state idiom: a dashed hairline, muted text. */\r\n.mono-chart-message {\r\n  display: flex;\r\n  align-items: center;\r\n  justify-content: center;\r\n  min-height: 6rem;\r\n  padding: calc(var(--mono-spacing) * 4);\r\n  font-size: var(--mono-text-sm);\r\n  line-height: var(--mono-text-sm--lh);\r\n  color: var(--_mono-chart-muted);\r\n  text-align: center;\r\n  border: var(--mono-border-width) dashed var(--_mono-chart-grid);\r\n  border-radius: var(--_mono-chart-radius);\r\n}\r\n\r\n.mono-chart-message.error {\r\n  color: var(--_mono-chart-danger);\r\n  border-color: color-mix(in oklab, var(--_mono-chart-danger) 45%, var(--_mono-chart-grid));\r\n}\r\n\r\n/* Loading veil — the canvas stays mounted so Chart.js keeps its size. The\r\n   source-state overlay is exempt: the spinner must not fade with the chart. */\r\n.mono-chart.loading .mono-chart-canvas-wrap > :not(.mono-chart-state) {\r\n  opacity: 0.55;\r\n  transition: opacity var(--mono-duration) var(--mono-ease);\r\n}\r\n\r\n/* EXTENSION — dataSource state: the first load shows a spinner over the\r\n   (still sized) canvas; a failed load shows the error and a ↻, and outlines the\r\n   plot in the invalid colour — the same signal a failed field gives. */\r\n.mono-chart-state {\r\n  position: absolute;\r\n  inset: 0;\r\n  display: flex;\r\n  align-items: center;\r\n  justify-content: center;\r\n  gap: calc(var(--mono-spacing) * 2);\r\n  padding: calc(var(--mono-spacing) * 4);\r\n  font-size: var(--mono-text-sm);\r\n  line-height: var(--mono-text-sm--lh);\r\n  color: var(--_mono-chart-muted);\r\n  text-align: center;\r\n}\r\n\r\n.mono-chart[mono-ds-error] .mono-chart-state {\r\n  color: var(--mono-chart-ds-error-text, var(--_mono-chart-danger));\r\n}\r\n\r\n.mono-chart[mono-ds-error] .mono-chart-canvas-wrap {\r\n  outline: var(--mono-border-width, 1px) solid var(--mono-chart-ds-error-border, var(--mono-mode-invalid-border));\r\n  box-shadow: 0 0 0 3px var(--mono-chart-ds-error-ring, var(--mono-mode-invalid-ring));\r\n}\r\n\r\n.mono-chart[mono-ds-loading] .mono-chart-canvas-wrap {\r\n  cursor: progress;\r\n}\r\n\r\n.mono-chart-state-text {\r\n  min-width: 0;\r\n  overflow: hidden;\r\n  text-overflow: ellipsis;\r\n}\r\n\r\n.mono-chart-state [mono-ds-spinner],\r\n.mono-chart-state [mono-ds-retry] {\r\n  display: inline-flex;\r\n  align-items: center;\r\n  justify-content: center;\r\n  flex-shrink: 0;\r\n  width: 1.5rem;\r\n  height: 1.5rem;\r\n  margin: 0;\r\n  padding: 0;\r\n  border: 0;\r\n  border-radius: calc(var(--radius) - 5px);\r\n  background: transparent;\r\n  color: inherit;\r\n  font: inherit;\r\n}\r\n\r\n.mono-chart-state [mono-ds-retry] {\r\n  cursor: pointer;\r\n}\r\n\r\n@media (hover: hover) {\r\n  .mono-chart-state [mono-ds-retry]:hover {\r\n    background: var(--mono-mode-ghost-hover);\r\n  }\r\n}\r\n\r\n.mono-chart-state [mono-ds-retry]:focus-visible {\r\n  outline: 2px solid currentColor;\r\n  outline-offset: 1px;\r\n}\r\n\r\n.mono-chart-state :is([mono-ds-spinner], [mono-ds-retry]) > svg {\r\n  display: block;\r\n  width: 1rem;\r\n  height: 1rem;\r\n}\r\n\r\n.mono-chart-state [mono-ds-spinner] > svg {\r\n  animation: mono-chart-spin 0.7s linear infinite;\r\n}\r\n\r\n@keyframes mono-chart-spin {\r\n  to {\r\n    transform: rotate(360deg);\r\n  }\r\n}\r\n\r\n@media (prefers-reduced-motion: reduce) {\r\n  .mono-chart.loading .mono-chart-canvas-wrap > :not(.mono-chart-state) {\r\n    transition: none;\r\n  }\r\n\r\n  .mono-chart-state [mono-ds-spinner] > svg {\r\n    animation-duration: 2.4s;\r\n  }\r\n}\r\n";
 //#endregion
 //#region src/components/chart/mono-chart.shadow.ts
 var SHADOW_CHART_CSS$1 = toShadowCss(chart_default, { host: "mono-chart" });
@@ -1214,7 +1290,8 @@ function monoChart(source = null, opts = {}) {
 	}
 	const onChanged = () => {
 		if (drainDepth > 0) return;
-		sync();
+		if (opts.loadAll === false) succeed();
+		sync().catch(() => {});
 	};
 	/**
 	* Publish the loading state, notifying only on a real change.
@@ -1237,11 +1314,26 @@ function monoChart(source = null, opts = {}) {
 		syncLoading();
 		notify();
 	};
+	/** Record a load failure for the element to paint. Cancelled loads are not failures. */
+	function fail(err) {
+		if (isCanceled(err)) return;
+		ctrl.error = describeError(err);
+		notify();
+	}
+	/** A load answered: the chart has data and any earlier failure is over. */
+	function succeed() {
+		ctrl.hasLoaded = true;
+		ctrl.error = null;
+	}
+	const onLoadError = (err) => {
+		syncLoading();
+		fail(err ?? /* @__PURE__ */ new Error("Request failed"));
+	};
 	function detach() {
 		if (!bound) return;
 		bound.off("changed", onChanged);
 		bound.off("loadingChanged", onLoadingChanged);
-		bound.off("loadError", onLoadingChanged);
+		bound.off("loadError", onLoadError);
 		bound = null;
 	}
 	let dsOptionsSource = opts.dataSourceOptions;
@@ -1339,8 +1431,10 @@ function monoChart(source = null, opts = {}) {
 		preAggregated = false;
 		resolveBase();
 		if (!bound) rows = [];
-		else if (opts.loadAll === false) rows = [...bound.items?.() ?? []];
-		else {
+		else if (opts.loadAll === false) {
+			rows = [...bound.items?.() ?? []];
+			if (rows.length) succeed();
+		} else {
 			drainDepth++;
 			syncLoading();
 			try {
@@ -1362,6 +1456,10 @@ function monoChart(source = null, opts = {}) {
 					});
 					rows = isArray && typeof filter === "function" ? drained.filter(filter) : drained;
 				}
+				succeed();
+			} catch (err) {
+				fail(err);
+				throw err;
 			} finally {
 				drainDepth--;
 				syncLoading();
@@ -1376,6 +1474,7 @@ function monoChart(source = null, opts = {}) {
 			detach();
 			raw = next;
 			rows = [];
+			succeed();
 			ctrl.items = rows;
 			ctrl.dataSource = null;
 			project();
@@ -1388,14 +1487,16 @@ function monoChart(source = null, opts = {}) {
 		detach();
 		bound = src;
 		ctrl.dataSource = src;
+		ctrl.hasLoaded = false;
+		ctrl.error = null;
 		if (!src) {
-			sync();
+			sync().catch(() => {});
 			return;
 		}
 		src.on("changed", onChanged);
 		src.on("loadingChanged", onLoadingChanged);
-		src.on("loadError", onLoadingChanged);
-		sync();
+		src.on("loadError", onLoadError);
+		sync().catch(() => {});
 	}
 	/**
 	* Load through `monoOdataFetch`.
@@ -1440,6 +1541,10 @@ function monoChart(source = null, opts = {}) {
 			if (res?.error) throw new Error(res.error.message ?? "odata request failed");
 			rows = res?.data ?? [];
 			preAggregated = request.aggregated;
+			succeed();
+		} catch (err) {
+			fail(err);
+			throw err;
 		} finally {
 			setLoading(false);
 		}
@@ -1458,7 +1563,13 @@ function monoChart(source = null, opts = {}) {
 			if (opts.loadAll === false && bound?.load) {
 				resolveBase();
 				applyBaseToSource(bound);
-				await bound.load();
+				try {
+					await bound.load();
+					succeed();
+				} catch (err) {
+					fail(err);
+					throw err;
+				}
 			}
 			await sync();
 		} finally {
@@ -1511,6 +1622,8 @@ function monoChart(source = null, opts = {}) {
 	const ctrl = {
 		items: rows,
 		loading: false,
+		error: null,
+		hasLoaded: false,
 		type: opts.type ?? "bar",
 		dataSource: null,
 		get instance() {
@@ -1536,6 +1649,11 @@ function monoChart(source = null, opts = {}) {
 		bind,
 		reload,
 		refresh: reload,
+		async retry() {
+			ctrl.error = null;
+			notify();
+			await reload().catch(() => {});
+		},
 		setDataSourceOptions,
 		setOdataOptions,
 		resolvedDataSourceOptions,
@@ -1560,9 +1678,7 @@ function monoChart(source = null, opts = {}) {
 	};
 	if (source) bind(source);
 	else project();
-	if (!source && opts.odata?.url) loadOdata().catch((err) => {
-		console.error("[mono-chart] odata load failed:", err);
-	});
+	if (!source && opts.odata?.url) loadOdata().catch(() => {});
 	return ctrl;
 }
 //#endregion

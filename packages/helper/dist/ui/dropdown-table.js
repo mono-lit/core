@@ -1,13 +1,13 @@
 import { f as monoPendingGrace, l as monoHostChildNodes } from "../mono-ui-CPV7rrdo.js";
 import { n as detachEventHandlers, t as applyProps } from "../element-props-CLB6yvbm.js";
-import { t as monoDataDropdown } from "../mono-data-dropdown-BAUl58kW.js";
+import { t as monoDataDropdown } from "../mono-data-dropdown-Wnoke6zO.js";
 import { t as customElement } from "../mono-element-B0kP_96P.js";
 import { a as defineHybridPropAliases, i as defineHybridPropAlias, o as numberStringConverter, r as booleanStringConverter, s as optionalNumberConverter, t as __decorate } from "../decorate-DEXtNagw.js";
 import { t as dispatchMonoEvent } from "../mono-event-Bi1qP9uN.js";
 import { i as guardHostTextContent, s as placeSlotNode } from "../light-slots-DW1WgfgT.js";
 import { n as toCssSize, t as buildSizeStyle } from "../css-size-DhHSVZJK.js";
 import { n as applyPopupPlacement, r as computePopupPlacement, t as PopupPortalController } from "../popup-portal-BziRX1yG.js";
-import { n as chevronIcon, r as closeIcon, t as caretIcon } from "../field-icons-BoOG6KrL.js";
+import { n as chevronIcon, r as closeIcon, t as caretIcon } from "../field-icons-DELrSdqJ.js";
 import { t as MonoFormControlCore } from "../form-control-core-eeRr0zLU.js";
 import { n as visibleChipCap, r as ChipStripController, t as resolveChipLimit } from "../chip-limits-BMoO31JM.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";

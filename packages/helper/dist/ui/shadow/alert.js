@@ -1,6 +1,6 @@
 import { a as __decorate, c as defineHybridPropAlias, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, n as adoptIconStyles, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration } from "../../hydration-flush-RB5Tz5nl.js";
 import { n as mdiGlyph, t as isIconifyClass } from "../../icon-CJkTlmTb.js";
-import { r as closeIcon } from "../../field-icons-BoOG6KrL.js";
+import { r as closeIcon } from "../../field-icons-DELrSdqJ.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { property, state } from "lit/decorators.js";
 //#region src/components/alert/alert-core.ts

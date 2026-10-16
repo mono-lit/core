@@ -1,5 +1,6 @@
 import { MonoDataSource, LoadMoreMode } from '../../composables/data-source-controller';
 import { PanelSizeProps } from '../../composables/css-size';
+import { DescribedError } from '../../utils/normalize-error';
 import { VisibilityProps } from '../../composables/visibility';
 import { MonoSearchValue } from '../../search/data-search';
 import { ChipBehaviour, ChipColor, ChipCssClass, ChipRounded, ChipSize, ChipVariant } from '../chip/chip-types';
@@ -310,6 +311,19 @@ export interface TagInputProps extends VisibilityProps {
     disabled?: boolean;
     /** Makes the tag input read-only. */
     readonly?: boolean;
+    /** Show "Loading…" + a spinner and lock the tag input — the app is still fetching its options. */
+    loading?: boolean;
+    /** Text shown while loading (default `'Loading…'`). */
+    loadingText?: string;
+    'loading-text'?: string;
+    loadingtext?: string;
+    /** The app's fetch failed: a string or the error itself. Painted with ↻, which fires `retry`. */
+    loadingError?: unknown;
+    'loading-error'?: unknown;
+    loadingerror?: unknown;
+    /** Accessible name of the ↻ button (default `'Retry'`). */
+    retryLabel?: string;
+    'retry-label'?: string;
     /** Marks the field as required. */
     required?: boolean;
     /** Shows a clear button to remove all tags. */
@@ -378,11 +392,21 @@ export interface TagInputProps extends VisibilityProps {
     cssclass?: TagInputCssClass;
     'css-class'?: TagInputCssClass | string;
 }
+/**
+ * ↻ was pressed on a failed field. `source: 'dataSource'` — the bound source
+ * failed and is already being re-run; `'app'` — it was `loading-error`, so the
+ * app re-runs its own fetch.
+ */
+export type TagInputRetryEvent = CustomEvent<{
+    error: DescribedError;
+    source: 'app' | 'dataSource';
+}>;
 export interface TagInputEvents {
     change: TagInputModelEvent;
     add: TagInputModelEvent;
     remove: TagInputModelEvent;
     clear: TagInputModelEvent;
+    retry: TagInputRetryEvent;
     'mno-change': TagInputModelEvent;
     mnoChange: TagInputModelEvent;
     'mno-add': TagInputModelEvent;
@@ -391,4 +415,6 @@ export interface TagInputEvents {
     mnoRemove: TagInputModelEvent;
     'mno-clear': TagInputModelEvent;
     mnoClear: TagInputModelEvent;
+    'mno-retry': TagInputRetryEvent;
+    mnoRetry: TagInputRetryEvent;
 }

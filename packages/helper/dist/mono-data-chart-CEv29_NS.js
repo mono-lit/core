@@ -1,7 +1,8 @@
 import { n as isPath, t as getFieldValue } from "./field-path-C92eGLg3.js";
 import { r as readAllRows } from "./data-source-read-DL88aH8t.js";
 import { n as andPredicates, r as compileFilterPredicate, t as andFilters } from "./filter-eval-DIfU2EAn.js";
-import { a as resolveDataSourceOptions, d as createApplyGate, f as isRolledUp, h as monoArraySource, i as normalizeSortList, n as extraLoadOptions, o as toList, p as loadApply, r as mergeDataSourceOptions, u as summaryFilterOf } from "./data-source-options-CQSTZHPE.js";
+import { n as describeError, o as isCanceled } from "./normalize-error-Gcgmgh5i.js";
+import { a as resolveDataSourceOptions, d as createApplyGate, f as isRolledUp, h as monoArraySource, i as normalizeSortList, n as extraLoadOptions, o as toList, p as loadApply, r as mergeDataSourceOptions, u as summaryFilterOf } from "./data-source-options-Jqj7LU3Z.js";
 import { t as arrayToODataString } from "./filter-odata-C1vSGZaY.js";
 import { t as createNotifier } from "./notifier-CE4yxMUQ.js";
 //#region src/components/chart/chart-odata.ts
@@ -383,7 +384,8 @@ function monoChart(source = null, opts = {}) {
 	}
 	const onChanged = () => {
 		if (drainDepth > 0) return;
-		sync();
+		if (opts.loadAll === false) succeed();
+		sync().catch(() => {});
 	};
 	/**
 	* Publish the loading state, notifying only on a real change.
@@ -406,11 +408,26 @@ function monoChart(source = null, opts = {}) {
 		syncLoading();
 		notify();
 	};
+	/** Record a load failure for the element to paint. Cancelled loads are not failures. */
+	function fail(err) {
+		if (isCanceled(err)) return;
+		ctrl.error = describeError(err);
+		notify();
+	}
+	/** A load answered: the chart has data and any earlier failure is over. */
+	function succeed() {
+		ctrl.hasLoaded = true;
+		ctrl.error = null;
+	}
+	const onLoadError = (err) => {
+		syncLoading();
+		fail(err ?? /* @__PURE__ */ new Error("Request failed"));
+	};
 	function detach() {
 		if (!bound) return;
 		bound.off("changed", onChanged);
 		bound.off("loadingChanged", onLoadingChanged);
-		bound.off("loadError", onLoadingChanged);
+		bound.off("loadError", onLoadError);
 		bound = null;
 	}
 	let dsOptionsSource = opts.dataSourceOptions;
@@ -508,8 +525,10 @@ function monoChart(source = null, opts = {}) {
 		preAggregated = false;
 		resolveBase();
 		if (!bound) rows = [];
-		else if (opts.loadAll === false) rows = [...bound.items?.() ?? []];
-		else {
+		else if (opts.loadAll === false) {
+			rows = [...bound.items?.() ?? []];
+			if (rows.length) succeed();
+		} else {
 			drainDepth++;
 			syncLoading();
 			try {
@@ -531,6 +550,10 @@ function monoChart(source = null, opts = {}) {
 					});
 					rows = isArray && typeof filter === "function" ? drained.filter(filter) : drained;
 				}
+				succeed();
+			} catch (err) {
+				fail(err);
+				throw err;
 			} finally {
 				drainDepth--;
 				syncLoading();
@@ -545,6 +568,7 @@ function monoChart(source = null, opts = {}) {
 			detach();
 			raw = next;
 			rows = [];
+			succeed();
 			ctrl.items = rows;
 			ctrl.dataSource = null;
 			project();
@@ -557,14 +581,16 @@ function monoChart(source = null, opts = {}) {
 		detach();
 		bound = src;
 		ctrl.dataSource = src;
+		ctrl.hasLoaded = false;
+		ctrl.error = null;
 		if (!src) {
-			sync();
+			sync().catch(() => {});
 			return;
 		}
 		src.on("changed", onChanged);
 		src.on("loadingChanged", onLoadingChanged);
-		src.on("loadError", onLoadingChanged);
-		sync();
+		src.on("loadError", onLoadError);
+		sync().catch(() => {});
 	}
 	/**
 	* Load through `monoOdataFetch`.
@@ -609,6 +635,10 @@ function monoChart(source = null, opts = {}) {
 			if (res?.error) throw new Error(res.error.message ?? "odata request failed");
 			rows = res?.data ?? [];
 			preAggregated = request.aggregated;
+			succeed();
+		} catch (err) {
+			fail(err);
+			throw err;
 		} finally {
 			setLoading(false);
 		}
@@ -627,7 +657,13 @@ function monoChart(source = null, opts = {}) {
 			if (opts.loadAll === false && bound?.load) {
 				resolveBase();
 				applyBaseToSource(bound);
-				await bound.load();
+				try {
+					await bound.load();
+					succeed();
+				} catch (err) {
+					fail(err);
+					throw err;
+				}
 			}
 			await sync();
 		} finally {
@@ -680,6 +716,8 @@ function monoChart(source = null, opts = {}) {
 	const ctrl = {
 		items: rows,
 		loading: false,
+		error: null,
+		hasLoaded: false,
 		type: opts.type ?? "bar",
 		dataSource: null,
 		get instance() {
@@ -705,6 +743,11 @@ function monoChart(source = null, opts = {}) {
 		bind,
 		reload,
 		refresh: reload,
+		async retry() {
+			ctrl.error = null;
+			notify();
+			await reload().catch(() => {});
+		},
 		setDataSourceOptions,
 		setOdataOptions,
 		resolvedDataSourceOptions,
@@ -729,9 +772,7 @@ function monoChart(source = null, opts = {}) {
 	};
 	if (source) bind(source);
 	else project();
-	if (!source && opts.odata?.url) loadOdata().catch((err) => {
-		console.error("[mono-chart] odata load failed:", err);
-	});
+	if (!source && opts.odata?.url) loadOdata().catch(() => {});
 	return ctrl;
 }
 //#endregion

@@ -47,5 +47,40 @@ function chevronIcon(dir) {
     <path fill-rule="evenodd" d=${dir === -1 ? "M12.79 5.23a.75.75 0 0 1-.02 1.06L9.06 10l3.71 3.71a.75.75 0 1 1-1.06 1.06l-4.24-4.24a.75.75 0 0 1 0-1.06l4.24-4.24a.75.75 0 0 1 1.08 0z" : "M7.21 14.77a.75.75 0 0 1 .02-1.06L10.94 10 7.23 6.29a.75.75 0 1 1 1.06-1.06l4.24 4.24a.75.75 0 0 1 0 1.06l-4.24 4.24a.75.75 0 0 1-1.08 0z"} clip-rule="evenodd" />
   </svg>`;
 }
+/**
+* Busy arc for a field whose data source is still answering. Spun by the
+* component's own CSS (`[mono-ds-spinner] > svg`) so a reduced-motion rule can
+* stop it.
+*/
+function spinnerIcon() {
+	return html`<svg
+    mono-icon
+    viewBox="0 0 24 24"
+    width="16"
+    height="16"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.5"
+    stroke-linecap="round"
+    aria-hidden="true"
+  >
+    <path d="M12 3a9 9 0 1 0 9 9" />
+  </svg>`;
+}
+/** ↻ — the retry affordance a field shows after its data source failed. */
+function refreshIcon() {
+	return html`<svg
+    mono-icon
+    viewBox="0 0 24 24"
+    width="16"
+    height="16"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path
+      d="M17.65 6.35A8 8 0 1 0 19.73 14h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"
+    />
+  </svg>`;
+}
 //#endregion
-export { chevronIcon as n, closeIcon as r, caretIcon as t };
+export { spinnerIcon as a, refreshIcon as i, chevronIcon as n, closeIcon as r, caretIcon as t };

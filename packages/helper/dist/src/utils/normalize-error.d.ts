@@ -37,6 +37,19 @@ export declare function resolveErrorMessages(local?: MonoErrorMessages): Record<
  * `Error`.
  */
 export declare function errorStatus(raw: unknown): number | undefined;
+/**
+ * Every message an error carries, combined the way `monoFetch`'s
+ * `extractErrorMessage` does it: each key whose name contains "message"
+ * (`message`, `errorMessage`, `Message`, …) holding text — or OData's
+ * `{ message: { value } }` — at any depth up to 3, plus a JSON body still in
+ * `responseText` / `responseJSON` / `response`, plus an `Error`'s own
+ * (non-enumerable) `message`. The usual body fields `detail` / `title` and a
+ * plain-text `response.data` count too.
+ *
+ * Deduplicated by {@link uniqueMessages}, transport boilerplate ("Bad Request",
+ * "Failed to fetch") dropped, in the order found.
+ */
+export declare function collectErrorMessages(raw: unknown, status?: number | undefined): string[];
 export interface DescribedError {
     /** The headline: the preset for the status when there is one, else the error's own text. */
     message: string;
@@ -47,7 +60,19 @@ export interface DescribedError {
      * user CAN act on ("Budget period is closed"). Never a bare reason phrase.
      */
     detail?: string;
+    /**
+     * Every distinct message the error carried (see {@link collectErrorMessages}) —
+     * what `detail` joins. Empty when the error said nothing beyond its status.
+     */
+    messages: string[];
 }
+/**
+ * The one line a field shows for `err`: what the server said, every distinct
+ * message combined (`monoFetch` style), or the headline when it said nothing.
+ */
+export declare function errorText(err: DescribedError, separator?: string): string;
+/** The hover text: the headline, then everything the server said, each once. */
+export declare function errorTitle(err: DescribedError): string;
 /**
  * The line a person should read for `raw`.
  *
@@ -58,3 +83,8 @@ export interface DescribedError {
  * returns an empty `message`.
  */
 export declare function describeError(raw: unknown, messages?: MonoErrorMessages): DescribedError;
+/**
+ * A load a newer load superseded (devextreme rejects it with `'canceled'`).
+ * Not a failure — nothing should be shown for it.
+ */
+export declare function isCanceled(err: any): boolean;

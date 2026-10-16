@@ -50,7 +50,9 @@
   width: max-content;
   max-width: min(var(--_mono-tooltip-max-width), calc(100vw - 16px));
   padding: var(--_mono-tooltip-padding-y) var(--_mono-tooltip-padding-x);
-  border-radius: var(--_mono-tooltip-radius);
+  /* `--_mono-tooltip-radius-cap` is set by the controller only when the arrow's edge
+     is too short for the rounding (a pill's short side) — see `arrowGeometry`. */
+  border-radius: min(var(--_mono-tooltip-radius), var(--_mono-tooltip-radius-cap, 9999px));
   background: var(--_mono-tooltip-bg);
   color: var(--_mono-tooltip-color);
   box-shadow: var(--_mono-tooltip-ring), var(--_mono-tooltip-shadow);

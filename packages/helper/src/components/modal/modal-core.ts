@@ -1109,6 +1109,7 @@ class MonoModalCoreClass extends superClass implements PopupLayer {
         class=${this._cls('mono-modal-head', 'head')}
         mono-header
         ?mono-empty=${!hasDefaultHeader}
+        ?mono-no-subtitle=${!s.subtitle && !this._hasHeadSlotState}
         @pointerdown=${this._onHeaderPointerDown}
       >
         <div

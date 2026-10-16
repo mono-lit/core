@@ -87,6 +87,7 @@ export declare class MonoCardCoreInterface {
   protected get _isInteractive(): boolean
   protected get _isDisabled(): boolean
   protected get _hasHeader(): boolean
+  protected get _noSubtitle(): boolean
   protected get _cardClasses(): string
   protected _handleClick(event: MouseEvent): void
   protected _handleKeyDown(event: KeyboardEvent): void
@@ -370,6 +371,16 @@ export const MonoCardCore = <T extends Constructor<LitElement>>(superClass: T) =
         this.title ||
         this.subtitle,
       )
+    }
+
+    /**
+     * The header shows a title with NO subtitle under it — drives `mono-no-subtitle`,
+     * which centres the icon chip and that lone title on one axis. With a subtitle
+     * the row stays top-aligned (icon level with the first line); a `slot="header"`
+     * owns its own layout, so it never counts.
+     */
+    protected get _noSubtitle(): boolean {
+      return !this._hasHeaderSlot && !this._hasSubtitle && !this.subtitle
     }
 
     protected get _cardClasses(): string {

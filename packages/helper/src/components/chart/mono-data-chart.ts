@@ -29,6 +29,7 @@ import type {
   MonoChartType,
 } from './chart-types.js'
 import { createNotifier } from '../../composables/notifier'
+import { describeError, isCanceled } from '../../utils/normalize-error.js'
 import { buildChartApply, buildChartOdataRequest, composeApply } from './chart-odata.js'
 import { createApplyGate, isRolledUp, loadApply } from '../../utils/data-source-apply.js'
 import { summaryFilterOf } from '../../utils/data-source-summary.js'
@@ -366,7 +367,10 @@ export function monoChart<T = any>(
 
   const onChanged = (): void => {
     if (drainDepth > 0) return
-    void sync()
+    // The source answered a load. A paged (`loadAll: false`) chart shows exactly
+    // that page, so this IS its successful load; a draining chart re-reads below.
+    if (opts.loadAll === false) succeed()
+    void sync().catch(() => {}) // recorded on `ctrl.error`
   }
   /**
    * Publish the loading state, notifying only on a real change.
@@ -392,11 +396,29 @@ export function monoChart<T = any>(
     notify()
   }
 
+  /** Record a load failure for the element to paint. Cancelled loads are not failures. */
+  function fail(err: unknown): void {
+    if (isCanceled(err)) return
+    ;(ctrl as { error: unknown }).error = describeError(err)
+    notify()
+  }
+
+  /** A load answered: the chart has data and any earlier failure is over. */
+  function succeed(): void {
+    ;(ctrl as { hasLoaded: boolean }).hasLoaded = true
+    ;(ctrl as { error: unknown }).error = null
+  }
+
+  const onLoadError = (err?: unknown): void => {
+    syncLoading()
+    fail(err ?? new Error('Request failed'))
+  }
+
   function detach(): void {
     if (!bound) return
     bound.off('changed', onChanged)
     bound.off('loadingChanged', onLoadingChanged)
-    bound.off('loadError', onLoadingChanged)
+    bound.off('loadError', onLoadError)
     bound = null
   }
 
@@ -525,6 +547,9 @@ export function monoChart<T = any>(
       rows = []
     } else if (opts.loadAll === false) {
       rows = [...(bound.items?.() ?? [])]
+      // Rows already there were loaded by someone; an empty page may just mean
+      // nothing has loaded yet — `changed` / `reload()` settle that.
+      if (rows.length) succeed()
     } else {
       // A chart wants the whole set, not the current page. `readAllRows` passes
       // an array source straight through and drains a remote one in chunks.
@@ -554,6 +579,11 @@ export function monoChart<T = any>(
           })
           rows = isArray && typeof filter === 'function' ? drained.filter(filter as RowPredicate) : drained
         }
+        succeed()
+      } catch (err) {
+        // Keep the rows already drawn; the element paints the failure.
+        fail(err)
+        throw err
       } finally {
         drainDepth--
         syncLoading()
@@ -569,6 +599,7 @@ export function monoChart<T = any>(
       detach()
       raw = next
       rows = []
+      succeed()
       ;(ctrl as { items: T[] }).items = rows
       ;(ctrl as { dataSource: MonoChartSource<T> | null }).dataSource = null
       project()
@@ -586,14 +617,16 @@ export function monoChart<T = any>(
     detach()
     bound = src
     ;(ctrl as { dataSource: MonoChartSource<T> | null }).dataSource = src
+    ;(ctrl as { hasLoaded: boolean }).hasLoaded = false
+    ;(ctrl as { error: unknown }).error = null
     if (!src) {
-      void sync()
+      void sync().catch(() => {})
       return
     }
     src.on('changed', onChanged)
     src.on('loadingChanged', onLoadingChanged)
-    src.on('loadError', onLoadingChanged)
-    void sync()
+    src.on('loadError', onLoadError)
+    void sync().catch(() => {}) // recorded on `ctrl.error`
   }
 
   /**
@@ -651,6 +684,10 @@ export function monoChart<T = any>(
       rows = (res?.data ?? []) as T[]
       // Only the `$apply` path returns rolled-up rows; a plain fetch is raw.
       preAggregated = request.aggregated
+      succeed()
+    } catch (err) {
+      fail(err)
+      throw err
     } finally {
       // `setLoading` notifies, so a failed request clears the spinner too — the
       // bare assignment here left it stuck on when the fetch threw.
@@ -688,7 +725,13 @@ export function monoChart<T = any>(
       if (opts.loadAll === false && bound?.load) {
         resolveBase()
         applyBaseToSource(bound)
-        await bound.load()
+        try {
+          await bound.load()
+          succeed()
+        } catch (err) {
+          fail(err)
+          throw err
+        }
       }
       await sync()
     } finally {
@@ -752,6 +795,8 @@ export function monoChart<T = any>(
   const ctrl: MonoChartController<T> = {
     items: rows,
     loading: false,
+    error: null,
+    hasLoaded: false,
     type: opts.type ?? 'bar',
     dataSource: null,
     get instance() {
@@ -777,6 +822,11 @@ export function monoChart<T = any>(
     bind,
     reload,
     refresh: reload,
+    async retry() {
+      ;(ctrl as { error: unknown }).error = null
+      notify()
+      await reload().catch(() => {}) // recorded on `ctrl.error`
+    },
     setDataSourceOptions,
     setOdataOptions,
     resolvedDataSourceOptions,
@@ -808,9 +858,8 @@ export function monoChart<T = any>(
   // An `odata` chart owns its own fetching, so it loads itself — matching how
   // passing a source auto-syncs. `reload()` re-runs it on demand.
   if (!source && opts.odata?.url) {
-    void loadOdata().catch((err) => {
-      console.error('[mono-chart] odata load failed:', err)
-    })
+    // A failure is recorded on `ctrl.error`, which the element paints with ↻.
+    void loadOdata().catch(() => {})
   }
 
   return ctrl

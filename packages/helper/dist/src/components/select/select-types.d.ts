@@ -1,4 +1,5 @@
 import { PanelSizeProps } from '../../composables/css-size';
+import { DescribedError } from '../../utils/normalize-error';
 import { MonoDataSource, LoadMoreMode } from '../../composables/data-source-controller';
 import { VisibilityProps } from '../../composables/visibility';
 import { MonoSearchValue } from '../../search/data-search';
@@ -221,6 +222,19 @@ export interface SelectProps extends VisibilityProps {
     required?: boolean;
     /** Shows a clear button to reset the selected value. */
     clearable?: boolean;
+    /** Show "Loading…" + a spinner and lock the select — the app is still fetching its options. */
+    loading?: boolean;
+    /** Text shown while loading (default `'Loading…'`). */
+    loadingText?: string;
+    'loading-text'?: string;
+    loadingtext?: string;
+    /** The app's fetch failed: a string or the error itself. Painted with ↻, which fires `retry`. */
+    loadingError?: unknown;
+    'loading-error'?: unknown;
+    loadingerror?: unknown;
+    /** Accessible name of the ↻ button (default `'Retry'`). */
+    retryLabel?: string;
+    'retry-label'?: string;
     /** Accessible label used when no visible label is present. */
     ariaLabelText?: string;
     ariaLabel?: string;
@@ -248,11 +262,23 @@ export interface SelectProps extends VisibilityProps {
     cssclass?: SelectCssClass;
     'css-class'?: SelectCssClass | string;
 }
+/**
+ * ↻ was pressed on a failed field. `source: 'dataSource'` — the bound source
+ * failed and is already being re-run; `'app'` — it was `loading-error`, so the
+ * app re-runs its own fetch.
+ */
+export type MonoRetryEvent = CustomEvent<{
+    error: DescribedError;
+    source: 'app' | 'dataSource';
+}>;
 export interface SelectEvents {
     change: SelectModelEvent;
     clear: SelectModelEvent;
+    retry: MonoRetryEvent;
     'mno-change': SelectModelEvent;
     mnoChange: SelectModelEvent;
     'mno-clear': SelectModelEvent;
     mnoClear: SelectModelEvent;
+    'mno-retry': MonoRetryEvent;
+    mnoRetry: MonoRetryEvent;
 }

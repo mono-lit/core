@@ -186,34 +186,55 @@ function isFocusVisible(el) {
 		return true;
 	}
 }
-/**
-* How far the arrow must stay from the bubble's corners: past the rounding, on the
-* straight part of the edge. A fixed 4px let a `-start` / `-end` arrow land on the
-* curve of a well-rounded flavor (a pill, in the extreme), where the edge has
-* already pulled away and the diamond hung off the corner.
-*
-* Read from the PAINTED radius, so every flavor and radius preset is covered.
-* CSS scales radii that overflow the box down to fit it (a `9999px` pill paints
-* half its height), hence the clamp to half the smaller side. The diamond is the
-* arrow box rotated 45°: where it meets the edge it is `size·√2` wide, so it
-* overhangs its own box by `size·(√2−1)/2` on each side. Floating UI caps the
-* padding itself when the bubble is too short for it — the arrow then centres on
-* the edge and the bubble shifts so it still points at the trigger.
-*/
-function arrowPadding(bubble, arrowEl) {
+/** The bubble's four computed corner radii — read once per open, BEFORE any cap lands. */
+function readCorners(bubble) {
 	const cs = getComputedStyle(bubble);
-	const half = Math.min(bubble.offsetWidth, bubble.offsetHeight) / 2;
-	const radius = Math.max(...[
+	return [
 		cs.borderTopLeftRadius,
 		cs.borderTopRightRadius,
 		cs.borderBottomRightRadius,
 		cs.borderBottomLeftRadius
-	].map((v) => {
+	];
+}
+/**
+* Where the arrow may sit on the edge of `side`, and whether the bubble's rounding
+* has to give way for it.
+*
+* `padding` keeps the arrow past the rounding, on the straight part of the edge. A
+* fixed 4px let a `-start` / `-end` arrow land on the curve of a well-rounded
+* flavor, where the edge has already pulled away and the diamond hung off the
+* corner.
+*
+* `cap` handles the edge that has NO straight part: a pill's short side is all
+* curve (height = 2 × radius), so whatever the padding, the diamond sat on a curve
+* and looked glued to the corner. When the edge can't fit the arrow between its two
+* roundings, the radius is capped to the widest value that still leaves the
+* diamond a straight run — the bubble turns from a pill into a rounded rectangle
+* only on the placements that need it. `null` = the painted radius already fits.
+*
+* Read from the PAINTED radius, so every flavor and radius preset is covered. CSS
+* scales radii that overflow the box down to fit it (a `9999px` pill paints half
+* its height), hence the clamp to half the smaller side. The diamond is the arrow
+* box rotated 45°: where it meets the edge it is `size·√2` wide, so it overhangs
+* its own box by `size·(√2−1)/2` on each side.
+*/
+function arrowGeometry(bubble, arrowEl, corners, side) {
+	const width = bubble.offsetWidth;
+	const height = bubble.offsetHeight;
+	const half = Math.min(width, height) / 2;
+	const painted = Math.min(half, Math.max(...corners.map((v) => {
 		const n = parseFloat(v) || 0;
 		return v.trim().endsWith("%") ? n / 100 * half * 2 : n;
-	}));
-	const overhang = arrowEl.offsetWidth * (Math.SQRT2 - 1) / 2;
-	return Math.max(4, Math.ceil(Math.min(radius, half) + overhang) + 1);
+	})));
+	const size = arrowEl.offsetWidth;
+	const diagonal = size * Math.SQRT2;
+	const overhang = (diagonal - size) / 2;
+	const fit = Math.max(0, Math.floor(((side === "left" || side === "right" ? height : width) - diagonal) / 2) - 2);
+	const radius = Math.min(painted, fit);
+	return {
+		padding: Math.max(4, Math.ceil(radius + overhang) + 1),
+		cap: radius < painted ? radius : null
+	};
 }
 function toDelays(delay) {
 	if (Array.isArray(delay)) return [Number(delay[0]) || 0, Number(delay[1]) || 0];
@@ -247,6 +268,7 @@ var TooltipInstance = class {
 		this._reasons = /* @__PURE__ */ new Set();
 		this._token = 0;
 		this._pending = null;
+		this._pendingReason = null;
 		this._suppressed = null;
 		this._lastPath = [];
 		this._destroyed = false;
@@ -374,8 +396,13 @@ var TooltipInstance = class {
 		}
 		if (anchor && o.hideOnClick) {
 			this._suppressed = anchor;
-			if (this._pending === anchor) this._cancelShow();
-			if (this._open?.anchor === anchor && !this._reasons.has("manual")) this._close(false);
+			if (this._pending === anchor) {
+				if (this._pendingReason !== "focus") this._cancelShow();
+				return;
+			}
+			if (this._open?.anchor !== anchor || this._reasons.has("manual")) return;
+			if (this._reasons.has("focus")) this._reasons.delete("hover");
+			else this._close(false);
 		}
 	}
 	_resolved(anchor) {
@@ -409,6 +436,7 @@ var TooltipInstance = class {
 		clearTimeout(this._showTimer);
 		this._showTimer = void 0;
 		this._pending = null;
+		this._pendingReason = null;
 	}
 	_cancelHide() {
 		clearTimeout(this._hideTimer);
@@ -416,7 +444,7 @@ var TooltipInstance = class {
 	}
 	/** One reason to stay open went away — close once none is left. */
 	_dropReason(reason) {
-		if (this._pending && !this._open) {
+		if (this._pending && !this._open && this._pendingReason === reason) {
 			this._cancelShow();
 			this._token++;
 		}
@@ -441,12 +469,14 @@ var TooltipInstance = class {
 		const token = ++this._token;
 		if (delay > 0) {
 			this._pending = anchor;
+			this._pendingReason = reason;
 			await new Promise((resolve) => {
 				this._showTimer = setTimeout(resolve, delay);
 			});
 			if (token !== this._token) return;
 		}
 		this._pending = null;
+		this._pendingReason = null;
 		await this._mount(anchor, reason, token);
 	}
 	async _mount(anchor, reason, token) {
@@ -521,10 +551,12 @@ var TooltipInstance = class {
 		const middleware = [offset(o.offset)];
 		if (o.flip) middleware.push(flip({ padding: o.padding }));
 		if (o.shift) middleware.push(shift({ padding: o.padding }));
-		if (o.arrow) middleware.push(arrow({
+		const corners = state.corners ??= readCorners(state.el);
+		const geometry = (placement) => arrowGeometry(state.el, state.arrow, corners, placement.split("-")[0]);
+		if (o.arrow) middleware.push(arrow(({ placement }) => ({
 			element: state.arrow,
-			padding: arrowPadding(state.el, state.arrow)
-		}));
+			padding: geometry(placement).padding
+		})));
 		middleware.push(hide());
 		const { x, y, placement, middlewareData } = await computePosition(state.anchor, state.el, {
 			placement: o.placement,
@@ -538,6 +570,9 @@ var TooltipInstance = class {
 		state.el.setAttribute("data-side", side);
 		if (align) state.el.setAttribute("data-align", align);
 		else state.el.removeAttribute("data-align");
+		const cap = o.arrow ? geometry(placement).cap : null;
+		if (cap === null) state.el.style.removeProperty("--_mono-tooltip-radius-cap");
+		else state.el.style.setProperty("--_mono-tooltip-radius-cap", `${cap}px`);
 		const a = middlewareData.arrow;
 		state.arrow.style.left = a?.x != null ? `${a.x}px` : "";
 		state.arrow.style.top = a?.y != null ? `${a.y}px` : "";

@@ -486,6 +486,12 @@ mono-modal {
   background: var(--_mono-modal-header-bg);
 }
 
+/* No subtitle: a lone title line sits centred beside the taller ✕ instead of
+   riding its top edge. With a subtitle the head stays top-aligned. */
+:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-header][mono-no-subtitle] {
+  align-items: center;
+}
+
 /* basecoat@1.0.2 styles/vega.css .dialog > * > header > h2, .dialog > * > [data-title]
    — leading-none font-medium */
 /* basecoat@1.0.2 components/dialog.css .dialog >> > * > header — flex flex-col

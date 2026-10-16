@@ -31,6 +31,8 @@ import {
 } from '../../composables/hybird-prop'
 import { dispatchMonoEvent } from '../../composables/mono-event'
 import { DataSourceController } from '../../composables/data-source-controller'
+import { describeError, errorText, errorTitle, type DescribedError } from '../../utils/normalize-error'
+import { refreshIcon, spinnerIcon } from '../../composables/field-icons'
 import { buildSizeStyle, toCssSize, type CssSizeValue } from '../../composables/css-size'
 import { PopupPortalController } from '../../composables/popup-portal'
 import { LateSlotWatcher } from '../../composables/light-slots'
@@ -66,6 +68,8 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
 
     defineHybridPropAliases(this, [
       'modelValue',
+      'loadingText',
+      'loadingError',
       'helperText',
       'validationState',
       'validationMessage',
@@ -175,6 +179,8 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
     return [
       ...base,
       'modelvalue',
+      'loadingtext',
+      'loadingerror',
       'model-value',
       'helpertext',
       'validationstate',
@@ -203,6 +209,16 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
 
     if (name === 'modelvalue' || name === 'model-value') {
       this.modelValue = this._toSelectValue(newValue)
+      return
+    }
+
+    if (name === 'loadingtext') {
+      this.loadingText = newValue ?? 'Loading…'
+      return
+    }
+
+    if (name === 'loadingerror') {
+      this.loadingError = newValue
       return
     }
 
@@ -552,6 +568,34 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
   @property({ type: String, attribute: 'search-placeholder' })
   searchPlaceholder = ''
 
+  /**
+   * Shown in the field while the bound `dataSource` answers its first request
+   * (or a retry). The field is fully read-only meanwhile.
+   */
+  @property({ type: String, attribute: 'loading-text' })
+  loadingText = 'Loading…'
+
+  /** Accessible name of the ↻ button shown after the `dataSource` failed. */
+  @property({ type: String, attribute: 'retry-label' })
+  retryLabel = 'Retry'
+
+  /**
+   * The app is still fetching this field's options (e.g. the source is built
+   * after an `await`): the field shows `loadingText` + a spinner and is fully
+   * read-only, exactly as while a bound `dataSource` loads. Bind with
+   * `:loading.prop` from Vue (see the hydration note on `mono-button`).
+   */
+  @property({ converter: booleanStringConverter })
+  loading = false
+
+  /**
+   * The app's own fetch failed: a string, or the error itself (its messages are
+   * collected like `monoFetch` does). The field paints the failure + ↻ like a
+   * failed `dataSource`; ↻ fires `retry` for the app to re-run its fetch.
+   */
+  @property({ attribute: 'loading-error' })
+  loadingError: unknown = null
+
   @property({ attribute: false, hasChanged: rateLimitHasChanged })
   cssClass: SelectCssClass = {}
 
@@ -799,13 +843,25 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
     // so render() sees real booleans and client hydration matches.
     // (see project_shadow_boolean_prop_ssr)
     for (const key of [
-      'disabled', 'readonly', 'required', 'clearable',
+      'disabled', 'loading', 'readonly', 'required', 'clearable',
       'immediate', 'group', 'groupSticky', 'searchable', 'stayOpen',
     ] as const) {
       const v = this[key] as unknown
       if (typeof v !== 'boolean') {
         ;(this as unknown as Record<string, unknown>)[key] = this._toBoolean(v)
       }
+    }
+
+    if (changed.has('loadingError')) {
+      const v = this.loadingError
+      this._appFailure = v == null || v === false || v === '' ? null : describeError(v === true ? undefined : v)
+    }
+
+    // The source is loading for the first time, or failed: no panel. Drop the
+    // typed query locally — `_close()` would re-query a source that just failed.
+    if (this._open && this._dsInert) {
+      this._open = false
+      this._dropQuery()
     }
 
     // Store the RAW target, not the consumer's reactive proxy — otherwise the
@@ -1580,7 +1636,7 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
   }
 
   private _onSearchInput(event: Event): void {
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
 
     this._query = (event.target as HTMLInputElement).value
     this._searchActive = true
@@ -1602,10 +1658,19 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
       this.requestUpdate()
       return
     }
+    await this._pushSearch(query).catch((err: unknown) => {
+      // A failed search is a failed source: the field shows it and offers ↻.
+      this._ds.setError(err)
+    })
+  }
+
+  /** Push `query` onto the source and reload it; rejects when the load fails. */
+  private _pushSearch(query: string): Promise<unknown> {
     // `MonoSourceSearch` picks the strategy: plain columns ride the source's own
     // `searchValue` folding, while paths / `*` patterns / customs are compiled to
     // a `$filter` and AND-ed onto the consumer's own filter.
-    await this._sourceSearch.apply(this.dataSource, {
+    this._appliedQuery = query
+    return this._sourceSearch.apply(this.dataSource, {
       query,
       searchValue: this.searchValue,
       fallbackFields: this._fallbackSearchFields(),
@@ -1614,6 +1679,69 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
       defaultToWildcard: true,
       operation: this.searchOperation || 'contains',
     })
+  }
+
+  /** The query last pushed onto the source — a retry after a failed search clears it. */
+  private _appliedQuery = ''
+
+  /** Forget the typed query without touching the source. */
+  private _dropQuery(): void {
+    if (this._searchTimer) {
+      clearTimeout(this._searchTimer)
+      this._searchTimer = undefined
+    }
+    this._query = ''
+    this._searchActive = false
+    this._activeIndex = -1
+  }
+
+  /** `loading-error`, described — null when the app reports no failure. */
+  private _appFailure: DescribedError | null = null
+
+  /** Loading: the app says so (`loading`), or the bound source's first load / retry. */
+  private get _busy(): boolean {
+    return this.loading || (!!this.dataSource && this._ds.busy)
+  }
+
+  /** The failure to paint: the app's `loading-error`, else the source's own; none while busy. */
+  private get _failure(): DescribedError | null {
+    if (this._busy) return null
+    return this._appFailure ?? (this.dataSource ? this._ds.error : null)
+  }
+
+  /**
+   * ↻: always announced as `retry`. A failure of the bound source is also
+   * re-run here (without the failed search query); an app-reported
+   * `loading-error` is the app's to re-fetch.
+   */
+  private _retry = (event: Event): void => {
+    event.preventDefault()
+    event.stopPropagation()
+    const error = this._failure
+    if (this.disabled || this._busy || !error) return
+    const fromApp = !!this._appFailure
+    dispatchMonoEvent(this, 'retry', { error, source: fromApp ? 'app' : 'dataSource' })
+    if (fromApp || !this.dataSource || !this._ds.error) return
+    const clearSearch = !!this._appliedQuery && this._serverSearch()
+    void this._ds.retry(clearSearch ? () => this._pushSearch('') : undefined)
+  }
+
+  /** Enter / Space on the focused field retries a failure. */
+  private _retryKey(event: KeyboardEvent): boolean {
+    if (event.key !== 'Enter' && event.key !== ' ') return false
+    if (!this._failure || this.disabled) return false
+    this._retry(event)
+    return true
+  }
+
+  /** Loading, or failed: the field refuses every gesture but ↻. */
+  private get _dsInert(): boolean {
+    return this._busy || !!this._failure
+  }
+
+  /** Every interaction is off: disabled, read-only, or the source isn't usable. */
+  private get _inert(): boolean {
+    return this.disabled || this.readonly || this._dsInert
   }
 
   /** Clear the typed query (and the source query, on close / select). */
@@ -1637,6 +1765,8 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
 
   /** Placeholder for the search field — a search hint while open, else the prompt. */
   private get _fieldPlaceholder(): string {
+    if (this._busy) return this.loadingText
+    if (this._failure) return errorText(this._failure)
     if ((this._open || this._searchActive) && this.searchPlaceholder) {
       return this.searchPlaceholder
     }
@@ -1783,7 +1913,7 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
   private _toggleOpen(event?: Event): void {
     event?.stopPropagation()
 
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
 
     if (this._open) this._close()
     else this._open = true
@@ -1836,7 +1966,8 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
   }
 
   private _handleTriggerKeydown(event: KeyboardEvent): void {
-    if (this.disabled || this.readonly) return
+    if (this._retryKey(event)) return
+    if (this._inert) return
 
     // Closed: Enter / Space / ↓ open it.
     if (!this._open) {
@@ -1904,7 +2035,7 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
    * chevron are.
    */
   private _handleSearchFocus(event: Event): void {
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
     ;(event.target as HTMLInputElement).select()
   }
 
@@ -1917,14 +2048,15 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
    */
   private _handleFieldClick(event: Event): void {
     event.stopPropagation()
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
     this._open = true
     this._searchFieldEl?.focus()
   }
 
   /** Keyboard nav for the search field: arrows move, Enter selects, Esc closes. */
   private _handleSearchKeydown(event: KeyboardEvent): void {
-    if (this.disabled || this.readonly) return
+    if (this._retryKey(event)) return
+    if (this._inert) return
     this._handleListKeydown(event)
   }
 
@@ -1932,7 +2064,7 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
     event?.preventDefault()
     event?.stopPropagation()
 
-    if (this.disabled || this.readonly || item.disabled) return
+    if (this._inert || item.disabled) return
 
     const oldValue = this.modelValue
     const nextValue = this._resolveItemValue(item)
@@ -1964,7 +2096,7 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
     event.preventDefault()
     event.stopPropagation()
 
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
 
     const oldValue = this.modelValue
     const nextValue = null
@@ -2010,6 +2142,24 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
   }
 
   private _renderValue(): TemplateResult {
+    if (this._dsInert) {
+      const err = this._failure
+      return html`
+        <span
+          class=${`${this._cls('mono-select-value', 'value')} ${this._cls(
+        'mono-select-placeholder',
+        'placeholder',
+      )}`}
+          mono-value
+          mono-placeholder
+          ?mono-ds-error-text=${!!err}
+          title=${ifDefined(err ? errorTitle(err) : undefined)}
+        >
+          ${err ? errorText(err) : this.loadingText}
+        </span>
+      `
+    }
+
     if (this._hasValue && this._selectedItem) {
       return html`
         <span class=${this._cls('mono-select-value', 'value')} mono-value>
@@ -2342,7 +2492,7 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
    * Single-select, so this SETS the value and closes — the same thing `_renderOption` does.
    */
   protected _onListSlotClick = (event: Event): void => {
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
 
     const target = event.target as Element | null
     const item = target ? (this._entryFromNode(target)?.item as SelectItem | undefined) : undefined
@@ -2352,7 +2502,7 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
   }
 
   private _emptyRow(): TemplateResult {
-    const text = this.dataSource && this._ds.loading ? 'Loading…' : this._query ? 'No matches' : 'No items'
+    const text = this.dataSource && this._ds.loading ? this.loadingText : this._query ? 'No matches' : 'No items'
     return html`<div class=${this._cls('mono-select-item disabled', 'itemDisabled')} mono-empty-row>${text}</div>`
   }
 
@@ -2496,7 +2646,31 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
    * input); `_toggleOpen` stops propagation so the plain trigger does not toggle
    * a second time. */
   private _renderActions(): TemplateResult {
-    const inert = this.disabled || this.readonly
+    if (this._busy) {
+      return html`
+        <span class=${this._cls('mono-select-actions', 'actions')} mono-actions>
+          <span mono-ds-spinner role="status" aria-label=${this.loadingText}>${spinnerIcon()}</span>
+        </span>
+      `
+    }
+    if (this._failure && !this.disabled) {
+      return html`
+        <span class=${this._cls('mono-select-actions', 'actions')} mono-actions>
+          <span
+            role="button"
+            tabindex="-1"
+            mono-ds-retry
+            aria-label=${this.retryLabel}
+            title=${this.retryLabel}
+            @mousedown=${(event: MouseEvent) => event.preventDefault()}
+            @click=${this._retry}
+          >
+            ${refreshIcon()}
+          </span>
+        </span>
+      `
+    }
+    const inert = this._inert
     const canClear = this.clearable && this._hasValue && !inert
     const showArrow = !inert && !canClear
     return html`
@@ -2581,10 +2755,10 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
           aria-controls=${this._listboxId}
           aria-label=${ifDefined(ariaLabel)}
           aria-describedby=${ifDefined(describedBy)}
-          .value=${this._searchActive ? this._query : this._displayText}
+          .value=${this._dsInert ? '' : this._searchActive ? this._query : this._displayText}
           placeholder=${this._fieldPlaceholder}
           ?disabled=${this.disabled}
-          ?readonly=${this.readonly}
+          ?readonly=${this.readonly || this._dsInert}
           @input=${this._onSearchInput}
           @focus=${this._handleSearchFocus}
           @keydown=${this._handleSearchKeydown}
@@ -2675,6 +2849,9 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
         ?mono-required=${this.required}
         ?mono-clearable=${this.clearable}
         ?mono-searchable=${this.searchable}
+        ?mono-ds-loading=${this._busy}
+        ?mono-ds-error=${!!this._failure}
+        aria-busy=${this._busy ? 'true' : nothing}
       >
         ${this._renderLabel()}
 
@@ -2723,7 +2900,7 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
   }
 
   public open(): void {
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
     this._open = true
   }
 
@@ -2732,7 +2909,7 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
   }
 
   public toggle(): void {
-    if (this.disabled || this.readonly) return
+    if (this._inert) return
     if (this._open) this._close()
     else this._open = true
   }

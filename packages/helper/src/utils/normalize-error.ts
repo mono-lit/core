@@ -231,45 +231,92 @@ export function errorStatus(raw: unknown): number | undefined {
   return undefined
 }
 
+/** A JSON response body handed over as text (an XHR's `responseText`), parsed; else undefined. */
+function parseBody(value: unknown): unknown {
+  if (typeof value !== 'string') return undefined
+  const s = value.trim()
+  if (!s.startsWith('{') && !s.startsWith('[')) return undefined
+  try {
+    return JSON.parse(s)
+  } catch {
+    return undefined
+  }
+}
+
+/** The "same message" key: case, spacing and trailing punctuation do not make two texts different. */
+const messageKey = (value: string): string =>
+  value.toLowerCase().replace(/\s+/g, ' ').replace(/[\s.!:;,]+$/, '').trim()
+
 /**
- * The text a SERVER wrote about the failure, if the error carries one — an OData
- * error body's message, a JSON body's `message` / `error`, an axios
- * `response.data`. `''` when there is nothing beyond the transport's own words.
+ * Keep each message once. Two texts are the same message when they match after
+ * {@link messageKey}, and a text another kept one already CONTAINS adds nothing
+ * ("Not found" next to "Not found: Order 42") — the longer, more specific one wins
+ * and keeps its place in the order the messages were found.
  */
-function serverDetail(raw: unknown): string {
-  if (!isObject(raw)) return ''
+function uniqueMessages(found: string[]): string[] {
+  const kept: Array<{ text: string; key: string }> = []
+  for (const t of found) {
+    const key = messageKey(t)
+    if (!key) continue
+    if (kept.some((k) => k.key.includes(key))) continue
+    // A newcomer that contains earlier, shorter ones replaces them.
+    const swallowed = kept.findIndex((k) => key.includes(k.key))
+    if (swallowed >= 0) {
+      kept[swallowed] = { text: t, key }
+      for (let i = kept.length - 1; i > swallowed; i--) if (key.includes(kept[i].key)) kept.splice(i, 1)
+      continue
+    }
+    kept.push({ text: t, key })
+  }
+  return kept.map((k) => k.text)
+}
 
-  // devextreme: the parsed `error` / `odata.error` / `@odata.error` body.
-  const details = raw.errorDetails
-  if (isObject(details)) {
-    const m = details.message
-    const hit = text(m) || (isObject(m) ? text(m.value) : '')
-    if (hit) return hit
+/**
+ * Every message an error carries, combined the way `monoFetch`'s
+ * `extractErrorMessage` does it: each key whose name contains "message"
+ * (`message`, `errorMessage`, `Message`, …) holding text — or OData's
+ * `{ message: { value } }` — at any depth up to 3, plus a JSON body still in
+ * `responseText` / `responseJSON` / `response`, plus an `Error`'s own
+ * (non-enumerable) `message`. The usual body fields `detail` / `title` and a
+ * plain-text `response.data` count too.
+ *
+ * Deduplicated by {@link uniqueMessages}, transport boilerplate ("Bad Request",
+ * "Failed to fetch") dropped, in the order found.
+ */
+export function collectErrorMessages(raw: unknown, status = errorStatus(raw)): string[] {
+  const found: string[] = []
+  const add = (value: unknown): void => {
+    const t = text(value)
+    if (t) found.push(t)
+  }
+  const seen = new Set<unknown>()
+
+  const visit = (val: unknown, depth: number): void => {
+    if (!isObject(val) || depth > 3 || seen.has(val)) return
+    seen.add(val)
+    // An Error keeps `message` on itself but NON-enumerable — Object.entries misses it.
+    if (val instanceof Error) add(val.message)
+    for (const [k, v] of Object.entries(val)) {
+      if (/message/i.test(k)) {
+        if (typeof v === 'string') add(v)
+        else if (isObject(v) && typeof v.value === 'string') add(v.value) // OData
+      } else if (k === 'detail' || k === 'title' || k === 'errorDetail') {
+        add(v)
+      } else if (k === 'responseText' || k === 'response' || k === 'data' || k === '_data') {
+        if (typeof v === 'string') {
+          const body = parseBody(v)
+          if (body !== undefined) visit(body, depth + 1)
+          else if (k !== 'response') add(v) // a plain-text body is the server's words
+        }
+      }
+      if (isObject(v)) visit(v, depth + 1)
+    }
   }
 
-  // axios / ofetch: the response body one level down.
-  const response = isObject(raw.response) ? raw.response : undefined
-  const data = response?.data ?? response?._data ?? raw.data
-  if (isObject(data)) {
-    const err = data.error
-    const hit =
-      text(data.message) ||
-      text(data.detail) ||
-      text(data.title) ||
-      text(err) ||
-      (isObject(err) ? text(err.message) : '')
-    if (hit) return hit
-  } else if (text(data)) {
-    return text(data)
-  }
+  if (typeof raw === 'string') add(raw)
+  else visit(raw, 0)
 
-  if (!(raw instanceof Error)) {
-    const err = raw.error
-    const hit = text(raw.errorMessage) || text(raw.detail) || (isObject(err) ? text(err.message) : '')
-    if (hit) return hit
-  }
-
-  return ''
+  return uniqueMessages(found).filter((t) => !isBoilerplate(t, status))
 }
 
 /** Is `value` nothing more than the reason phrase / a generic label for `status`? */
@@ -298,6 +345,24 @@ export interface DescribedError {
    * user CAN act on ("Budget period is closed"). Never a bare reason phrase.
    */
   detail?: string
+  /**
+   * Every distinct message the error carried (see {@link collectErrorMessages}) —
+   * what `detail` joins. Empty when the error said nothing beyond its status.
+   */
+  messages: string[]
+}
+
+/**
+ * The one line a field shows for `err`: what the server said, every distinct
+ * message combined (`monoFetch` style), or the headline when it said nothing.
+ */
+export function errorText(err: DescribedError, separator = ' · '): string {
+  return err.messages.length ? err.messages.join(separator) : err.message
+}
+
+/** The hover text: the headline, then everything the server said, each once. */
+export function errorTitle(err: DescribedError): string {
+  return uniqueMessages([err.message, ...err.messages]).join('\n')
 }
 
 /**
@@ -317,21 +382,34 @@ export function describeError(raw: unknown, messages?: MonoErrorMessages): Descr
 
   const preset =
     status === undefined ? undefined : status === 0 ? texts.network : texts[status]
+  const said = collectErrorMessages(raw, status).filter((m) => m !== preset)
 
   if (preset) {
-    // The server's own words first; failing that the error's text, if it says
-    // more than the status already does.
-    const fromServer = serverDetail(raw)
-    const candidate = fromServer || (rawText === fallback ? '' : rawText)
-    const detail = candidate && !isBoilerplate(candidate, status) && candidate !== preset ? candidate : ''
-    return detail ? { message: preset, status, detail } : { message: preset, status }
+    // The preset is the headline; whatever the server wrote rides along as detail.
+    const out: DescribedError = { message: preset, status, messages: said }
+    if (said.length) out.detail = said.join('\n\n')
+    return out
   }
 
+  // No preset: the error's own text IS the headline, the rest is detail.
   const message = rawText || fallback
-  const fromServer = serverDetail(raw)
-  const detail = fromServer && fromServer !== message && !isBoilerplate(fromServer, status) ? fromServer : ''
-  const out: DescribedError = { message }
+  const rest = said.filter((m) => messageKey(m) !== messageKey(message))
+  const out: DescribedError = { message, messages: said }
   if (status !== undefined) out.status = status
-  if (detail) out.detail = detail
+  if (rest.length) out.detail = rest.join('\n\n')
   return out
+}
+
+/**
+ * A load a newer load superseded (devextreme rejects it with `'canceled'`).
+ * Not a failure — nothing should be shown for it.
+ */
+export function isCanceled(err: any): boolean {
+  if (!err) return false
+  return (
+    err === 'canceled' ||
+    err.name === 'canceled' ||
+    err.message === 'canceled' ||
+    err.__id === 'canceled'
+  )
 }

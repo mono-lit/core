@@ -156,4 +156,18 @@ describe('<mono-card> styling attributes', () => {
     expect(r.hasAttribute('mono-no-footer-divider')).toBe(true)
     el.remove()
   })
+
+  // card.css centres icon + title on `mono-no-subtitle`; with a subtitle the
+  // header stays top-aligned.
+  it('marks a header that has no subtitle', async () => {
+    const header = (el: any) => el.querySelector('[mono-header]') as HTMLElement
+
+    const titleOnly = await mount({ title: 'T' })
+    expect(header(titleOnly).hasAttribute('mono-no-subtitle')).toBe(true)
+
+    titleOnly.subtitle = 'S'
+    await tick()
+    expect(header(titleOnly).hasAttribute('mono-no-subtitle')).toBe(false)
+    titleOnly.remove()
+  })
 })

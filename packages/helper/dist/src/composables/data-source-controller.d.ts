@@ -1,4 +1,5 @@
 import { ReactiveController, ReactiveControllerHost } from 'lit';
+import { DescribedError } from '../utils/normalize-error';
 /**
  * Minimal structural shape of a devextreme DataSource. Declared locally so
  * @mono-lit/helper stays dependency-free; a real devextreme DataSource satisfies it.
@@ -49,6 +50,9 @@ export declare class DataSourceController<T = unknown> implements ReactiveContro
     private _dsLoading;
     private _loadingMore;
     private _isLastPage;
+    private _error;
+    private _hasLoaded;
+    private _retrying;
     private _visibleCount;
     private _internalLoad;
     private _bound;
@@ -64,18 +68,43 @@ export declare class DataSourceController<T = unknown> implements ReactiveContro
     resetVisible(): void;
     /** Load/reveal the next page and append it to the accumulated list. */
     loadMore(): Promise<void>;
+    /**
+     * Re-run the request after a failure. Reloads the source as it stands, so a
+     * failed search is retried with the same query. While it runs the field is
+     * {@link busy} again.
+     *
+     * `load` replaces the plain `ds.load()` — a host whose failed request was a
+     * search passes one that clears the query on the source and reloads.
+     */
+    retry(load?: () => unknown): Promise<void>;
+    /**
+     * Record a failure from a request the host drove itself (e.g. a server
+     * select-all drain). Cancelled loads are ignored.
+     */
+    setError(raw: unknown): void;
     /** Raw source array: accumulated DataSource items, or the plain `items`. */
     get sourceItems(): T[];
     /** Rows to actually render (array-mode reveals a slice; else everything). */
     get visibleItems(): T[];
     get loading(): boolean;
     get loadingMore(): boolean;
+    /**
+     * The field must be locked: the FIRST load (or a retry) is in flight. A
+     * search / filter reload after the source has answered once does not count —
+     * the person is typing into the field and it must stay usable.
+     */
+    get busy(): boolean;
+    /** The last load failure, described for a person; null once a load succeeds. */
+    get error(): DescribedError | null;
     /** load-more is driving a plain `items` array (no DataSource bound). */
     get isArrayLoadMore(): boolean;
     /** Whether there's nothing left to load/reveal. */
     get atLastPage(): boolean;
     private readonly _onChanged;
     private readonly _onLoadingChanged;
+    private readonly _onLoadError;
+    /** A load answered: the source is usable and any earlier failure is over. */
+    private _markLoaded;
     private _sync;
     /** Load the first page, replacing the accumulated list. */
     private _loadFirstPage;

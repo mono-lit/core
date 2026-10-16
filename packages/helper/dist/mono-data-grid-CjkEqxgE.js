@@ -1,312 +1,10 @@
-import { a as parseFieldPath, c as toODataClause, l as toODataSelector, n as isPath, o as projectFields, r as mergePatch, s as setFieldValue, t as getFieldValue } from "./field-path-C92eGLg3.js";
-import { a as buildGroups, c as isGroupNode, i as searchFilterOf, o as collectGroupPaths, r as readAllRows, s as flattenLeaves } from "./data-source-read-DL88aH8t.js";
-import { i as joinFilters, n as andPredicates, r as compileFilterPredicate, t as andFilters } from "./filter-eval-DIfU2EAn.js";
-import { S as searchEntryFor, _ as hasWildcardSearch, b as plainSearchColumns, g as hasCustomSearch, m as customRemoteClause, o as mergeSearchFields, p as customPredicate, t as DEFAULT_SEARCH_FIELDS, x as resolveSearchEntries } from "./data-search-Bwo5bg8K.js";
-import { a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, h as monoArraySource, i as normalizeSortList, l as summaryAliases, m as storeRows, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-CQSTZHPE.js";
-import { n as unwrapReactive } from "./reactive-D3EERqgO.js";
-import { t as arrayToODataString } from "./filter-odata-C1vSGZaY.js";
 import { t as createNotifier } from "./notifier-CE4yxMUQ.js";
-import { t as monoFilterBuilder } from "./filter-builder-Bke3qOgJ.js";
-//#region src/utils/normalize-error.ts
-/** Fields worth reading off an object that is not an `Error`. */
-var MESSAGE_KEYS = [
-	"message",
-	"statusText",
-	"errorMessage",
-	"error",
-	"detail"
-];
-var text = (value) => typeof value === "string" && value.trim() ? value.trim() : "";
-var isObject = (value) => value !== null && typeof value === "object";
-/**
-* A readable message for `raw`, or `fallback` when nothing legible can be found.
-*
-* Never throws, and never returns an empty string — a caller rendering this into
-* an error bar has to have something to render, and a blank bar is worse than a
-* generic one.
-*/
-function normalizeError(raw, fallback = "Request failed") {
-	if (raw == null) return fallback;
-	if (raw instanceof Error) {
-		const own = text(raw.message);
-		if (own) return own;
-	} else {
-		if (typeof raw === "string") return text(raw) || fallback;
-		if (typeof raw === "number" || typeof raw === "boolean") return String(raw);
-	}
-	if (isObject(raw)) {
-		const obj = raw;
-		for (const key of MESSAGE_KEYS) {
-			const hit = text(obj[key]);
-			if (hit) return hit;
-		}
-		const response = obj.response;
-		if (isObject(response)) {
-			const nested = text(response.statusText) || text(response.message);
-			if (nested) return nested;
-		}
-		const status = errorStatus(obj);
-		if (status !== void 0 && status > 0) return `HTTP ${status}`;
-		if (raw instanceof Error) return text(raw.name) || fallback;
-		return fallback;
-	}
-	return text(String(raw)) || fallback;
-}
-/**
-* What the bar says for a status. English; an app puts its own language in
-* ONCE with `setErrorMessages()` rather than on every table.
-*/
-var DEFAULT_ERROR_MESSAGES = Object.freeze({
-	network: "Could not reach the server. Check your connection and try again.",
-	400: "The server rejected the request.",
-	401: "Your session has expired. Please sign in again.",
-	403: "You do not have permission to view this data.",
-	404: "The requested data could not be found.",
-	408: "The server took too long to respond. Please try again.",
-	409: "The request conflicts with the current state of the data.",
-	422: "The server could not process the request.",
-	429: "Too many requests. Please wait a moment and try again.",
-	500: "Something went wrong on the server. Please try again later.",
-	502: "The server is temporarily unavailable. Please try again later.",
-	503: "The server is temporarily unavailable. Please try again later.",
-	504: "The server took too long to respond. Please try again later.",
-	default: "Request failed"
-});
-var globalMessages = null;
-/**
-* App-wide wording, merged over the defaults; `null` restores them. A grid's own
-* `errorMessages` merges over this in turn, so a single table can still differ.
-*/
-function setErrorMessages(messages) {
-	globalMessages = messages ? { ...messages } : null;
-}
-/** Defaults ← app-wide ← `local`, same shape as the filter builder's `resolveTexts`. */
-function resolveErrorMessages(local) {
-	const merged = { ...DEFAULT_ERROR_MESSAGES };
-	for (const layer of [globalMessages, local]) {
-		if (!layer) continue;
-		for (const key of Object.keys(layer)) {
-			const value = layer[key];
-			if (typeof value === "string" && value.trim()) merged[key] = value;
-		}
-	}
-	return merged;
-}
-/**
-* The standard reason phrases. Not shown to anyone — they are what `describeError`
-* uses to recognise that an error's text is ONLY the phrase for its status
-* (`Error('Forbidden')` + `httpStatus: 403`), which adds nothing to the preset and
-* so is not a detail worth appending.
-*/
-var REASON_PHRASES = {
-	400: "Bad Request",
-	401: "Unauthorized",
-	402: "Payment Required",
-	403: "Forbidden",
-	404: "Not Found",
-	405: "Method Not Allowed",
-	408: "Request Timeout",
-	409: "Conflict",
-	410: "Gone",
-	412: "Precondition Failed",
-	413: "Payload Too Large",
-	415: "Unsupported Media Type",
-	422: "Unprocessable Entity",
-	429: "Too Many Requests",
-	500: "Internal Server Error",
-	501: "Not Implemented",
-	502: "Bad Gateway",
-	503: "Service Unavailable",
-	504: "Gateway Timeout"
-};
-/** Texts a transport mints for "no answer at all" — a status of 0 in words. */
-var NETWORK_TEXTS = [
-	"failed to fetch",
-	"networkerror when attempting to fetch resource",
-	"load failed",
-	"network error",
-	"unspecified network error",
-	"network connection timeout",
-	"network request failed"
-];
-var toStatus = (value) => {
-	if (value === null || value === void 0 || value === "") return void 0;
-	const n = Number(value);
-	return Number.isInteger(n) && n >= 0 && n < 1e3 ? n : void 0;
-};
-/**
-* The HTTP status an error carries, `0` for a network failure, `undefined` when
-* it has none.
-*
-* Reads the fields the common transports use — devextreme's `httpStatus`, a
-* fetch `Response` / axios error's `status` and `response.status`, ofetch's
-* `statusCode`, an OData error body's numeric `code` — on an `Error` instance as
-* readily as on a plain object, since devextreme `extend()`s them onto an
-* `Error`.
-*/
-function errorStatus(raw) {
-	if (!isObject(raw)) return void 0;
-	const response = isObject(raw.response) ? raw.response : void 0;
-	const direct = toStatus(raw.httpStatus) ?? toStatus(raw.status) ?? toStatus(raw.statusCode) ?? toStatus(response?.status) ?? toStatus(response?.statusCode);
-	if (direct !== void 0) return direct;
-	const code = toStatus((isObject(raw.errorDetails) ? raw.errorDetails : void 0)?.code);
-	if (code !== void 0 && code >= 400) return code;
-	const own = (raw instanceof Error ? text(raw.message) : text(raw.message)).toLowerCase();
-	if (own && NETWORK_TEXTS.some((t) => own.includes(t))) return 0;
-}
-/**
-* The text a SERVER wrote about the failure, if the error carries one — an OData
-* error body's message, a JSON body's `message` / `error`, an axios
-* `response.data`. `''` when there is nothing beyond the transport's own words.
-*/
-function serverDetail(raw) {
-	if (!isObject(raw)) return "";
-	const details = raw.errorDetails;
-	if (isObject(details)) {
-		const m = details.message;
-		const hit = text(m) || (isObject(m) ? text(m.value) : "");
-		if (hit) return hit;
-	}
-	const response = isObject(raw.response) ? raw.response : void 0;
-	const data = response?.data ?? response?._data ?? raw.data;
-	if (isObject(data)) {
-		const err = data.error;
-		const hit = text(data.message) || text(data.detail) || text(data.title) || text(err) || (isObject(err) ? text(err.message) : "");
-		if (hit) return hit;
-	} else if (text(data)) return text(data);
-	if (!(raw instanceof Error)) {
-		const err = raw.error;
-		const hit = text(raw.errorMessage) || text(raw.detail) || (isObject(err) ? text(err.message) : "");
-		if (hit) return hit;
-	}
-	return "";
-}
-/** Is `value` nothing more than the reason phrase / a generic label for `status`? */
-function isBoilerplate(value, status) {
-	const v = value.toLowerCase();
-	if (!v || v === "error" || v === "unknown error" || v === "request failed") return true;
-	if (/^http\s*\d{3}$/.test(v)) return true;
-	if (NETWORK_TEXTS.some((t) => v.includes(t))) return true;
-	if (status !== void 0) {
-		const phrase = REASON_PHRASES[status]?.toLowerCase();
-		if (phrase && (v === phrase || v === `${status} ${phrase}` || v === `${status}`)) return true;
-		if (v === String(status)) return true;
-	}
-	return Object.values(REASON_PHRASES).some((p) => p.toLowerCase() === v);
-}
-/**
-* The line a person should read for `raw`.
-*
-* Order: a preset for the status (`'network'` for 0) → the error's own text →
-* `messages.default`. When a preset is the headline, whatever the server said
-* on top of the status becomes `detail`; without a preset, the raw text IS the
-* headline and only a distinct server body is a detail. Never throws, never
-* returns an empty `message`.
-*/
-function describeError(raw, messages) {
-	const texts = resolveErrorMessages(messages);
-	const status = errorStatus(raw);
-	const fallback = texts.default || DEFAULT_ERROR_MESSAGES.default;
-	const rawText = normalizeError(raw, fallback);
-	const preset = status === void 0 ? void 0 : status === 0 ? texts.network : texts[status];
-	if (preset) {
-		const candidate = serverDetail(raw) || (rawText === fallback ? "" : rawText);
-		const detail = candidate && !isBoilerplate(candidate, status) && candidate !== preset ? candidate : "";
-		return detail ? {
-			message: preset,
-			status,
-			detail
-		} : {
-			message: preset,
-			status
-		};
-	}
-	const message = rawText || fallback;
-	const fromServer = serverDetail(raw);
-	const detail = fromServer && fromServer !== message && !isBoilerplate(fromServer, status) ? fromServer : "";
-	const out = { message };
-	if (status !== void 0) out.status = status;
-	if (detail) out.detail = detail;
-	return out;
-}
-//#endregion
-//#region src/components/table/store-group-source.ts
-/**
-* Build a {@link MonoServerGroupSource} that drives **server-side** group paging
-* straight from a devextreme `DataSource`'s store — no extra fetcher, no custom
-* callbacks. `loadGroups` issues one cheap grouped query (group keys + counts +
-* optional summaries, no rows); `loadRows` fetches a single group's page with
-* `$filter` + `$skip`/`$top`. Returns `null` if the source has no usable store
-* (e.g. a plain in-memory array), so the caller can fall back to client grouping.
-*/
-function storeGroupSource(source, config) {
-	const store = source.store?.();
-	if (!store || typeof store.load !== "function") return null;
-	const { groupField, select, searchExpr, searchOperation, groupSummary } = config;
-	const summaryDesc = groupSummary ? Object.entries(groupSummary).map(([selector, summaryType]) => ({
-		selector,
-		summaryType
-	})) : void 0;
-	/**
-	* Build a devextreme filter expression for the active search (or undefined).
-	* Delegates to the shared builder, which takes the search state off a source;
-	* here the search arrives per-call via `ctx`, so a minimal stand-in carries it.
-	*/
-	function searchFilter(search) {
-		if (!search || !searchExpr) return void 0;
-		return searchFilterOf({
-			load: () => [],
-			items: () => [],
-			searchValue: () => search,
-			searchExpr: () => searchExpr,
-			searchOperation: () => searchOperation ?? "contains"
-		});
-	}
-	/** devextreme `store.load` returns either an array or `{ data, … }`. */
-	const rows = (res) => Array.isArray(res) ? res : res?.data ?? [];
-	return {
-		async loadGroups(ctx) {
-			const filter = joinFilters([ctx.filter, searchFilter(ctx.search)], "and");
-			return rows(await store.load({
-				group: [{
-					selector: groupField,
-					isExpanded: false
-				}],
-				...summaryDesc ? { groupSummary: summaryDesc } : {},
-				requireGroupCount: true,
-				...filter ? { filter } : {},
-				sort: ctx.sort ?? [{ selector: groupField }],
-				...ctx.loadOptions ?? {}
-			})).map((g) => ({
-				key: g.key,
-				count: Number(g.count ?? (Array.isArray(g.items) ? g.items.length : 0)) || 0,
-				aggregates: summaryDesc && Array.isArray(g.summary) ? Object.fromEntries(summaryDesc.map((s, i) => [s.selector, Number(g.summary[i]) || 0])) : void 0
-			}));
-		},
-		async loadRows(key, ctx) {
-			const groupFilter = [
-				groupField,
-				"=",
-				key
-			];
-			const rowSelect = select ?? ctx.select;
-			return rows(await store.load({
-				filter: joinFilters([
-					groupFilter,
-					ctx.filter,
-					searchFilter(ctx.search)
-				], "and"),
-				...rowSelect ? { select: rowSelect } : {},
-				...ctx.sort ? { sort: ctx.sort } : {},
-				skip: ctx.skip,
-				take: ctx.take,
-				requireTotalCount: false,
-				...ctx.loadOptions ?? {}
-			}));
-		}
-	};
-}
-//#endregion
+import { a as parseFieldPath, c as toODataClause, l as toODataSelector, n as isPath, o as projectFields, r as mergePatch, s as setFieldValue, t as getFieldValue } from "./field-path-C92eGLg3.js";
+import { A as compileFilterPredicate, D as searchEntryFor, E as resolveSearchEntries, O as andFilters, S as hasWildcardSearch, T as plainSearchColumns, a as describeError, h as mergeSearchFields, j as joinFilters, k as andPredicates, l as isCanceled, n as unwrapReactive, p as DEFAULT_SEARCH_FIELDS, v as customPredicate, x as hasCustomSearch, y as customRemoteClause } from "./reactive-Di3mTMnV.js";
+import { a as buildGroups, c as isGroupNode, i as searchFilterOf, o as collectGroupPaths, r as readAllRows, s as flattenLeaves } from "./data-source-read-B4DGp6UQ.js";
+import { a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, h as monoArraySource, i as normalizeSortList, l as summaryAliases, m as storeRows, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-CP-X62Pa.js";
+import { t as arrayToODataString } from "./filter-odata-C1vSGZaY.js";
+import { t as monoFilterBuilder } from "./filter-builder-CE4zE0V5.js";
 //#region src/components/table/date-filter-tree.ts
 var DATE_LEVELS = [
 	"year",
@@ -596,11 +294,84 @@ function inRange(d, r) {
 	return t >= r.from.getTime() && t < r.to.getTime();
 }
 //#endregion
-//#region src/components/table/mono-data-grid.ts
-function isCanceled(err) {
-	if (!err) return false;
-	return err === "canceled" || err.name === "canceled" || err.message === "canceled" || err.__id === "canceled";
+//#region src/components/table/store-group-source.ts
+/**
+* Build a {@link MonoServerGroupSource} that drives **server-side** group paging
+* straight from a devextreme `DataSource`'s store — no extra fetcher, no custom
+* callbacks. `loadGroups` issues one cheap grouped query (group keys + counts +
+* optional summaries, no rows); `loadRows` fetches a single group's page with
+* `$filter` + `$skip`/`$top`. Returns `null` if the source has no usable store
+* (e.g. a plain in-memory array), so the caller can fall back to client grouping.
+*/
+function storeGroupSource(source, config) {
+	const store = source.store?.();
+	if (!store || typeof store.load !== "function") return null;
+	const { groupField, select, searchExpr, searchOperation, groupSummary } = config;
+	const summaryDesc = groupSummary ? Object.entries(groupSummary).map(([selector, summaryType]) => ({
+		selector,
+		summaryType
+	})) : void 0;
+	/**
+	* Build a devextreme filter expression for the active search (or undefined).
+	* Delegates to the shared builder, which takes the search state off a source;
+	* here the search arrives per-call via `ctx`, so a minimal stand-in carries it.
+	*/
+	function searchFilter(search) {
+		if (!search || !searchExpr) return void 0;
+		return searchFilterOf({
+			load: () => [],
+			items: () => [],
+			searchValue: () => search,
+			searchExpr: () => searchExpr,
+			searchOperation: () => searchOperation ?? "contains"
+		});
+	}
+	/** devextreme `store.load` returns either an array or `{ data, … }`. */
+	const rows = (res) => Array.isArray(res) ? res : res?.data ?? [];
+	return {
+		async loadGroups(ctx) {
+			const filter = joinFilters([ctx.filter, searchFilter(ctx.search)], "and");
+			return rows(await store.load({
+				group: [{
+					selector: groupField,
+					isExpanded: false
+				}],
+				...summaryDesc ? { groupSummary: summaryDesc } : {},
+				requireGroupCount: true,
+				...filter ? { filter } : {},
+				sort: ctx.sort ?? [{ selector: groupField }],
+				...ctx.loadOptions ?? {}
+			})).map((g) => ({
+				key: g.key,
+				count: Number(g.count ?? (Array.isArray(g.items) ? g.items.length : 0)) || 0,
+				aggregates: summaryDesc && Array.isArray(g.summary) ? Object.fromEntries(summaryDesc.map((s, i) => [s.selector, Number(g.summary[i]) || 0])) : void 0
+			}));
+		},
+		async loadRows(key, ctx) {
+			const groupFilter = [
+				groupField,
+				"=",
+				key
+			];
+			const rowSelect = select ?? ctx.select;
+			return rows(await store.load({
+				filter: joinFilters([
+					groupFilter,
+					ctx.filter,
+					searchFilter(ctx.search)
+				], "and"),
+				...rowSelect ? { select: rowSelect } : {},
+				...ctx.sort ? { sort: ctx.sort } : {},
+				skip: ctx.skip,
+				take: ctx.take,
+				requireTotalCount: false,
+				...ctx.loadOptions ?? {}
+			}));
+		}
+	};
 }
+//#endregion
+//#region src/components/table/mono-data-grid.ts
 function monoDataGrid(ds = null, opts = {}) {
 	let bound = null;
 	let searchFieldsOverride;
@@ -4102,7 +3873,7 @@ function monoDataGrid(ds = null, opts = {}) {
 		return buildGroups(rows ?? await getData(), groupFields);
 	}
 	async function importSheet(options) {
-		const { importTable } = await import("./import.js");
+		const { importTable } = await import("./import-BgJdkwBI.js");
 		return importTable(options, {
 			getData,
 			rowKeyOf,
@@ -4119,7 +3890,7 @@ function monoDataGrid(ds = null, opts = {}) {
 		});
 	}
 	async function exportReport(options) {
-		const { exportTable } = await import("./export.js");
+		const { exportTable } = await import("./export-BiGVyxt6.js");
 		return exportTable(options);
 	}
 	function subscribe(cb) {
@@ -4139,4 +3910,4 @@ function monoDataGrid(ds = null, opts = {}) {
 	return ctrl;
 }
 //#endregion
-export { seedFromRanges as a, DEFAULT_ERROR_MESSAGES as c, normalizeError as d, resolveErrorMessages as f, minimize as i, describeError as l, buildDateTree as n, setAllChecked as o, setErrorMessages as p, checkState as r, setChecked as s, monoDataGrid as t, errorStatus as u };
+export { seedFromRanges as a, minimize as i, buildDateTree as n, setAllChecked as o, checkState as r, setChecked as s, monoDataGrid as t };

@@ -186,37 +186,69 @@ function isFocusVisible(el: EventTarget | undefined): boolean {
   }
 }
 
-/**
- * How far the arrow must stay from the bubble's corners: past the rounding, on the
- * straight part of the edge. A fixed 4px let a `-start` / `-end` arrow land on the
- * curve of a well-rounded flavor (a pill, in the extreme), where the edge has
- * already pulled away and the diamond hung off the corner.
- *
- * Read from the PAINTED radius, so every flavor and radius preset is covered.
- * CSS scales radii that overflow the box down to fit it (a `9999px` pill paints
- * half its height), hence the clamp to half the smaller side. The diamond is the
- * arrow box rotated 45°: where it meets the edge it is `size·√2` wide, so it
- * overhangs its own box by `size·(√2−1)/2` on each side. Floating UI caps the
- * padding itself when the bubble is too short for it — the arrow then centres on
- * the edge and the bubble shifts so it still points at the trigger.
- */
-function arrowPadding(bubble: HTMLElement, arrowEl: HTMLElement): number {
+/** The bubble's four computed corner radii — read once per open, BEFORE any cap lands. */
+function readCorners(bubble: HTMLElement): string[] {
   const cs = getComputedStyle(bubble)
-  const half = Math.min(bubble.offsetWidth, bubble.offsetHeight) / 2
-  const radius = Math.max(
-    ...[
-      cs.borderTopLeftRadius,
-      cs.borderTopRightRadius,
-      cs.borderBottomRightRadius,
-      cs.borderBottomLeftRadius,
-    ].map((v) => {
-      const n = parseFloat(v) || 0
-      return v.trim().endsWith('%') ? (n / 100) * half * 2 : n
-    }),
+  return [
+    cs.borderTopLeftRadius,
+    cs.borderTopRightRadius,
+    cs.borderBottomRightRadius,
+    cs.borderBottomLeftRadius,
+  ]
+}
+
+/**
+ * Where the arrow may sit on the edge of `side`, and whether the bubble's rounding
+ * has to give way for it.
+ *
+ * `padding` keeps the arrow past the rounding, on the straight part of the edge. A
+ * fixed 4px let a `-start` / `-end` arrow land on the curve of a well-rounded
+ * flavor, where the edge has already pulled away and the diamond hung off the
+ * corner.
+ *
+ * `cap` handles the edge that has NO straight part: a pill's short side is all
+ * curve (height = 2 × radius), so whatever the padding, the diamond sat on a curve
+ * and looked glued to the corner. When the edge can't fit the arrow between its two
+ * roundings, the radius is capped to the widest value that still leaves the
+ * diamond a straight run — the bubble turns from a pill into a rounded rectangle
+ * only on the placements that need it. `null` = the painted radius already fits.
+ *
+ * Read from the PAINTED radius, so every flavor and radius preset is covered. CSS
+ * scales radii that overflow the box down to fit it (a `9999px` pill paints half
+ * its height), hence the clamp to half the smaller side. The diamond is the arrow
+ * box rotated 45°: where it meets the edge it is `size·√2` wide, so it overhangs
+ * its own box by `size·(√2−1)/2` on each side.
+ */
+function arrowGeometry(
+  bubble: HTMLElement,
+  arrowEl: HTMLElement,
+  corners: string[],
+  side: string,
+): { padding: number; cap: number | null } {
+  const width = bubble.offsetWidth
+  const height = bubble.offsetHeight
+  const half = Math.min(width, height) / 2
+  const painted = Math.min(
+    half,
+    Math.max(
+      ...corners.map((v) => {
+        const n = parseFloat(v) || 0
+        return v.trim().endsWith('%') ? (n / 100) * half * 2 : n
+      }),
+    ),
   )
-  const overhang = (arrowEl.offsetWidth * (Math.SQRT2 - 1)) / 2
-  // 4px floor: the previous fixed value, so square flavors (lyra / sera) are unchanged.
-  return Math.max(4, Math.ceil(Math.min(radius, half) + overhang) + 1)
+  const size = arrowEl.offsetWidth
+  const diagonal = size * Math.SQRT2
+  const overhang = (diagonal - size) / 2
+  const edge = side === 'left' || side === 'right' ? height : width
+  // the widest radius that still leaves the diamond (plus 2px of air) a straight run
+  const fit = Math.max(0, Math.floor((edge - diagonal) / 2) - 2)
+  const radius = Math.min(painted, fit)
+  return {
+    // 4px floor: the previous fixed value, so square flavors (lyra / sera) are unchanged.
+    padding: Math.max(4, Math.ceil(radius + overhang) + 1),
+    cap: radius < painted ? radius : null,
+  }
 }
 
 function toDelays(delay: ResolvedTooltipOptions['delay']): [number, number] {
@@ -270,6 +302,8 @@ interface OpenState {
   describedBy: string | null
   /** Watches the anchor's `mono-tooltip-*` attributes while open (declarative only). */
   observer: MutationObserver | null
+  /** Uncapped corner radii, read on the first position (see `arrowGeometry`). */
+  corners?: string[]
 }
 
 /** Prefix of the declarative anchor attributes (`mono-tooltip-content`, …). */
@@ -285,6 +319,8 @@ class TooltipInstance implements MonoTooltipController {
   private _token = 0
   /** Anchor a pending (delayed) open is for. */
   private _pending: Element | null = null
+  /** What asked for that pending open. */
+  private _pendingReason: Reason | null = null
   /** A `hideOnClick` anchor stays quiet until the pointer leaves it. */
   private _suppressed: Element | null = null
   /** The last event path — which elements between the pointer and the anchor carry a `title`. */
@@ -455,8 +491,17 @@ class TooltipInstance implements MonoTooltipController {
 
     if (anchor && o.hideOnClick) {
       this._suppressed = anchor
-      if (this._pending === anchor) this._cancelShow()
-      if (this._open?.anchor === anchor && !this._reasons.has('manual')) this._close(false)
+      // `hideOnClick` dismisses a HOVER tooltip only. Clicking into a field focuses it,
+      // and a text field matches `:focus-visible` on a mouse focus too — so the focus
+      // tooltip opened on mousedown, and this click (mouseup) closed it a moment later.
+      // The click is part of using the field; focus keeps the tooltip until blur.
+      if (this._pending === anchor) {
+        if (this._pendingReason !== 'focus') this._cancelShow()
+        return
+      }
+      if (this._open?.anchor !== anchor || this._reasons.has('manual')) return
+      if (this._reasons.has('focus')) this._reasons.delete('hover')
+      else this._close(false)
     }
   }
 
@@ -500,6 +545,7 @@ class TooltipInstance implements MonoTooltipController {
     clearTimeout(this._showTimer)
     this._showTimer = undefined
     this._pending = null
+    this._pendingReason = null
   }
 
   private _cancelHide(): void {
@@ -509,8 +555,9 @@ class TooltipInstance implements MonoTooltipController {
 
   /** One reason to stay open went away — close once none is left. */
   private _dropReason(reason: Reason): void {
-    if (this._pending && !this._open) {
-      // a delayed open that has not happened yet: just forget it
+    if (this._pending && !this._open && this._pendingReason === reason) {
+      // a delayed open that has not happened yet: just forget it — but only one THIS
+      // reason asked for (a mouse nudge must not cancel a pending focus open)
       this._cancelShow()
       this._token++
     }
@@ -537,12 +584,14 @@ class TooltipInstance implements MonoTooltipController {
     const token = ++this._token
     if (delay > 0) {
       this._pending = anchor
+      this._pendingReason = reason
       await new Promise<void>((resolve) => {
         this._showTimer = setTimeout(resolve, delay)
       })
       if (token !== this._token) return
     }
     this._pending = null
+    this._pendingReason = null
     await this._mount(anchor, reason, token)
   }
 
@@ -637,7 +686,16 @@ class TooltipInstance implements MonoTooltipController {
     const middleware = [offset(o.offset)]
     if (o.flip) middleware.push(flip({ padding: o.padding }))
     if (o.shift) middleware.push(shift({ padding: o.padding }))
-    if (o.arrow) middleware.push(arrow({ element: state.arrow, padding: arrowPadding(state.el, state.arrow) }))
+    // Read before the first cap lands — afterwards the computed radius IS the cap.
+    const corners = (state.corners ??= readCorners(state.el))
+    // Derived per run: `flip` may have moved the bubble to a side with a shorter edge.
+    const geometry = (placement: string) =>
+      arrowGeometry(state.el, state.arrow, corners, placement.split('-')[0])
+    if (o.arrow) {
+      middleware.push(
+        arrow(({ placement }) => ({ element: state.arrow, padding: geometry(placement).padding })),
+      )
+    }
     middleware.push(hide())
 
     const { x, y, placement, middlewareData } = await computePosition(state.anchor, state.el, {
@@ -653,6 +711,10 @@ class TooltipInstance implements MonoTooltipController {
     state.el.setAttribute('data-side', side)
     if (align) state.el.setAttribute('data-align', align)
     else state.el.removeAttribute('data-align')
+
+    const cap = o.arrow ? geometry(placement).cap : null
+    if (cap === null) state.el.style.removeProperty('--_mono-tooltip-radius-cap')
+    else state.el.style.setProperty('--_mono-tooltip-radius-cap', `${cap}px`)
 
     const a = middlewareData.arrow
     state.arrow.style.left = a?.x != null ? `${a.x}px` : ''
