@@ -1,3 +1,4 @@
+//#region src/components/nav/nav-types.d.ts
 /**
  * Nav (top app bar) Component Type Definitions
  */
@@ -17,32 +18,32 @@ export type NavColorToken = 'primary' | 'secondary' | 'success' | 'danger' | 'wa
 export type NavColor = NavColorToken | (string & {}) | 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'info' | 'teal' | 'purple' | 'neutral' | 'dark' | 'surface';
 export type NavVariant = 'flat' | 'elevated' | 'outlined';
 export interface NavCssClass {
-    root?: string;
-    inner?: string;
-    start?: string;
-    center?: string;
-    end?: string;
-    extension?: string;
+  root?: string;
+  inner?: string;
+  start?: string;
+  center?: string;
+  end?: string;
+  extension?: string;
 }
 export interface NavProps {
-    /** Sticks the bar to the top of the viewport on scroll. */
-    sticky?: boolean;
-    /** Vertical spacing density of the bar. */
-    density?: NavDensity;
-    /** Theme color of the bar background. */
-    color?: NavColor;
-    /** Visual style of the bar (flat, elevated, or outlined). */
-    variant?: NavVariant;
-    /** Renders an additional extension row below the bar. */
-    extension?: boolean;
-    /** Per-part class overrides for internal elements. */
-    cssClass?: NavCssClass;
-    cssclass?: NavCssClass;
-    'css-class'?: NavCssClass | string;
+  /** Sticks the bar to the top of the viewport on scroll. */
+  sticky?: boolean;
+  /** Vertical spacing density of the bar. */
+  density?: NavDensity;
+  /** Theme color of the bar background. */
+  color?: NavColor;
+  /** Visual style of the bar (flat, elevated, or outlined). */
+  variant?: NavVariant;
+  /** Renders an additional extension row below the bar. */
+  extension?: boolean;
+  /** Per-part class overrides for internal elements. */
+  cssClass?: NavCssClass;
+  cssclass?: NavCssClass;
+  'css-class'?: NavCssClass | string;
 }
 /**
  * Nav emits no events of its own — slotted buttons drive behavior.
  * Type kept for symmetry with other components but intentionally empty.
  */
-export interface NavEvents {
-}
+export interface NavEvents {}
+//#endregion

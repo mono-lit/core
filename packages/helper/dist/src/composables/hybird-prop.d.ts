@@ -1,3 +1,4 @@
+//#region src/composables/hybird-prop.d.ts
 /** Generic constructor type for Lit mixins: `<T extends Constructor<LitElement>>`. */
 export type Constructor<T = object> = new (...args: any[]) => T;
 export declare function toKebabCase(value: string): string;
@@ -53,12 +54,12 @@ export declare function defineHybridPropAlias<T extends object>(target: T, alias
  */
 export declare function arrayHasChanged(value: unknown, old: unknown): boolean;
 export declare const booleanStringConverter: {
-    fromAttribute(value: unknown): boolean;
-    toAttribute(value: boolean): string | null;
+  fromAttribute(value: unknown): boolean;
+  toAttribute(value: boolean): string | null;
 };
 export declare const numberStringConverter: {
-    fromAttribute(value: string | null): number;
-    toAttribute(value: number): string | null;
+  fromAttribute(value: string | null): number;
+  toAttribute(value: number): string | null;
 };
 /**
  * Like {@link numberStringConverter}, but an absent/blank attribute stays
@@ -70,10 +71,11 @@ export declare const numberStringConverter: {
  * Using the plain number converter there would pin every dialog to `z-index: 0`.
  */
 export declare const optionalNumberConverter: {
-    fromAttribute(value: string | null): number | undefined;
-    toAttribute(value: number | undefined): string | null;
+  fromAttribute(value: string | null): number | undefined;
+  toAttribute(value: number | undefined): string | null;
 };
 export declare const stringConverter: {
-    fromAttribute(value: string | null): string;
-    toAttribute(value: string): string | null;
+  fromAttribute(value: string | null): string;
+  toAttribute(value: string): string | null;
 };
+//#endregion

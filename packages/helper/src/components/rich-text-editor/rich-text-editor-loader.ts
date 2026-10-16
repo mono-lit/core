@@ -1,8 +1,8 @@
 // rich-text-editor-loader.ts — the OPTIONAL `suneditor` peer, loaded on demand.
 //
 // Same arrangement as `chart-core.ts`'s `loadChartJs`: the package is
-// externalized from mono's build (see the `mono-external-suneditor` plugin in
-// both vite configs), so every `import('suneditor…')` below survives into
+// externalized from mono's build (see `NEVER_BUNDLE` in `tsdown.config.ts`),
+// so every `import('suneditor…')` below survives into
 // `dist/` verbatim and resolves against the CONSUMER's copy at runtime. An app
 // that never renders the editor never downloads it; one that has not installed
 // it gets an actionable message instead of a stack trace.

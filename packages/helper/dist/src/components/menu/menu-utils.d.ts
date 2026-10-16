@@ -1,5 +1,6 @@
-import { MenuItem, MenuProps } from './menu-types.js';
-export { isIconifyClass } from '../../composables/icon.js';
+import { isIconifyClass } from "../../composables/icon.js";
+import { MenuItem, MenuProps } from "./menu-types.js";
+//#region src/components/menu/menu-utils.d.ts
 export declare function isItem(node: MenuItem): boolean;
 export declare function isGroup(node: MenuItem): boolean;
 export declare function isDivider(node: MenuItem): boolean;
@@ -26,13 +27,13 @@ export declare function findItem(items: MenuItem[], id: string): MenuItem | null
 export declare function getMenuAlias(input: string | undefined | null, max?: number): string;
 export declare function collectDefaultOpenGroups(items: MenuItem[]): string[];
 export declare function generateMenuRootClasses(props: {
-    density: string;
-    color: string;
-    nav: boolean;
-    selectable: boolean;
-    disabled: boolean;
-    cssClassName?: string;
-    rootExtra?: string;
+  density: string;
+  color: string;
+  nav: boolean;
+  selectable: boolean;
+  disabled: boolean;
+  cssClassName?: string;
+  rootExtra?: string;
 }): string;
 export declare function validateMenuProps(props: MenuProps): string[];
 /**
@@ -45,9 +46,11 @@ export declare function validateMenuProps(props: MenuProps): string[];
  * cannot drift apart.
  */
 export declare function menuRootAttrs(props: {
-    density: string;
-    color: string;
+  density: string;
+  color: string;
 }): {
-    density: string | null;
-    color: string | null;
+  density: string | null;
+  color: string | null;
 };
+//#endregion
+export { isIconifyClass };

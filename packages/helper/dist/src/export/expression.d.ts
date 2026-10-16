@@ -1,3 +1,4 @@
+//#region src/export/expression.d.ts
 /**
  * Template source preprocessing — everything that must happen *before*
  * Handlebars sees the template.
@@ -26,7 +27,7 @@ export declare function evaluateExpression(expression: string, context: unknown)
  * code-aware (fenced blocks + inline spans are copied verbatim).
  */
 export declare function preprocessTemplate(src: string, opts?: {
-    escapeTableCells?: boolean;
+  escapeTableCells?: boolean;
 }): string;
 /**
  * Escape an interpolated value for a GFM table cell. Registered as the `esc`
@@ -34,3 +35,4 @@ export declare function preprocessTemplate(src: string, opts?: {
  * {@link preprocessTemplate}; also callable by hand.
  */
 export declare function escapeForCell(value: unknown): string;
+//#endregion

@@ -1,6 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-import { TableSearchIconName } from './mono-table-search-core.js';
-declare const MonoTableSearchShadow_base: import('../../composables/hybird-prop').Constructor<import('./mono-table-search-core.js').MonoTableSearchCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableSearchCoreInterface, TableSearchIconName } from "./mono-table-search-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/table/mono-table-search.shadow.d.ts
+declare const MonoTableSearchShadow_base: Constructor<MonoTableSearchCoreInterface> & typeof LitElement;
 /**
  * Shadow-DOM `mono-table-search` (SSR build, `@mono-lit/helper/ui/shadow/table`).
  * The icons are inline SVG — the global `.mono-icon`/`i-mdi-*` utility CSS can't
@@ -12,10 +14,11 @@ declare const MonoTableSearchShadow_base: import('../../composables/hybird-prop'
  * simply never matches in here, which is harmless.
  */
 export declare class MonoTableSearchShadow extends MonoTableSearchShadow_base {
-    static styles: import('lit').CSSResult[];
-    protected renderIcon(name: TableSearchIconName): TemplateResult;
-    /** Shadow build projects the slotted filter-builder through a native `<slot>`. */
-    protected _renderFilterSlotContent(): TemplateResult;
-    connectedCallback(): void;
+  static styles: import("lit").CSSResult[];
+  protected renderIcon(name: TableSearchIconName): TemplateResult;
+  /** Shadow build projects the slotted filter-builder through a native `<slot>`. */
+  protected _renderFilterSlotContent(): TemplateResult;
+  connectedCallback(): void;
 }
+//#endregion
 export {};

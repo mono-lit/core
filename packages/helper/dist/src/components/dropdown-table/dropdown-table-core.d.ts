@@ -1,56 +1,57 @@
-import { LitElement, TemplateResult } from 'lit';
-import { PopupPortalController } from '../../composables/popup-portal.js';
-import { DropdownPlacement } from '../dropdown/dropdown-types.js';
-import { Constructor } from '../../composables/hybird-prop';
-import { CssSizeValue } from '../../composables/css-size';
-import { MonoDropdownController } from './mono-data-dropdown.js';
-import { DropdownTableSize, DropdownTableColor, DropdownTableVariant, DropdownTableValidationState, DropdownPanelOptions, DropdownTableCssClass, DropdownTableChipProps } from './dropdown-table-types.js';
+import { Constructor } from "../../composables/hybird-prop.js";
+import { CssSizeValue } from "../../composables/css-size.js";
+import { DropdownPlacement } from "../dropdown/dropdown-types.js";
+import { PopupPortalController } from "../../composables/popup-portal.js";
+import { DropdownPanelOptions, DropdownTableChipProps, DropdownTableColor, DropdownTableCssClass, DropdownTableSize, DropdownTableValidationState, DropdownTableVariant } from "./dropdown-table-types.js";
+import { MonoDropdownController } from "./mono-data-dropdown.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/dropdown-table/dropdown-table-core.d.ts
 /** Public surface added by the dropdown-table core mixin. */
 export declare class MonoDropdownTableCoreInterface {
-    dataDropdown?: MonoDropdownController;
-    size: DropdownTableSize;
-    color: DropdownTableColor;
-    variant: DropdownTableVariant;
-    label: string;
-    placeholder: string;
-    helperText: string;
-    validationState: DropdownTableValidationState;
-    validationMessage: string;
-    errorMessage: string;
-    successMessage: string;
-    required: boolean;
-    disabled: boolean;
-    readonly: boolean;
-    clearable: boolean;
-    multiple: boolean;
-    max?: number;
-    min?: number;
-    maxVisible?: number;
-    minVisible?: number;
-    chip: DropdownTableChipProps;
-    modelValue: unknown;
-    width?: CssSizeValue;
-    height?: CssSizeValue;
-    minWidth?: CssSizeValue;
-    maxWidth?: CssSizeValue;
-    minHeight?: CssSizeValue;
-    maxHeight?: CssSizeValue;
-    dropdown?: DropdownPanelOptions;
-    placement: DropdownPlacement;
-    flip: boolean;
-    shift: boolean;
-    offset: number;
-    cssClass: DropdownTableCssClass;
-    cssClassName: string;
-    stayOpen: boolean;
-    /** The popup controller — the light build reads `panelRoot` for slot placement. */
-    protected _popup: PopupPortalController;
-    /** Render a panel region — light: a `data-mono-slot` capture target; shadow: native `<slot>`. */
-    protected _renderRegion(cls: string, name: string): TemplateResult;
-    readonly isOpen: boolean;
-    open(): void;
-    close(): void;
-    toggle(): void;
+  dataDropdown?: MonoDropdownController;
+  size: DropdownTableSize;
+  color: DropdownTableColor;
+  variant: DropdownTableVariant;
+  label: string;
+  placeholder: string;
+  helperText: string;
+  validationState: DropdownTableValidationState;
+  validationMessage: string;
+  errorMessage: string;
+  successMessage: string;
+  required: boolean;
+  disabled: boolean;
+  readonly: boolean;
+  clearable: boolean;
+  multiple: boolean;
+  max?: number;
+  min?: number;
+  maxVisible?: number;
+  minVisible?: number;
+  chip: DropdownTableChipProps;
+  modelValue: unknown;
+  width?: CssSizeValue;
+  height?: CssSizeValue;
+  minWidth?: CssSizeValue;
+  maxWidth?: CssSizeValue;
+  minHeight?: CssSizeValue;
+  maxHeight?: CssSizeValue;
+  dropdown?: DropdownPanelOptions;
+  placement: DropdownPlacement;
+  flip: boolean;
+  shift: boolean;
+  offset: number;
+  cssClass: DropdownTableCssClass;
+  cssClassName: string;
+  stayOpen: boolean;
+  /** The popup controller — the light build reads `panelRoot` for slot placement. */
+  protected _popup: PopupPortalController;
+  /** Render a panel region — light: a `data-mono-slot` capture target; shadow: native `<slot>`. */
+  protected _renderRegion(cls: string, name: string): TemplateResult;
+  readonly isOpen: boolean;
+  open(): void;
+  close(): void;
+  toggle(): void;
 }
 /**
  * `MonoDropdownTableCore` — the field + popup shell for `<mono-dropdown-table>`. The
@@ -63,3 +64,4 @@ export declare class MonoDropdownTableCoreInterface {
  * `buildSizeStyle`, and the global `.mono-chip` classes.
  */
 export declare const MonoDropdownTableCore: <T extends Constructor<LitElement>>(superClass: T) => Constructor<MonoDropdownTableCoreInterface> & T;
+//#endregion

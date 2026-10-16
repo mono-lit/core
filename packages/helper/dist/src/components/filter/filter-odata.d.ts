@@ -1,4 +1,5 @@
-import { MonoFilterExpression, MonoFilterGroup, MonoFilterGroupOperator, MonoFilterNode } from './filter-types.js';
+import { MonoFilterExpression, MonoFilterGroup, MonoFilterGroupOperator, MonoFilterNode } from "./filter-types.js";
+//#region src/components/filter/filter-odata.d.ts
 export declare function nextId(prefix?: string): string;
 export declare function emptyGroup(operator?: MonoFilterGroupOperator): MonoFilterGroup;
 /** Split a comma-separated multi-value entry, trimming and dropping blanks. */
@@ -25,3 +26,4 @@ export declare function arrayToODataString(filter: unknown): string;
 export declare function odataStringToArray(input: string): unknown[] | null;
 /** Flatten same-operator nesting so `[[a,'and',b],'and',c]` reads as one group. */
 export declare function flattenTree(node: MonoFilterNode): MonoFilterNode;
+//#endregion

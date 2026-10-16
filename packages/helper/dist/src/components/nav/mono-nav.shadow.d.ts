@@ -1,6 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-import { NavSlotName } from './nav-core.js';
-declare const MonoNavShadow_base: import('../../composables/hybird-prop').Constructor<import('./nav-core.js').MonoNavCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoNavCoreInterface, NavSlotName } from "./nav-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/nav/mono-nav.shadow.d.ts
+declare const MonoNavShadow_base: Constructor<MonoNavCoreInterface> & typeof LitElement;
 /**
  * Shadow-DOM `mono-nav` (the opt-in SSR build, `@mono-lit/helper/ui/shadow/nav`).
  *
@@ -14,8 +16,9 @@ declare const MonoNavShadow_base: import('../../composables/hybird-prop').Constr
  * (see plan/2026-06-23-shadow-dom-ssr-mixin-spike.md).
  */
 export declare class MonoNavShadow extends MonoNavShadow_base {
-    static styles: import('lit').CSSResult[];
-    connectedCallback(): void;
-    protected renderSlot(slotName: NavSlotName): TemplateResult;
+  static styles: import("lit").CSSResult[];
+  connectedCallback(): void;
+  protected renderSlot(slotName: NavSlotName): TemplateResult;
 }
+//#endregion
 export {};

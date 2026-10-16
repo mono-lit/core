@@ -1,5 +1,8 @@
-import { LitElement } from 'lit';
-declare const MonoCheckbox_base: import('../../composables/hybird-prop').Constructor<import('./checkbox-core.js').MonoCheckboxCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoCheckboxCoreInterface } from "./checkbox-core.js";
+import { LitElement } from "lit";
+//#region src/components/checkbox/mono-checkbox.d.ts
+declare const MonoCheckbox_base: Constructor<MonoCheckboxCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-checkbox` (default build, `@mono-lit/helper/ui/checkbox`).
  *
@@ -14,21 +17,22 @@ declare const MonoCheckbox_base: import('../../composables/hybird-prop').Constru
  * document loads only one.
  */
 export declare class MonoCheckbox extends MonoCheckbox_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
-    private _slotsCaptured;
-    private _slotIcon;
-    private _slotIndeterminateIcon;
-    private _slotLabel;
-    private _slotDescription;
-    connectedCallback(): void;
-    protected updated(changed: Map<string, unknown>): void;
-    private _captureSlots;
-    private _placeSlot;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
+  private _slotsCaptured;
+  private _slotIcon;
+  private _slotIndeterminateIcon;
+  private _slotLabel;
+  private _slotDescription;
+  connectedCallback(): void;
+  protected updated(changed: Map<string, unknown>): void;
+  private _captureSlots;
+  private _placeSlot;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-checkbox': MonoCheckbox;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-checkbox': MonoCheckbox;
+  }
 }
+//#endregion
 export {};

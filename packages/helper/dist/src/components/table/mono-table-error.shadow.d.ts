@@ -1,5 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-declare const MonoTableErrorShadow_base: import('../../composables/hybird-prop').Constructor<import('./mono-table-error-core.js').MonoTableErrorCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableErrorCoreInterface } from "./mono-table-error-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/table/mono-table-error.shadow.d.ts
+declare const MonoTableErrorShadow_base: Constructor<MonoTableErrorCoreInterface> & typeof LitElement;
 /**
  * Shadow-DOM `mono-shadow-table-error` (SSR build, `@mono-lit/helper/ui/shadow/table`).
  *
@@ -9,13 +12,14 @@ declare const MonoTableErrorShadow_base: import('../../composables/hybird-prop')
  * Shares all logic via `MonoTableErrorCore`.
  */
 export declare class MonoTableErrorShadow extends MonoTableErrorShadow_base {
-    static styles: import('lit').CSSResult[];
-    connectedCallback(): void;
-    /**
-     * Inline SVG — the global `.mono-icon` / `i-mdi-close` UnoCSS rule cannot reach
-     * a shadow root, so the class the light build uses would paint a blank box
-     * here. Same glyph, same split as `mono-modal` / `mono-drawer`.
-     */
-    protected renderIcon(name: 'close' | 'refresh'): TemplateResult;
+  static styles: import("lit").CSSResult[];
+  connectedCallback(): void;
+  /**
+   * Inline SVG — the global `.mono-icon` / `i-mdi-close` UnoCSS rule cannot reach
+   * a shadow root, so the class the light build uses would paint a blank box
+   * here. Same glyph, same split as `mono-modal` / `mono-drawer`.
+   */
+  protected renderIcon(name: 'close' | 'refresh'): TemplateResult;
 }
+//#endregion
 export {};

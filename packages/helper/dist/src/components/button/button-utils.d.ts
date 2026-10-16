@@ -1,4 +1,5 @@
-import { ButtonSize, ButtonColor, ButtonVariant, ButtonRounded, ButtonBadgeColor } from './button-types.js';
+import { ButtonBadgeColor, ButtonColor, ButtonRounded, ButtonSize, ButtonVariant } from "./button-types.js";
+//#region src/components/button/button-utils.d.ts
 /**
  * Generate badge CSS classes
  */
@@ -11,8 +12,9 @@ export declare function processIconContent(icon: string): string;
  * Validate button props
  */
 export declare function validateButtonProps(props: {
-    size?: ButtonSize;
-    color?: ButtonColor;
-    variant?: ButtonVariant;
-    rounded?: ButtonRounded;
+  size?: ButtonSize;
+  color?: ButtonColor;
+  variant?: ButtonVariant;
+  rounded?: ButtonRounded;
 }): boolean;
+//#endregion

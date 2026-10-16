@@ -1,36 +1,37 @@
 /// <reference path="../../vue.d.ts" />
-import { Plugin } from 'vite';
-import { monoClientOnlyPlugin } from './mono-client-only';
-import { monoSsrStubPlugin } from './mono-ssr-stub';
+import { MonoClientOnlyOptions, monoClientOnlyPlugin } from "./mono-client-only.js";
+import { MonoSsrStubOptions, monoSsrStubPlugin } from "./mono-ssr-stub.js";
+import { Plugin } from "vite";
+//#region src/vite/index.d.ts
 export interface MonoSsrOptions {
-    /** Custom-element tag prefix wrapped in <ClientOnly>. Default 'mono-'. */
-    prefix?: string;
-    /** Wrapper component used for client-only rendering. Default 'ClientOnly'. */
-    wrapper?: string;
-    /** Import prefix of registration modules stubbed during SSR. Default '@mono-lit/helper/ui/'. */
-    ssrStubPrefix?: string;
-    /**
-     * Tag names (e.g. `['mono-nav']`) to NOT wrap in `<ClientOnly>` — for
-     * components server-rendered by another mechanism (e.g. `nuxt-ssr-lit`
-     * shadow-DOM builds). Default `[]`.
-     */
-    exclude?: string[];
-    /**
-     * Wrap LIGHT `<prefix*>` elements in `<ClientOnly>`. Default `true`. `false`
-     * keeps the server import-stub and the shadow `<LitWrapper>` wrap but leaves
-     * light tags as they are — see `MonoClientOnlyOptions.lightWrap`.
-     */
-    lightWrap?: boolean;
-    /**
-     * Enable the import-driven SSR wrap: `<mono-*>` whose `@mono-lit/helper/ui/shadow/
-     * <entry>` build a `.vue` file imports get wrapped in `<LitWrapper>`
-     * (Declarative Shadow DOM) instead of `<ClientOnly>`. Default off.
-     */
-    litWrapper?: boolean;
-    /** Component name used for the SSR wrap. Default `'LitWrapper'`. */
-    litWrapperComponent?: string;
-    /** Tags to ALWAYS treat as shadow (for globally-registered components). */
-    shadowOverride?: string[];
+  /** Custom-element tag prefix wrapped in <ClientOnly>. Default 'mono-'. */
+  prefix?: string;
+  /** Wrapper component used for client-only rendering. Default 'ClientOnly'. */
+  wrapper?: string;
+  /** Import prefix of registration modules stubbed during SSR. Default '@mono-lit/helper/ui/'. */
+  ssrStubPrefix?: string;
+  /**
+   * Tag names (e.g. `['mono-nav']`) to NOT wrap in `<ClientOnly>` — for
+   * components server-rendered by another mechanism (e.g. `nuxt-ssr-lit`
+   * shadow-DOM builds). Default `[]`.
+   */
+  exclude?: string[];
+  /**
+   * Wrap LIGHT `<prefix*>` elements in `<ClientOnly>`. Default `true`. `false`
+   * keeps the server import-stub and the shadow `<LitWrapper>` wrap but leaves
+   * light tags as they are — see `MonoClientOnlyOptions.lightWrap`.
+   */
+  lightWrap?: boolean;
+  /**
+   * Enable the import-driven SSR wrap: `<mono-*>` whose `@mono-lit/helper/ui/shadow/
+   * <entry>` build a `.vue` file imports get wrapped in `<LitWrapper>`
+   * (Declarative Shadow DOM) instead of `<ClientOnly>`. Default off.
+   */
+  litWrapper?: boolean;
+  /** Component name used for the SSR wrap. Default `'LitWrapper'`. */
+  litWrapperComponent?: string;
+  /** Tags to ALWAYS treat as shadow (for globally-registered components). */
+  shadowOverride?: string[];
 }
 /**
  * One import, one props object — wires both halves of SSR support for the
@@ -43,6 +44,5 @@ export interface MonoSsrOptions {
  *   plugins: [monoSsr()]
  */
 export declare function monoSsr(options?: MonoSsrOptions): Plugin[];
-export { monoClientOnlyPlugin, monoSsrStubPlugin };
-export type { MonoClientOnlyOptions } from './mono-client-only';
-export type { MonoSsrStubOptions } from './mono-ssr-stub';
+//#endregion
+export { type MonoClientOnlyOptions, type MonoSsrStubOptions, monoClientOnlyPlugin, monoSsrStubPlugin };

@@ -1,5 +1,8 @@
-import { LitElement } from 'lit';
-declare const MonoFileUpload_base: import('../../composables/hybird-prop').Constructor<import('./file-upload-core.js').MonoFileUploadCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoFileUploadCoreInterface } from "./file-upload-core.js";
+import { LitElement } from "lit";
+//#region src/components/file-upload/mono-file-upload.d.ts
+declare const MonoFileUpload_base: Constructor<MonoFileUploadCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-file-upload` (default build, `@mono-lit/helper/ui/file-upload`).
  *
@@ -14,20 +17,21 @@ declare const MonoFileUpload_base: import('../../composables/hybird-prop').Const
  * `mono-file-upload`, so a document loads only one.
  */
 export declare class MonoFileUpload extends MonoFileUpload_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
-    private _slotsCaptured;
-    private _slots;
-    private _parked?;
-    connectedCallback(): void;
-    protected updated(changed: Map<string, unknown>): void;
-    /** Move light-DOM `slot="icon|title|subtitle"` children out for placement into their regions. */
-    private _captureSlots;
-    private _placeSlot;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
+  private _slotsCaptured;
+  private _slots;
+  private _parked?;
+  connectedCallback(): void;
+  protected updated(changed: Map<string, unknown>): void;
+  /** Move light-DOM `slot="icon|title|subtitle"` children out for placement into their regions. */
+  private _captureSlots;
+  private _placeSlot;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-file-upload': MonoFileUpload;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-file-upload': MonoFileUpload;
+  }
 }
+//#endregion
 export {};

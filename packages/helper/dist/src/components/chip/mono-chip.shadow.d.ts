@@ -1,5 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-declare const MonoChipShadow_base: import('../../composables/hybird-prop').Constructor<import('./chip-core.js').MonoChipCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoChipCoreInterface } from "./chip-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/chip/mono-chip.shadow.d.ts
+declare const MonoChipShadow_base: Constructor<MonoChipCoreInterface> & typeof LitElement;
 /**
  * Shadow-DOM `mono-chip` (the opt-in SSR build, `@mono-lit/helper/ui/shadow/chip`).
  *
@@ -17,17 +20,18 @@ declare const MonoChipShadow_base: import('../../composables/hybird-prop').Const
  * `mono-chip`, so a document loads only one.
  */
 export declare class MonoChipShadow extends MonoChipShadow_base {
-    static styles: import('lit').CSSResult[];
-    connectedCallback(): void;
-    firstUpdated(changed: Map<string, unknown>): void;
-    private _iconSlot;
-    private _slotHasContent;
-    private _onIconSlotChange;
-    private _renderDot;
-    private _iconSpan;
-    private _renderLabel;
-    private _renderClose;
-    private _renderContent;
-    protected render(): TemplateResult;
+  static styles: import("lit").CSSResult[];
+  connectedCallback(): void;
+  firstUpdated(changed: Map<string, unknown>): void;
+  private _iconSlot;
+  private _slotHasContent;
+  private _onIconSlotChange;
+  private _renderDot;
+  private _iconSpan;
+  private _renderLabel;
+  private _renderClose;
+  private _renderContent;
+  protected render(): TemplateResult;
 }
+//#endregion
 export {};

@@ -1,4 +1,5 @@
-import { MonoTooltipController, MonoTooltipOptions, MonoTooltipTarget } from './tooltip-types';
+import { MonoTooltipController, MonoTooltipOptions, MonoTooltipTarget } from "./tooltip-types.js";
+//#region src/components/tooltip/control-tooltip.d.ts
 /**
  * A REAL document. `typeof document` is not enough on the server: Lit's SSR DOM shim (loaded by
  * VitePress / Nuxt SSR through @mono-lit/helper's server entries) defines a global `document` stub with no
@@ -34,3 +35,4 @@ export declare function createTooltipController(target: MonoTooltipTarget, optio
 export declare const monoTooltip: typeof controlMonoTooltip;
 /** @internal — close and forget every live controller. Public as `destroyAllMonoTooltips`. */
 export declare function destroyAllTooltipControllers(): void;
+//#endregion

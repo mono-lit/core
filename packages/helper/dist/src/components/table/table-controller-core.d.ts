@@ -1,23 +1,24 @@
-import { LitElement } from 'lit';
-import { MonoTableController } from './mono-data-grid.js';
-import { Constructor } from '../../composables/hybird-prop';
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableController } from "./mono-data-grid.js";
+import { LitElement } from "lit";
+//#region src/components/table/table-controller-core.d.ts
 /**
  * Public surface added by the shared controller base mixin (for typing the
  * per-element cores + wrappers).
  */
 export declare class MonoTableControllerCoreInterface {
-    dataGrid?: MonoTableController;
-    /** Unsubscribe handle for the current controller subscription (set by `_subscribe`). */
-    protected _off?: () => void;
-    /** (Re)bind the controller subscription; called on connect + `dataGrid` change. */
-    protected _subscribe(): void;
-    /**
-     * Which slot of `monoDataGrid({ props })` this element reads. `'th' | 'sort' |
-     * 'summary'` resolve per column via the element's `field`; the rest are
-     * singletons. Left undefined = the element takes no central props.
-     */
-    protected _propsSlot?: MonoTablePropsSlot;
-    protected _applyControllerProps(): void;
+  dataGrid?: MonoTableController;
+  /** Unsubscribe handle for the current controller subscription (set by `_subscribe`). */
+  protected _off?: () => void;
+  /** (Re)bind the controller subscription; called on connect + `dataGrid` change. */
+  protected _subscribe(): void;
+  /**
+   * Which slot of `monoDataGrid({ props })` this element reads. `'th' | 'sort' |
+   * 'summary'` resolve per column via the element's `field`; the rest are
+   * singletons. Left undefined = the element takes no central props.
+   */
+  protected _propsSlot?: MonoTablePropsSlot;
+  protected _applyControllerProps(): void;
 }
 /** The `props` key an element reads — see {@link MonoTableProps}. */
 export type MonoTablePropsSlot = 'th' | 'sort' | 'summary' | 'search' | 'info' | 'paging' | 'loading' | 'empty' | 'error' | 'pageSize' | 'pagingGroup' | 'detail' | 'checkbox';
@@ -38,3 +39,4 @@ export type MonoTablePropsSlot = 'th' | 'sort' | 'summary' | 'search' | 'info' |
  * is a no-op there and the element renders its deterministic empty shell.
  */
 export declare const MonoTableControllerCore: <T extends Constructor<LitElement>>(superClass: T) => Constructor<MonoTableControllerCoreInterface> & T;
+//#endregion

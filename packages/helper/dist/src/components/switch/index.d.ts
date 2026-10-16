@@ -1,4 +1,5 @@
 /// <reference path="../../../vue.d.ts" />
-export { MonoSwitch } from './mono-switch.js';
-export type { SwitchSize, SwitchColor, SwitchProps, SwitchEvents } from './switch-types.js';
-export { validateSwitchProps, generateSwitchAttributes } from './switch-utils.js';
+import { SwitchColor, SwitchEvents, SwitchProps, SwitchSize } from "./switch-types.js";
+import { MonoSwitch } from "./mono-switch.js";
+import { generateSwitchAttributes, validateSwitchProps } from "./switch-utils.js";
+export { MonoSwitch, type SwitchColor, type SwitchEvents, type SwitchProps, type SwitchSize, generateSwitchAttributes, validateSwitchProps };

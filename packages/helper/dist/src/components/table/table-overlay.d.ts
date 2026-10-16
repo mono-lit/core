@@ -1,3 +1,4 @@
+//#region src/components/table/table-overlay.d.ts
 /**
  * The element an overlay covers: the `<table>` first, the scroll wrapper only as
  * a fallback.
@@ -44,8 +45,8 @@ export declare function columnCount(table: HTMLTableElement): number;
  * a framework that still holds a reference to it is how hydration breaks.
  */
 export interface RowHost {
-    row: HTMLTableRowElement;
-    generated: boolean;
+  row: HTMLTableRowElement;
+  generated: boolean;
 }
 /**
  * Give an overlay a spec-valid home inside the table, and make that home carry
@@ -105,45 +106,45 @@ export declare function releaseRowHost(el: HTMLElement, host: RowHost | undefine
  */
 export declare function syncRowSpan(el: HTMLElement, host: RowHost | undefined): void;
 export interface OverlayHostOptions {
-    /**
-     * The custom property the measured sticky-header height is published on, so the
-     * overlay's content can sit BELOW a frozen header rather than under it.
-     */
-    headVar: string;
-    /**
-     * This overlay's own reservation slot on the size host — must start with
-     * `--mono-table-hold-`. See {@link HOLD_PREFIX} for why each overlay needs one
-     * of its own rather than sharing `min-height`.
-     */
-    holdVar: string;
-    /**
-     * How much room to reserve on the size host while the overlay is up.
-     *
-     * `'measure'` freezes whatever height it currently has — right for an overlay
-     * that appears over a grid which is ABOUT to lose its rows. A length string
-     * sets that height outright, which is what an overlay shown over an already
-     * empty grid needs: there is nothing left to measure but a header.
-     *
-     * A FUNCTION is called after `headVar` has been published, for a caller whose
-     * answer depends on it. Passing the string it would have returned instead reads
-     * the header offset from the PREVIOUS pass — zero on the first one — which is
-     * a whole header's worth of room short.
-     */
-    hold: 'measure' | string | (() => string);
-    /**
-     * When to measure the header into `headVar`.
-     *
-     * `'sticky'` publishes it only for a frozen header, and `0` otherwise — right
-     * for a small glyph that may sit over rows quite happily, and only has to clear
-     * a header that refuses to scroll away.
-     *
-     * `'always'` publishes it whatever the header does. An overlay whose content is
-     * a block of text has to clear the header at rest as well as while scrolling:
-     * with `0` it starts at the table's top and the first line lands ON the header
-     * row. Costs a slightly generous offset once a non-sticky header has scrolled
-     * away, which is invisible; the alternative is text over the column names.
-     */
-    measureHead?: 'sticky' | 'always';
+  /**
+   * The custom property the measured sticky-header height is published on, so the
+   * overlay's content can sit BELOW a frozen header rather than under it.
+   */
+  headVar: string;
+  /**
+   * This overlay's own reservation slot on the size host — must start with
+   * `--mono-table-hold-`. See {@link HOLD_PREFIX} for why each overlay needs one
+   * of its own rather than sharing `min-height`.
+   */
+  holdVar: string;
+  /**
+   * How much room to reserve on the size host while the overlay is up.
+   *
+   * `'measure'` freezes whatever height it currently has — right for an overlay
+   * that appears over a grid which is ABOUT to lose its rows. A length string
+   * sets that height outright, which is what an overlay shown over an already
+   * empty grid needs: there is nothing left to measure but a header.
+   *
+   * A FUNCTION is called after `headVar` has been published, for a caller whose
+   * answer depends on it. Passing the string it would have returned instead reads
+   * the header offset from the PREVIOUS pass — zero on the first one — which is
+   * a whole header's worth of room short.
+   */
+  hold: 'measure' | string | (() => string);
+  /**
+   * When to measure the header into `headVar`.
+   *
+   * `'sticky'` publishes it only for a frozen header, and `0` otherwise — right
+   * for a small glyph that may sit over rows quite happily, and only has to clear
+   * a header that refuses to scroll away.
+   *
+   * `'always'` publishes it whatever the header does. An overlay whose content is
+   * a block of text has to clear the header at rest as well as while scrolling:
+   * with `0` it starts at the table's top and the first line lands ON the header
+   * row. Costs a slightly generous offset once a non-sticky header has scrolled
+   * away, which is invisible; the alternative is text over the column names.
+   */
+  measureHead?: 'sticky' | 'always';
 }
 /**
  * Give back everything an overlay reserved, from the hosts it remembers.
@@ -163,3 +164,4 @@ export declare function releaseOverlayHost(el: HTMLElement): void;
  * had before any room was made, which on an empty grid is a header-high strip.
  */
 export declare function applyOverlayHost(el: HTMLElement, on: boolean, opts: OverlayHostOptions): void;
+//#endregion

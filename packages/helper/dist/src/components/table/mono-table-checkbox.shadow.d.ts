@@ -1,5 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-declare const MonoTableCheckboxShadow_base: import('../../composables/hybird-prop').Constructor<import('./mono-table-checkbox-core.js').MonoTableCheckboxCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableCheckboxCoreInterface } from "./mono-table-checkbox-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/table/mono-table-checkbox.shadow.d.ts
+declare const MonoTableCheckboxShadow_base: Constructor<MonoTableCheckboxCoreInterface> & typeof LitElement;
 /**
  * Shadow-DOM `mono-shadow-table-checkbox` (SSR build, `@mono-lit/helper/ui/shadow/table`).
  *
@@ -13,14 +16,15 @@ declare const MonoTableCheckboxShadow_base: import('../../composables/hybird-pro
  * shared via `MonoTableCheckboxCore`.
  */
 export declare class MonoTableCheckboxShadow extends MonoTableCheckboxShadow_base {
-    static styles: import('lit').CSSResult[];
-    connectedCallback(): void;
-    /**
-     * `mdi:loading` inlined — a shadow root can't reach the page's `i-mdi-*`
-     * utility CSS, so the light build's icon class would render nothing here.
-     * `fill="currentColor"` keeps it on the box's own icon colour, and the spin
-     * comes from the adopted `checkbox.css` (`[mono-spinner]`), like the box itself.
-     */
-    protected _renderLoadingIcon(): TemplateResult;
+  static styles: import("lit").CSSResult[];
+  connectedCallback(): void;
+  /**
+   * `mdi:loading` inlined — a shadow root can't reach the page's `i-mdi-*`
+   * utility CSS, so the light build's icon class would render nothing here.
+   * `fill="currentColor"` keeps it on the box's own icon colour, and the spin
+   * comes from the adopted `checkbox.css` (`[mono-spinner]`), like the box itself.
+   */
+  protected _renderLoadingIcon(): TemplateResult;
 }
+//#endregion
 export {};

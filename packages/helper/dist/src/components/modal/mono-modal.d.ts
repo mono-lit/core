@@ -1,5 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-declare const MonoModal_base: import('../../composables/hybird-prop').Constructor<import('./modal-core.js').MonoModalCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoModalCoreInterface } from "./modal-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/modal/mono-modal.d.ts
+declare const MonoModal_base: Constructor<MonoModalCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-modal` (the default build).
  *
@@ -14,32 +17,33 @@ declare const MonoModal_base: import('../../composables/hybird-prop').Constructo
  * `mono-modal.shadow.ts`; all logic is shared via `MonoModalCore`.
  */
 export declare class MonoModal extends MonoModal_base {
-    static styles: import('lit').CSSResult[];
-    private _portal;
-    private _appliedPortalClasses;
-    private _slotHead;
-    private _slotTitle;
-    private _slotSubtitle;
-    private _slotBody;
-    private _slotFoot;
-    /** `slot="header"` / `slot="footer"` — aliases that OUTRANK `head`/`foot`. */
-    private _slotHeaderAlias;
-    private _slotFooterAlias;
-    /** Detached parking for captured nodes that lost the alias contest. */
-    private _orphanHolder?;
-    protected createRenderRoot(): HTMLElement;
-    connectedCallback(): void;
-    disconnectedCallback(): void;
-    protected updated(changed: Map<string, unknown>): void;
-    private _updatePortalClasses;
-    private _updatePortalAttributes;
-    protected render(): TemplateResult;
-    private _captureSlots;
-    private _placeSlot;
+  static styles: import("lit").CSSResult[];
+  private _portal;
+  private _appliedPortalClasses;
+  private _slotHead;
+  private _slotTitle;
+  private _slotSubtitle;
+  private _slotBody;
+  private _slotFoot;
+  /** `slot="header"` / `slot="footer"` — aliases that OUTRANK `head`/`foot`. */
+  private _slotHeaderAlias;
+  private _slotFooterAlias;
+  /** Detached parking for captured nodes that lost the alias contest. */
+  private _orphanHolder?;
+  protected createRenderRoot(): HTMLElement;
+  connectedCallback(): void;
+  disconnectedCallback(): void;
+  protected updated(changed: Map<string, unknown>): void;
+  private _updatePortalClasses;
+  private _updatePortalAttributes;
+  protected render(): TemplateResult;
+  private _captureSlots;
+  private _placeSlot;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-modal': MonoModal;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-modal': MonoModal;
+  }
 }
+//#endregion
 export {};

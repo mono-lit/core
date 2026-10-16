@@ -1,4 +1,5 @@
-import { MonoColumnValue } from './mono-data-grid.js';
+import { MonoColumnValue } from "./mono-data-grid.js";
+//#region src/components/table/date-filter-tree.d.ts
 /** The levels of the tree, outermost first. */
 export type MonoDateLevel = 'year' | 'month' | 'day' | 'hour' | 'minute' | 'second';
 export declare const DATE_LEVELS: readonly MonoDateLevel[];
@@ -7,35 +8,35 @@ export declare const DATE_LEVELS: readonly MonoDateLevel[];
  * filter stores on the column (`table.columnFilter(field)` returns these).
  */
 export interface MonoDateRange {
-    from: Date;
-    to: Date;
+  from: Date;
+  to: Date;
 }
 /** A `{ from, to }` pair of Dates (or ISO strings, which `setColumnFilter` also accepts). */
 export declare function isDateRange(v: unknown): v is MonoDateRange | {
-    from: string;
-    to: string;
+  from: string;
+  to: string;
 };
 export interface DateNode {
-    /** Unique within the tree: the parts joined — `2026`, `2026-3`, `2026-3-5-13`… or `blank`. */
-    key: string;
-    level: MonoDateLevel;
-    /** `[year, month(1-12), day, hour, minute, second]` down to this level. */
-    parts: number[];
-    label: string;
-    /** Rows inside this period (summed from the timestamps it contains). */
-    count: number;
-    /** The period, `[from, to)`. `null` on the blanks node. */
-    from: Date | null;
-    to: Date | null;
-    children: DateNode[];
+  /** Unique within the tree: the parts joined — `2026`, `2026-3`, `2026-3-5-13`… or `blank`. */
+  key: string;
+  level: MonoDateLevel;
+  /** `[year, month(1-12), day, hour, minute, second]` down to this level. */
+  parts: number[];
+  label: string;
+  /** Rows inside this period (summed from the timestamps it contains). */
+  count: number;
+  /** The period, `[from, to)`. `null` on the blanks node. */
+  from: Date | null;
+  to: Date | null;
+  children: DateNode[];
 }
 export interface DateTreeOptions {
-    /** Deepest level built. Default `'month'`. */
-    depth?: MonoDateLevel;
-    /** Read the parts in UTC instead of local time. Default `false`. */
-    utc?: boolean;
-    /** BCP-47 tag for the month / weekday names. Default: the browser's. */
-    locale?: string;
+  /** Deepest level built. Default `'month'`. */
+  depth?: MonoDateLevel;
+  /** Read the parts in UTC instead of local time. Default `false`. */
+  utc?: boolean;
+  /** BCP-47 tag for the month / weekday names. Default: the browser's. */
+  locale?: string;
 }
 export declare const BLANK_KEY = "blank";
 /**
@@ -91,3 +92,4 @@ export declare function minimize(roots: readonly DateNode[], checked: ReadonlySe
 export declare function seedFromRanges(roots: readonly DateNode[], values: readonly unknown[]): Set<string>;
 /** Whether a Date falls in `[from, to)`. */
 export declare function inRange(d: Date, r: MonoDateRange): boolean;
+//#endregion

@@ -1,5 +1,6 @@
-import { LitElement, TemplateResult } from 'lit';
-import { StatusDotState } from './chip-types.js';
+import { StatusDotState } from "./chip-types.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/chip/mono-status-dot.d.ts
 /**
  * `mono-status-dot` — a small status indicator. Already a real shadow-DOM
  * LitElement (default render root + `static styles`, native `<slot>`), so it is
@@ -14,21 +15,22 @@ import { StatusDotState } from './chip-types.js';
  * loads both light + shadow chip won't throw a "already defined" registry error.
  */
 export declare class MonoStatusDot extends LitElement {
-    static styles: import('lit').CSSResult[];
-    constructor();
-    state: StatusDotState;
-    pulse: boolean;
-    label?: string;
-    color?: string;
-    private _statusElement?;
-    private get _statusClasses();
-    private get _statusStyle();
-    protected render(): TemplateResult;
-    focus(): void;
-    blur(): void;
+  static styles: import("lit").CSSResult[];
+  constructor();
+  state: StatusDotState;
+  pulse: boolean;
+  label?: string;
+  color?: string;
+  private _statusElement?;
+  private get _statusClasses();
+  private get _statusStyle();
+  protected render(): TemplateResult;
+  focus(): void;
+  blur(): void;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-status-dot': MonoStatusDot;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-status-dot': MonoStatusDot;
+  }
 }
+//#endregion

@@ -1,3 +1,4 @@
+//#region src/composables/color.d.ts
 /**
  * Colour parsing and contrast, for props that accept a raw CSS colour.
  *
@@ -17,10 +18,10 @@
  * `var()` and has different needs.
  */
 export interface Rgba {
-    r: number;
-    g: number;
-    b: number;
-    a: number;
+  r: number;
+  g: number;
+  b: number;
+  a: number;
 }
 /** The two inks the theme uses on a filled surface (`index.css` `--theme-*-contrast`). */
 export declare const INK_LIGHT = "#ffffff";
@@ -101,3 +102,4 @@ export declare function customColorStyle(value: string | undefined | null, compo
  * reads as a CSS colour. Returns an error string, or null when the value is fine.
  */
 export declare function validateColorProp(value: unknown): string | null;
+//#endregion

@@ -1,6 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-import { SidebarSlotName } from './sidebar-core.js';
-declare const MonoSidebarShadow_base: import('../../composables/hybird-prop').Constructor<import('./sidebar-core.js').MonoSidebarCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoSidebarCoreInterface, SidebarSlotName } from "./sidebar-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/sidebar/mono-sidebar.shadow.d.ts
+declare const MonoSidebarShadow_base: Constructor<MonoSidebarCoreInterface> & typeof LitElement;
 /**
  * Shadow-DOM `mono-sidebar` (SSR build, `@mono-lit/helper/ui/shadow/sidebar`).
  *
@@ -19,9 +21,10 @@ declare const MonoSidebarShadow_base: import('../../composables/hybird-prop').Co
  * `mono-sidebar`, so a document loads only one build.
  */
 export declare class MonoSidebarShadow extends MonoSidebarShadow_base {
-    static styles: import('lit').CSSResult[];
-    connectedCallback(): void;
-    protected renderSlot(name: SidebarSlotName): TemplateResult;
-    protected renderIcon(_name: 'chevron'): TemplateResult;
+  static styles: import("lit").CSSResult[];
+  connectedCallback(): void;
+  protected renderSlot(name: SidebarSlotName): TemplateResult;
+  protected renderIcon(_name: 'chevron'): TemplateResult;
 }
+//#endregion
 export {};

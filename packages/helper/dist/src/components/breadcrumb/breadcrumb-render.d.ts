@@ -1,20 +1,21 @@
-import { nothing, TemplateResult } from 'lit';
-import { BreadcrumbCssClass, BreadcrumbItem } from './breadcrumb-types.js';
+import { BreadcrumbCssClass, BreadcrumbItem } from "./breadcrumb-types.js";
+import { TemplateResult, nothing } from "lit";
+//#region src/components/breadcrumb/breadcrumb-render.d.ts
 export interface BreadcrumbRenderContext {
-    cssClass: BreadcrumbCssClass;
-    separator: string;
-    hasSeparatorSlot: boolean;
-    disabled: boolean;
-    /**
-     * Shadow build: render per-item icons through a native `<slot name="icon-<id>">`
-     * (the element creates matching light-DOM `<span slot>` children styled by the
-     * page's global UnoCSS — `i-…` classes can't paint inside a shadow root). The
-     * light build leaves this falsy and uses `data-mono-slot` + inline `i-…` spans.
-     */
-    iconSlot?: boolean;
-    isCurrent(id: string): boolean;
-    getSlotIconNodes(id: string): Node[] | undefined;
-    onItemClick(item: BreadcrumbItem, index: number, event: Event): void;
+  cssClass: BreadcrumbCssClass;
+  separator: string;
+  hasSeparatorSlot: boolean;
+  disabled: boolean;
+  /**
+   * Shadow build: render per-item icons through a native `<slot name="icon-<id>">`
+   * (the element creates matching light-DOM `<span slot>` children styled by the
+   * page's global UnoCSS — `i-…` classes can't paint inside a shadow root). The
+   * light build leaves this falsy and uses `data-mono-slot` + inline `i-…` spans.
+   */
+  iconSlot?: boolean;
+  isCurrent(id: string): boolean;
+  getSlotIconNodes(id: string): Node[] | undefined;
+  onItemClick(item: BreadcrumbItem, index: number, event: Event): void;
 }
 export declare function renderBreadcrumbIcon(item: BreadcrumbItem, ctx: BreadcrumbRenderContext): TemplateResult | typeof nothing;
 export declare function renderBreadcrumbBadge(item: BreadcrumbItem, ctx: BreadcrumbRenderContext): TemplateResult | typeof nothing;
@@ -29,3 +30,4 @@ export declare function renderBreadcrumbList(items: BreadcrumbItem[], ctx: Bread
  *   `.mono-breadcrumb-list > mono-breadcrumb-list:first-child > .mono-breadcrumb-sep:first-child { display: none; }`
  */
 export declare function renderBreadcrumbItemsLeadingSep(items: BreadcrumbItem[], ctx: BreadcrumbRenderContext, startIndex?: number): TemplateResult[];
+//#endregion

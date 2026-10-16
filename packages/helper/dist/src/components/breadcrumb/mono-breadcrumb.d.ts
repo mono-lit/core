@@ -1,5 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-declare const MonoBreadcrumb_base: import('../../composables/hybird-prop').Constructor<import('./breadcrumb-core.js').MonoBreadcrumbCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoBreadcrumbCoreInterface } from "./breadcrumb-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/breadcrumb/mono-breadcrumb.d.ts
+declare const MonoBreadcrumb_base: Constructor<MonoBreadcrumbCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-breadcrumb` (default build, `@mono-lit/helper/ui/breadcrumb`).
  *
@@ -15,24 +18,25 @@ declare const MonoBreadcrumb_base: import('../../composables/hybird-prop').Const
  * so a document loads only one.
  */
 export declare class MonoBreadcrumb extends MonoBreadcrumb_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
-    private _slotsCaptured;
-    private _hasBodySlot;
-    /** Captured nodes for the whole-body slot — `slot="body"`. */
-    private _slotBody;
-    private _orphanHolder?;
-    connectedCallback(): void;
-    protected updated(changed: Map<string, unknown>): void;
-    protected _renderBody(): TemplateResult;
-    private _captureSlots;
-    private _placeIconSlots;
-    private _placeBodySlot;
-    private _placeSeparatorSlots;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
+  private _slotsCaptured;
+  private _hasBodySlot;
+  /** Captured nodes for the whole-body slot — `slot="body"`. */
+  private _slotBody;
+  private _orphanHolder?;
+  connectedCallback(): void;
+  protected updated(changed: Map<string, unknown>): void;
+  protected _renderBody(): TemplateResult;
+  private _captureSlots;
+  private _placeIconSlots;
+  private _placeBodySlot;
+  private _placeSeparatorSlots;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-breadcrumb': MonoBreadcrumb;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-breadcrumb': MonoBreadcrumb;
+  }
 }
+//#endregion
 export {};

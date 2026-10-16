@@ -1,4 +1,5 @@
-import { RichTextEditorButtonList, RichTextEditorPlugins, RichTextEditorToolbar, RichTextEditorToolbarPreset } from './rich-text-editor-types.js';
+import { RichTextEditorButtonList, RichTextEditorPlugins, RichTextEditorToolbar, RichTextEditorToolbarPreset } from "./rich-text-editor-types.js";
+//#region src/components/rich-text-editor/rich-text-editor-toolbar.d.ts
 /**
  * Buttons SunEditor's core provides WITHOUT a plugin (v3 `_defaultButtons`).
  * Anything else in a `buttonList` is the `key` of a plugin that has to be in
@@ -58,8 +59,9 @@ export declare function pruneToolbar(list: RichTextEditorButtonList, available: 
  * - a string → comma/space-separated names.
  */
 export declare function resolvePlugins(plugins: RichTextEditorPlugins | undefined | null, all: Record<string, unknown> | null): {
-    plugins: unknown[];
-    keys: Set<string>;
+  plugins: unknown[];
+  keys: Set<string>;
 };
 /** Whether `plugins` needs the full built-in map to be resolved. */
 export declare function pluginsNeedCatalog(plugins: RichTextEditorPlugins | undefined | null): boolean;
+//#endregion

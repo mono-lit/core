@@ -1,18 +1,19 @@
+//#region src/composables/mono-event.d.ts
 /** Options for {@link dispatchMonoEvent}. */
 export interface MonoEventOptions {
-    /**
-     * The native DOM event this mono event was derived from, if any. Defaults to
-     * `detail.sourceEvent` when that is an `Event` — which is what every model
-     * detail already carries.
-     */
-    sourceEvent?: Event | null;
-    /**
-     * The plain (unprefixed) name to emit. Defaults to `name`. Give a different
-     * one when the mono name is not what the plain event means — `mno-click` on
-     * a modal is an open-state change, so its plain name is `toggle`. `false`
-     * emits no plain event at all.
-     */
-    alias?: string | false;
+  /**
+   * The native DOM event this mono event was derived from, if any. Defaults to
+   * `detail.sourceEvent` when that is an `Event` — which is what every model
+   * detail already carries.
+   */
+  sourceEvent?: Event | null;
+  /**
+   * The plain (unprefixed) name to emit. Defaults to `name`. Give a different
+   * one when the mono name is not what the plain event means — `mno-click` on
+   * a modal is an open-state change, so its plain name is `toggle`. `false`
+   * emits no plain event at all.
+   */
+  alias?: string | false;
 }
 /**
  * Device-originated event names — decorated when native, never synthesized.
@@ -53,3 +54,4 @@ export declare function decorateEvent<T>(event: Event, detail: T): void;
  *   dispatchMonoEvent(this, 'loading-change', detail)                  // loading-change + loadingChange + mno-loading-change + mnoLoadingChange
  */
 export declare function dispatchMonoEvent<T>(target: EventTarget, name: string, detail: T, options?: MonoEventOptions): void;
+//#endregion

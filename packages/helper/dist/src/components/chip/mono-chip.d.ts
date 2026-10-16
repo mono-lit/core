@@ -1,5 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-declare const MonoChip_base: import('../../composables/hybird-prop').Constructor<import('./chip-core.js').MonoChipCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoChipCoreInterface } from "./chip-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/chip/mono-chip.d.ts
+declare const MonoChip_base: Constructor<MonoChipCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-chip` (default build, `@mono-lit/helper/ui/chip`).
  *
@@ -18,31 +21,32 @@ declare const MonoChip_base: import('../../composables/hybird-prop').Constructor
  * only one.
  */
 export declare class MonoChip extends MonoChip_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
-    private _buckets;
-    private _slotsCaptured;
-    private _renderLabel;
-    private _renderDot;
-    private _renderClose;
-    private _renderContent;
-    protected render(): TemplateResult;
-    connectedCallback(): void;
-    /**
-     * In light DOM mode, <slot> elements no longer project the host's children.
-     * Capture them once before Lit's first render replaces the children, then
-     * re-place them in the render template at the right positions. `light-slots`
-     * carries comments and zero-length Fragment text nodes with the content they
-     * anchor and removes *only* what it buckets — the previous inline logic deleted
-     * every original child, dropping Vue's anchors for good.
-     */
-    private _captureSlots;
-    protected updated(changed: Map<string, unknown>): void;
-    private _placeSlot;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
+  private _buckets;
+  private _slotsCaptured;
+  private _renderLabel;
+  private _renderDot;
+  private _renderClose;
+  private _renderContent;
+  protected render(): TemplateResult;
+  connectedCallback(): void;
+  /**
+   * In light DOM mode, <slot> elements no longer project the host's children.
+   * Capture them once before Lit's first render replaces the children, then
+   * re-place them in the render template at the right positions. `light-slots`
+   * carries comments and zero-length Fragment text nodes with the content they
+   * anchor and removes *only* what it buckets — the previous inline logic deleted
+   * every original child, dropping Vue's anchors for good.
+   */
+  private _captureSlots;
+  protected updated(changed: Map<string, unknown>): void;
+  private _placeSlot;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-chip': MonoChip;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-chip': MonoChip;
+  }
 }
+//#endregion
 export {};

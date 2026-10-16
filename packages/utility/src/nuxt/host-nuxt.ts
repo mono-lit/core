@@ -802,7 +802,9 @@ function registerRemotePages(dirs: string[], exclude: string[], label: string): 
           // Belt-and-suspenders: set meta from the parsed `definePage` so layout/
           // title are correct even if Nuxt doesn't run the `definePageMeta` macro
           // on these out-of-tree files. The Vite transform below covers the rest.
-          meta: parsePageMeta(safeRead(file)),
+          // Spread: Nuxt 4.6's `NuxtPageMeta` has an index signature, which a
+          // named interface (MonoPageMeta) is not assignable to; a literal is.
+          meta: { ...parsePageMeta(safeRead(file)) },
         })
         added.push(routePath)
       }

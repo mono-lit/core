@@ -1,5 +1,8 @@
-import { LitElement } from 'lit';
-declare const MonoDate_base: import('../../composables/hybird-prop').Constructor<import('./date-core.js').MonoDateCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoDateCoreInterface } from "./date-core.js";
+import { LitElement } from "lit";
+//#region src/components/date/mono-date.d.ts
+declare const MonoDate_base: Constructor<MonoDateCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-date` (default build, `@mono-lit/helper/ui/date`).
  *
@@ -11,12 +14,13 @@ declare const MonoDate_base: import('../../composables/hybird-prop').Constructor
  * `mono-date`, so a document loads one.
  */
 export declare class MonoDate extends MonoDate_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-date': MonoDate;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-date': MonoDate;
+  }
 }
+//#endregion
 export {};

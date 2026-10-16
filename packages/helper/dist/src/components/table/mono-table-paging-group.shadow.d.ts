@@ -1,5 +1,8 @@
-import { LitElement } from 'lit';
-declare const MonoTablePagingGroupShadow_base: import('../../composables/hybird-prop').Constructor<import('./mono-table-paging-group-core.js').MonoTablePagingGroupCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTablePagingGroupCoreInterface } from "./mono-table-paging-group-core.js";
+import { LitElement } from "lit";
+//#region src/components/table/mono-table-paging-group.shadow.d.ts
+declare const MonoTablePagingGroupShadow_base: Constructor<MonoTablePagingGroupCoreInterface> & typeof LitElement;
 /**
  * Shadow-DOM `mono-table-paging-group` (SSR build, `@mono-lit/helper/ui/shadow/table`).
  * Shares all logic with the light build via `MonoTablePagingGroupCore`. Renders
@@ -7,7 +10,8 @@ declare const MonoTablePagingGroupShadow_base: import('../../composables/hybird-
  * materializes after hydration binds the controller + group.
  */
 export declare class MonoTablePagingGroupShadow extends MonoTablePagingGroupShadow_base {
-    static styles: import('lit').CSSResult[];
-    connectedCallback(): void;
+  static styles: import("lit").CSSResult[];
+  connectedCallback(): void;
 }
+//#endregion
 export {};

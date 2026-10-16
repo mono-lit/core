@@ -1,46 +1,47 @@
-import { LitElement, TemplateResult } from 'lit';
-import { MonoTableControllerCoreInterface } from './table-controller-core.js';
-import { MonoCheckMode } from './mono-data-grid.js';
-import { CheckboxColor, CheckboxCssClass, CheckboxSize } from '../checkbox/checkbox-types.js';
-import { Constructor } from '../../composables/hybird-prop';
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableControllerCoreInterface } from "./table-controller-core.js";
+import { CheckboxColor, CheckboxCssClass, CheckboxSize } from "../checkbox/checkbox-types.js";
+import { MonoCheckMode } from "./mono-data-grid.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/table/mono-table-checkbox-core.d.ts
 /** Which job this checkbox does. */
 export type TableCheckboxType = 'all' | 'single';
 /** `detail` of the `mno-change` event `<mono-table-checkbox>` emits. */
 export interface TableCheckboxChangeEventDetail<T = any> {
-    /** The state it moved TO. */
-    checked: boolean;
-    /** The row, for `type="single"`; `null` for the select-all. */
-    item: T | null;
-    /** How many rows are selected after the change (a drain fills in later). */
-    count: number;
+  /** The state it moved TO. */
+  checked: boolean;
+  /** The row, for `type="single"`; `null` for the select-all. */
+  item: T | null;
+  /** How many rows are selected after the change (a drain fills in later). */
+  count: number;
 }
 export type TableCheckboxChangeEvent<T = any> = CustomEvent<TableCheckboxChangeEventDetail<T>>;
 /** Events emitted by `<mono-table-checkbox>` (feeds the generated Vue types). */
 export interface TableCheckboxEvents {
-    change: TableCheckboxChangeEvent;
-    'mno-change': TableCheckboxChangeEvent;
-    mnoChange: TableCheckboxChangeEvent;
+  change: TableCheckboxChangeEvent;
+  'mno-change': TableCheckboxChangeEvent;
+  mnoChange: TableCheckboxChangeEvent;
 }
 /** Public surface added by the table-checkbox core mixin. */
 export declare class MonoTableCheckboxCoreInterface extends MonoTableControllerCoreInterface {
-    type: TableCheckboxType;
-    item?: unknown;
-    keyValue?: string | string[];
-    mode: MonoCheckMode;
-    chunk: number;
-    size: CheckboxSize;
-    color: CheckboxColor;
-    disabled: boolean;
-    label: string;
-    /** Secondary line under the label. */
-    sublabel: string;
-    /** The same as `sublabel`, kept for existing code. */
-    description: string;
-    ariaLabelText?: string;
-    cssClass: CheckboxCssClass;
-    cssClassName: string;
-    /** The spinner shown mid-drain — the shadow build swaps in inline SVG. */
-    protected _renderLoadingIcon(): TemplateResult;
+  type: TableCheckboxType;
+  item?: unknown;
+  keyValue?: string | string[];
+  mode: MonoCheckMode;
+  chunk: number;
+  size: CheckboxSize;
+  color: CheckboxColor;
+  disabled: boolean;
+  label: string;
+  /** Secondary line under the label. */
+  sublabel: string;
+  /** The same as `sublabel`, kept for existing code. */
+  description: string;
+  ariaLabelText?: string;
+  cssClass: CheckboxCssClass;
+  cssClassName: string;
+  /** The spinner shown mid-drain — the shadow build swaps in inline SVG. */
+  protected _renderLoadingIcon(): TemplateResult;
 }
 /**
  * `MonoTableCheckboxCore` — render-mode-agnostic logic for `mono-table-checkbox`,
@@ -74,3 +75,4 @@ export declare class MonoTableCheckboxCoreInterface extends MonoTableControllerC
  * shell and touches no DOM.
  */
 export declare const MonoTableCheckboxCore: <T extends Constructor<LitElement>>(superClass: T) => Constructor<MonoTableCheckboxCoreInterface> & T;
+//#endregion

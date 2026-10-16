@@ -1,6 +1,7 @@
-import { c as escapeCellText, d as __toESM, l as stripDirectives, o as parseMarkdown, s as encodeDirective, t as DEFAULT_STYLES, u as __commonJSMin } from "./styles-BIJ31TM4.js";
-import { n as isReadableSource, r as readAllRows } from "./data-source-read-DL88aH8t.js";
-import { n as unwrapReactive } from "./reactive-D3EERqgO.js";
+import { c as escapeCellText, d as __toESM, l as stripDirectives, o as parseMarkdown, s as encodeDirective, t as DEFAULT_STYLES, u as __commonJSMin } from "./styles-D-ergrfR.js";
+import { n as isReadableSource, r as readAllRows } from "./data-source-read-FxqzQkk2.js";
+import { n as unwrapReactive } from "./reactive-Dtd-esHO.js";
+
 //#region src/export/download.ts
 /**
 * Browser download helper. Kept separate (and DOM-guarded) so the report engine
@@ -8,7 +9,7 @@ import { n as unwrapReactive } from "./reactive-D3EERqgO.js";
 * rather than a crash.
 */
 /** MIME type per output format. */
-var MIME = {
+const MIME = {
 	md: "text/markdown;charset=utf-8",
 	xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 };
@@ -28,6 +29,7 @@ function downloadBlob(blob, fileName) {
 	document.body.removeChild(anchor);
 	setTimeout(() => URL.revokeObjectURL(url), 0);
 }
+
 //#endregion
 //#region src/export/detail.ts
 function readPath(row, path) {
@@ -145,6 +147,7 @@ async function resolveDetails(masterRows, detail) {
 	}
 	throw new Error("[mono-export] `detail` needs either `field` or `load`.");
 }
+
 //#endregion
 //#region src/export/resolve-data.ts
 /**
@@ -190,6 +193,7 @@ async function resolveExportData(data, options = {}) {
 	if (pending.length) await Promise.all(pending);
 	return out;
 }
+
 //#endregion
 //#region ../../node_modules/.pnpm/@babel+runtime@7.26.10/node_modules/@babel/runtime/helpers/interopRequireDefault.js
 var require_interopRequireDefault = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -198,6 +202,7 @@ var require_interopRequireDefault = /* @__PURE__ */ __commonJSMin(((exports, mod
 	}
 	module.exports = _interopRequireDefault, module.exports.__esModule = true, module.exports["default"] = module.exports;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/@babel+runtime@7.26.10/node_modules/@babel/runtime/helpers/typeof.js
 var require_typeof = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -211,6 +216,7 @@ var require_typeof = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	}
 	module.exports = _typeof, module.exports.__esModule = true, module.exports["default"] = module.exports;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/@babel+runtime@7.26.10/node_modules/@babel/runtime/helpers/toPrimitive.js
 var require_toPrimitive = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -227,6 +233,7 @@ var require_toPrimitive = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	}
 	module.exports = toPrimitive, module.exports.__esModule = true, module.exports["default"] = module.exports;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/@babel+runtime@7.26.10/node_modules/@babel/runtime/helpers/toPropertyKey.js
 var require_toPropertyKey = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -238,6 +245,7 @@ var require_toPropertyKey = /* @__PURE__ */ __commonJSMin(((exports, module) => 
 	}
 	module.exports = toPropertyKey, module.exports.__esModule = true, module.exports["default"] = module.exports;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/@babel+runtime@7.26.10/node_modules/@babel/runtime/helpers/defineProperty.js
 var require_defineProperty = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -252,6 +260,7 @@ var require_defineProperty = /* @__PURE__ */ __commonJSMin(((exports, module) =>
 	}
 	module.exports = _defineProperty, module.exports.__esModule = true, module.exports["default"] = module.exports;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/@babel+runtime@7.26.10/node_modules/@babel/runtime/helpers/classCallCheck.js
 var require_classCallCheck = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -260,6 +269,7 @@ var require_classCallCheck = /* @__PURE__ */ __commonJSMin(((exports, module) =>
 	}
 	module.exports = _classCallCheck, module.exports.__esModule = true, module.exports["default"] = module.exports;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/@babel+runtime@7.26.10/node_modules/@babel/runtime/helpers/createClass.js
 var require_createClass = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -275,6 +285,7 @@ var require_createClass = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	}
 	module.exports = _createClass, module.exports.__esModule = true, module.exports["default"] = module.exports;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/@babel+runtime@7.26.10/node_modules/@babel/runtime/helpers/arrayLikeToArray.js
 var require_arrayLikeToArray = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -285,6 +296,7 @@ var require_arrayLikeToArray = /* @__PURE__ */ __commonJSMin(((exports, module) 
 	}
 	module.exports = _arrayLikeToArray, module.exports.__esModule = true, module.exports["default"] = module.exports;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/@babel+runtime@7.26.10/node_modules/@babel/runtime/helpers/arrayWithoutHoles.js
 var require_arrayWithoutHoles = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -294,6 +306,7 @@ var require_arrayWithoutHoles = /* @__PURE__ */ __commonJSMin(((exports, module)
 	}
 	module.exports = _arrayWithoutHoles, module.exports.__esModule = true, module.exports["default"] = module.exports;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/@babel+runtime@7.26.10/node_modules/@babel/runtime/helpers/iterableToArray.js
 var require_iterableToArray = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -302,6 +315,7 @@ var require_iterableToArray = /* @__PURE__ */ __commonJSMin(((exports, module) =
 	}
 	module.exports = _iterableToArray, module.exports.__esModule = true, module.exports["default"] = module.exports;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/@babel+runtime@7.26.10/node_modules/@babel/runtime/helpers/unsupportedIterableToArray.js
 var require_unsupportedIterableToArray = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -315,6 +329,7 @@ var require_unsupportedIterableToArray = /* @__PURE__ */ __commonJSMin(((exports
 	}
 	module.exports = _unsupportedIterableToArray, module.exports.__esModule = true, module.exports["default"] = module.exports;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/@babel+runtime@7.26.10/node_modules/@babel/runtime/helpers/nonIterableSpread.js
 var require_nonIterableSpread = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -323,6 +338,7 @@ var require_nonIterableSpread = /* @__PURE__ */ __commonJSMin(((exports, module)
 	}
 	module.exports = _nonIterableSpread, module.exports.__esModule = true, module.exports["default"] = module.exports;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/@babel+runtime@7.26.10/node_modules/@babel/runtime/helpers/toConsumableArray.js
 var require_toConsumableArray = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -335,6 +351,7 @@ var require_toConsumableArray = /* @__PURE__ */ __commonJSMin(((exports, module)
 	}
 	module.exports = _toConsumableArray, module.exports.__esModule = true, module.exports["default"] = module.exports;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/jexl@2.3.0/node_modules/jexl/dist/evaluator/handlers.js
 var require_handlers$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
@@ -490,6 +507,7 @@ var require_handlers$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
 		});
 	};
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/jexl@2.3.0/node_modules/jexl/dist/evaluator/Evaluator.js
 var require_Evaluator = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -497,7 +515,26 @@ var require_Evaluator = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	var _classCallCheck2 = _interopRequireDefault(require_classCallCheck());
 	var _createClass2 = _interopRequireDefault(require_createClass());
 	var handlers = require_handlers$1();
-	module.exports = /* @__PURE__ */ function() {
+	/**
+	* The Evaluator takes a Jexl expression tree as generated by the
+	* {@link Parser} and calculates its value within a given context. The
+	* collection of transforms, context, and a relative context to be used as the
+	* root for relative identifiers, are all specific to an Evaluator instance.
+	* When any of these things change, a new instance is required.  However, a
+	* single instance can be used to simultaneously evaluate many different
+	* expressions, and does not have to be reinstantiated for each.
+	* @param {{}} grammar A grammar object against which to evaluate the expression
+	*      tree
+	* @param {{}} [context] A map of variable keys to their values. This will be
+	*      accessed to resolve the value of each non-relative identifier. Any
+	*      Promise values will be passed to the expression as their resolved
+	*      value.
+	* @param {{}|Array<{}|Array>} [relativeContext] A map or array to be accessed
+	*      to resolve the value of a relative identifier.
+	* @param {function} promise A constructor for the Promise class to be used;
+	*      probably either Promise or PromiseSync.
+	*/
+	var Evaluator = /*#__PURE__*/ function() {
 		function Evaluator(grammar, context, relativeContext) {
 			var promise = arguments.length > 3 && arguments[3] !== void 0 ? arguments[3] : Promise;
 			(0, _classCallCheck2.default)(this, Evaluator);
@@ -578,7 +615,9 @@ var require_Evaluator = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		]);
 		return Evaluator;
 	}();
+	module.exports = Evaluator;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/jexl@2.3.0/node_modules/jexl/dist/Lexer.js
 var require_Lexer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -605,7 +644,17 @@ var require_Lexer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		"question",
 		"colon"
 	];
-	module.exports = /* @__PURE__ */ function() {
+	/**
+	* Lexer is a collection of stateless, statically-accessed functions for the
+	* lexical parsing of a Jexl string.  Its responsibility is to identify the
+	* "parts of speech" of a Jexl expression, and tokenize and label each, but
+	* to do only the most minimal syntax checking; the only errors the Lexer
+	* should be concerned with are if it's unable to identify the utility of
+	* any of its tokens.  Errors stemming from these tokens not being in a
+	* sensible configuration should be left for the Parser to handle.
+	* @type {{}}
+	*/
+	var Lexer = /*#__PURE__*/ function() {
 		function Lexer(grammar) {
 			(0, _classCallCheck2.default)(this, Lexer);
 			this._grammar = grammar;
@@ -722,7 +771,9 @@ var require_Lexer = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		]);
 		return Lexer;
 	}();
+	module.exports = Lexer;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/jexl@2.3.0/node_modules/jexl/dist/parser/handlers.js
 var require_handlers = /* @__PURE__ */ __commonJSMin(((exports) => {
@@ -923,6 +974,7 @@ var require_handlers = /* @__PURE__ */ __commonJSMin(((exports) => {
 		});
 	};
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/jexl@2.3.0/node_modules/jexl/dist/parser/states.js
 var require_states = /* @__PURE__ */ __commonJSMin(((exports) => {
@@ -1075,6 +1127,7 @@ var require_states = /* @__PURE__ */ __commonJSMin(((exports) => {
 		}
 	};
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/jexl@2.3.0/node_modules/jexl/dist/parser/Parser.js
 var require_Parser = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -1083,7 +1136,24 @@ var require_Parser = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	var _createClass2 = _interopRequireDefault(require_createClass());
 	var handlers = require_handlers();
 	var states = require_states().states;
-	module.exports = /* @__PURE__ */ function() {
+	/**
+	* The Parser is a state machine that converts tokens from the {@link Lexer}
+	* into an Abstract Syntax Tree (AST), capable of being evaluated in any
+	* context by the {@link Evaluator}.  The Parser expects that all tokens
+	* provided to it are legal and typed properly according to the grammar, but
+	* accepts that the tokens may still be in an invalid order or in some other
+	* unparsable configuration that requires it to throw an Error.
+	* @param {{}} grammar The grammar object to use to parse Jexl strings
+	* @param {string} [prefix] A string prefix to prepend to the expression string
+	*      for error messaging purposes.  This is useful for when a new Parser is
+	*      instantiated to parse an subexpression, as the parent Parser's
+	*      expression string thus far can be passed for a more user-friendly
+	*      error message.
+	* @param {{}} [stopMap] A mapping of token types to any truthy value. When the
+	*      token type is encountered, the parser will return the mapped value
+	*      instead of boolean false.
+	*/
+	var Parser = /*#__PURE__*/ function() {
 		function Parser(grammar, prefix, stopMap) {
 			(0, _classCallCheck2.default)(this, Parser);
 			this._grammar = grammar;
@@ -1199,7 +1269,9 @@ var require_Parser = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		]);
 		return Parser;
 	}();
+	module.exports = Parser;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/jexl@2.3.0/node_modules/jexl/dist/PromiseSync.js
 var require_PromiseSync = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -1245,9 +1317,10 @@ var require_PromiseSync = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 			{
 				key: "_resolve",
 				value: function _resolve(val) {
-					if (val instanceof PromiseSync) if (val.error) this._reject(val.error);
-					else this._resolve(val.value);
-					else {
+					if (val instanceof PromiseSync) {
+						if (val.error) this._reject(val.error);
+						else this._resolve(val.value);
+					} else {
 						this.value = val;
 						this.error = void 0;
 					}
@@ -1279,6 +1352,7 @@ var require_PromiseSync = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	};
 	module.exports = PromiseSync;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/jexl@2.3.0/node_modules/jexl/dist/Expression.js
 var require_Expression = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -1289,7 +1363,7 @@ var require_Expression = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	var Lexer = require_Lexer();
 	var Parser = require_Parser();
 	var PromiseSync = require_PromiseSync();
-	module.exports = /* @__PURE__ */ function() {
+	var Expression = /*#__PURE__*/ function() {
 		function Expression(grammar, exprStr) {
 			(0, _classCallCheck2.default)(this, Expression);
 			this._grammar = grammar;
@@ -1350,7 +1424,9 @@ var require_Expression = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 		]);
 		return Expression;
 	}();
+	module.exports = Expression;
 }));
+
 //#endregion
 //#region ../../node_modules/.pnpm/jexl@2.3.0/node_modules/jexl/dist/grammar.js
 var require_grammar = /* @__PURE__ */ __commonJSMin(((exports) => {
@@ -1541,9 +1617,10 @@ var require_grammar = /* @__PURE__ */ __commonJSMin(((exports) => {
 		};
 	};
 }));
+
 //#endregion
-//#region src/export/expression.ts
-var import_Jexl = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+//#region ../../node_modules/.pnpm/jexl@2.3.0/node_modules/jexl/dist/Jexl.js
+var require_Jexl = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	var _interopRequireDefault = require_interopRequireDefault();
 	var _defineProperty2 = _interopRequireDefault(require_defineProperty());
 	var _classCallCheck2 = _interopRequireDefault(require_classCallCheck());
@@ -1694,11 +1771,15 @@ var import_Jexl = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((expor
 	}();
 	module.exports = new Jexl();
 	module.exports.Jexl = Jexl;
-})))(), 1);
+}));
+
+//#endregion
+//#region src/export/expression.ts
+var import_Jexl = /* @__PURE__ */ __toESM(require_Jexl(), 1);
 /** jexl ships a UMD bundle whose `module.exports` is the ready-made instance. */
-var jexl = import_Jexl.default?.default ?? import_Jexl.default;
+const jexl = import_Jexl.default?.default ?? import_Jexl.default;
 /** Handlebars sub-expressions/blocks — never wrap these in `{{esc}}`. */
-var NON_VALUE_MUSTACHE = /^[#/!>^&]|^\s*else\b/;
+const NON_VALUE_MUSTACHE = /^[#/!>^&]|^\s*else\b/;
 /**
 * Evaluate one Jexl expression.
 *
@@ -1871,6 +1952,7 @@ function escapeForCell(value) {
 	if (value == null) return "";
 	return escapeCellText(String(value));
 }
+
 //#endregion
 //#region src/export/helpers.ts
 /**
@@ -2144,6 +2226,7 @@ function compare(raw, test) {
 	if (a !== null && b !== null) return test(a, b);
 	return test(args[0], args[1]);
 }
+
 //#endregion
 //#region src/export/template.ts
 /** Load the optional `handlebars` peer, with an actionable error when it's absent. */
@@ -2187,6 +2270,7 @@ async function renderTemplate(options) {
 	if (options.partials) for (const [name, source] of Object.entries(options.partials)) env.registerPartial(name, preprocessTemplate(source));
 	return env.compile(preprocessTemplate(options.md ?? ""), { noEscape: true })(options.data ?? {});
 }
+
 //#endregion
 //#region src/export/index.ts
 /**
@@ -2257,7 +2341,7 @@ async function exportTable(options) {
 	}
 	let workbookPromise = null;
 	const workbook = () => {
-		workbookPromise ??= import("./excel-CY6zGkcx.js").then(({ renderExcel }) => renderExcel(parseMarkdown(rendered), {
+		workbookPromise ??= import("./excel-DtRpxmxs.js").then(({ renderExcel }) => renderExcel(parseMarkdown(rendered), {
 			...options,
 			back: options.detail?.back,
 			sheets: detailSheets.map((s) => ({
@@ -2298,5 +2382,6 @@ async function exportTable(options) {
 	if (options.fileName && options.download !== false) await download();
 	return result;
 }
+
 //#endregion
 export { DEFAULT_STYLES, exportTable };

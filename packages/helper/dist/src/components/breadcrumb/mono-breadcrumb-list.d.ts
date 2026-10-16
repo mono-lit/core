@@ -1,6 +1,9 @@
-import { LitElement, TemplateResult } from 'lit';
-import { BreadcrumbRenderContext } from './breadcrumb-render.js';
-declare const MonoBreadcrumbList_base: import('../../composables/hybird-prop').Constructor<import('./breadcrumb-list-core.js').MonoBreadcrumbListCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { BreadcrumbRenderContext } from "./breadcrumb-render.js";
+import { MonoBreadcrumbListCoreInterface } from "./breadcrumb-list-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/breadcrumb/mono-breadcrumb-list.d.ts
+declare const MonoBreadcrumbList_base: Constructor<MonoBreadcrumbListCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-breadcrumb-list` (default build, `@mono-lit/helper/ui/breadcrumb`).
  *
@@ -13,17 +16,18 @@ declare const MonoBreadcrumbList_base: import('../../composables/hybird-prop').C
  *     (`@mono-lit/helper/ui/shadow/breadcrumb`) supports standalone only.
  */
 export declare class MonoBreadcrumbList extends MonoBreadcrumbList_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
-    private _parent;
-    connectedCallback(): void;
-    disconnectedCallback(): void;
-    protected _buildContext(): BreadcrumbRenderContext;
-    protected render(): TemplateResult;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
+  private _parent;
+  connectedCallback(): void;
+  disconnectedCallback(): void;
+  protected _buildContext(): BreadcrumbRenderContext;
+  protected render(): TemplateResult;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-breadcrumb-list': MonoBreadcrumbList;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-breadcrumb-list': MonoBreadcrumbList;
+  }
 }
+//#endregion
 export {};

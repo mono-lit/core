@@ -1,3 +1,4 @@
+//#region src/export/sheet-name.d.ts
 /**
  * Worksheet names, which Excel is fussier about than anything else in a
  * workbook — and every rule below is one it enforces by refusing to open the
@@ -37,9 +38,10 @@ export declare function sheetRef(name: string, cell?: string): string;
  * ` (2)`. One registry, one `take()`, no second opinion.
  */
 export declare class SheetNames {
-    /** Lower-cased claimed names: Excel's uniqueness is case-insensitive. */
-    private readonly used;
-    constructor(existing?: Iterable<string>);
-    /** Claim a legal, unique name derived from `raw`. */
-    take(raw: unknown, fallback?: string): string;
+  /** Lower-cased claimed names: Excel's uniqueness is case-insensitive. */
+  private readonly used;
+  constructor(existing?: Iterable<string>);
+  /** Claim a legal, unique name derived from `raw`. */
+  take(raw: unknown, fallback?: string): string;
 }
+//#endregion

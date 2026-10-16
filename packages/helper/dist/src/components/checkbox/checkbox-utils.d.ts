@@ -1,10 +1,11 @@
-import { CheckboxSize, CheckboxColor } from './checkbox-types.js';
+import { CheckboxColor, CheckboxSize } from "./checkbox-types.js";
+//#region src/components/checkbox/checkbox-utils.d.ts
 /**
  * Validate checkbox props
  */
 export declare function validateCheckboxProps(props: {
-    size?: CheckboxSize;
-    color?: CheckboxColor;
+  size?: CheckboxSize;
+  color?: CheckboxColor;
 }): boolean;
 /**
  * Generate ARIA attributes for accessibility
@@ -14,22 +15,23 @@ export declare function generateCheckboxAttributes(disabled: boolean, checked: b
  * Generate root CSS classes for checkbox
  */
 export declare function generateCheckboxRootClasses(props: {
-    size?: CheckboxSize;
-    color?: CheckboxColor;
-    checked?: boolean;
-    indeterminate?: boolean;
-    disabled?: boolean;
+  size?: CheckboxSize;
+  color?: CheckboxColor;
+  checked?: boolean;
+  indeterminate?: boolean;
+  disabled?: boolean;
 }): string;
 /**
  * Generate CSS classes for checkbox box element
  */
 export declare function generateCheckboxBoxClasses(props: {
-    size?: CheckboxSize;
+  size?: CheckboxSize;
 }): string;
 /**
  * Generate CSS classes for checkbox icon element
  */
 export declare function generateCheckboxIconClasses(props: {
-    size?: CheckboxSize;
-    type?: 'check' | 'indeterminate';
+  size?: CheckboxSize;
+  type?: 'check' | 'indeterminate';
 }): string;
+//#endregion

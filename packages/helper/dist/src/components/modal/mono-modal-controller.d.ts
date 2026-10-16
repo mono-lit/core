@@ -1,4 +1,5 @@
-import { MonoModalController, MonoModalOptions } from './modal-types.js';
-/** Renamed "control" alias of {@link monoModal} (no breaking change — both work). */
-export { monoModal as controlMonoModal };
+import { MonoModalController, MonoModalOptions } from "./modal-types.js";
+//#region src/components/modal/mono-modal-controller.d.ts
 export declare function monoModal(options?: MonoModalOptions): MonoModalController;
+//#endregion
+export { monoModal as controlMonoModal };

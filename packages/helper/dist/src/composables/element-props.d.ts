@@ -1,3 +1,4 @@
+//#region src/composables/element-props.d.ts
 /**
  * Whether `key` can actually be assigned on `obj` — a plain expando, or an
  * accessor/data property that isn't read-only.
@@ -10,9 +11,7 @@
  */
 export declare function isSettable(obj: object, key: string): boolean;
 /** `{ onChange, onToggle, onLoadingChange, … }` typed from a component's `*Events` interface. */
-export type MonoEventProps<E> = {
-    [K in Extract<keyof E, string> as K extends `${string}-${string}` ? never : `on${Capitalize<K>}`]?: (event: E[K]) => void;
-};
+export type MonoEventProps<E> = { [K in Extract<keyof E, string> as K extends `${string}-${string}` ? never : `on${Capitalize<K>}`]?: (event: E[K]) => void; };
 /** Whether a props key names an event handler (`onClick`, `onLoadingChange`). */
 export declare function isEventHandlerKey(key: string): boolean;
 /**
@@ -44,3 +43,4 @@ export declare function detachEventHandlers(el: object): void;
  * and its failure modes are subtle enough to be worth having in one place.
  */
 export declare function applyProps(el: object, patch: Record<string, unknown> | undefined): boolean;
+//#endregion

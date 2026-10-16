@@ -1,10 +1,11 @@
-import { a as __decorate, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, p as defineMonoElement, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration } from "../../hydration-flush-RB5Tz5nl.js";
-import { t as dispatchMonoEvent } from "../../mono-event-Bi1qP9uN.js";
-import { t as chip_default } from "../../chip-DBUUa2eB.js";
+import { a as __decorate, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, p as defineMonoElement, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration } from "../../hydration-flush-DHrl4_KK.js";
+import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
+import { t as chip_css_raw_default } from "../../chip.css_raw-ChfRSHLO.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { property, query, state } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
 import { when } from "lit/directives/when.js";
+
 //#region src/components/chip/chip-core.ts
 /**
 * `MonoChipCore` — all render-mode-agnostic logic for `mono-chip`: reactive
@@ -18,7 +19,7 @@ import { when } from "lit/directives/when.js";
 * SSR-safe: no `document`/`window` access; `_chipElement` (`@query`) is lazy and
 * `focus/blur/click` only run client-side.
 */
-var MonoChipCore = (superClass) => {
+const MonoChipCore = (superClass) => {
 	class MonoChipCoreClass extends superClass {
 		constructor(...args) {
 			super(...args);
@@ -265,19 +266,20 @@ var MonoChipCore = (superClass) => {
 	__decorate([query("div > span, div > a")], MonoChipCoreClass.prototype, "_chipElement", void 0);
 	return MonoChipCoreClass;
 };
+
 //#endregion
 //#region src/components/chip/mono-chip.shadow.ts
-var SHADOW_EXTRA_CSS = `
+const SHADOW_EXTRA_CSS = `
 [data-mono-slot='icon'][data-empty] {
   display: none;
 }
 `;
-var MonoChipShadow = class MonoChipShadow extends withShadowUtilityStyles(MonoChipCore(LitElement)) {
+let MonoChipShadow = class MonoChipShadow extends withShadowUtilityStyles(MonoChipCore(LitElement)) {
 	static {
 		this.disableWarning?.("change-in-update");
 	}
 	static {
-		this.styles = [unsafeCSS(toShadowCss(chip_default, {
+		this.styles = [unsafeCSS(toShadowCss(chip_css_raw_default, {
 			host: "mono-chip",
 			append: SHADOW_EXTRA_CSS
 		}))];
@@ -347,8 +349,9 @@ var MonoChipShadow = class MonoChipShadow extends withShadowUtilityStyles(MonoCh
       `, () => nothing);
 	}
 	_renderContent() {
+		const contentClass = this._cls(this.iconPosition === "right" ? "chip-content icon-right" : "chip-content icon-left", "content");
 		return html`
-      <span class=${this._cls(this.iconPosition === "right" ? "chip-content icon-right" : "chip-content icon-left", "content")} mono-content>
+      <span class=${contentClass} mono-content>
         ${this._renderDot()}
         ${this.iconPosition === "left" ? this._iconSpan() : nothing}
         ${this._renderLabel()}
@@ -426,6 +429,7 @@ var MonoChipShadow = class MonoChipShadow extends withShadowUtilityStyles(MonoCh
 	}
 };
 MonoChipShadow = __decorate([customElement("mono-shadow-chip")], MonoChipShadow);
+
 //#endregion
 //#region src/components/chip/mono-status-dot.ts
 /**
@@ -443,7 +447,7 @@ MonoChipShadow = __decorate([customElement("mono-shadow-chip")], MonoChipShadow)
 */
 var MonoStatusDot = class extends LitElement {
 	static {
-		this.styles = [unsafeCSS(chip_default)];
+		this.styles = [unsafeCSS(chip_css_raw_default)];
 	}
 	constructor() {
 		super();
@@ -495,6 +499,7 @@ __decorate([property({ type: String })], MonoStatusDot.prototype, "label", void 
 __decorate([property({ type: String })], MonoStatusDot.prototype, "color", void 0);
 __decorate([query("span")], MonoStatusDot.prototype, "_statusElement", void 0);
 defineMonoElement("mono-status-dot", MonoStatusDot);
+
 //#endregion
 //#region src/components/chip/chip-utils.ts
 function generateChipRootClasses(props) {
@@ -555,5 +560,6 @@ function validateChipProps(props) {
 	if (props.rounded && !validRounded.includes(props.rounded)) return false;
 	return true;
 }
+
 //#endregion
 export { MonoChipCore, MonoChipShadow, MonoStatusDot, generateChipRootClasses, isInteractive, validateChipProps };

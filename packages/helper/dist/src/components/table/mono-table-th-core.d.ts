@@ -1,7 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-import { MonoColumnSort, MonoDateFilter, MonoEditableTrigger, MonoHeaderFilter, SortOrder } from './mono-data-grid.js';
-import { MonoTableMenuCoreInterface } from './table-menu-core.js';
-import { Constructor } from '../../composables/hybird-prop';
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoColumnSort, MonoDateFilter, MonoEditableTrigger, MonoHeaderFilter, SortOrder } from "./mono-data-grid.js";
+import { MonoTableMenuCoreInterface } from "./table-menu-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/table/mono-table-th-core.d.ts
 /** Slot regions the header cell lays out. */
 export type TableThSlotName = 'label';
 /** Per-build icon hook the header core delegates to. */
@@ -15,23 +16,23 @@ export type TableThIconName = 'chevron' | 'funnel';
 export type TableThAlign = 'left' | 'center' | 'right';
 /** Public surface added by the header-cell core mixin. */
 export declare class MonoTableThCoreInterface extends MonoTableMenuCoreInterface {
-    field: string;
-    caption: string;
-    sort?: boolean | MonoColumnSort;
-    editable: boolean;
-    editableTrigger?: MonoEditableTrigger;
-    required: boolean;
-    headerFilter: boolean | MonoHeaderFilter;
-    dateFilter: boolean | MonoDateFilter;
-    align?: TableThAlign;
-    width?: string | number;
-    height?: string | number;
-    protected renderSlot(name: TableThSlotName): TemplateResult;
-    protected renderIcon(name: TableThIconName): TemplateResult;
-    /** Active sort direction for this column, or null. Read by the builds' `renderIcon`. */
-    protected get _current(): SortOrder;
-    /** Whether this column has an active header filter. Read by the builds' `renderIcon`. */
-    protected get _filtered(): boolean;
+  field: string;
+  caption: string;
+  sort?: boolean | MonoColumnSort;
+  editable: boolean;
+  editableTrigger?: MonoEditableTrigger;
+  required: boolean;
+  headerFilter: boolean | MonoHeaderFilter;
+  dateFilter: boolean | MonoDateFilter;
+  align?: TableThAlign;
+  width?: string | number;
+  height?: string | number;
+  protected renderSlot(name: TableThSlotName): TemplateResult;
+  protected renderIcon(name: TableThIconName): TemplateResult;
+  /** Active sort direction for this column, or null. Read by the builds' `renderIcon`. */
+  protected get _current(): SortOrder;
+  /** Whether this column has an active header filter. Read by the builds' `renderIcon`. */
+  protected get _filtered(): boolean;
 }
 /**
  * `MonoTableThCore` — render-mode-agnostic logic for `mono-table-th`, the unified
@@ -54,3 +55,4 @@ export declare class MonoTableThCoreInterface extends MonoTableMenuCoreInterface
  * The standalone `mono-table-sort` element is unchanged and still supported.
  */
 export declare const MonoTableThCore: <T extends Constructor<LitElement>>(superClass: T) => Constructor<MonoTableThCoreInterface> & T;
+//#endregion

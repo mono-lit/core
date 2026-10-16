@@ -1,6 +1,6 @@
 {
   "name": "@mono-lit/devextreme",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "DevExtreme data layer (DataSource, stores) re-exported from one place for the @mono-lit packages.",
   "keywords": [
     "devextreme",
@@ -50,7 +50,7 @@
   },
   "devDependencies": {
     "taze": "^19.14.1",
-    "tsdown": "^0.22.2",
+    "tsdown": "0.23.1",
     "typescript": "^6.0.3"
   }
 }

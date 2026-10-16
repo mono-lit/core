@@ -1,4 +1,5 @@
 /// <reference path="../../../vue.d.ts" />
-export { MonoNav } from './mono-nav.js';
-export type { NavDensity, NavColor, NavVariant, NavCssClass, NavProps, NavEvents, } from './nav-types.js';
-export { getNavHeight, generateNavRootClasses, validateNavProps, } from './nav-utils.js';
+import { NavColor, NavCssClass, NavDensity, NavEvents, NavProps, NavVariant } from "./nav-types.js";
+import { MonoNav } from "./mono-nav.js";
+import { generateNavRootClasses, getNavHeight, validateNavProps } from "./nav-utils.js";
+export { MonoNav, type NavColor, type NavCssClass, type NavDensity, type NavEvents, type NavProps, type NavVariant, generateNavRootClasses, getNavHeight, validateNavProps };

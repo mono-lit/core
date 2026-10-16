@@ -1,5 +1,8 @@
-import { LitElement } from 'lit';
-declare const MonoNav_base: import('../../composables/hybird-prop').Constructor<import('./nav-core.js').MonoNavCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoNavCoreInterface } from "./nav-core.js";
+import { LitElement } from "lit";
+//#region src/components/nav/mono-nav.d.ts
+declare const MonoNav_base: Constructor<MonoNavCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-nav` (the default build, `@mono-lit/helper/ui/nav`).
  *
@@ -14,28 +17,29 @@ declare const MonoNav_base: import('../../composables/hybird-prop').Constructor<
  * given document must load only one of the two builds.
  */
 export declare class MonoNav extends MonoNav_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
-    private _slotsCaptured;
-    private _slotNodes;
-    connectedCallback(): void;
-    protected updated(changed: Map<string, unknown>): void;
-    /**
-     * Pull every direct child into one of four buckets:
-     *  - `slot="start"`  → start
-     *  - `slot="end"`    → end
-     *  - `slot="extension"` → extension
-     *  - everything else (no slot attr) → default (center)
-     *
-     * Captured nodes are removed from the host root and re-inserted into the
-     * matching `[data-mono-slot]` target during `updated()`.
-     */
-    private _captureSlots;
-    private _placeSlots;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
+  private _slotsCaptured;
+  private _slotNodes;
+  connectedCallback(): void;
+  protected updated(changed: Map<string, unknown>): void;
+  /**
+   * Pull every direct child into one of four buckets:
+   *  - `slot="start"`  → start
+   *  - `slot="end"`    → end
+   *  - `slot="extension"` → extension
+   *  - everything else (no slot attr) → default (center)
+   *
+   * Captured nodes are removed from the host root and re-inserted into the
+   * matching `[data-mono-slot]` target during `updated()`.
+   */
+  private _captureSlots;
+  private _placeSlots;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-nav': MonoNav;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-nav': MonoNav;
+  }
 }
+//#endregion
 export {};

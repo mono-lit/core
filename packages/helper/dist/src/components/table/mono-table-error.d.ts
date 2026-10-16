@@ -1,5 +1,8 @@
-import { LitElement } from 'lit';
-declare const MonoTableError_base: import('../../composables/hybird-prop').Constructor<import('./mono-table-error-core.js').MonoTableErrorCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableErrorCoreInterface } from "./mono-table-error-core.js";
+import { LitElement } from "lit";
+//#region src/components/table/mono-table-error.d.ts
+declare const MonoTableError_base: Constructor<MonoTableErrorCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-table-error` (default build, `@mono-lit/helper/ui/table`).
  *
@@ -17,12 +20,13 @@ declare const MonoTableError_base: import('../../composables/hybird-prop').Const
  * which is exactly what a light build can use and a shadow one cannot.
  */
 export declare class MonoTableError extends MonoTableError_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-table-error': MonoTableError;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-table-error': MonoTableError;
+  }
 }
+//#endregion
 export {};

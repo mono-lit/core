@@ -1,3 +1,4 @@
+//#region src/utils/normalize-error.d.ts
 /**
  * A readable message for `raw`, or `fallback` when nothing legible can be found.
  *
@@ -51,20 +52,20 @@ export declare function errorStatus(raw: unknown): number | undefined;
  */
 export declare function collectErrorMessages(raw: unknown, status?: number | undefined): string[];
 export interface DescribedError {
-    /** The headline: the preset for the status when there is one, else the error's own text. */
-    message: string;
-    /** The HTTP status, `0` for a network failure, absent when the error carries none. */
-    status?: number;
-    /**
-     * Text the server (or the error itself) added beyond the status — the part a
-     * user CAN act on ("Budget period is closed"). Never a bare reason phrase.
-     */
-    detail?: string;
-    /**
-     * Every distinct message the error carried (see {@link collectErrorMessages}) —
-     * what `detail` joins. Empty when the error said nothing beyond its status.
-     */
-    messages: string[];
+  /** The headline: the preset for the status when there is one, else the error's own text. */
+  message: string;
+  /** The HTTP status, `0` for a network failure, absent when the error carries none. */
+  status?: number;
+  /**
+   * Text the server (or the error itself) added beyond the status — the part a
+   * user CAN act on ("Budget period is closed"). Never a bare reason phrase.
+   */
+  detail?: string;
+  /**
+   * Every distinct message the error carried (see {@link collectErrorMessages}) —
+   * what `detail` joins. Empty when the error said nothing beyond its status.
+   */
+  messages: string[];
 }
 /**
  * The one line a field shows for `err`: what the server said, every distinct
@@ -88,3 +89,4 @@ export declare function describeError(raw: unknown, messages?: MonoErrorMessages
  * Not a failure — nothing should be shown for it.
  */
 export declare function isCanceled(err: any): boolean;
+//#endregion

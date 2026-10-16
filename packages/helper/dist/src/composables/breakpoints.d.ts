@@ -1,3 +1,4 @@
+//#region src/composables/breakpoints.d.ts
 /**
  * Shared viewport breakpoints — Tailwind's values, so `auto-fullscreen="lg"` in a
  * mono component and `lg:` in the consumer's utility classes agree on where the
@@ -12,11 +13,11 @@
  * re-pointing it here would silently change the sidebar's auto-temporary threshold.
  */
 export declare const MONO_BREAKPOINTS: {
-    readonly sm: 640;
-    readonly md: 768;
-    readonly lg: 1024;
-    readonly xl: 1280;
-    readonly '2xl': 1536;
+  readonly sm: 640;
+  readonly md: 768;
+  readonly lg: 1024;
+  readonly xl: 1280;
+  readonly '2xl': 1536;
 };
 export type MonoBreakpoint = keyof typeof MONO_BREAKPOINTS;
 /**
@@ -41,8 +42,8 @@ export declare function resolveAutoFullscreen(value: MonoAutoFullscreen | string
  * `fromAttribute`, so a real boolean can arrive here instead of a string.
  */
 export declare const autoFullscreenConverter: {
-    fromAttribute(value: unknown): MonoAutoFullscreen;
-    toAttribute(value: MonoAutoFullscreen): string | null;
+  fromAttribute(value: unknown): MonoAutoFullscreen;
+  toAttribute(value: MonoAutoFullscreen): string | null;
 };
 /**
  * Is the viewport currently at or below `bp`?
@@ -57,3 +58,4 @@ export declare const autoFullscreenConverter: {
  * the `@media` blocks in modal.css / drawer.css, which have no SSR surface at all.
  */
 export declare function isBelowBreakpoint(bp: MonoBreakpoint): boolean;
+//#endregion

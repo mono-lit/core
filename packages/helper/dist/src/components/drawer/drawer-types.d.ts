@@ -1,4 +1,5 @@
-import { MonoBreakpoint } from '../../composables/breakpoints';
+import { MonoBreakpoint } from "../../composables/breakpoints.js";
+//#region src/components/drawer/drawer-types.d.ts
 export type DrawerPosition = 'left' | 'right' | 'top' | 'bottom';
 /**
  * Content scale of the drawer — title font, body font, padding and the close icon.
@@ -31,26 +32,26 @@ export type DrawerDimension = DrawerDimensionPreset | (string & {}) | number;
 export type DrawerColor = 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'info' | 'teal' | 'purple' | 'neutral' | 'dark';
 export type DrawerSource = 'overlay' | 'close' | 'escape' | 'manual';
 export interface DrawerCssClass {
-    root?: string;
-    overlay?: string;
-    panel?: string;
-    head?: string;
-    /** The heading column inside the head (title + subtitle, or `slot="header"`). */
-    heading?: string;
-    title?: string;
-    subtitle?: string;
-    close?: string;
-    body?: string;
-    foot?: string;
-    resizer?: string;
+  root?: string;
+  overlay?: string;
+  panel?: string;
+  head?: string;
+  /** The heading column inside the head (title + subtitle, or `slot="header"`). */
+  heading?: string;
+  title?: string;
+  subtitle?: string;
+  close?: string;
+  body?: string;
+  foot?: string;
+  resizer?: string;
 }
 export type DrawerClickEventDetail = {
-    modelValue: boolean;
-    currentValue: boolean;
-    oldValue: boolean;
-    value: boolean;
-    source: DrawerSource;
-    sourceEvent?: Event;
+  modelValue: boolean;
+  currentValue: boolean;
+  oldValue: boolean;
+  value: boolean;
+  source: DrawerSource;
+  sourceEvent?: Event;
 };
 export type DrawerClickEvent = CustomEvent<DrawerClickEventDetail>;
 /** Emitted on the false → true transition only. */
@@ -60,94 +61,95 @@ export type DrawerOpenEvent = CustomEvent<DrawerOpenEventDetail>;
 export type DrawerCloseEventDetail = DrawerClickEventDetail;
 export type DrawerCloseEvent = CustomEvent<DrawerCloseEventDetail>;
 export interface DrawerProps {
-    /** Two-way bound open state of the drawer. */
-    modelValue?: boolean;
-    'model-value'?: boolean;
-    modelvalue?: boolean;
-    /** Edge the drawer slides in from. */
-    position?: DrawerPosition;
-    /** Sizing scale of the drawer panel. */
-    size?: DrawerSize;
-    /** Color theme applied to the drawer. */
-    color?: DrawerColor;
-    /** Heading text shown in the drawer header. `slot="title"` replaces it. */
-    title?: string;
-    /**
-     * Secondary line under the title — muted and smaller, hidden when empty.
-     * `slot="subtitle"` replaces it; `slot="header"` replaces title + subtitle
-     * together (the close ✕ stays).
-     */
-    subtitle?: string;
-    /** Shows a close button and allows dismissal. */
-    dismissible?: boolean;
-    /** Prevents closing via overlay click or escape. */
-    persistent?: boolean;
-    /** Renders a backdrop overlay behind the panel. */
-    overlay?: boolean;
-    /** Closes the drawer when the Escape key is pressed. */
-    closeOnEscape?: boolean;
-    'close-on-escape'?: boolean;
-    closeonescape?: boolean;
-    /** Closes the drawer on a click outside the panel: the overlay, or — with `overlay: false` — the page itself (the click still reaches the page). */
-    closeOnOverlay?: boolean;
-    'close-on-overlay'?: boolean;
-    closeonoverlay?: boolean;
-    /**
-     * Locks page scroll while the drawer is open (default `true`). The lock is shared
-     * across overlapping overlays, so it lifts only when the last one closes.
-     */
-    lockScroll?: boolean;
-    'lock-scroll'?: boolean;
-    lockscroll?: boolean;
-    /**
-     * Fill the screen at a breakpoint and below (default `false`). `auto-fullscreen`
-     * on its own means Tailwind's `sm` (< 640px); a token moves the boundary, so
-     * `auto-fullscreen="lg"` covers everything `lg:` does not match (< 1024px).
-     */
-    autoFullscreen?: boolean | MonoBreakpoint;
-    'auto-fullscreen'?: boolean | MonoBreakpoint;
-    autofullscreen?: boolean | MonoBreakpoint;
-    /** Allow resizing the drawer by dragging a handle on the panel's inner edge. */
-    resizeable?: boolean;
-    /**
-     * Allow this drawer to stack on top of others. When false (default) it is
-     * exclusive — opening it closes any other open drawers.
-     */
-    stackable?: boolean;
-    /**
-     * Panel dimensions. Each accepts a preset token (`"xs"`…`"xxl"` — see
-     * {@link DrawerDimensionPreset}), a CSS length string (`"12rem"`, `"80%"`,
-     * `"100vw"`), or a number / numeric string (interpreted as px).
-     *
-     * `width` applies to left/right drawers, `height` to top/bottom ones — the other
-     * axis is pinned to the viewport edge by `position`. `width="100%"` (or
-     * `height="100%"`) replaces the old `size="full"`.
-     */
-    width?: DrawerDimension;
-    height?: DrawerDimension;
-    /**
-     * Pin the drawer to an explicit stacking level. Unset (the default) lets the
-     * shared popup stack assign one so the newest layer is always on top. The value
-     * is the overlay's `z-index`; the panel sits one above it.
-     */
-    zIndex?: number | string;
-    'z-index'?: number | string;
-    zindex?: number | string;
-    /** Per-element class overrides for internal parts. */
-    cssClass?: DrawerCssClass;
-    cssclass?: DrawerCssClass;
-    'css-class'?: DrawerCssClass | string;
-    /** Extra class name applied to the drawer root. */
-    cssClassName?: string;
+  /** Two-way bound open state of the drawer. */
+  modelValue?: boolean;
+  'model-value'?: boolean;
+  modelvalue?: boolean;
+  /** Edge the drawer slides in from. */
+  position?: DrawerPosition;
+  /** Sizing scale of the drawer panel. */
+  size?: DrawerSize;
+  /** Color theme applied to the drawer. */
+  color?: DrawerColor;
+  /** Heading text shown in the drawer header. `slot="title"` replaces it. */
+  title?: string;
+  /**
+   * Secondary line under the title — muted and smaller, hidden when empty.
+   * `slot="subtitle"` replaces it; `slot="header"` replaces title + subtitle
+   * together (the close ✕ stays).
+   */
+  subtitle?: string;
+  /** Shows a close button and allows dismissal. */
+  dismissible?: boolean;
+  /** Prevents closing via overlay click or escape. */
+  persistent?: boolean;
+  /** Renders a backdrop overlay behind the panel. */
+  overlay?: boolean;
+  /** Closes the drawer when the Escape key is pressed. */
+  closeOnEscape?: boolean;
+  'close-on-escape'?: boolean;
+  closeonescape?: boolean;
+  /** Closes the drawer on a click outside the panel: the overlay, or — with `overlay: false` — the page itself (the click still reaches the page). */
+  closeOnOverlay?: boolean;
+  'close-on-overlay'?: boolean;
+  closeonoverlay?: boolean;
+  /**
+   * Locks page scroll while the drawer is open (default `true`). The lock is shared
+   * across overlapping overlays, so it lifts only when the last one closes.
+   */
+  lockScroll?: boolean;
+  'lock-scroll'?: boolean;
+  lockscroll?: boolean;
+  /**
+   * Fill the screen at a breakpoint and below (default `false`). `auto-fullscreen`
+   * on its own means Tailwind's `sm` (< 640px); a token moves the boundary, so
+   * `auto-fullscreen="lg"` covers everything `lg:` does not match (< 1024px).
+   */
+  autoFullscreen?: boolean | MonoBreakpoint;
+  'auto-fullscreen'?: boolean | MonoBreakpoint;
+  autofullscreen?: boolean | MonoBreakpoint;
+  /** Allow resizing the drawer by dragging a handle on the panel's inner edge. */
+  resizeable?: boolean;
+  /**
+   * Allow this drawer to stack on top of others. When false (default) it is
+   * exclusive — opening it closes any other open drawers.
+   */
+  stackable?: boolean;
+  /**
+   * Panel dimensions. Each accepts a preset token (`"xs"`…`"xxl"` — see
+   * {@link DrawerDimensionPreset}), a CSS length string (`"12rem"`, `"80%"`,
+   * `"100vw"`), or a number / numeric string (interpreted as px).
+   *
+   * `width` applies to left/right drawers, `height` to top/bottom ones — the other
+   * axis is pinned to the viewport edge by `position`. `width="100%"` (or
+   * `height="100%"`) replaces the old `size="full"`.
+   */
+  width?: DrawerDimension;
+  height?: DrawerDimension;
+  /**
+   * Pin the drawer to an explicit stacking level. Unset (the default) lets the
+   * shared popup stack assign one so the newest layer is always on top. The value
+   * is the overlay's `z-index`; the panel sits one above it.
+   */
+  zIndex?: number | string;
+  'z-index'?: number | string;
+  zindex?: number | string;
+  /** Per-element class overrides for internal parts. */
+  cssClass?: DrawerCssClass;
+  cssclass?: DrawerCssClass;
+  'css-class'?: DrawerCssClass | string;
+  /** Extra class name applied to the drawer root. */
+  cssClassName?: string;
 }
 export interface DrawerEvents {
-    toggle: DrawerClickEvent;
-    open: DrawerOpenEvent;
-    close: DrawerCloseEvent;
-    'mno-click': DrawerClickEvent;
-    mnoClick: DrawerClickEvent;
-    'mno-open': DrawerOpenEvent;
-    mnoOpen: DrawerOpenEvent;
-    'mno-close': DrawerCloseEvent;
-    mnoClose: DrawerCloseEvent;
+  toggle: DrawerClickEvent;
+  open: DrawerOpenEvent;
+  close: DrawerCloseEvent;
+  'mno-click': DrawerClickEvent;
+  mnoClick: DrawerClickEvent;
+  'mno-open': DrawerOpenEvent;
+  mnoOpen: DrawerOpenEvent;
+  'mno-close': DrawerCloseEvent;
+  mnoClose: DrawerCloseEvent;
 }
+//#endregion

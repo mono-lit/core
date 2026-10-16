@@ -53,14 +53,15 @@ function parseNumber(raw, mode = "auto", allowNegative = true) {
 	} else {
 		const lastDot = s.lastIndexOf(".");
 		const lastComma = s.lastIndexOf(",");
-		if (lastDot === -1 && lastComma === -1) {} else if (lastDot !== -1 && lastComma !== -1) if (lastDot > lastComma) {
-			decimalSep = ".";
-			groupSep = ",";
+		if (lastDot === -1 && lastComma === -1) {} else if (lastDot !== -1 && lastComma !== -1) {
+			if (lastDot > lastComma) {
+				decimalSep = ".";
+				groupSep = ",";
+			} else {
+				decimalSep = ",";
+				groupSep = ".";
+			}
 		} else {
-			decimalSep = ",";
-			groupSep = ".";
-		}
-		else {
 			const only = lastDot !== -1 ? "." : ",";
 			const pos = only === "." ? lastDot : lastComma;
 			const trailing = s.length - pos - 1;
@@ -100,7 +101,7 @@ function parseDate(raw) {
 	const parsed = new Date(text);
 	return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
-var TRUE_WORDS = new Set([
+const TRUE_WORDS = /* @__PURE__ */ new Set([
 	"true",
 	"yes",
 	"y",
@@ -110,7 +111,7 @@ var TRUE_WORDS = new Set([
 	"x",
 	"✓"
 ]);
-var FALSE_WORDS = new Set([
+const FALSE_WORDS = /* @__PURE__ */ new Set([
 	"false",
 	"no",
 	"n",
@@ -170,6 +171,7 @@ function isSameValue(current, next, type) {
 	if (current == null && (next === "" || next == null)) return true;
 	return String(current ?? "") === String(next ?? "");
 }
+
 //#endregion
 //#region src/import/match.ts
 /**
@@ -282,6 +284,7 @@ function findMatch(matcher, readExcel) {
 	};
 	return { kind: "miss" };
 }
+
 //#endregion
 //#region src/import/parse.ts
 /**
@@ -315,11 +318,12 @@ function splitDelimited(raw, delimiter) {
 	for (let i = 0; i < raw.length; i += 1) {
 		const ch = raw[i];
 		if (quoted) {
-			if (ch === "\"") if (raw[i + 1] === "\"") {
-				cell += "\"";
-				i += 1;
-			} else quoted = false;
-			else cell += ch;
+			if (ch === "\"") {
+				if (raw[i + 1] === "\"") {
+					cell += "\"";
+					i += 1;
+				} else quoted = false;
+			} else cell += ch;
 			continue;
 		}
 		if (ch === "\"") {
@@ -405,6 +409,7 @@ async function parseSheet(options) {
 		rows: matrix.slice(headerIndex + 1).filter((r) => r.some((c) => cellText(c).trim() !== ""))
 	};
 }
+
 //#endregion
 //#region src/import/index.ts
 /**
@@ -425,7 +430,7 @@ async function parseSheet(options) {
 * })
 * if (!result.ok) warn(`${result.unmatched} rows didn't match`)
 */
-var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /** Build header → column-index, including any declared aliases. */
 function buildHeaderIndex(headers, aliases) {
 	const index = /* @__PURE__ */ new Map();
@@ -602,5 +607,6 @@ async function importTable(options, bridge) {
 	if ((options.apply ?? "stage") === "stage") result.apply();
 	return result;
 }
+
 //#endregion
 export { importTable };

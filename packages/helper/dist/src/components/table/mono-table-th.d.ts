@@ -1,6 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-import { TableThSlotName, TableThIconName } from './mono-table-th-core.js';
-declare const MonoTableTh_base: import('../../composables/hybird-prop').Constructor<import('./mono-table-th-core.js').MonoTableThCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableThCoreInterface, TableThIconName, TableThSlotName } from "./mono-table-th-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/table/mono-table-th.d.ts
+declare const MonoTableTh_base: Constructor<MonoTableThCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-table-th` (default build, `@mono-lit/helper/ui/table`). The unified
  * column-header cell — place it inside a native `<th>`. Declares the column's
@@ -21,21 +23,22 @@ declare const MonoTableTh_base: import('../../composables/hybird-prop').Construc
  *      :editable.prop="{ type: 'string', editor: 'input-text' }">Name</mono-table-th></th>
  */
 export declare class MonoTableTh extends MonoTableTh_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
-    /** The captured label nodes (the element's original light-DOM children). */
-    private _buckets;
-    private _slotsCaptured;
-    connectedCallback(): void;
-    protected updated(changed: Map<string, unknown>): void;
-    protected renderSlot(_name: TableThSlotName): TemplateResult;
-    protected renderIcon(name: TableThIconName): TemplateResult;
-    private _captureSlots;
-    private _placeSlot;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
+  /** The captured label nodes (the element's original light-DOM children). */
+  private _buckets;
+  private _slotsCaptured;
+  connectedCallback(): void;
+  protected updated(changed: Map<string, unknown>): void;
+  protected renderSlot(_name: TableThSlotName): TemplateResult;
+  protected renderIcon(name: TableThIconName): TemplateResult;
+  private _captureSlots;
+  private _placeSlot;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-table-th': MonoTableTh;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-table-th': MonoTableTh;
+  }
 }
+//#endregion
 export {};

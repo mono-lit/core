@@ -1,46 +1,47 @@
-import { LitElement } from 'lit';
-import { ChipSize, ChipColor, ChipVariant, ChipRounded, ChipIconPosition, ChipCssClass, ChipModelEventDetail } from './chip-types.js';
-import { Constructor } from '../../composables/hybird-prop';
+import { Constructor } from "../../composables/hybird-prop.js";
+import { ChipColor, ChipCssClass, ChipIconPosition, ChipModelEventDetail, ChipRounded, ChipSize, ChipVariant } from "./chip-types.js";
+import { LitElement } from "lit";
+//#region src/components/chip/chip-core.d.ts
 type ChipLikeElement = HTMLSpanElement | HTMLAnchorElement;
 /** Public + shared-protected surface added by the core mixin. */
 export declare class MonoChipCoreInterface {
-    size: ChipSize;
-    color: ChipColor;
-    variant: ChipVariant;
-    rounded?: ChipRounded;
-    label?: string;
-    dot: boolean;
-    removable: boolean;
-    clickable: boolean;
-    disabled: boolean;
+  size: ChipSize;
+  color: ChipColor;
+  variant: ChipVariant;
+  rounded?: ChipRounded;
+  label?: string;
+  dot: boolean;
+  removable: boolean;
+  clickable: boolean;
+  disabled: boolean;
+  modelValue: boolean;
+  selected: boolean;
+  href?: string;
+  target?: string;
+  iconPosition: ChipIconPosition;
+  ariaLabelText?: string;
+  closeLabel: string;
+  cssClass: ChipCssClass;
+  focus(): void;
+  blur(): void;
+  click(): void;
+  protected _isActive: boolean;
+  protected _hasIcon: boolean;
+  protected _chipElement?: ChipLikeElement;
+  protected _toBoolean(value: unknown): boolean;
+  protected _cls(base: string, key: keyof ChipCssClass): string;
+  protected get _chipClasses(): string;
+  protected get _isInteractive(): boolean;
+  protected _createModelDetail(args: {
     modelValue: boolean;
-    selected: boolean;
-    href?: string;
-    target?: string;
-    iconPosition: ChipIconPosition;
-    ariaLabelText?: string;
-    closeLabel: string;
-    cssClass: ChipCssClass;
-    focus(): void;
-    blur(): void;
-    click(): void;
-    protected _isActive: boolean;
-    protected _hasIcon: boolean;
-    protected _chipElement?: ChipLikeElement;
-    protected _toBoolean(value: unknown): boolean;
-    protected _cls(base: string, key: keyof ChipCssClass): string;
-    protected get _chipClasses(): string;
-    protected get _isInteractive(): boolean;
-    protected _createModelDetail(args: {
-        modelValue: boolean;
-        oldValue: boolean;
-        sourceEvent?: Event;
-    }): ChipModelEventDetail;
-    protected _handleClick(event: MouseEvent): void;
-    protected _handleKeyDown(event: KeyboardEvent): void;
-    protected _handleFocus(): void;
-    protected _handleBlur(): void;
-    protected _handleClose(event: MouseEvent): void;
+    oldValue: boolean;
+    sourceEvent?: Event;
+  }): ChipModelEventDetail;
+  protected _handleClick(event: MouseEvent): void;
+  protected _handleKeyDown(event: KeyboardEvent): void;
+  protected _handleFocus(): void;
+  protected _handleBlur(): void;
+  protected _handleClose(event: MouseEvent): void;
 }
 /**
  * `MonoChipCore` — all render-mode-agnostic logic for `mono-chip`: reactive
@@ -55,4 +56,5 @@ export declare class MonoChipCoreInterface {
  * `focus/blur/click` only run client-side.
  */
 export declare const MonoChipCore: <T extends Constructor<LitElement>>(superClass: T) => Constructor<MonoChipCoreInterface> & T;
+//#endregion
 export {};

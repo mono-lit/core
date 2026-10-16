@@ -1,5 +1,8 @@
-import { LitElement } from 'lit';
-declare const MonoSwitch_base: import('../../composables/hybird-prop').Constructor<import('./switch-core.js').MonoSwitchCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoSwitchCoreInterface } from "./switch-core.js";
+import { LitElement } from "lit";
+//#region src/components/switch/mono-switch.d.ts
+declare const MonoSwitch_base: Constructor<MonoSwitchCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-switch` (default build, `@mono-lit/helper/ui/switch`).
  *
@@ -13,19 +16,20 @@ declare const MonoSwitch_base: import('../../composables/hybird-prop').Construct
  * Both register `mono-switch`, so a document loads only one.
  */
 export declare class MonoSwitch extends MonoSwitch_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
-    private _slotsCaptured;
-    private _slotLabel;
-    private _slotDescription;
-    connectedCallback(): void;
-    protected updated(changed: Map<string, unknown>): void;
-    private _captureSlots;
-    private _placeSlot;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
+  private _slotsCaptured;
+  private _slotLabel;
+  private _slotDescription;
+  connectedCallback(): void;
+  protected updated(changed: Map<string, unknown>): void;
+  private _captureSlots;
+  private _placeSlot;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-switch': MonoSwitch;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-switch': MonoSwitch;
+  }
 }
+//#endregion
 export {};

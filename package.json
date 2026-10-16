@@ -44,6 +44,8 @@
         "registry:verify": "node scripts/registry/verify.mjs",
         "registry:publish": "node scripts/registry/publish.mjs",
         "registry:check": "node scripts/registry/check-versions.mjs",
-        "registry:purge": "node scripts/registry/purge.mjs"
+        "registry:purge": "node scripts/registry/purge.mjs",
+        "npm:publish:dry": "node scripts/npm/publish.mjs",
+        "npm:publish": "node scripts/npm/publish.mjs --yes"
     }
 }

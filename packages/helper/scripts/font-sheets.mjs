@@ -22,7 +22,7 @@
 //     switches font live, nothing else to call.
 // Two sheets of the same kind: the one later in the cascade wins (same selector).
 //
-// `vite.config.ts` → `mono-emit-flavor-themes` emits the result into dist/ui/font/.
+// `tsdown.config.ts` → `mono-emit-flavor-themes` emits the result into dist/ui/font/.
 import { mkdirSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { createGenerator } from 'unocss'

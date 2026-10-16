@@ -1,4 +1,5 @@
-import { SortOrder } from './mono-data-grid.js';
+import { SortOrder } from "./mono-data-grid.js";
+//#region src/components/table/table-sort-utils.d.ts
 /**
  * Pure sort-cycle helpers shared by `mono-table-sort` and `mono-table-th` so the
  * two header controls behave identically. Kept dependency-free (no Lit/DOM) so
@@ -18,3 +19,4 @@ export declare function ariaSort(current: SortOrder): string;
  * `<sup>` badge shows visually).
  */
 export declare function sortTitle(current: SortOrder, seq?: number, total?: number): string;
+//#endregion

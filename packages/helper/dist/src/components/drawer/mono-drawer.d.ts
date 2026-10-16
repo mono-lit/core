@@ -1,5 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-declare const MonoDrawer_base: import('../../composables/hybird-prop').Constructor<import('./drawer-core.js').MonoDrawerCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoDrawerCoreInterface } from "./drawer-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/drawer/mono-drawer.d.ts
+declare const MonoDrawer_base: Constructor<MonoDrawerCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-drawer` (the default build).
  *
@@ -14,32 +17,33 @@ declare const MonoDrawer_base: import('../../composables/hybird-prop').Construct
  * `mono-drawer.shadow.ts`; all logic is shared via `MonoDrawerCore`.
  */
 export declare class MonoDrawer extends MonoDrawer_base {
-    static styles: import('lit').CSSResult[];
-    private _portal;
-    private _appliedPortalClasses;
-    private _slotHeader;
-    private _slotTitle;
-    private _slotSubtitle;
-    private _slotBody;
-    private _slotFooter;
-    /** Parking for captured title/subtitle nodes a `slot="header"` displaced. */
-    private _orphanHolder?;
-    protected createRenderRoot(): HTMLElement;
-    connectedCallback(): void;
-    disconnectedCallback(): void;
-    protected updated(changed: Map<string, unknown>): void;
-    /** Light build: the size-vars live on the portal (the `.mono-drawer` root). */
-    protected _setDrawerSizeVar(name: string, value: string): void;
-    protected _removeDrawerSizeVar(name: string): void;
-    private _updatePortalClasses;
-    private _updatePortalAttributes;
-    protected render(): TemplateResult;
-    private _captureSlots;
-    private _placeSlot;
+  static styles: import("lit").CSSResult[];
+  private _portal;
+  private _appliedPortalClasses;
+  private _slotHeader;
+  private _slotTitle;
+  private _slotSubtitle;
+  private _slotBody;
+  private _slotFooter;
+  /** Parking for captured title/subtitle nodes a `slot="header"` displaced. */
+  private _orphanHolder?;
+  protected createRenderRoot(): HTMLElement;
+  connectedCallback(): void;
+  disconnectedCallback(): void;
+  protected updated(changed: Map<string, unknown>): void;
+  /** Light build: the size-vars live on the portal (the `.mono-drawer` root). */
+  protected _setDrawerSizeVar(name: string, value: string): void;
+  protected _removeDrawerSizeVar(name: string): void;
+  private _updatePortalClasses;
+  private _updatePortalAttributes;
+  protected render(): TemplateResult;
+  private _captureSlots;
+  private _placeSlot;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-drawer': MonoDrawer;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-drawer': MonoDrawer;
+  }
 }
+//#endregion
 export {};

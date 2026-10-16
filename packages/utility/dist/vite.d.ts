@@ -1,7 +1,6 @@
-import { c as MonoConfig, o as MonoAppType, w as MonoTemplate } from "./create-config-D3m6xTaQ.js";
-import { r as MonoAppRootSource, t as MonoAppRoot } from "./app-roots-BJsIxzjk.js";
+import { c as MonoConfig, o as MonoAppType, w as MonoTemplate } from "./create-config-B8IhX4ht.js";
+import { r as MonoAppRootSource, t as MonoAppRoot } from "./app-roots-DK41xMWj.js";
 import { Plugin, PluginOption, ViteDevServer } from "vite";
-
 //#region src/vite/remote-matcher.d.ts
 /** The options every compat transform accepts, so they stay interchangeable. */
 interface MonoRemoteGateOptions {
@@ -33,9 +32,9 @@ interface MonoPageMetaPluginOptions extends MonoRemoteGateOptions {}
  * `enforce: 'pre'` so it runs before the SFC is compiled — place `monoVue()`
  * before `VueRouter()` in the plugins array.
  */
-declare function monoPageMetaToDefinePage(options?: MonoPageMetaPluginOptions): Plugin;
+export declare function monoPageMetaToDefinePage(options?: MonoPageMetaPluginOptions): Plugin;
 /** Clearer alias for {@link monoPageMetaToDefinePage}. */
-declare const monoStripPageMeta: typeof monoPageMetaToDefinePage;
+export declare const monoStripPageMeta: typeof monoPageMetaToDefinePage;
 //#endregion
 //#region src/vite/mono-layout-slot.d.ts
 /**
@@ -56,7 +55,7 @@ declare const monoStripPageMeta: typeof monoPageMetaToDefinePage;
  * Mirror of `mono-pagemeta`'s transform; the Nuxt host never runs this (it uses
  * the same layout files via `<slot/>`).
  */
-declare function monoLayoutSlotToRouterView(options?: MonoPageMetaPluginOptions): Plugin;
+export declare function monoLayoutSlotToRouterView(options?: MonoPageMetaPluginOptions): Plugin;
 //#endregion
 //#region src/vite/mono-nuxt-state.d.ts
 interface MonoNuxtStatePluginOptions extends MonoPageMetaPluginOptions {
@@ -97,9 +96,9 @@ interface MonoNuxtStatePluginOptions extends MonoPageMetaPluginOptions {
  * `enforce: 'pre'` so `.vue` files are still raw SFC source — register before
  * `@vitejs/plugin-vue`, alongside the other `monoVue()` plugins.
  */
-declare function monoNuxtStateToRef(options?: MonoNuxtStatePluginOptions): Plugin;
+export declare function monoNuxtStateToRef(options?: MonoNuxtStatePluginOptions): Plugin;
 /** Clearer alias for {@link monoNuxtStateToRef}. */
-declare const monoNuxtState: typeof monoNuxtStateToRef;
+export declare const monoNuxtState: typeof monoNuxtStateToRef;
 //#endregion
 //#region src/vite/mono-link.d.ts
 interface MonoLinkPluginOptions extends MonoPageMetaPluginOptions {
@@ -145,7 +144,7 @@ interface MonoLinkPluginOptions extends MonoPageMetaPluginOptions {
  * `enforce: 'pre'` — the SFC must still be raw source, so register before
  * `@vitejs/plugin-vue` (`monoVue()` / `monoRepo().nuxt().hostResolver()` do).
  */
-declare function monoNuxtLinkToRouterLink(options?: MonoLinkPluginOptions): Plugin;
+export declare function monoNuxtLinkToRouterLink(options?: MonoLinkPluginOptions): Plugin;
 /**
  * Vite plugin (Nuxt host): `<RouterLink>` -> `<NuxtLink>` for synced **Vue**
  * remotes — the mirror of {@link monoNuxtLinkToRouterLink}, registered by
@@ -160,10 +159,10 @@ declare function monoNuxtLinkToRouterLink(options?: MonoLinkPluginOptions): Plug
  * `v-slot` bindings pass through untouched. Case is preserved:
  * `<router-link>` -> `<nuxt-link>`.
  */
-declare function monoRouterLinkToNuxtLink(options?: MonoLinkPluginOptions): Plugin;
+export declare function monoRouterLinkToNuxtLink(options?: MonoLinkPluginOptions): Plugin;
 /** Clearer aliases. */
-declare const monoNuxtLink: typeof monoNuxtLinkToRouterLink;
-declare const monoRouterLink: typeof monoRouterLinkToNuxtLink;
+export declare const monoNuxtLink: typeof monoNuxtLinkToRouterLink;
+export declare const monoRouterLink: typeof monoRouterLinkToNuxtLink;
 //#endregion
 //#region src/vite/extend-route.d.ts
 interface MonoExtendRouteOptions extends MonoRemoteGateOptions {
@@ -233,7 +232,7 @@ interface ExtendRouteNode {
  *   import { monoExtendRoute } from '@mono-lit/utility/vite'
  *   VueRouter({ routesFolder: [...], extendRoute: monoExtendRoute() })
  */
-declare function monoExtendRoute(options?: MonoExtendRouteOptions): (route: ExtendRouteNode) => void;
+export declare function monoExtendRoute(options?: MonoExtendRouteOptions): (route: ExtendRouteNode) => void;
 //#endregion
 //#region src/vite/mono-vite.d.ts
 /**
@@ -263,7 +262,7 @@ type MonoEcoOptions = PluginOpts & MonoViteOwnDirs;
 /** The ecosystem plugins mono can build. */
 type MonoEcoKey = 'pages' | 'layouts' | 'composables' | 'components';
 /** Upstream plugin name for each key — used for the duplicate warning. */
-declare const MONO_ECO_PLUGIN_NAMES: Record<MonoEcoKey, string>;
+export declare const MONO_ECO_PLUGIN_NAMES: Record<MonoEcoKey, string>;
 interface MonoViteOptions {
   /** `vue-router/vite`. `false` to register it yourself. */
   pages?: false | MonoEcoOptions;
@@ -328,11 +327,11 @@ interface MonoViteContext {
  * Which ecosystem a `mono.ecosystem(sub)` call belongs to, by first path
  * segment — `composables/shared` and `stores/shared` both feed auto-import.
  */
-declare const MONO_ECO_SUB_KEYS: Record<string, MonoEcoKey>;
+export declare const MONO_ECO_SUB_KEYS: Record<string, MonoEcoKey>;
 /** Map one ecosystem subpath to the plugin that consumes it, if any. */
-declare function ecoKeyForSub(sub: string): MonoEcoKey | undefined;
+export declare function ecoKeyForSub(sub: string): MonoEcoKey | undefined;
 /** `VueRouter()` options: own + federated page folders, plus `extendRoute`. */
-declare function monoPagesOptions(ctx: MonoViteContext, opts?: MonoEcoOptions, extendRouteOpts?: false | MonoExtendRouteOptions): PluginOpts;
+export declare function monoPagesOptions(ctx: MonoViteContext, opts?: MonoEcoOptions, extendRouteOpts?: false | MonoExtendRouteOptions): PluginOpts;
 /**
  * `Layouts()` options: own layout dirs, plus the federated ones unless this app
  * is the host.
@@ -348,7 +347,7 @@ declare function monoPagesOptions(ctx: MonoViteContext, opts?: MonoEcoOptions, e
  * `template` sets a DEFAULT, not a lock: `layoutsDirs` replaces the whole list,
  * so one call can always opt out without a mono-specific knob.
  */
-declare function monoLayoutsOptions(ctx: MonoViteContext, opts?: MonoEcoOptions): PluginOpts;
+export declare function monoLayoutsOptions(ctx: MonoViteContext, opts?: MonoEcoOptions): PluginOpts;
 /**
  * Per-ecosystem controls for the auto-import plugin.
  *
@@ -372,21 +371,21 @@ interface MonoAutoImportOptions extends PluginOpts {
  * load, which cannot happen synchronously — import them in your config and pass
  * your own `imports`, or use `mono.autoImport()`, which resolves them for you.
  */
-declare function monoAutoImportOptions(ctx: MonoViteContext, opts?: MonoAutoImportOptions): PluginOpts;
+export declare function monoAutoImportOptions(ctx: MonoViteContext, opts?: MonoAutoImportOptions): PluginOpts;
 /** `Components()` options: own + federated component dirs. */
-declare function monoComponentsOptions(ctx: MonoViteContext, opts?: MonoEcoOptions): PluginOpts;
+export declare function monoComponentsOptions(ctx: MonoViteContext, opts?: MonoEcoOptions): PluginOpts;
 /** `vue-router/vite` + `ecosystem('pages')` + `extendRoute`. `enforce: 'pre'`. */
-declare function monoPages(ctx: MonoViteContext, opts?: MonoEcoOptions, extendRouteOpts?: false | MonoExtendRouteOptions): Promise<PluginOption>;
+export declare function monoPages(ctx: MonoViteContext, opts?: MonoEcoOptions, extendRouteOpts?: false | MonoExtendRouteOptions): Promise<PluginOption>;
 /** `vite-plugin-vue-layouts-next` + `ecosystem('layouts')`. `enforce: 'pre'`. */
-declare function monoLayouts(ctx: MonoViteContext, opts?: MonoEcoOptions): Promise<PluginOption>;
+export declare function monoLayouts(ctx: MonoViteContext, opts?: MonoEcoOptions): Promise<PluginOption>;
 /**
  * `unplugin-auto-import/vite` + the federated composables AND stores dirs.
  * `enforce: 'post'`. One plugin covers both ecosystems, so `stores` is a
  * dirs-only companion option rather than its own factory.
  */
-declare function monoAutoImport(ctx: MonoViteContext, opts?: MonoAutoImportOptions): Promise<PluginOption>;
+export declare function monoAutoImport(ctx: MonoViteContext, opts?: MonoAutoImportOptions): Promise<PluginOption>;
 /** `unplugin-vue-components/vite` + `ecosystem('components')`. `enforce: 'post'`. */
-declare function monoComponents(ctx: MonoViteContext, opts?: MonoEcoOptions): Promise<PluginOption>;
+export declare function monoComponents(ctx: MonoViteContext, opts?: MonoEcoOptions): Promise<PluginOption>;
 /**
  * Build the federated plugin stack.
  *
@@ -397,7 +396,7 @@ declare function monoComponents(ctx: MonoViteContext, opts?: MonoEcoOptions): Pr
  * Any ecosystem plugin already built via its own factory earlier in the same
  * `plugins` array is skipped, so mixing the two styles never double-registers.
  */
-declare function monoVite(ctx: MonoViteContext, opts?: MonoViteOptions): Promise<PluginOption[]>;
+export declare function monoVite(ctx: MonoViteContext, opts?: MonoViteOptions): Promise<PluginOption[]>;
 /**
  * Make `mono.vite()` win when an ecosystem is registered twice.
  *
@@ -409,7 +408,7 @@ declare function monoVite(ctx: MonoViteContext, opts?: MonoViteOptions): Promise
  * When neither instance is mono's, nothing is touched: that is the consumer's
  * own duplicate, and silently disabling one would be worse than saying so.
  */
-declare function reconcileEcoPlugins(plugins: unknown): {
+export declare function reconcileEcoPlugins(plugins: unknown): {
   won: string[];
   conflicting: string[];
 };
@@ -429,7 +428,7 @@ declare function reconcileEcoPlugins(plugins: unknown): {
  * Exported so a custom `expose` can opt into the same sanitisation:
  *   expose: (c) => sanitizeForExpose({ ...c, extra: customInstance })
  */
-declare function sanitizeForExpose(value: unknown, depth?: number, seen?: WeakSet<object>): unknown;
+export declare function sanitizeForExpose(value: unknown, depth?: number, seen?: WeakSet<object>): unknown;
 //#endregion
 //#region src/vite/mono-repo.d.ts
 interface MonoRepoOptions {
@@ -610,7 +609,8 @@ interface MonoRepoResult {
    * second `VueRouter`.
    */
   pages: ((options?: MonoEcoOptions) => Promise<PluginOption>) & {
-    /** The `VueRouter()` options — see {@link MonoRepoResult.pages}. */options: (options?: MonoEcoOptions) => Record<string, any>;
+    /** The `VueRouter()` options — see {@link MonoRepoResult.pages}. */
+    options: (options?: MonoEcoOptions) => Record<string, any>;
   };
   /**
    * `vite-plugin-vue-layouts-next`, federated.
@@ -636,7 +636,8 @@ interface MonoRepoResult {
    * Taking either form marks layouts as yours, so `vite()` skips its own copy.
    */
   layouts: ((options?: MonoEcoOptions) => Promise<PluginOption>) & {
-    /** The `Layouts()` options — see {@link MonoRepoResult.layouts}. */options: (options?: MonoEcoOptions) => Record<string, any>;
+    /** The `Layouts()` options — see {@link MonoRepoResult.layouts}. */
+    options: (options?: MonoEcoOptions) => Record<string, any>;
   };
   /**
    * `unplugin-auto-import/vite`, federated.
@@ -674,7 +675,8 @@ interface MonoRepoResult {
    * Taking either form marks this ecosystem as yours, so `vite()` skips its own.
    */
   autoImport: ((options?: MonoAutoImportOptions) => Promise<PluginOption>) & {
-    /** The `AutoImport()` options — see {@link MonoRepoResult.autoImport}. */options: (options?: MonoAutoImportOptions) => Record<string, any>;
+    /** The `AutoImport()` options — see {@link MonoRepoResult.autoImport}. */
+    options: (options?: MonoAutoImportOptions) => Record<string, any>;
   };
   /**
    * Alias of {@link MonoRepoResult.autoImport}, kept because this ecosystem is
@@ -711,7 +713,8 @@ interface MonoRepoResult {
    * Taking either form marks components as yours, so `vite()` skips its own.
    */
   components: ((options?: MonoEcoOptions) => Promise<PluginOption>) & {
-    /** The `Components()` options — see {@link MonoRepoResult.components}. */options: (options?: MonoEcoOptions) => Record<string, any>;
+    /** The `Components()` options — see {@link MonoRepoResult.components}. */
+    options: (options?: MonoEcoOptions) => Record<string, any>;
   };
   /** Vite plugin — register LAST. Wires alias, define, server.fs, optimizeDeps. */
   plugin: Plugin;
@@ -805,7 +808,7 @@ interface MonoRepoResult {
  *   mono.vite({ layouts: false }),
  *   Layouts({ layoutsDirs: mono.ecosystem('layouts') }),
  */
-declare function monoRepo(options?: MonoRepoOptions): Promise<MonoRepoResult>;
+export declare function monoRepo(options?: MonoRepoOptions): Promise<MonoRepoResult>;
 //#endregion
 //#region src/composables/parse-page-meta.d.ts
 /**
@@ -828,9 +831,9 @@ interface MonoPageMeta {
  * host's `extendRoute` (since unplugin-vue-router reads page files from disk and
  * never sees the `definePageMeta -> definePage` Vite transform).
  */
-declare function parsePageMeta(code: string): MonoPageMeta;
+export declare function parsePageMeta(code: string): MonoPageMeta;
 /** {@link parsePageMeta} for a file path (build-time, Node). Returns `{}` on read error. */
-declare function parsePageMetaFromFile(file: string): MonoPageMeta;
+export declare function parsePageMetaFromFile(file: string): MonoPageMeta;
 //#endregion
 //#region src/vite/resolve-from-root.d.ts
 /** A loader that imports bare specifiers as the app at `rootDir` would. */
@@ -841,12 +844,12 @@ type RootLoader = <T = any>(id: string) => Promise<T>;
  * `createRequire` needs a *file* to resolve from — `noop.js` never has to exist,
  * it only fixes the directory the walk starts in.
  */
-declare function createRootLoader(rootDir: string): RootLoader;
+export declare function createRootLoader(rootDir: string): RootLoader;
 /** `true` when `id` can be resolved from the app root. Never throws. */
-declare function canResolveFromRoot(rootDir: string, id: string): boolean;
+export declare function canResolveFromRoot(rootDir: string, id: string): boolean;
 //#endregion
 //#region src/vite/mono-lith.d.ts
-declare const MONO_APPS_VIRTUAL_ID = "virtual:mono-apps";
+export declare const MONO_APPS_VIRTUAL_ID = "virtual:mono-apps";
 interface MonoLithOptions {
   /** Project root. Defaults to `process.cwd()`. */
   dirname?: string;
@@ -885,7 +888,7 @@ interface MonoLithHooks {
   resolveId: (id: string) => string | undefined;
   load: (id: string) => string | undefined;
 }
-declare function createMonoLithHooks(options?: MonoLithOptions): MonoLithHooks;
+export declare function createMonoLithHooks(options?: MonoLithOptions): MonoLithHooks;
 /**
  * Standalone plugin for a long-hand `vite.config.ts`. `monoRepo().vite()` /
  * `mono.plugin` already include these hooks — do not register both.
@@ -895,10 +898,10 @@ declare function createMonoLithHooks(options?: MonoLithOptions): MonoLithHooks;
  * plugins: [VueRouter({ … }), vue(), monoLith({ dirname: __dirname })]
  * ```
  */
-declare function monoLith(options?: MonoLithOptions): Plugin;
+export declare function monoLith(options?: MonoLithOptions): Plugin;
 //#endregion
 //#region src/vite/index.d.ts
-interface MonoVueOptions extends MonoNuxtStatePluginOptions, MonoLinkPluginOptions {
+export interface MonoVueOptions extends MonoNuxtStatePluginOptions, MonoLinkPluginOptions {
   /**
    * Define the Nuxt compile-time constants `import.meta.server` /
    * `import.meta.client` for synced remote code that branches on them
@@ -937,4 +940,4 @@ interface MonoVueOptions extends MonoNuxtStatePluginOptions, MonoLinkPluginOptio
  */
 declare function monoVue(options?: MonoVueOptions): Plugin[];
 //#endregion
-export { MONO_APPS_VIRTUAL_ID, MONO_ECO_PLUGIN_NAMES, MONO_ECO_SUB_KEYS, type MonoAppRoot, type MonoAppRootSource, type MonoAutoImportOptions, type MonoEcoKey, type MonoEcoOptions, type MonoExtendRouteOptions, type MonoLinkPluginOptions, type MonoLithHooks, type MonoLithOptions, type MonoNuxtStatePluginOptions, type MonoPageMeta, type MonoPageMetaPluginOptions, type MonoRepoNuxt, type MonoRepoNuxtHostOptions, type MonoRepoOptions, type MonoRepoResult, type MonoViteContext, type MonoViteOptions, type MonoViteOwnDirs, MonoVueOptions, type RootLoader, canResolveFromRoot, createMonoLithHooks, createRootLoader, ecoKeyForSub, monoAutoImport, monoAutoImportOptions, monoComponents, monoComponentsOptions, monoExtendRoute, monoLayoutSlotToRouterView, monoLayouts, monoLayoutsOptions, monoLith, monoVue as monoNuxtHost, monoVue, monoNuxtLink, monoNuxtLinkToRouterLink, monoNuxtState, monoNuxtStateToRef, monoPageMetaToDefinePage, monoPages, monoPagesOptions, monoRepo, monoRouterLink, monoRouterLinkToNuxtLink, monoStripPageMeta, monoVite, parsePageMeta, parsePageMetaFromFile, reconcileEcoPlugins, sanitizeForExpose };
+export { type MonoAppRoot, type MonoAppRootSource, type MonoAutoImportOptions, type MonoEcoKey, type MonoEcoOptions, type MonoExtendRouteOptions, type MonoLinkPluginOptions, type MonoLithHooks, type MonoLithOptions, type MonoNuxtStatePluginOptions, type MonoPageMeta, type MonoPageMetaPluginOptions, type MonoRepoNuxt, type MonoRepoNuxtHostOptions, type MonoRepoOptions, type MonoRepoResult, type MonoViteContext, type MonoViteOptions, type MonoViteOwnDirs, type RootLoader, monoVue as monoNuxtHost, monoVue };

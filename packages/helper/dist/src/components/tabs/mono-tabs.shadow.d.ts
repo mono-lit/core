@@ -1,6 +1,9 @@
-import { LitElement } from 'lit';
-import { TabItem } from './tabs-types.js';
-declare const MonoTabsShadow_base: import('../../composables/hybird-prop').Constructor<import('./tabs-core.js').MonoTabsCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { TabItem } from "./tabs-types.js";
+import { MonoTabsCoreInterface } from "./tabs-core.js";
+import { LitElement } from "lit";
+//#region src/components/tabs/mono-tabs.shadow.d.ts
+declare const MonoTabsShadow_base: Constructor<MonoTabsCoreInterface> & typeof LitElement;
 /**
  * Shadow-DOM `mono-tabs` (the opt-in SSR build, `@mono-lit/helper/ui/shadow/tabs`).
  *
@@ -20,18 +23,19 @@ declare const MonoTabsShadow_base: import('../../composables/hybird-prop').Const
  * one.
  */
 export declare class MonoTabsShadow extends MonoTabsShadow_base {
-    static styles: import('lit').CSSResult[];
-    /** Tab ids whose `icon-<id>` slot has assigned content (detected post-hydration). */
-    private _iconIds;
-    /** Server-rendered tab count, captured before the first client render mutates the DSD. */
-    private _ssrItemCount;
-    protected _useIconSlots(): boolean;
-    protected _iconHasContent(id: string): boolean;
-    protected _itemsForRender(): TabItem[];
-    connectedCallback(): void;
-    firstUpdated(changed: Map<string, unknown>): void;
-    protected updated(changed: Map<string, unknown>): void;
-    /** Populate `_iconIds` from the per-tab icon slots' assigned content. */
-    private _scanIconSlots;
+  static styles: import("lit").CSSResult[];
+  /** Tab ids whose `icon-<id>` slot has assigned content (detected post-hydration). */
+  private _iconIds;
+  /** Server-rendered tab count, captured before the first client render mutates the DSD. */
+  private _ssrItemCount;
+  protected _useIconSlots(): boolean;
+  protected _iconHasContent(id: string): boolean;
+  protected _itemsForRender(): TabItem[];
+  connectedCallback(): void;
+  firstUpdated(changed: Map<string, unknown>): void;
+  protected updated(changed: Map<string, unknown>): void;
+  /** Populate `_iconIds` from the per-tab icon slots' assigned content. */
+  private _scanIconSlots;
 }
+//#endregion
 export {};

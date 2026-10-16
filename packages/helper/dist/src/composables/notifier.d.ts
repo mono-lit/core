@@ -1,26 +1,27 @@
+//#region src/composables/notifier.d.ts
 /** A subscriber callback. */
 export type MonoNotifyFn = () => void;
 export interface MonoNotifier {
-    /** Register a subscriber; returns its unsubscribe handle. */
-    subscribe(cb: MonoNotifyFn): () => void;
-    /** Schedule a coalesced notification. */
-    notify(): void;
-    /** Drop every subscriber (controller `dispose`). */
-    clear(): void;
-    /** How many subscribers are attached — handy for tests / diagnostics. */
-    readonly size: number;
+  /** Register a subscriber; returns its unsubscribe handle. */
+  subscribe(cb: MonoNotifyFn): () => void;
+  /** Schedule a coalesced notification. */
+  notify(): void;
+  /** Drop every subscriber (controller `dispose`). */
+  clear(): void;
+  /** How many subscribers are attached — handy for tests / diagnostics. */
+  readonly size: number;
 }
 export interface MonoNotifierOptions {
-    /**
-     * Runs immediately before the subscribers, inside the same flush. Use it to
-     * recompute derived state that subscribers are about to read (e.g. the grid
-     * refreshes its merged element props and writes its `state` snapshot here).
-     */
-    onFlush?: () => void;
-    /** Names the controller in the runaway-loop error (`'form'`, `'grid'` …). */
-    name?: string;
-    /** Extra context for that error — e.g. the form keys that notified last. Called only on a trip. */
-    detail?: () => string;
+  /**
+   * Runs immediately before the subscribers, inside the same flush. Use it to
+   * recompute derived state that subscribers are about to read (e.g. the grid
+   * refreshes its merged element props and writes its `state` snapshot here).
+   */
+  onFlush?: () => void;
+  /** Names the controller in the runaway-loop error (`'form'`, `'grid'` …). */
+  name?: string;
+  /** Extra context for that error — e.g. the form keys that notified last. Called only on a trip. */
+  detail?: () => string;
 }
 /**
  * Flushes allowed back-to-back without the event loop getting a turn. Real work never comes close:
@@ -44,3 +45,4 @@ export declare const MONO_NOTIFY_RUNAWAY_LIMIT = 200;
  * implementation means one place to fix if the scheduling ever needs to change.
  */
 export declare function createNotifier(options?: MonoNotifierOptions): MonoNotifier;
+//#endregion

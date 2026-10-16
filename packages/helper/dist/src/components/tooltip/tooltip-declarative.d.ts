@@ -1,4 +1,5 @@
-import { MonoTooltipGlobal, MonoTooltipGlobalOptions, MonoTooltipOptions } from './tooltip-types';
+import { MonoTooltipGlobal, MonoTooltipGlobalOptions, MonoTooltipOptions } from "./tooltip-types.js";
+//#region src/components/tooltip/tooltip-declarative.d.ts
 /** The two text attributes — `message` is an alias of `content`. */
 export declare const TOOLTIP_ATTRIBUTE_SELECTOR = "[mono-tooltip-content], [mono-tooltip-message]";
 /**
@@ -39,3 +40,4 @@ export declare function createMonoTooltip(options?: MonoTooltipGlobalOptions): M
 export declare function destroyAllMonoTooltips(): void;
 /** Drop the global options and turn the attributes off (tests, runtime reconfiguration). */
 export declare function resetMonoTooltip(): void;
+//#endregion

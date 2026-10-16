@@ -1,6 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-import { RichTextEditorSlotName } from './rich-text-editor-core.js';
-declare const MonoRichTextEditorShadow_base: import('../../composables/hybird-prop').Constructor<import('./rich-text-editor-core.js').MonoRichTextEditorCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoRichTextEditorCoreInterface, RichTextEditorSlotName } from "./rich-text-editor-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/rich-text-editor/mono-rich-text-editor.shadow.d.ts
+declare const MonoRichTextEditorShadow_base: Constructor<MonoRichTextEditorCoreInterface> & typeof LitElement;
 /**
  * Shadow-DOM `mono-shadow-rich-text-editor` (the opt-in SSR build,
  * `@mono-lit/helper/ui/shadow/rich-text-editor`).
@@ -15,20 +17,21 @@ declare const MonoRichTextEditorShadow_base: import('../../composables/hybird-pr
  * state); the first client update builds it.
  */
 export declare class MonoRichTextEditorShadow extends MonoRichTextEditorShadow_base {
-    static styles: import('lit').CSSResult[];
-    protected get _slotsAlwaysRender(): boolean;
-    protected get _useNativeSlots(): boolean;
-    connectedCallback(): void;
-    firstUpdated(changed: Map<string, unknown>): void;
-    protected updated(changed: Map<string, unknown>): void;
-    private _slotFor;
-    private _slotHasContent;
-    private _onSlotChange;
-    /** Reconcile the 2 slot-presence flags from their slots' assigned content. */
-    private _scanSlots;
-    /** Native `<slot>` carrying the prop fallback as native slot content. */
-    protected _slotOutlet(name: RichTextEditorSlotName, fallback?: unknown): TemplateResult;
-    /** The frame projects the light-DOM mount the core keeps on the host. */
-    protected _renderEditorOutlet(fieldClass: string): TemplateResult;
+  static styles: import("lit").CSSResult[];
+  protected get _slotsAlwaysRender(): boolean;
+  protected get _useNativeSlots(): boolean;
+  connectedCallback(): void;
+  firstUpdated(changed: Map<string, unknown>): void;
+  protected updated(changed: Map<string, unknown>): void;
+  private _slotFor;
+  private _slotHasContent;
+  private _onSlotChange;
+  /** Reconcile the 2 slot-presence flags from their slots' assigned content. */
+  private _scanSlots;
+  /** Native `<slot>` carrying the prop fallback as native slot content. */
+  protected _slotOutlet(name: RichTextEditorSlotName, fallback?: unknown): TemplateResult;
+  /** The frame projects the light-DOM mount the core keeps on the host. */
+  protected _renderEditorOutlet(fieldClass: string): TemplateResult;
 }
+//#endregion
 export {};

@@ -1,3 +1,4 @@
+//#region src/export/resolve-data.d.ts
 /**
  * Turning live data sources in `options.data` into plain arrays.
  *
@@ -27,5 +28,6 @@
  * report with three of them shouldn't take three times as long.
  */
 export declare function resolveExportData(data: Record<string, unknown> | undefined, options?: {
-    chunkSize?: number;
+  chunkSize?: number;
 }): Promise<Record<string, unknown>>;
+//#endregion

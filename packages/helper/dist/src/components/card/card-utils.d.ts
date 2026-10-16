@@ -1,23 +1,25 @@
-import { CardVariant, CardColor } from './card-types.js';
+import { CardColor, CardVariant } from "./card-types.js";
+//#region src/components/card/card-utils.d.ts
 /**
  * Validate card props
  */
 export declare function validateCardProps(props: {
-    variant?: CardVariant;
-    color?: CardColor;
+  variant?: CardVariant;
+  color?: CardColor;
 }): boolean;
 /**
  * Generate root CSS classes for card
  */
 export declare function generateCardRootClasses(props: {
-    variant?: CardVariant;
-    color?: CardColor;
-    bordered?: boolean;
-    hoverable?: boolean;
-    clickable?: boolean;
-    disabled?: boolean;
+  variant?: CardVariant;
+  color?: CardColor;
+  bordered?: boolean;
+  hoverable?: boolean;
+  clickable?: boolean;
+  disabled?: boolean;
 }): string;
 /**
  * Generate ARIA attributes for accessibility
  */
 export declare function generateCardAttributes(clickable: boolean, hoverable: boolean, label: string | undefined): Record<string, string | boolean | undefined>;
+//#endregion

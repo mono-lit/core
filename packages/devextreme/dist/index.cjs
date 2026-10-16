@@ -20,7 +20,7 @@ var __copyProps = (to, from, except, desc) => {
 	}
 	return to;
 };
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
 	value: mod,
 	enumerable: true
 }) : target, mod));
@@ -66,31 +66,31 @@ function scheduleDevExtremeLicenseCheck() {
 scheduleDevExtremeLicenseCheck();
 
 //#endregion
-Object.defineProperty(exports, 'ArrayStore', {
+Object.defineProperty(exports, "ArrayStore", {
   enumerable: true,
   get: function () {
     return devextreme_data_array_store.default;
   }
 });
-Object.defineProperty(exports, 'CustomStore', {
+Object.defineProperty(exports, "CustomStore", {
   enumerable: true,
   get: function () {
     return devextreme_data_custom_store.default;
   }
 });
-Object.defineProperty(exports, 'DataSource', {
+Object.defineProperty(exports, "DataSource", {
   enumerable: true,
   get: function () {
     return devextreme_data_data_source.default;
   }
 });
-Object.defineProperty(exports, 'ODataStore', {
+Object.defineProperty(exports, "ODataStore", {
   enumerable: true,
   get: function () {
     return devextreme_data_odata_store.default;
   }
 });
-Object.defineProperty(exports, 'config', {
+Object.defineProperty(exports, "config", {
   enumerable: true,
   get: function () {
     return devextreme_core_config.default;

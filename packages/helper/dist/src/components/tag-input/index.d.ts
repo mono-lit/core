@@ -1,4 +1,6 @@
 /// <reference path="../../../vue.d.ts" />
-export { MonoTagInput } from './mono-tag-input.js';
-export type { TagInputSize, TagInputColor, TagInputVariant, TagInputValidationState, TagInputValue, TagInputItem, TagInputDisplayValue, TagInputDisplayGroup, TagInputDataSource, TagInputLoadMore, TagInputCssClass, TagInputDropdownOptions, TagInputModelEventDetail, TagInputModelEvent, TagInputProps, TagInputEvents, TagInputChipProps, ChipBehaviour, } from './tag-input-types.js';
-export { validateTagInputProps, normalizeSuggestions, } from './tag-input-utils.js';
+import { ChipBehaviour } from "../chip/chip-types.js";
+import { TagInputChipProps, TagInputColor, TagInputCssClass, TagInputDataSource, TagInputDisplayGroup, TagInputDisplayValue, TagInputDropdownOptions, TagInputEvents, TagInputItem, TagInputLoadMore, TagInputModelEvent, TagInputModelEventDetail, TagInputProps, TagInputSize, TagInputValidationState, TagInputValue, TagInputVariant } from "./tag-input-types.js";
+import { MonoTagInput } from "./mono-tag-input.js";
+import { normalizeSuggestions, validateTagInputProps } from "./tag-input-utils.js";
+export { type ChipBehaviour, MonoTagInput, type TagInputChipProps, type TagInputColor, type TagInputCssClass, type TagInputDataSource, type TagInputDisplayGroup, type TagInputDisplayValue, type TagInputDropdownOptions, type TagInputEvents, type TagInputItem, type TagInputLoadMore, type TagInputModelEvent, type TagInputModelEventDetail, type TagInputProps, type TagInputSize, type TagInputValidationState, type TagInputValue, type TagInputVariant, normalizeSuggestions, validateTagInputProps };

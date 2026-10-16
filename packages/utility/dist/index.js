@@ -438,14 +438,16 @@ async function ensurePlainScriptModule(args) {
 			});
 			return `import ${JSON.stringify(toVueRelativeImport(outPath, cssOutPath))}`;
 		}
-		const nextSpec = toVueRelativeImport(outPath, (await ensurePlainScriptModule({
+		const childStem = `${outStem}-${fileBaseStem(resolved)}`;
+		const childRef = await ensurePlainScriptModule({
 			root,
 			sourceAbs: resolved,
-			outStem: `${outStem}-${fileBaseStem(resolved)}`,
+			outStem: childStem,
 			emitted,
 			plainScriptCache,
 			styleCache
-		})).outPath);
+		});
+		const nextSpec = toVueRelativeImport(outPath, childRef.outPath);
 		return clause ? `import ${clause} from ${JSON.stringify(nextSpec)}` : `import ${JSON.stringify(nextSpec)}`;
 	});
 	const ref = {

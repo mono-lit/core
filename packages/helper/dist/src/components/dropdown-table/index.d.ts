@@ -1,5 +1,6 @@
 /// <reference path="../../../vue.d.ts" />
-export { MonoDropdownTable } from './mono-dropdown-table.js';
-export { monoDataDropdown, controlMonoDataDropdown } from './mono-data-dropdown.js';
-export type { MonoDropdownController, MonoDropdownItem, MonoDataDropdownOptions, } from './mono-data-dropdown.js';
-export type { DropdownTableProps, DropdownTableEvents, DropdownTableChangeEvent, DropdownTableChangeEventDetail, DropdownTableSize, DropdownTableColor, DropdownTableVariant, DropdownTableValidationState, DropdownPanelOptions, DropdownTableChipProps, ChipBehaviour, } from './dropdown-table-types.js';
+import { ChipBehaviour } from "../chip/chip-types.js";
+import { DropdownPanelOptions, DropdownTableChangeEvent, DropdownTableChangeEventDetail, DropdownTableChipProps, DropdownTableColor, DropdownTableEvents, DropdownTableProps, DropdownTableSize, DropdownTableValidationState, DropdownTableVariant } from "./dropdown-table-types.js";
+import { MonoDataDropdownOptions, MonoDropdownController, MonoDropdownItem, controlMonoDataDropdown as monoDataDropdown } from "./mono-data-dropdown.js";
+import { MonoDropdownTable } from "./mono-dropdown-table.js";
+export { type ChipBehaviour, type DropdownPanelOptions, type DropdownTableChangeEvent, type DropdownTableChangeEventDetail, type DropdownTableChipProps, type DropdownTableColor, type DropdownTableEvents, type DropdownTableProps, type DropdownTableSize, type DropdownTableValidationState, type DropdownTableVariant, type MonoDataDropdownOptions, type MonoDropdownController, type MonoDropdownItem, MonoDropdownTable, monoDataDropdown as controlMonoDataDropdown, monoDataDropdown };

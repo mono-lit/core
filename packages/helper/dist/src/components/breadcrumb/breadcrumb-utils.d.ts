@@ -1,5 +1,6 @@
-import { BreadcrumbItem, BreadcrumbProps } from './breadcrumb-types.js';
-export { isIconifyClass } from '../../composables/icon.js';
+import { BreadcrumbItem, BreadcrumbProps } from "./breadcrumb-types.js";
+import { isIconifyClass } from "../../composables/icon.js";
+//#region src/components/breadcrumb/breadcrumb-utils.d.ts
 /**
  * Coerce any `items` input to a `BreadcrumbItem[]`. Accepts an array (pass-through),
  * a JSON string (`items='[...]'` attribute, or a string assigned to the PROPERTY —
@@ -15,13 +16,13 @@ export declare function findItemIndex(items: BreadcrumbItem[], id: string): numb
  */
 export declare function resolveCurrentId(items: BreadcrumbItem[], modelValue: BreadcrumbItem | null): string;
 export declare function generateBreadcrumbRootClasses(props: {
-    variant: string;
-    size: string;
-    color: string;
-    truncate: boolean;
-    disabled: boolean;
-    cssClassName?: string;
-    rootExtra?: string;
+  variant: string;
+  size: string;
+  color: string;
+  truncate: boolean;
+  disabled: boolean;
+  cssClassName?: string;
+  rootExtra?: string;
 }): string;
 export declare function validateBreadcrumbProps(props: BreadcrumbProps): string[];
 /**
@@ -33,11 +34,13 @@ export declare function validateBreadcrumbProps(props: BreadcrumbProps): string[
  * `<mono-breadcrumb-list>` cannot drift apart.
  */
 export declare function breadcrumbRootAttrs(props: {
-    variant: string;
-    size: string;
-    color: string;
+  variant: string;
+  size: string;
+  color: string;
 }): {
-    size: string | null;
-    color: string | null;
-    variant: string | null;
+  size: string | null;
+  color: string | null;
+  variant: string | null;
 };
+//#endregion
+export { isIconifyClass };

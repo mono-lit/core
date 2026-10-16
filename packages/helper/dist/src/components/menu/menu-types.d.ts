@@ -1,3 +1,4 @@
+//#region src/components/menu/menu-types.d.ts
 /**
  * Menu (recursive nav list) Component Type Definitions
  */
@@ -24,112 +25,112 @@ export type MenuBadgeColor = 'default' | 'primary' | 'success' | 'danger' | 'war
  * - `'subheader'` — small label heading for the section beneath.
  */
 export interface MenuItemBase {
-    id: string;
-    type?: 'item' | 'group' | 'divider' | 'subheader';
-    title?: string;
-    subtitle?: string;
-    icon?: string;
-    appendIcon?: string;
-    badge?: string | number;
-    badgeColor?: MenuBadgeColor;
-    href?: string;
-    disabled?: boolean;
-    /**
-     * Nested menu rows.
-     * Used by both normal items and group items.
-     */
-    items?: MenuItem[];
-    /** Group items only — initial expansion state. */
-    defaultOpen?: boolean;
+  id: string;
+  type?: 'item' | 'group' | 'divider' | 'subheader';
+  title?: string;
+  subtitle?: string;
+  icon?: string;
+  appendIcon?: string;
+  badge?: string | number;
+  badgeColor?: MenuBadgeColor;
+  href?: string;
+  disabled?: boolean;
+  /**
+   * Nested menu rows.
+   * Used by both normal items and group items.
+   */
+  items?: MenuItem[];
+  /** Group items only — initial expansion state. */
+  defaultOpen?: boolean;
 }
 export type MenuItem = MenuItemBase;
 export interface MenuCssClass {
-    root?: string;
-    list?: string;
-    item?: string;
-    itemActive?: string;
-    itemDisabled?: string;
-    action?: string;
-    icon?: string;
-    appendIcon?: string;
-    content?: string;
-    title?: string;
-    subtitle?: string;
-    badge?: string;
-    group?: string;
-    groupHeader?: string;
-    groupBody?: string;
-    groupChevron?: string;
-    divider?: string;
-    subheader?: string;
+  root?: string;
+  list?: string;
+  item?: string;
+  itemActive?: string;
+  itemDisabled?: string;
+  action?: string;
+  icon?: string;
+  appendIcon?: string;
+  content?: string;
+  title?: string;
+  subtitle?: string;
+  badge?: string;
+  group?: string;
+  groupHeader?: string;
+  groupBody?: string;
+  groupChevron?: string;
+  divider?: string;
+  subheader?: string;
 }
 export type MenuChangeEventDetail = {
-    modelValue: string | string[];
-    oldValue: string | string[];
-    value: string;
-    item: MenuItem;
-    selected: boolean;
-    sourceEvent?: Event;
+  modelValue: string | string[];
+  oldValue: string | string[];
+  value: string;
+  item: MenuItem;
+  selected: boolean;
+  sourceEvent?: Event;
 };
 export type MenuChangeEvent = CustomEvent<MenuChangeEventDetail>;
 export type MenuClickEventDetail = {
-    value: string;
-    item: MenuItem;
-    sourceEvent?: Event;
+  value: string;
+  item: MenuItem;
+  sourceEvent?: Event;
 };
 export type MenuClickEvent = CustomEvent<MenuClickEventDetail>;
 export type MenuToggleGroupEventDetail = {
-    groupId: string;
-    open: boolean;
-    oldOpen: boolean;
-    group: MenuItem;
-    sourceEvent?: Event;
+  groupId: string;
+  open: boolean;
+  oldOpen: boolean;
+  group: MenuItem;
+  sourceEvent?: Event;
 };
 export type MenuToggleGroupEvent = CustomEvent<MenuToggleGroupEventDetail>;
 export interface MenuProps {
-    /** Menu items rendered as a recursive list. */
-    items?: MenuItem[];
-    /** Selected item id, or array of ids when multiple. */
-    modelValue?: string | string[];
-    'model-value'?: string | string[];
-    modelvalue?: string | string[];
-    /** Allows selecting multiple items at once. */
-    multiple?: boolean;
-    /** Vertical spacing density of menu rows. */
-    density?: MenuDensity;
-    /** Theme color applied to active and accent states. */
-    color?: MenuColor;
-    /** Renders rows as navigation links. */
-    nav?: boolean;
-    /** Enables item selection and listbox semantics. */
-    selectable?: boolean;
-    /** Disables interaction across the whole menu. */
-    disabled?: boolean;
-    /**
-     * Controlled mode — the parent owns `modelValue` (e.g. bound to the current
-     * route). Clicks emit `click` but the highlight doesn't move until
-     * `modelValue` updates. Use with Vue Router so the active item can't jump
-     * ahead of an async navigation.
-     */
-    controlled?: boolean;
-    /** Per-part class overrides for internal elements. */
-    cssClass?: MenuCssClass;
-    cssclass?: MenuCssClass;
-    'css-class'?: MenuCssClass | string;
-    /** Plain root class string applied to the menu. */
-    cssClassName?: string;
+  /** Menu items rendered as a recursive list. */
+  items?: MenuItem[];
+  /** Selected item id, or array of ids when multiple. */
+  modelValue?: string | string[];
+  'model-value'?: string | string[];
+  modelvalue?: string | string[];
+  /** Allows selecting multiple items at once. */
+  multiple?: boolean;
+  /** Vertical spacing density of menu rows. */
+  density?: MenuDensity;
+  /** Theme color applied to active and accent states. */
+  color?: MenuColor;
+  /** Renders rows as navigation links. */
+  nav?: boolean;
+  /** Enables item selection and listbox semantics. */
+  selectable?: boolean;
+  /** Disables interaction across the whole menu. */
+  disabled?: boolean;
+  /**
+   * Controlled mode — the parent owns `modelValue` (e.g. bound to the current
+   * route). Clicks emit `click` but the highlight doesn't move until
+   * `modelValue` updates. Use with Vue Router so the active item can't jump
+   * ahead of an async navigation.
+   */
+  controlled?: boolean;
+  /** Per-part class overrides for internal elements. */
+  cssClass?: MenuCssClass;
+  cssclass?: MenuCssClass;
+  'css-class'?: MenuCssClass | string;
+  /** Plain root class string applied to the menu. */
+  cssClassName?: string;
 }
 export interface MenuEvents {
-    change: MenuChangeEvent;
-    click: MenuClickEvent;
-    'toggle-group': MenuToggleGroupEvent;
-    toggleGroup: MenuToggleGroupEvent;
-    'mno-change': MenuChangeEvent;
-    mnoChange: MenuChangeEvent;
-    'mno-click': MenuClickEvent;
-    mnoClick: MenuClickEvent;
-    'mno-toggle-group': MenuToggleGroupEvent;
-    mnoToggleGroup: MenuToggleGroupEvent;
+  change: MenuChangeEvent;
+  click: MenuClickEvent;
+  'toggle-group': MenuToggleGroupEvent;
+  toggleGroup: MenuToggleGroupEvent;
+  'mno-change': MenuChangeEvent;
+  mnoChange: MenuChangeEvent;
+  'mno-click': MenuClickEvent;
+  mnoClick: MenuClickEvent;
+  'mno-toggle-group': MenuToggleGroupEvent;
+  mnoToggleGroup: MenuToggleGroupEvent;
 }
 /**
  * `<mono-menu-list>` `type` semantics:
@@ -152,44 +153,45 @@ export interface MenuEvents {
  */
 export type MonoMenuListType = 'children' | 'item' | 'group' | 'divider' | 'subheader';
 export interface MenuListProps {
-    /**
-     * In list mode:
-     *   <mono-menu-list :items.prop="items" />
-     *
-     * In direct single-row mode:
-     *   <mono-menu-list type="group" title="Sales" :items.prop="children" />
-     * Here, `items` becomes the built item's `children`.
-     *
-     * In declarative mode, child `<mono-menu-list>` elements (or any other HTML)
-     * compose the row's body — arbitrary depth supported.
-     */
-    items?: MenuItem[];
-    /** Render one full item object, useful with Vue `v-for`. */
-    item?: MenuItem;
-    /** Render mode, or the synthesised item's type in direct mode. */
-    type?: MonoMenuListType;
-    /** Direct single-row props. `item-type` is a legacy alias for `type` in declarative mode. */
-    itemType?: MenuItem['type'];
-    'item-type'?: MenuItem['type'];
-    /** Row title text. */
-    title?: string;
-    /** Secondary text shown beneath the title. */
-    subtitle?: string;
-    /** Leading icon shown before the title. */
-    icon?: string;
-    /** Trailing icon shown after the title. */
-    appendIcon?: string;
-    'append-icon'?: string;
-    /** Badge content shown on the row. */
-    badge?: string | number;
-    /** Color theme of the badge. */
-    badgeColor?: MenuBadgeColor;
-    'badge-color'?: MenuBadgeColor;
-    /** Link target for navigation rows. */
-    href?: string;
-    /** Disables interaction with the row. */
-    disabled?: boolean;
-    /** Initial expansion state for group rows. */
-    defaultOpen?: boolean;
-    'default-open'?: boolean;
+  /**
+   * In list mode:
+   *   <mono-menu-list :items.prop="items" />
+   *
+   * In direct single-row mode:
+   *   <mono-menu-list type="group" title="Sales" :items.prop="children" />
+   * Here, `items` becomes the built item's `children`.
+   *
+   * In declarative mode, child `<mono-menu-list>` elements (or any other HTML)
+   * compose the row's body — arbitrary depth supported.
+   */
+  items?: MenuItem[];
+  /** Render one full item object, useful with Vue `v-for`. */
+  item?: MenuItem;
+  /** Render mode, or the synthesised item's type in direct mode. */
+  type?: MonoMenuListType;
+  /** Direct single-row props. `item-type` is a legacy alias for `type` in declarative mode. */
+  itemType?: MenuItem['type'];
+  'item-type'?: MenuItem['type'];
+  /** Row title text. */
+  title?: string;
+  /** Secondary text shown beneath the title. */
+  subtitle?: string;
+  /** Leading icon shown before the title. */
+  icon?: string;
+  /** Trailing icon shown after the title. */
+  appendIcon?: string;
+  'append-icon'?: string;
+  /** Badge content shown on the row. */
+  badge?: string | number;
+  /** Color theme of the badge. */
+  badgeColor?: MenuBadgeColor;
+  'badge-color'?: MenuBadgeColor;
+  /** Link target for navigation rows. */
+  href?: string;
+  /** Disables interaction with the row. */
+  disabled?: boolean;
+  /** Initial expansion state for group rows. */
+  defaultOpen?: boolean;
+  'default-open'?: boolean;
 }
+//#endregion

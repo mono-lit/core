@@ -1,5 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-declare const MonoDropdownShadow_base: import('../../composables/hybird-prop').Constructor<import('./dropdown-core.js').MonoDropdownCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoDropdownCoreInterface } from "./dropdown-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/dropdown/mono-dropdown.shadow.d.ts
+declare const MonoDropdownShadow_base: Constructor<MonoDropdownCoreInterface> & typeof LitElement;
 /**
  * Shadow-DOM `mono-dropdown` (SSR build, `@mono-lit/helper/ui/shadow/dropdown`).
  *
@@ -12,17 +15,18 @@ declare const MonoDropdownShadow_base: import('../../composables/hybird-prop').C
  * `mono-dropdown`, so a document loads only one build.
  */
 export declare class MonoDropdownShadow extends MonoDropdownShadow_base {
-    static styles: import('lit').CSSResult[];
-    protected _activeMainNodes(): HTMLElement[];
-    /**
-     * No-op: the shadow build carries state classes on an inner `.mono-dropdown`
-     * root rendered in `render()` (see below), NOT the host. The host's `class` is
-     * controlled by the framework (Vue), which would wipe host classes — including
-     * `open` — on every re-render, so the panel could never stay open.
-     */
-    protected _updateHostClasses(): void;
-    private _onMainSlotChange;
-    protected render(): TemplateResult;
-    connectedCallback(): void;
+  static styles: import("lit").CSSResult[];
+  protected _activeMainNodes(): HTMLElement[];
+  /**
+   * No-op: the shadow build carries state classes on an inner `.mono-dropdown`
+   * root rendered in `render()` (see below), NOT the host. The host's `class` is
+   * controlled by the framework (Vue), which would wipe host classes — including
+   * `open` — on every re-render, so the panel could never stay open.
+   */
+  protected _updateHostClasses(): void;
+  private _onMainSlotChange;
+  protected render(): TemplateResult;
+  connectedCallback(): void;
 }
+//#endregion
 export {};

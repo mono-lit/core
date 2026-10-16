@@ -1,15 +1,16 @@
-import { a as __decorate, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration } from "../../hydration-flush-RB5Tz5nl.js";
-import { t as dispatchMonoEvent } from "../../mono-event-Bi1qP9uN.js";
-import { n as cssPart } from "../../css-class-BRKRzHx-.js";
-import { t as buildSizeStyle } from "../../css-size-DhHSVZJK.js";
-import { t as MonoFormControlCore } from "../../form-control-core-B8d7k6vk.js";
-import { t as input_default } from "../../input-zGOULADt.js";
+import { a as __decorate, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration } from "../../hydration-flush-DHrl4_KK.js";
+import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
+import { n as cssPart } from "../../css-class-B6Tc_MAx.js";
+import { t as buildSizeStyle } from "../../css-size-DWAPgQdT.js";
+import { t as MonoFormControlCore } from "../../form-control-core-CIdMLXMo.js";
+import { t as input_css_raw_default } from "../../input.css_raw-CGESifay.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { property, query, state } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
 import { styleMap } from "lit/directives/style-map.js";
+
 //#region src/components/input/input-format.ts
-var SEPARATOR_CACHE = /* @__PURE__ */ new Map();
+const SEPARATOR_CACHE = /* @__PURE__ */ new Map();
 /**
 * Ask `Intl` which characters this locale uses, rather than assuming `,` and `.`.
 *
@@ -256,9 +257,10 @@ function resolveFormat(format, raw, ctx, mode) {
 	if (!descriptor) return null;
 	return mode === "display" ? applyFormat(raw, descriptor, ctx.locale) : normaliseValue(raw, descriptor);
 }
+
 //#endregion
 //#region src/components/input/input-core.ts
-var numberStringConverter = {
+const numberStringConverter = {
 	fromAttribute(value) {
 		if (value === null || value === "") return void 0;
 		const parsed = Number(value);
@@ -282,7 +284,7 @@ var numberStringConverter = {
 *    shared `_hasXxxSlotState` `@state` fields back both strategies and feed the
 *    class getters.
 */
-var MonoInputCore = (superClass) => {
+const MonoInputCore = (superClass) => {
 	class MonoInputCoreClass extends MonoFormControlCore(superClass) {
 		constructor(...args) {
 			super(...args);
@@ -658,7 +660,8 @@ var MonoInputCore = (superClass) => {
 			input.value = next;
 			this._display = next;
 			if (caretBefore == null) return;
-			const caret = caretAfterFormat(next, caretBefore, prev, significantFor(this._displayDescriptor, this.formatLocale));
+			const significant = significantFor(this._displayDescriptor, this.formatLocale);
+			const caret = caretAfterFormat(next, caretBefore, prev, significant);
 			try {
 				input.setSelectionRange(caret, caret);
 			} catch {}
@@ -960,15 +963,16 @@ var MonoInputCore = (superClass) => {
 	__decorate([state()], MonoInputCoreClass.prototype, "_hasHelperSlotState", void 0);
 	return MonoInputCoreClass;
 };
+
 //#endregion
 //#region src/components/input/mono-input.shadow.ts
-var SHADOW_EXTRA_CSS = "";
-var MonoInputShadow = class MonoInputShadow extends withShadowUtilityStyles(MonoInputCore(LitElement)) {
+const SHADOW_EXTRA_CSS = "";
+let MonoInputShadow = class MonoInputShadow extends withShadowUtilityStyles(MonoInputCore(LitElement)) {
 	static {
 		this.disableWarning?.("change-in-update");
 	}
 	static {
-		this.styles = [unsafeCSS(toShadowCss(input_default, {
+		this.styles = [unsafeCSS(toShadowCss(input_css_raw_default, {
 			host: "mono-input",
 			append: SHADOW_EXTRA_CSS
 		}))];
@@ -1060,6 +1064,7 @@ var MonoInputShadow = class MonoInputShadow extends withShadowUtilityStyles(Mono
 	}
 };
 MonoInputShadow = __decorate([customElement("mono-shadow-input")], MonoInputShadow);
+
 //#endregion
 //#region src/components/input/input-utils.ts
 function validateInputProps(props) {
@@ -1146,5 +1151,6 @@ function getInputIcon(type) {
 	};
 	return iconMap[type] ?? iconMap.text;
 }
+
 //#endregion
 export { MonoInputCore, MonoInputShadow, applyFormat, caretAfterFormat, generateInputAriaAttributes, generateInputAttributes, getInputIcon, localeSeparators, normaliseValue, parseFormat, resolveFormat, significantFor, stripFormat, validateInputProps };

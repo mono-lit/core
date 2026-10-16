@@ -1,38 +1,39 @@
-import { LitElement, TemplateResult } from 'lit';
-import { SidebarMode, SidebarLocation, SidebarDensity, SidebarColor, SidebarVariant, SidebarSource, SidebarCssClass } from './sidebar-types.js';
-import { Constructor } from '../../composables/hybird-prop';
+import { Constructor } from "../../composables/hybird-prop.js";
+import { SidebarColor, SidebarCssClass, SidebarDensity, SidebarLocation, SidebarMode, SidebarSource, SidebarVariant } from "./sidebar-types.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/sidebar/sidebar-core.d.ts
 /** Slot regions the sidebar lays out. `body` is the default (unnamed) region. */
 export type SidebarSlotName = 'header' | 'body' | 'footer';
 /** Public + shared-protected surface added by the core mixin. */
 export declare class MonoSidebarCoreInterface {
-    modelValue: boolean;
-    mode: SidebarMode;
-    location: SidebarLocation;
-    density: SidebarDensity;
-    color: SidebarColor;
-    variant: SidebarVariant;
-    width: number;
-    railWidth: number;
-    expandOnHover: boolean;
-    rail: boolean | null;
-    contained: boolean;
-    persistent: boolean;
-    closeOnEscape: boolean;
-    closeOnScrim: boolean;
-    lockScroll: boolean;
-    showScrim: boolean;
-    cssClass: SidebarCssClass;
-    cssClassName: string;
-    open(source?: SidebarSource, sourceEvent?: Event): void;
-    hide(source?: SidebarSource, sourceEvent?: Event): void;
-    close(source?: SidebarSource, sourceEvent?: Event): void;
-    toggle(source?: SidebarSource, sourceEvent?: Event): void;
-    expandRail(): void;
-    collapseRail(): void;
-    protected _setCssClass(value: unknown): void;
-    protected _cls(base: string, key: keyof SidebarCssClass): string;
-    protected renderSlot(name: SidebarSlotName): TemplateResult;
-    protected renderIcon(name: 'chevron'): TemplateResult;
+  modelValue: boolean;
+  mode: SidebarMode;
+  location: SidebarLocation;
+  density: SidebarDensity;
+  color: SidebarColor;
+  variant: SidebarVariant;
+  width: number;
+  railWidth: number;
+  expandOnHover: boolean;
+  rail: boolean | null;
+  contained: boolean;
+  persistent: boolean;
+  closeOnEscape: boolean;
+  closeOnScrim: boolean;
+  lockScroll: boolean;
+  showScrim: boolean;
+  cssClass: SidebarCssClass;
+  cssClassName: string;
+  open(source?: SidebarSource, sourceEvent?: Event): void;
+  hide(source?: SidebarSource, sourceEvent?: Event): void;
+  close(source?: SidebarSource, sourceEvent?: Event): void;
+  toggle(source?: SidebarSource, sourceEvent?: Event): void;
+  expandRail(): void;
+  collapseRail(): void;
+  protected _setCssClass(value: unknown): void;
+  protected _cls(base: string, key: keyof SidebarCssClass): string;
+  protected renderSlot(name: SidebarSlotName): TemplateResult;
+  protected renderIcon(name: 'chevron'): TemplateResult;
 }
 /**
  * `MonoSidebarCore` — all render-mode-agnostic logic for `mono-sidebar`:
@@ -49,3 +50,4 @@ export declare class MonoSidebarCoreInterface {
  * `renderIcon()` (light: `.mono-icon` UnoCSS icon; shadow: inline SVG).
  */
 export declare const MonoSidebarCore: <T extends Constructor<LitElement>>(superClass: T) => Constructor<MonoSidebarCoreInterface> & T;
+//#endregion

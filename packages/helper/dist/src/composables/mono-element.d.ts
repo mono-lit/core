@@ -1,3 +1,4 @@
+//#region src/composables/mono-element.d.ts
 type ElementClass = CustomElementConstructor;
 /** Register `cls` as `tag` with the app-wide defaults applied. Returns the registered class. */
 export declare function defineMonoElement<T extends ElementClass>(tag: string, cls: T): T;
@@ -6,4 +7,5 @@ export declare function defineMonoElement<T extends ElementClass>(tag: string, c
  * `createMonoUI` defaults apply and `pending` exists) and replaces the class binding with it.
  */
 export declare function customElement(tag: string): <T extends ElementClass>(cls: T) => T;
+//#endregion
 export {};

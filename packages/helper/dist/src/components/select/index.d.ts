@@ -1,4 +1,5 @@
 /// <reference path="../../../vue.d.ts" />
-export { MonoSelect } from './mono-select.js';
-export type { SelectSize, SelectColor, SelectVariant, SelectValidationState, SelectValue, SelectItem, SelectDisplayValue, SelectDisplayGroup, SelectDataSource, SelectDataSourceLoadMore, SelectCssClass, SelectDropdownOptions, SelectModelEventDetail, SelectModelEvent, SelectProps, SelectEvents, } from './select-types.js';
-export { validateSelectProps, } from './select-utils.js';
+import { SelectColor, SelectCssClass, SelectDataSource, SelectDataSourceLoadMore, SelectDisplayGroup, SelectDisplayValue, SelectDropdownOptions, SelectEvents, SelectItem, SelectModelEvent, SelectModelEventDetail, SelectProps, SelectSize, SelectValidationState, SelectValue, SelectVariant } from "./select-types.js";
+import { MonoSelect } from "./mono-select.js";
+import { validateSelectProps } from "./select-utils.js";
+export { MonoSelect, type SelectColor, type SelectCssClass, type SelectDataSource, type SelectDataSourceLoadMore, type SelectDisplayGroup, type SelectDisplayValue, type SelectDropdownOptions, type SelectEvents, type SelectItem, type SelectModelEvent, type SelectModelEventDetail, type SelectProps, type SelectSize, type SelectValidationState, type SelectValue, type SelectVariant, validateSelectProps };

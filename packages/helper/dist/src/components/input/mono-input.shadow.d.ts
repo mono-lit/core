@@ -1,5 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-declare const MonoInputShadow_base: import('../../composables/hybird-prop').Constructor<import('./input-core.js').MonoInputCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoInputCoreInterface } from "./input-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/input/mono-input.shadow.d.ts
+declare const MonoInputShadow_base: Constructor<MonoInputCoreInterface> & typeof LitElement;
 /**
  * Shadow-DOM `mono-input` (SSR build, `@mono-lit/helper/ui/shadow/input`).
  *
@@ -20,15 +23,16 @@ declare const MonoInputShadow_base: import('../../composables/hybird-prop').Cons
  * `mono-input`, so a document loads only one build.
  */
 export declare class MonoInputShadow extends MonoInputShadow_base {
-    static styles: import('lit').CSSResult[];
-    firstUpdated(changed: Map<string, unknown>): void;
-    private _slotHasContent;
-    private _setSlotState;
-    private _onSlotChange;
-    protected renderIcon(_name: 'close'): TemplateResult;
-    private _renderLabel;
-    private _renderHelper;
-    protected render(): TemplateResult;
-    connectedCallback(): void;
+  static styles: import("lit").CSSResult[];
+  firstUpdated(changed: Map<string, unknown>): void;
+  private _slotHasContent;
+  private _setSlotState;
+  private _onSlotChange;
+  protected renderIcon(_name: 'close'): TemplateResult;
+  private _renderLabel;
+  private _renderHelper;
+  protected render(): TemplateResult;
+  connectedCallback(): void;
 }
+//#endregion
 export {};

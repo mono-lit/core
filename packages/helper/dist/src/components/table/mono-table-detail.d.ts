@@ -1,5 +1,8 @@
-import { LitElement } from 'lit';
-declare const MonoTableDetail_base: import('../../composables/hybird-prop').Constructor<import('./mono-table-detail-core.js').MonoTableDetailCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableDetailCoreInterface } from "./mono-table-detail-core.js";
+import { LitElement } from "lit";
+//#region src/components/table/mono-table-detail.d.ts
+declare const MonoTableDetail_base: Constructor<MonoTableDetailCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-table-detail` (default build, `@mono-lit/helper/ui/table`) — the
  * expand/collapse chevron for a table row.
@@ -21,12 +24,13 @@ declare const MonoTableDetail_base: import('../../composables/hybird-prop').Cons
  * </tr>
  */
 export declare class MonoTableDetail extends MonoTableDetail_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-table-detail': MonoTableDetail;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-table-detail': MonoTableDetail;
+  }
 }
+//#endregion
 export {};

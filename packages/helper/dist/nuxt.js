@@ -1,20 +1,21 @@
-import { t as monoSsr } from "./vite-C5iUK7so.js";
+import { t as monoSsr } from "./vite-DcyRlTTf.js";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { addPluginTemplate, addVitePlugin, defineNuxtModule, extendViteConfig, hasNuxtModule, installModule, tryResolveModule, useLogger } from "@nuxt/kit";
+
 //#region src/nuxt/index.ts
 /** The optional peer the automatic skeleton (`pending`) renders with. */
-var PHANTOM_UI = "@aejkatappaja/phantom-ui";
+const PHANTOM_UI = "@aejkatappaja/phantom-ui";
 /** One lit instance, shared with the shadow build and @lit-labs/ssr. */
-var LIT_DEDUPE = [
+const LIT_DEDUPE = [
 	"lit",
 	"lit-html",
 	"lit-element",
 	"@lit/reactive-element"
 ];
 /** Reached only from federated routes, so Vite won't find it in its entry scan. */
-var DEFAULT_OPTIMIZE_INCLUDE = ["@mono-lit/devextreme"];
-var monoHelperModule = defineNuxtModule({
+const DEFAULT_OPTIMIZE_INCLUDE = ["@mono-lit/devextreme"];
+const monoHelperModule = defineNuxtModule({
 	meta: {
 		name: "@mono-lit/helper",
 		configKey: "mono"
@@ -30,12 +31,15 @@ var monoHelperModule = defineNuxtModule({
 		if (!phantom && helper.skeleton !== false) logger.debug(`skeleton: "${PHANTOM_UI}" is not installed in the app — \`pending\` stays a no-op. Install it to turn the automatic skeleton on.`);
 		let litWrapper = false;
 		if (helper.ssr !== false && !ssrApp) logger.debug("ssr:false — skipping nuxt-ssr-lit; shadow builds render client-side as plain custom elements.");
-		else if (helper.ssr !== false) if (hasNuxtModule("nuxt-ssr-lit")) logger.info("nuxt-ssr-lit is configured by the host — using legacy manual SSR wiring (litElementPrefix). Remove that module entry to enable @mono-lit/helper auto-wrap, or set mono.helper.ssr:false to silence.");
-		else try {
-			await installModule(await tryResolveModule("nuxt-ssr-lit", import.meta.url) ?? "nuxt-ssr-lit", { litElementPrefix: [] });
-			litWrapper = true;
-		} catch {
-			logger.info("nuxt-ssr-lit could not be loaded — mono shadow components fall back to client-only. It ships as a @mono-lit/helper dependency, so this usually means a broken or deduped install; try reinstalling, or set mono.helper.ssr:false to silence.");
+		else if (helper.ssr !== false) {
+			if (hasNuxtModule("nuxt-ssr-lit")) logger.info("nuxt-ssr-lit is configured by the host — using legacy manual SSR wiring (litElementPrefix). Remove that module entry to enable @mono-lit/helper auto-wrap, or set mono.helper.ssr:false to silence.");
+			else try {
+				const ssrLit = await tryResolveModule("nuxt-ssr-lit", import.meta.url);
+				await installModule(ssrLit ?? "nuxt-ssr-lit", { litElementPrefix: [] });
+				litWrapper = true;
+			} catch {
+				logger.info("nuxt-ssr-lit could not be loaded — mono shadow components fall back to client-only. It ships as a @mono-lit/helper dependency, so this usually means a broken or deduped install; try reinstalling, or set mono.helper.ssr:false to silence.");
+			}
 		}
 		if (ssrApp || clientOnlyWrap) {
 			for (const plugin of monoSsr({
@@ -113,18 +117,19 @@ var monoHelperModule = defineNuxtModule({
 		if (dedupe.length || include.length || exclude.length) extendViteConfig((config) => {
 			if (dedupe.length) {
 				config.resolve ||= {};
-				config.resolve.dedupe = [...new Set([...config.resolve.dedupe ?? [], ...dedupe])];
+				config.resolve.dedupe = [.../* @__PURE__ */ new Set([...config.resolve.dedupe ?? [], ...dedupe])];
 			}
 			if (include.length) {
 				config.optimizeDeps ||= {};
-				config.optimizeDeps.include = [...new Set([...config.optimizeDeps.include ?? [], ...include])];
+				config.optimizeDeps.include = [.../* @__PURE__ */ new Set([...config.optimizeDeps.include ?? [], ...include])];
 			}
 			if (exclude.length) {
 				config.optimizeDeps ||= {};
-				config.optimizeDeps.exclude = [...new Set([...config.optimizeDeps.exclude ?? [], ...exclude])];
+				config.optimizeDeps.exclude = [.../* @__PURE__ */ new Set([...config.optimizeDeps.exclude ?? [], ...exclude])];
 			}
 		});
 	}
 });
+
 //#endregion
 export { monoHelperModule as default };

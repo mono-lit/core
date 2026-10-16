@@ -1,10 +1,11 @@
-import { Plugin } from 'vite';
+import { Plugin } from "vite";
+//#region src/vite/mono-ssr-stub.d.ts
 export interface MonoSsrStubOptions {
-    /**
-     * Import prefix whose side-effect (web component registration) modules
-     * should be stubbed during the server build. CSS entries are never stubbed.
-     */
-    packagePrefix?: string;
+  /**
+   * Import prefix whose side-effect (web component registration) modules
+   * should be stubbed during the server build. CSS entries are never stubbed.
+   */
+  packagePrefix?: string;
 }
 /**
  * `@mono-lit/helper/ui/*` entries register Lit custom elements at module load
@@ -18,3 +19,4 @@ export interface MonoSsrStubOptions {
  * still register and render after hydration.
  */
 export declare function monoSsrStubPlugin(options?: MonoSsrStubOptions): Plugin;
+//#endregion

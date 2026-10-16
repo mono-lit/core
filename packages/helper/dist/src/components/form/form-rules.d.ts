@@ -1,4 +1,5 @@
-import { MonoFormRule, MonoFormRuleCtx } from './form-types.js';
+import { MonoFormRule, MonoFormRuleCtx } from "./form-types.js";
+//#region src/components/form/form-rules.d.ts
 /** Empty for validation purposes: null/undefined, blank string, empty array. */
 export declare function isBlank(value: unknown): boolean;
 /**
@@ -17,9 +18,10 @@ export declare function runRule<V>(rule: MonoFormRule<V>, ctx: MonoFormRuleCtx<V
  * `form.validate()`), otherwise only rules whose effective timing matches.
  */
 export declare function runRules<V>(rules: MonoFormRule<V>[] | undefined, ctx: MonoFormRuleCtx<V>, opts: {
-    timing?: 'live' | 'change';
-    defaultTiming: 'live' | 'change';
+  timing?: 'live' | 'change';
+  defaultTiming: 'live' | 'change';
 }): Promise<{
-    success: boolean;
-    message: string;
+  success: boolean;
+  message: string;
 }>;
+//#endregion

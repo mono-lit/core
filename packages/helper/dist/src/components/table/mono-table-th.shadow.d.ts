@@ -1,6 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-import { TableThSlotName, TableThIconName } from './mono-table-th-core.js';
-declare const MonoTableThShadow_base: import('../../composables/hybird-prop').Constructor<import('./mono-table-th-core.js').MonoTableThCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableThCoreInterface, TableThIconName, TableThSlotName } from "./mono-table-th-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/table/mono-table-th.shadow.d.ts
+declare const MonoTableThShadow_base: Constructor<MonoTableThCoreInterface> & typeof LitElement;
 /**
  * Shadow-DOM `mono-table-th` (SSR build, `@mono-lit/helper/ui/shadow/table`). The
  * header label projects through a native `<slot>`; the sort indicator and the
@@ -11,9 +13,10 @@ declare const MonoTableThShadow_base: import('../../composables/hybird-prop').Co
  * logic via `MonoTableThCore`.
  */
 export declare class MonoTableThShadow extends MonoTableThShadow_base {
-    static styles: import('lit').CSSResult[];
-    protected renderSlot(_name: TableThSlotName): TemplateResult;
-    protected renderIcon(name: TableThIconName): TemplateResult;
-    connectedCallback(): void;
+  static styles: import("lit").CSSResult[];
+  protected renderSlot(_name: TableThSlotName): TemplateResult;
+  protected renderIcon(name: TableThIconName): TemplateResult;
+  connectedCallback(): void;
 }
+//#endregion
 export {};

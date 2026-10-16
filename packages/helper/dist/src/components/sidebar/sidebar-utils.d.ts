@@ -1,4 +1,5 @@
-import { SidebarMode, SidebarProps } from './sidebar-types.js';
+import { SidebarMode, SidebarProps } from "./sidebar-types.js";
+//#region src/components/sidebar/sidebar-utils.d.ts
 export declare const SIDEBAR_AUTO_BREAKPOINT = 768;
 /**
  * `typeof window === 'undefined'` alone is NOT a safe server guard: a DOM shim
@@ -12,19 +13,19 @@ export declare function isAutoTemporary(): boolean;
  */
 export declare function resolveMode(mode: SidebarMode): Exclude<SidebarMode, 'auto'>;
 export declare function generateSidebarRootClasses(props: {
-    mode: SidebarMode;
-    resolvedMode: Exclude<SidebarMode, 'auto'>;
-    location: string;
-    density: string;
-    color: string;
-    variant: string;
-    open: boolean;
-    expandOnHover: boolean;
-    contained: boolean;
-    persistent: boolean;
-    showScrim: boolean;
-    cssClassName?: string;
-    rootExtra?: string;
+  mode: SidebarMode;
+  resolvedMode: Exclude<SidebarMode, 'auto'>;
+  location: string;
+  density: string;
+  color: string;
+  variant: string;
+  open: boolean;
+  expandOnHover: boolean;
+  contained: boolean;
+  persistent: boolean;
+  showScrim: boolean;
+  cssClassName?: string;
+  rootExtra?: string;
 }): string;
 export declare function validateSidebarProps(props: SidebarProps): string[];
 /**
@@ -39,17 +40,18 @@ export declare function validateSidebarProps(props: SidebarProps): string[];
  * collapses to `custom`, with the colour itself arriving inline.
  */
 export declare function sidebarRootAttrs(props: {
-    mode: string;
-    resolvedMode: string;
-    location: string;
-    density: string;
-    color: string;
-    variant: string;
+  mode: string;
+  resolvedMode: string;
+  location: string;
+  density: string;
+  color: string;
+  variant: string;
 }): {
-    mode: string | null;
-    effective: string;
-    location: string | null;
-    density: string | null;
-    color: string | null;
-    variant: string | null;
+  mode: string | null;
+  effective: string;
+  location: string | null;
+  density: string | null;
+  color: string | null;
+  variant: string | null;
 };
+//#endregion

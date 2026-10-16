@@ -1,12 +1,13 @@
-import { arrayToODataString } from '../components/filter/filter-odata';
+import { arrayToODataString } from "../components/filter/filter-odata.js";
+//#region src/utils/data-source-summary.d.ts
 /** Aggregate kinds a spec may ask for — mirrors `MonoSummaryType` structurally. */
 export type MonoAggregateType = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'countDistinct';
 /** The part of a summary spec that decides what to ask for. */
 export interface MonoAggregateSpec {
-    field?: string;
-    type?: MonoAggregateType;
-    /** Disambiguates two aggregates on the same field; also used as the alias. */
-    name?: string;
+  field?: string;
+  type?: MonoAggregateType;
+  /** Disambiguates two aggregates on the same field; also used as the alias. */
+  name?: string;
 }
 /**
  * A field a server can aggregate.
@@ -51,5 +52,5 @@ export declare function composeSummaryApply(apply: string, filter: unknown): str
  * searched away, which is worse than being slow.
  */
 export declare function summaryFilterOf(source: unknown): unknown;
-/** Re-exported so a resolver can convert a devextreme filter itself. */
+//#endregion
 export { arrayToODataString as summaryODataFilter };

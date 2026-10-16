@@ -1,8 +1,9 @@
-import { MonoImportOptions, MonoImportType } from './types';
+import { MonoImportOptions, MonoImportType } from "./types.js";
+//#region src/import/parse.d.ts
 /** A parsed sheet: the header row plus the data rows beneath it. */
 export interface ParsedSheet {
-    headers: string[];
-    rows: unknown[][];
+  headers: string[];
+  rows: unknown[][];
 }
 /** Decide how to read `data` when the caller didn't say. */
 export declare function inferType(data: MonoImportOptions['data']): MonoImportType;
@@ -13,3 +14,4 @@ export declare function inferType(data: MonoImportOptions['data']): MonoImportTy
  * block above its table.
  */
 export declare function parseSheet(options: MonoImportOptions): Promise<ParsedSheet>;
+//#endregion

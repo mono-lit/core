@@ -1,5 +1,8 @@
-import { LitElement } from 'lit';
-declare const MonoTableEmpty_base: import('../../composables/hybird-prop').Constructor<import('./mono-table-empty-core.js').MonoTableEmptyCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableEmptyCoreInterface } from "./mono-table-empty-core.js";
+import { LitElement } from "lit";
+//#region src/components/table/mono-table-empty.d.ts
+declare const MonoTableEmpty_base: Constructor<MonoTableEmptyCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-table-empty` (default build, `@mono-lit/helper/ui/table`).
  *
@@ -19,17 +22,18 @@ declare const MonoTableEmpty_base: import('../../composables/hybird-prop').Const
  * INTO the host and would otherwise overwrite it.
  */
 export declare class MonoTableEmpty extends MonoTableEmpty_base {
-    static styles: import('lit').CSSResult[];
-    private _buckets;
-    private _slotsCaptured;
-    protected createRenderRoot(): HTMLElement;
-    connectedCallback(): void;
-    private _captureSlots;
-    protected updated(changed: Map<string, unknown>): void;
+  static styles: import("lit").CSSResult[];
+  private _buckets;
+  private _slotsCaptured;
+  protected createRenderRoot(): HTMLElement;
+  connectedCallback(): void;
+  private _captureSlots;
+  protected updated(changed: Map<string, unknown>): void;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-table-empty': MonoTableEmpty;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-table-empty': MonoTableEmpty;
+  }
 }
+//#endregion
 export {};

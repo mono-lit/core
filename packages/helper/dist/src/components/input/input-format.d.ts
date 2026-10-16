@@ -1,3 +1,4 @@
+//#region src/components/input/input-format.d.ts
 /**
  * `<mono-input>` value formatting — the pattern dialect, and the caret maths that make it usable
  * while typing.
@@ -34,32 +35,32 @@
 export type InputFormatOn = 'input' | 'blur';
 /** What a format FUNCTION receives. */
 export interface InputFormatCtx {
-    /** The typed text with any formatting removed — the raw value. */
-    value: string;
-    /** The input's `type`, so one function can serve several fields. */
-    type: string;
-    /** The resolved locale, when one was given. */
-    locale?: string;
+  /** The typed text with any formatting removed — the raw value. */
+  value: string;
+  /** The input's `type`, so one function can serve several fields. */
+  type: string;
+  /** The resolved locale, when one was given. */
+  locale?: string;
 }
 /** A pattern string, or a function that returns the finished text. */
 export type InputFormat = string | ((ctx: InputFormatCtx) => string);
 /** A parsed pattern. */
 export type InputFormatDescriptor = {
-    kind: 'number';
-    grouping: boolean;
-    minFraction: number;
-    maxFraction: number;
-    prefix: string;
-    suffix: string;
+  kind: 'number';
+  grouping: boolean;
+  minFraction: number;
+  maxFraction: number;
+  prefix: string;
+  suffix: string;
 } | {
-    kind: 'template';
-    before: string;
-    after: string;
+  kind: 'template';
+  before: string;
+  after: string;
 };
 /** The characters a locale draws a grouped decimal number with. */
 export interface LocaleSeparators {
-    group: string;
-    decimal: string;
+  group: string;
+  decimal: string;
 }
 /**
  * Ask `Intl` which characters this locale uses, rather than assuming `,` and `.`.
@@ -86,7 +87,7 @@ export declare function stripFormat(text: string, descriptor: InputFormatDescrip
  * grouped; the fraction is carried through verbatim, clamped to the pattern's ceiling.
  */
 export declare function applyFormat(raw: string, descriptor: InputFormatDescriptor | null, locale?: string, opts?: {
-    pad?: boolean;
+  pad?: boolean;
 }): string;
 /**
  * Normalise a raw value for the VALUE side.
@@ -113,6 +114,7 @@ export declare function caretAfterFormat(next: string, caretInPrev: number, prev
 export declare function significantFor(descriptor: InputFormatDescriptor | null, locale?: string): (ch: string) => boolean;
 /** Resolve either form of a format prop to its finished text. */
 export declare function resolveFormat(format: InputFormat | undefined, raw: string, ctx: {
-    type: string;
-    locale?: string;
+  type: string;
+  locale?: string;
 }, mode: 'display' | 'value'): string | null;
+//#endregion

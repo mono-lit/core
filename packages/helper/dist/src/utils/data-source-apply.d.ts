@@ -1,3 +1,4 @@
+//#region src/utils/data-source-apply.d.ts
 /**
  * ONE `$apply` request through a devextreme OData store.
  *
@@ -30,13 +31,13 @@
  */
 /** The slice of a devextreme store this module touches. */
 export interface ApplyStore {
-    load(options?: unknown): PromiseLike<unknown> | unknown;
-    /** OData protocol version (`ODataStore` only). */
-    version?(): number;
+  load(options?: unknown): PromiseLike<unknown> | unknown;
+  /** OData protocol version (`ODataStore` only). */
+  version?(): number;
 }
 export interface ApplyLoadOptions {
-    /** Cap the rolled-up rows (`$top`). */
-    top?: number;
+  /** Cap the rolled-up rows (`$top`). */
+  top?: number;
 }
 /** The store's OData version, or `null` for anything that is not an OData store. */
 export declare function odataStoreVersion(store: unknown): number | null;
@@ -80,10 +81,10 @@ export declare function isRolledUp(rows: readonly unknown[], keys: readonly stri
  */
 export declare function isApplyRejected(err: unknown): boolean;
 export interface ApplyGate {
-    /** `true` once the path is off — disabled by option, or rejected by the backend. */
-    readonly skip: boolean;
-    /** Report a failed request; a definite rejection turns the gate off for good. */
-    reject(err: unknown): void;
+  /** `true` once the path is off — disabled by option, or rejected by the backend. */
+  readonly skip: boolean;
+  /** Report a failed request; a definite rejection turns the gate off for good. */
+  reject(err: unknown): void;
 }
 /**
  * Per-controller "is the `$apply` path still worth trying?" switch.
@@ -95,3 +96,4 @@ export interface ApplyGate {
  * the next attempt goes out normally.
  */
 export declare function createApplyGate(enabled: boolean): ApplyGate;
+//#endregion

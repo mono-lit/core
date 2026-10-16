@@ -1,5 +1,8 @@
-import { LitElement } from 'lit';
-declare const MonoTableLoading_base: import('../../composables/hybird-prop').Constructor<import('./mono-table-loading-core.js').MonoTableLoadingCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableLoadingCoreInterface } from "./mono-table-loading-core.js";
+import { LitElement } from "lit";
+//#region src/components/table/mono-table-loading.d.ts
+declare const MonoTableLoading_base: Constructor<MonoTableLoadingCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-table-loading` (default build, `@mono-lit/helper/ui/table`). A
  * drop-in loading overlay — place it inside your `<table>` (or `.mono-table-scroll`)
@@ -39,12 +42,13 @@ declare const MonoTableLoading_base: import('../../composables/hybird-prop').Con
  * </div>
  */
 export declare class MonoTableLoading extends MonoTableLoading_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-table-loading': MonoTableLoading;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-table-loading': MonoTableLoading;
+  }
 }
+//#endregion
 export {};

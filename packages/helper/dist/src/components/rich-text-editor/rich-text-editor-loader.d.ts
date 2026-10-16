@@ -1,3 +1,4 @@
+//#region src/components/rich-text-editor/rich-text-editor-loader.d.ts
 /** The `suneditor` default export (`{ create, init }`), cached; a failure resets so a later attempt retries. */
 export declare function loadSunEditor(): Promise<any>;
 /**
@@ -15,3 +16,4 @@ export declare const SUNEDITOR_LANG_CODES: string[];
  * `undefined` for English / an unknown code (SunEditor then uses its default).
  */
 export declare function loadSunEditorLang(code: string): Promise<any | undefined>;
+//#endregion

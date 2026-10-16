@@ -1,6 +1,8 @@
 /// <reference path="../../../vue.d.ts" />
-export { MonoMenu } from './mono-menu.js';
-export { MonoMenuList } from './mono-menu-list.js';
-export type { MenuDensity, MenuColor, MenuBadgeColor, MenuItem, MenuItemBase, MenuCssClass, MenuChangeEventDetail, MenuChangeEvent, MenuClickEventDetail, MenuClickEvent, MenuToggleGroupEventDetail, MenuToggleGroupEvent, MenuProps, MenuEvents, MonoMenuListType, MenuListProps, } from './menu-types.js';
-export { isItem, isGroup, isDivider, isSubheader, isIconifyClass, findActivePath, findItem, collectDefaultOpenGroups, generateMenuRootClasses, getMenuAlias, validateMenuProps, } from './menu-utils.js';
-export { renderMenuList, renderMenuGroupsOnly, renderMenuItemRow, renderMenuGroup, renderMenuDivider, renderMenuSubheader, renderMenuIcon, renderMenuBadge, renderMenuAppend, type MenuRenderContext, } from './menu-render.js';
+import { isIconifyClass } from "../../composables/icon.js";
+import { MenuBadgeColor, MenuChangeEvent, MenuChangeEventDetail, MenuClickEvent, MenuClickEventDetail, MenuColor, MenuCssClass, MenuDensity, MenuEvents, MenuItem, MenuItemBase, MenuListProps, MenuProps, MenuToggleGroupEvent, MenuToggleGroupEventDetail, MonoMenuListType } from "./menu-types.js";
+import { MenuRenderContext, renderMenuAppend, renderMenuBadge, renderMenuDivider, renderMenuGroup, renderMenuGroupsOnly, renderMenuIcon, renderMenuItemRow, renderMenuList, renderMenuSubheader } from "./menu-render.js";
+import { MonoMenu } from "./mono-menu.js";
+import { MonoMenuList } from "./mono-menu-list.js";
+import { collectDefaultOpenGroups, findActivePath, findItem, generateMenuRootClasses, getMenuAlias, isDivider, isGroup, isItem, isSubheader, validateMenuProps } from "./menu-utils.js";
+export { type MenuBadgeColor, type MenuChangeEvent, type MenuChangeEventDetail, type MenuClickEvent, type MenuClickEventDetail, type MenuColor, type MenuCssClass, type MenuDensity, type MenuEvents, type MenuItem, type MenuItemBase, type MenuListProps, type MenuProps, type MenuRenderContext, type MenuToggleGroupEvent, type MenuToggleGroupEventDetail, MonoMenu, MonoMenuList, type MonoMenuListType, collectDefaultOpenGroups, findActivePath, findItem, generateMenuRootClasses, getMenuAlias, isDivider, isGroup, isIconifyClass, isItem, isSubheader, renderMenuAppend, renderMenuBadge, renderMenuDivider, renderMenuGroup, renderMenuGroupsOnly, renderMenuIcon, renderMenuItemRow, renderMenuList, renderMenuSubheader, validateMenuProps };

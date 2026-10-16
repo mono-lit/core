@@ -1,4 +1,5 @@
-import { t as MonoButton } from "../mono-button-simcTQdW.js";
+import { t as MonoButton } from "../mono-button-CeDB9khW.js";
+
 //#region src/components/button/button-utils.ts
 /**
 * Generate badge CSS classes
@@ -59,5 +60,6 @@ function validateButtonProps(props) {
 	if (props.rounded && !validRounded.includes(props.rounded)) return false;
 	return true;
 }
+
 //#endregion
 export { MonoButton, generateBadgeClasses, processIconContent, validateButtonProps };

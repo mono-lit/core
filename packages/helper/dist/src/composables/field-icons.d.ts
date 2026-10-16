@@ -1,4 +1,5 @@
-import { TemplateResult } from 'lit';
+import { TemplateResult } from "lit";
+//#region src/composables/field-icons.d.ts
 /** Downward caret — the "this opens a panel" affordance. */
 export declare function caretIcon(): TemplateResult;
 /** The ✕ a clear button and a chip's remove button draw, at the caret's weight. */
@@ -13,3 +14,4 @@ export declare function chevronIcon(dir: -1 | 1): TemplateResult;
 export declare function spinnerIcon(): TemplateResult;
 /** ↻ — the retry affordance a field shows after its data source failed. */
 export declare function refreshIcon(): TemplateResult;
+//#endregion

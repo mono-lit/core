@@ -1,4 +1,5 @@
-import { MonoExportOptions } from './types';
+import { MonoExportOptions } from "./types.js";
+//#region src/export/template.d.ts
 /**
  * Render a report template to Markdown (still carrying directive tokens).
  *
@@ -8,3 +9,4 @@ import { MonoExportOptions } from './types';
  * preprocessor injects only where it matters (see `expression.ts`).
  */
 export declare function renderTemplate(options: Pick<MonoExportOptions, 'md' | 'data' | 'helpers' | 'partials' | 'formatting'>): Promise<string>;
+//#endregion

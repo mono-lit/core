@@ -1,5 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-declare const MonoSidebar_base: import('../../composables/hybird-prop').Constructor<import('./sidebar-core.js').MonoSidebarCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoSidebarCoreInterface } from "./sidebar-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/sidebar/mono-sidebar.d.ts
+declare const MonoSidebar_base: Constructor<MonoSidebarCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-sidebar` (default build, `@mono-lit/helper/ui/sidebar`).
  *
@@ -13,22 +16,23 @@ declare const MonoSidebar_base: import('../../composables/hybird-prop').Construc
  * Both register `mono-sidebar`, so a document loads only one.
  */
 export declare class MonoSidebar extends MonoSidebar_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
-    private _slotsCaptured;
-    private _slotHeader;
-    private _slotBody;
-    private _slotFooter;
-    connectedCallback(): void;
-    protected updated(changed: Map<string, unknown>): void;
-    protected renderIcon(_name: 'chevron'): TemplateResult;
-    private _captureSlots;
-    private _placeSlots;
-    private _placeSlot;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
+  private _slotsCaptured;
+  private _slotHeader;
+  private _slotBody;
+  private _slotFooter;
+  connectedCallback(): void;
+  protected updated(changed: Map<string, unknown>): void;
+  protected renderIcon(_name: 'chevron'): TemplateResult;
+  private _captureSlots;
+  private _placeSlots;
+  private _placeSlot;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-sidebar': MonoSidebar;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-sidebar': MonoSidebar;
+  }
 }
+//#endregion
 export {};

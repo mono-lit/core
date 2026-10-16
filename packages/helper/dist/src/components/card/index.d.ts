@@ -1,4 +1,5 @@
 /// <reference path="../../../vue.d.ts" />
-export { MonoCard } from './mono-card.js';
-export type { CardSize, CardRounded, CardVariant, CardColor, CardCssClass, CardMediaPosition, CardProps, CardEvents } from './card-types.js';
-export { validateCardProps, generateCardAttributes } from './card-utils.js';
+import { CardColor, CardCssClass, CardEvents, CardMediaPosition, CardProps, CardRounded, CardSize, CardVariant } from "./card-types.js";
+import { generateCardAttributes, validateCardProps } from "./card-utils.js";
+import { MonoCard } from "./mono-card.js";
+export { type CardColor, type CardCssClass, type CardEvents, type CardMediaPosition, type CardProps, type CardRounded, type CardSize, type CardVariant, MonoCard, generateCardAttributes, validateCardProps };

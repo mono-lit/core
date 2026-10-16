@@ -1,5 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-declare const MonoTableDetailShadow_base: import('../../composables/hybird-prop').Constructor<import('./mono-table-detail-core.js').MonoTableDetailCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableDetailCoreInterface } from "./mono-table-detail-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/table/mono-table-detail.shadow.d.ts
+declare const MonoTableDetailShadow_base: Constructor<MonoTableDetailCoreInterface> & typeof LitElement;
 /**
  * Shadow-DOM `mono-shadow-table-detail` (SSR build, `@mono-lit/helper/ui/shadow/table`).
  *
@@ -21,11 +24,12 @@ declare const MonoTableDetailShadow_base: import('../../composables/hybird-prop'
  * Shares all behaviour via `MonoTableDetailCore`.
  */
 export declare class MonoTableDetailShadow extends MonoTableDetailShadow_base {
-    static styles: import('lit').CSSResult[];
-    connectedCallback(): void;
-    protected updated(changed: Map<string, unknown>): void;
-    /** Only when a CUSTOM class is in play — the defaults are inlined SVG. */
-    private _maybeAdoptIcons;
-    protected _renderIcon(): TemplateResult;
+  static styles: import("lit").CSSResult[];
+  connectedCallback(): void;
+  protected updated(changed: Map<string, unknown>): void;
+  /** Only when a CUSTOM class is in play — the defaults are inlined SVG. */
+  private _maybeAdoptIcons;
+  protected _renderIcon(): TemplateResult;
 }
+//#endregion
 export {};

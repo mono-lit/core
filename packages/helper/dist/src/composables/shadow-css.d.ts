@@ -1,19 +1,20 @@
-import { LitElement } from 'lit';
+import { LitElement } from "lit";
+//#region src/composables/shadow-css.d.ts
 type Constructor<T = object> = new (...args: any[]) => T;
 export interface ToShadowCssOptions {
-    /**
-     * Element-selector tag to rewrite to `:host` (e.g. `'mono-nav'`). Handles
-     * `tag { … }`, `tag[attr] { … }` and `tag,` — but NOT `.tag` or `tag-suffix`.
-     */
-    host?: string;
-    /**
-     * Prepend `:host { display: <value> }`. Use when the component has no element
-     * selector to rewrite (its state classes live on an inner root) but the host
-     * still needs a display value (e.g. dropdown → `'inline-block'`).
-     */
-    hostDisplay?: string;
-    /** Shadow-only CSS appended verbatim (e.g. `[data-empty] { display: none }`). */
-    append?: string;
+  /**
+   * Element-selector tag to rewrite to `:host` (e.g. `'mono-nav'`). Handles
+   * `tag { … }`, `tag[attr] { … }` and `tag,` — but NOT `.tag` or `tag-suffix`.
+   */
+  host?: string;
+  /**
+   * Prepend `:host { display: <value> }`. Use when the component has no element
+   * selector to rewrite (its state classes live on an inner root) but the host
+   * still needs a display value (e.g. dropdown → `'inline-block'`).
+   */
+  hostDisplay?: string;
+  /** Shadow-only CSS appended verbatim (e.g. `[data-empty] { display: none }`). */
+  append?: string;
 }
 export declare function toShadowCss(css: string, opts?: ToShadowCssOptions): string;
 /**
@@ -39,4 +40,5 @@ export declare function adoptUtilityStyles(root: ShadowRoot | null | undefined):
  * snap in on hydration). Apply as `extends withShadowUtilityStyles(XCore(LitElement))`.
  */
 export declare function withShadowUtilityStyles<T extends Constructor<LitElement>>(superClass: T): T;
+//#endregion
 export {};

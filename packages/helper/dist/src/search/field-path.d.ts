@@ -1,3 +1,4 @@
+//#region src/search/field-path.d.ts
 /**
  * Path field expressions.
  *
@@ -20,18 +21,18 @@
  * to plain `row[field]` when it returns false, so plain fields are unchanged.
  */
 export type FieldSegment = {
-    kind: 'key';
-    name: string;
+  kind: 'key';
+  name: string;
 } | {
-    kind: 'index';
-    index: number;
+  kind: 'index';
+  index: number;
 } | {
-    kind: 'wildcard';
+  kind: 'wildcard';
 };
 export interface ParsedFieldPath {
-    segments: FieldSegment[];
-    hasWildcard: boolean;
-    raw: string;
+  segments: FieldSegment[];
+  hasWildcard: boolean;
+  raw: string;
 }
 /** Whether `field` is a path expression (contains `.` or `[`) vs a plain key. */
 export declare function isPath(field: string): boolean;
@@ -105,3 +106,4 @@ export declare function odataComparison(op: string): string | null;
  * index segment mixed into a remote path); the caller warns + skips.
  */
 export declare function toODataClause(field: string, op: string, value: unknown): ODataClause | null;
+//#endregion

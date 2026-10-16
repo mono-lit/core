@@ -1,3 +1,4 @@
+//#region src/export/sentinel.d.ts
 /**
  * Sentinel directives — how presentation survives the trip through Markdown.
  *
@@ -22,20 +23,20 @@
  */
 /** Apply a named style to the cell (or block) the token sits in. */
 export interface StyleDirective {
-    k: 'style';
-    /** Named style, resolved against the merged style map. */
-    v: string;
+  k: 'style';
+  /** Named style, resolved against the merged style map. */
+  v: string;
 }
 /** Apply a named style to the entire row the token sits in. */
 export interface RowStyleDirective {
-    k: 'rowStyle';
-    v: string;
+  k: 'rowStyle';
+  v: string;
 }
 /** Merge the token's cell across `cols` columns / `rows` rows. */
 export interface MergeDirective {
-    k: 'merge';
-    cols?: number;
-    rows?: number;
+  k: 'merge';
+  cols?: number;
+  rows?: number;
 }
 /**
  * Write an Excel formula into the token's cell. Placeholders are resolved at
@@ -43,15 +44,15 @@ export interface MergeDirective {
  * `resolveFormula` in `excel/nodes.ts`.
  */
 export interface FormulaDirective {
-    k: 'formula';
-    v: string;
+  k: 'formula';
+  v: string;
 }
 /** Anchor an image at the token's cell. `v` is a data URL / base64 / http URL. */
 export interface ImageDirective {
-    k: 'image';
-    v: string;
-    width?: number;
-    height?: number;
+  k: 'image';
+  v: string;
+  width?: number;
+  height?: number;
 }
 /**
  * Carry the *raw* value behind formatted display text, so Excel gets a real
@@ -59,20 +60,20 @@ export interface ImageDirective {
  * string. `f` is an Excel number format.
  */
 export interface ValueDirective {
-    k: 'val';
-    /** Raw numeric value. */
-    n?: number;
-    /** Raw date as an ISO string (JSON has no Date). */
-    d?: string;
-    /** Excel number format, e.g. `#,##0.00` or `yyyy-mm-dd`. */
-    f?: string;
-    /**
-     * The display text this value was emitted with. The renderer swaps in the raw
-     * value only when it matches the cell's *entire* text — otherwise a sentence
-     * like "Rate {{percent 0.155}} this quarter" would collapse to the bare
-     * number `0.155`, losing the prose around it.
-     */
-    t?: string;
+  k: 'val';
+  /** Raw numeric value. */
+  n?: number;
+  /** Raw date as an ISO string (JSON has no Date). */
+  d?: string;
+  /** Excel number format, e.g. `#,##0.00` or `yyyy-mm-dd`. */
+  f?: string;
+  /**
+   * The display text this value was emitted with. The renderer swaps in the raw
+   * value only when it matches the cell's *entire* text — otherwise a sentence
+   * like "Rate {{percent 0.155}} this quarter" would collapse to the bare
+   * number `0.155`, losing the prose around it.
+   */
+  t?: string;
 }
 export type MonoExportDirective = StyleDirective | RowStyleDirective | MergeDirective | FormulaDirective | ImageDirective | ValueDirective;
 /** Wrap a directive in its sentinel token, ready to be emitted by a helper. */
@@ -85,8 +86,8 @@ export declare function hasDirectives(text: string): boolean;
  * never take down a whole report.
  */
 export declare function extractDirectives(text: string): {
-    text: string;
-    directives: MonoExportDirective[];
+  text: string;
+  directives: MonoExportDirective[];
 };
 /** Remove every directive token, leaving only the display text (Markdown output). */
 export declare function stripDirectives(text: string): string;
@@ -95,3 +96,4 @@ export declare function stripDirectives(text: string): string;
  * tokens are skipped — they are base64 and must arrive byte-identical.
  */
 export declare function escapeCellText(text: string): string;
+//#endregion

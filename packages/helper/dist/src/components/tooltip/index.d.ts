@@ -1,6 +1,7 @@
 /// <reference path="../../../vue.d.ts" />
-export { controlMonoTooltip, monoTooltip } from './control-tooltip';
-export { createMonoTooltip, resetMonoTooltip, destroyAllMonoTooltips, readTooltipAttributes, TOOLTIP_ATTRIBUTE_SELECTOR, } from './tooltip-declarative';
-export { getMonoTooltipGlobal, resolveTooltipOptions, DEFAULT_TOOLTIP_OPTIONS } from './tooltip-config';
-export { loadFloatingUi } from './tooltip-loader';
-export type { MonoTooltipOptions, MonoTooltipGlobalOptions, MonoTooltipGlobal, MonoTooltipController, MonoTooltipTarget, MonoTooltipTargetValue, MonoTooltipContent, MonoTooltipPlacement, MonoTooltipTrigger, MonoTooltipVariant, MonoTooltipColor, MonoTooltipSize, } from './tooltip-types';
+import { MonoTooltipColor, MonoTooltipContent, MonoTooltipController, MonoTooltipGlobal, MonoTooltipGlobalOptions, MonoTooltipOptions, MonoTooltipPlacement, MonoTooltipSize, MonoTooltipTarget, MonoTooltipTargetValue, MonoTooltipTrigger, MonoTooltipVariant } from "./tooltip-types.js";
+import { controlMonoTooltip, monoTooltip } from "./control-tooltip.js";
+import { TOOLTIP_ATTRIBUTE_SELECTOR, createMonoTooltip, destroyAllMonoTooltips, readTooltipAttributes, resetMonoTooltip } from "./tooltip-declarative.js";
+import { DEFAULT_TOOLTIP_OPTIONS, getMonoTooltipGlobal, resolveTooltipOptions } from "./tooltip-config.js";
+import { loadFloatingUi } from "./tooltip-loader.js";
+export { DEFAULT_TOOLTIP_OPTIONS, type MonoTooltipColor, type MonoTooltipContent, type MonoTooltipController, type MonoTooltipGlobal, type MonoTooltipGlobalOptions, type MonoTooltipOptions, type MonoTooltipPlacement, type MonoTooltipSize, type MonoTooltipTarget, type MonoTooltipTargetValue, type MonoTooltipTrigger, type MonoTooltipVariant, TOOLTIP_ATTRIBUTE_SELECTOR, controlMonoTooltip, createMonoTooltip, destroyAllMonoTooltips, getMonoTooltipGlobal, loadFloatingUi, monoTooltip, readTooltipAttributes, resetMonoTooltip, resolveTooltipOptions };

@@ -1,4 +1,5 @@
-import { TemplateResult } from 'lit';
+import { TemplateResult } from "lit";
+//#region src/composables/icon.d.ts
 /**
  * Detect whether an icon string is an iconify utility class — e.g.
  * `i-mdi-close`, `i-tabler-upload`. UnoCSS's preset-icons resolves these to a
@@ -15,3 +16,4 @@ export declare function isIconifyClass(icon: string | undefined | null): boolean
  * glyph is not bundled (see `scripts/mdi-glyphs.mjs`), so a caller can fall back.
  */
 export declare function mdiGlyph(icon: string | undefined | null): TemplateResult | undefined;
+//#endregion

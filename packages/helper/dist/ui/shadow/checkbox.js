@@ -1,10 +1,11 @@
-import { a as __decorate, c as defineHybridPropAlias, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration } from "../../hydration-flush-RB5Tz5nl.js";
-import { t as dispatchMonoEvent } from "../../mono-event-Bi1qP9uN.js";
-import { t as MonoFormControlCore } from "../../form-control-core-B8d7k6vk.js";
-import { t as checkbox_default } from "../../checkbox-Cqpie9Ap.js";
+import { a as __decorate, c as defineHybridPropAlias, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration } from "../../hydration-flush-DHrl4_KK.js";
+import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
+import { t as MonoFormControlCore } from "../../form-control-core-CIdMLXMo.js";
+import { t as checkbox_css_raw_default } from "../../checkbox.css_raw-AYtSbUtY.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { property, state } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
+
 //#region src/components/checkbox/checkbox-core.ts
 /**
 * `MonoCheckboxCore` — all render-mode-agnostic logic for `mono-checkbox`:
@@ -18,7 +19,7 @@ import { ifDefined } from "lit/directives/if-defined.js";
 *
 * SSR-safe: no `document`/`window` access; `focus`/`blur` query `this.renderRoot`.
 */
-var MonoCheckboxCore = (superClass) => {
+const MonoCheckboxCore = (superClass) => {
 	class MonoCheckboxCoreClass extends MonoFormControlCore(superClass) {
 		constructor(...args) {
 			super(...args);
@@ -290,15 +291,16 @@ var MonoCheckboxCore = (superClass) => {
 	__decorate([state()], MonoCheckboxCoreClass.prototype, "_hasDescriptionSlotState", void 0);
 	return MonoCheckboxCoreClass;
 };
+
 //#endregion
 //#region src/components/checkbox/mono-checkbox.shadow.ts
-var SHADOW_EXTRA_CSS = "";
-var MonoCheckboxShadow = class MonoCheckboxShadow extends withShadowUtilityStyles(MonoCheckboxCore(LitElement)) {
+const SHADOW_EXTRA_CSS = "";
+let MonoCheckboxShadow = class MonoCheckboxShadow extends withShadowUtilityStyles(MonoCheckboxCore(LitElement)) {
 	static {
 		this.disableWarning?.("change-in-update");
 	}
 	static {
-		this.styles = [unsafeCSS(toShadowCss(checkbox_default, {
+		this.styles = [unsafeCSS(toShadowCss(checkbox_css_raw_default, {
 			host: "mono-checkbox",
 			hostDisplay: "inline-block",
 			append: SHADOW_EXTRA_CSS
@@ -412,6 +414,7 @@ var MonoCheckboxShadow = class MonoCheckboxShadow extends withShadowUtilityStyle
 	}
 };
 MonoCheckboxShadow = __decorate([customElement("mono-shadow-checkbox")], MonoCheckboxShadow);
+
 //#endregion
 //#region src/components/checkbox/checkbox-utils.ts
 /**
@@ -453,5 +456,6 @@ function generateCheckboxAttributes(disabled, checked, indeterminate, label) {
 		"aria-label": label || void 0
 	};
 }
+
 //#endregion
 export { MonoCheckboxCore, MonoCheckboxShadow, generateCheckboxAttributes, validateCheckboxProps };

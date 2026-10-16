@@ -1,38 +1,39 @@
-import { LitElement, TemplateResult } from 'lit';
-import { MonoTableControllerCoreInterface } from './table-controller-core.js';
-import { MonoErrorBehaviour, MonoTableError } from './mono-data-grid.js';
-import { Constructor } from '../../composables/hybird-prop';
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableControllerCoreInterface } from "./table-controller-core.js";
+import { MonoErrorBehaviour, MonoTableError } from "./mono-data-grid.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/table/mono-table-error-core.d.ts
 /** `detail` of the `close` event `<mono-table-error>` emits when its × is pressed. */
 export interface TableErrorCloseEventDetail {
-    /** The text that was showing. */
-    message: string;
-    /** The controller error it stood for, if any. */
-    error: MonoTableError | null;
+  /** The text that was showing. */
+  message: string;
+  /** The controller error it stood for, if any. */
+  error: MonoTableError | null;
 }
 /** `detail` of the `reload` event `<mono-table-error>` emits when its ↻ is pressed. */
 export interface TableErrorReloadEventDetail {
-    error: MonoTableError | null;
+  error: MonoTableError | null;
 }
 export type TableErrorCloseEvent = CustomEvent<TableErrorCloseEventDetail>;
 export type TableErrorReloadEvent = CustomEvent<TableErrorReloadEventDetail>;
 /** Events emitted by `<mono-table-error>` (feeds the generated Vue types). */
 export interface TableErrorEvents {
-    close: TableErrorCloseEvent;
-    reload: TableErrorReloadEvent;
-    'mno-close': TableErrorCloseEvent;
-    mnoClose: TableErrorCloseEvent;
-    'mno-reload': TableErrorReloadEvent;
-    mnoReload: TableErrorReloadEvent;
+  close: TableErrorCloseEvent;
+  reload: TableErrorReloadEvent;
+  'mno-close': TableErrorCloseEvent;
+  mnoClose: TableErrorCloseEvent;
+  'mno-reload': TableErrorReloadEvent;
+  mnoReload: TableErrorReloadEvent;
 }
 /** Public surface added by the error-bar core mixin. */
 export declare class MonoTableErrorCoreInterface extends MonoTableControllerCoreInterface {
-    message: string;
-    dismissible: boolean;
-    closeLabel: string;
-    behaviour: MonoErrorBehaviour;
-    reload: boolean;
-    reloadLabel: string;
-    protected renderIcon(name: 'close' | 'refresh'): TemplateResult;
+  message: string;
+  dismissible: boolean;
+  closeLabel: string;
+  behaviour: MonoErrorBehaviour;
+  reload: boolean;
+  reloadLabel: string;
+  protected renderIcon(name: 'close' | 'refresh'): TemplateResult;
 }
 /**
  * `MonoTableErrorCore` — render-mode-agnostic logic for `mono-table-error`, the
@@ -82,3 +83,4 @@ export declare class MonoTableErrorCoreInterface extends MonoTableControllerCore
  * SSR-safe: all DOM work is guarded behind `isServer`.
  */
 export declare const MonoTableErrorCore: <T extends Constructor<LitElement>>(superClass: T) => Constructor<MonoTableErrorCoreInterface> & T;
+//#endregion

@@ -3,7 +3,7 @@ import path from "node:path";
 import { defineCommand, runMain } from "citty";
 
 //#region pkg/cli/prepare.ts
-runMain(defineCommand({
+const main = defineCommand({
 	meta: {
 		name: "prepare",
 		description: "Generate .mono/tsconfig.json from the mono alias map and wire it into the root tsconfig (via extends)."
@@ -22,6 +22,7 @@ runMain(defineCommand({
 		if (result.removedKeys.length) console.log(`[mono] removed ${result.removedKeys.length} inline alias path(s) from tsconfig.json`);
 		if (result.wiredApps.length) console.log(`[mono] wired ${result.wiredApps.length} cloned app tsconfig(s) -> ${monoRel}: ${result.wiredApps.join(", ")}`);
 	}
-}));
+});
+runMain(main);
 
 //#endregion

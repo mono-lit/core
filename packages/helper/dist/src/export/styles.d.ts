@@ -1,4 +1,5 @@
-import { MonoExportStyle, MonoExportStyles } from './types';
+import { MonoExportStyle, MonoExportStyles } from "./types.js";
+//#region src/export/styles.d.ts
 /**
  * Built-in styles. Consumers override individual keys via `options.styles`
  * without having to redefine a whole style.
@@ -15,19 +16,20 @@ export declare function combineStyles(...styles: Array<MonoExportStyle | undefin
 export declare function toArgb(color: string | undefined): string | undefined;
 /** One ExcelJS border edge. */
 interface ExcelBorderEdge {
-    style: 'thin';
-    color: {
-        argb: string;
-    };
+  style: 'thin';
+  color: {
+    argb: string;
+  };
 }
 /** The subset of ExcelJS cell style options this engine produces. */
 export interface ExcelCellStyle {
-    font?: Record<string, unknown>;
-    fill?: Record<string, unknown>;
-    alignment?: Record<string, unknown>;
-    border?: Record<string, ExcelBorderEdge>;
-    numFmt?: string;
+  font?: Record<string, unknown>;
+  fill?: Record<string, unknown>;
+  alignment?: Record<string, unknown>;
+  border?: Record<string, ExcelBorderEdge>;
+  numFmt?: string;
 }
 /** Translate a semantic style into ExcelJS cell options. */
 export declare function toExcelStyle(style: MonoExportStyle): ExcelCellStyle;
+//#endregion
 export {};

@@ -1,38 +1,39 @@
-import { LitElement, nothing, TemplateResult } from 'lit';
-import { SwitchSize, SwitchColor, SwitchCssClass } from './switch-types.js';
-import { Constructor } from '../../composables/hybird-prop';
+import { Constructor } from "../../composables/hybird-prop.js";
+import { SwitchColor, SwitchCssClass, SwitchSize } from "./switch-types.js";
+import { LitElement, TemplateResult, nothing } from "lit";
+//#region src/components/switch/switch-core.d.ts
 /** Public + shared-protected surface added by the core mixin. */
 export declare class MonoSwitchCoreInterface {
-    size: SwitchSize;
-    color: SwitchColor;
-    modelValue: boolean;
-    checked: boolean;
-    disabled: boolean;
-    loading: boolean;
-    label: string;
-    /** Secondary line under the label. */
-    sublabel: string;
-    /** The same as `sublabel`, kept for existing code. */
-    description: string;
-    value: string;
-    name: string;
-    ariaLabelText?: string;
-    cssClass: SwitchCssClass;
-    cssClassName: string;
-    focus(): void;
-    blur(): void;
-    protected _hasLabelSlotState: boolean;
-    protected _hasDescriptionSlotState: boolean;
-    protected _toBoolean(value: unknown): boolean;
-    protected _setCssClass(value: unknown): void;
-    protected _cls(base: string, key: keyof SwitchCssClass): string;
-    protected get _wrapperClasses(): string;
-    protected get _trackClasses(): string;
-    protected get _thumbClasses(): string;
-    protected _hasLabelContent(): boolean;
-    protected _hasDescriptionContent(): boolean;
-    protected _handleChange(event: Event): void;
-    protected _renderLabelBlock(): TemplateResult | typeof nothing;
+  size: SwitchSize;
+  color: SwitchColor;
+  modelValue: boolean;
+  checked: boolean;
+  disabled: boolean;
+  loading: boolean;
+  label: string;
+  /** Secondary line under the label. */
+  sublabel: string;
+  /** The same as `sublabel`, kept for existing code. */
+  description: string;
+  value: string;
+  name: string;
+  ariaLabelText?: string;
+  cssClass: SwitchCssClass;
+  cssClassName: string;
+  focus(): void;
+  blur(): void;
+  protected _hasLabelSlotState: boolean;
+  protected _hasDescriptionSlotState: boolean;
+  protected _toBoolean(value: unknown): boolean;
+  protected _setCssClass(value: unknown): void;
+  protected _cls(base: string, key: keyof SwitchCssClass): string;
+  protected get _wrapperClasses(): string;
+  protected get _trackClasses(): string;
+  protected get _thumbClasses(): string;
+  protected _hasLabelContent(): boolean;
+  protected _hasDescriptionContent(): boolean;
+  protected _handleChange(event: Event): void;
+  protected _renderLabelBlock(): TemplateResult | typeof nothing;
 }
 /**
  * `MonoSwitchCore` — all render-mode-agnostic logic for `mono-switch`: reactive
@@ -47,3 +48,4 @@ export declare class MonoSwitchCoreInterface {
  * `this.renderRoot`.
  */
 export declare const MonoSwitchCore: <T extends Constructor<LitElement>>(superClass: T) => Constructor<MonoSwitchCoreInterface> & T;
+//#endregion

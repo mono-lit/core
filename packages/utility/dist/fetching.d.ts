@@ -1,9 +1,8 @@
-import { a as monoMockDb, n as MonoMockRequest, o as resetMonoMockDb, r as MonoMockResponse, t as MonoMockDb } from "./index-C2hZeNkq.js";
-import { B as NormalFetchOptions, H as OdataFetchTypes, U as TanstackFetchOptions, Y as UseOdataStaticOpts, _ as getPrefetchBridge, a as TryCatchDatasourceParams, d as promiseWrapper, g as MonoPrefetchRequest, h as MonoPrefetchBridge, i as OdataFetchUniqueTypes, n as FetchOverrides, o as createFetcher, r as LoadChunkStoreArgs } from "./index-D70EYjBS.js";
+import { a as monoMockDb, n as MonoMockRequest, o as resetMonoMockDb, r as MonoMockResponse, t as MonoMockDb } from "./index-BAy6tbOG.js";
+import { B as NormalFetchOptions, H as OdataFetchTypes, U as TanstackFetchOptions, Y as UseOdataStaticOpts, _ as getPrefetchBridge, a as TryCatchDatasourceParams, d as promiseWrapper, g as MonoPrefetchRequest, h as MonoPrefetchBridge, i as OdataFetchUniqueTypes, n as FetchOverrides, o as createFetcher, r as LoadChunkStoreArgs } from "./index-DYlzhHq7.js";
 import DataSource from "devextreme/data/data_source";
 import CustomStore from "devextreme/data/custom_store";
 import ODataStore from "devextreme/data/odata/store";
-
 //#region pkg/wrapper-fetching.d.ts
 type FetchError = {
   message: string;
@@ -52,7 +51,7 @@ type MonoNormalFetchParams = NormalFetchOptions & {
   tanstack?: TanstackFetchOptions;
 };
 /** Options for `monoFetch(url, { tanstack })` / `monoOdataFetch({ tanstack })`. */
-type MonoTanstackFetchOptions = TanstackFetchOptions;
+export type MonoTanstackFetchOptions = TanstackFetchOptions;
 type MonoCreateFetcherParams = Omit<OdataFetchTypes, 'source'> & {
   source?: OdataFetchTypes['source'];
 } & {
@@ -194,33 +193,13 @@ declare const createStaticDataSource: <T extends Record<string, any>>(opt: UseOd
     response: any;
   };
 }>;
-declare const useFetchOdataUnique: <T = any>({
-  url,
-  options,
-  type,
-  params,
-  notif,
-  headers,
-  selfProxy,
-  method,
-  force,
-  allowZero,
-  cache,
-  override,
-  baseUrl,
-  configBaseUrl,
-  source,
-  token,
-  unique,
-  payload,
-  ...rest
-}: MonoOdataUniqueParams<T>) => FetchResult<T>;
+declare const useFetchOdataUnique: <T = any>({ url, options, type, params, notif, headers, selfProxy, method, force, allowZero, cache, override, baseUrl, configBaseUrl, source, token, unique, payload, ...rest }: MonoOdataUniqueParams<T>) => FetchResult<T>;
 declare function useMyFetch<T = any>(url: string, opt: MonoNormalFetchParams): Promise<any>;
 declare const loadChuckStores: <T>(opt: LoadChunkStoreArgs<T>) => Promise<T[]>;
 /** Marks a `definePrefetch` descriptor (@mono-lit/nuxt-pre-fetch's protocol; no import needed). */
 declare const PREFETCH_DESCRIPTOR: unique symbol;
 /** A call described for `definePrefetch` (`monoFetch.prefetch`, …): emits the request(s) it would send. */
-interface MonoPrefetchDescriptor {
+export interface MonoPrefetchDescriptor {
   readonly [PREFETCH_DESCRIPTOR]: true;
   collect: (context: unknown, emit: (request: MonoPrefetchRequest) => void) => Promise<void>;
 }
@@ -240,26 +219,7 @@ declare const monoFetch: typeof useMyFetch & {
   prefetch: typeof prefetchMonoFetch;
 };
 /** `monoFetchOdata` / `monoOdataFetch` with `.prefetch(params)`. */
-declare const monoFetchOdata: (<T = any>({
-  url,
-  options,
-  type,
-  params,
-  notif,
-  headers,
-  selfProxy,
-  method,
-  force,
-  allowZero,
-  cache,
-  override,
-  baseUrl,
-  configBaseUrl,
-  source,
-  token,
-  payload,
-  ...rest
-}: MonoOdataFetchParams) => FetchResult<T>) & {
+declare const monoFetchOdata: (<T = any>({ url, options, type, params, notif, headers, selfProxy, method, force, allowZero, cache, override, baseUrl, configBaseUrl, source, token, payload, ...rest }: MonoOdataFetchParams) => FetchResult<T>) & {
   prefetch: typeof prefetchMonoFetchOdata;
 };
 /**
@@ -281,4 +241,4 @@ declare function monoPrefetchContext(context: {
   cookie: (name: string, split?: boolean) => string | undefined;
 };
 //#endregion
-export { type MonoMockDb, type MonoMockRequest, type MonoMockResponse, type MonoPrefetchBridge, MonoPrefetchDescriptor, type MonoPrefetchRequest, MonoTanstackFetchOptions, createFetcher, configureFetching as monoConfigureFetching, useCreateFetcher as monoCreateFetcher, monoFetch, monoFetchOdata, monoFetchOdata as monoOdataFetch, useFetchOdataUnique as monoFetchOdataUnique, useFetchOdataUnique as monoOdataFetchUnique, getFetchingRuntime as monoFetchingRuntime, loadChuckStores as monoLoadChuckStores, monoMockDb, getODataBaseUrl as monoOdataBaseUrl, getODataSource as monoOdataSource, getPrefetchBridge as monoPrefetchBridge, monoPrefetchContext, getRequestToken as monoRequestToken, resetFetchingConfig as monoResetFetchingConfig, getRestBaseUrl as monoRestBaseUrl, monoSetPrefetchBridge, createStaticDataSource as monoStaticDataSource, useTryCatchDatasource as monoTryCatchDatasource, promiseWrapper, resetMonoMockDb };
+export { type MonoMockDb, type MonoMockRequest, type MonoMockResponse, type MonoPrefetchBridge, type MonoPrefetchRequest, createFetcher, configureFetching as monoConfigureFetching, useCreateFetcher as monoCreateFetcher, monoFetch, monoFetchOdata, monoFetchOdata as monoOdataFetch, useFetchOdataUnique as monoFetchOdataUnique, useFetchOdataUnique as monoOdataFetchUnique, getFetchingRuntime as monoFetchingRuntime, loadChuckStores as monoLoadChuckStores, monoMockDb, getODataBaseUrl as monoOdataBaseUrl, getODataSource as monoOdataSource, getPrefetchBridge as monoPrefetchBridge, monoPrefetchContext, getRequestToken as monoRequestToken, resetFetchingConfig as monoResetFetchingConfig, getRestBaseUrl as monoRestBaseUrl, monoSetPrefetchBridge, createStaticDataSource as monoStaticDataSource, useTryCatchDatasource as monoTryCatchDatasource, promiseWrapper, resetMonoMockDb };

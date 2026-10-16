@@ -1,34 +1,35 @@
-import { LitElement } from 'lit';
-import { BreadcrumbItem, BreadcrumbBadgeColor, BreadcrumbVariant, BreadcrumbSize, BreadcrumbColor } from './breadcrumb-types.js';
-import { Constructor } from '../../composables/hybird-prop';
-import { BreadcrumbRenderContext } from './breadcrumb-render.js';
+import { Constructor } from "../../composables/hybird-prop.js";
+import { BreadcrumbBadgeColor, BreadcrumbColor, BreadcrumbItem, BreadcrumbSize, BreadcrumbVariant } from "./breadcrumb-types.js";
+import { BreadcrumbRenderContext } from "./breadcrumb-render.js";
+import { LitElement } from "lit";
+//#region src/components/breadcrumb/breadcrumb-list-core.d.ts
 /** Public + shared-protected surface added by the list core mixin. */
 export declare class MonoBreadcrumbListCoreInterface {
-    items: BreadcrumbItem[];
-    item?: BreadcrumbItem;
-    title: string;
-    href: string;
-    icon: string;
-    badge?: string | number;
-    badgeColor?: BreadcrumbBadgeColor;
-    current: boolean;
-    disabled: boolean;
-    variant: BreadcrumbVariant;
-    size: BreadcrumbSize;
-    color: BreadcrumbColor;
-    separator: string;
-    truncate: boolean;
-    getBreadcrumbItems(): BreadcrumbItem[];
-    protected readonly _autoId: string;
-    protected _hasDirectItemProps(): boolean;
-    protected _normalizeItem(item: Partial<BreadcrumbItem>): BreadcrumbItem;
-    protected _buildDirectItem(): BreadcrumbItem;
-    protected _getEffectiveItems(): BreadcrumbItem[];
-    protected _itemsForRender(): BreadcrumbItem[];
-    protected _useIconSlots(): boolean;
-    protected _standaloneContext(): BreadcrumbRenderContext;
-    protected _buildContext(): BreadcrumbRenderContext;
-    protected _standaloneRootClasses(): string;
+  items: BreadcrumbItem[];
+  item?: BreadcrumbItem;
+  title: string;
+  href: string;
+  icon: string;
+  badge?: string | number;
+  badgeColor?: BreadcrumbBadgeColor;
+  current: boolean;
+  disabled: boolean;
+  variant: BreadcrumbVariant;
+  size: BreadcrumbSize;
+  color: BreadcrumbColor;
+  separator: string;
+  truncate: boolean;
+  getBreadcrumbItems(): BreadcrumbItem[];
+  protected readonly _autoId: string;
+  protected _hasDirectItemProps(): boolean;
+  protected _normalizeItem(item: Partial<BreadcrumbItem>): BreadcrumbItem;
+  protected _buildDirectItem(): BreadcrumbItem;
+  protected _getEffectiveItems(): BreadcrumbItem[];
+  protected _itemsForRender(): BreadcrumbItem[];
+  protected _useIconSlots(): boolean;
+  protected _standaloneContext(): BreadcrumbRenderContext;
+  protected _buildContext(): BreadcrumbRenderContext;
+  protected _standaloneRootClasses(): string;
 }
 /**
  * `MonoBreadcrumbListCore` — render-mode-agnostic logic for the STANDALONE
@@ -47,3 +48,4 @@ export declare class MonoBreadcrumbListCoreInterface {
  * SSR-safe: no `document`/`window` access.
  */
 export declare const MonoBreadcrumbListCore: <T extends Constructor<LitElement>>(superClass: T) => Constructor<MonoBreadcrumbListCoreInterface> & T;
+//#endregion

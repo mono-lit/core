@@ -319,9 +319,7 @@ const monoNuxtModule = defineNuxtModule({
 				case "middleware":
 					registerRemoteMiddleware(dirs, entry.exclude ?? [], ownSrcDir, name);
 					break;
-				case "plugins":
-					registerRemotePlugins(dirs, entry.exclude ?? [], ownSrcDir, name);
-					break;
+				case "plugins": registerRemotePlugins(dirs, entry.exclude ?? [], ownSrcDir, name);
 			}
 		}
 		extendViteConfig((config) => {
@@ -454,7 +452,7 @@ function registerPreFetchDirs(nuxt, roots) {
 	if (!dirs.length) return;
 	const options = nuxt.options.nuxtPreFetch ??= {};
 	const own = options.prefetchDir ?? "prefetch";
-	options.prefetchDir = [...new Set([...Array.isArray(own) ? own : [own], ...dirs])];
+	options.prefetchDir = [.../* @__PURE__ */ new Set([...Array.isArray(own) ? own : [own], ...dirs])];
 }
 /** Hosts of every `fetching.api` entry and the auth cookie names, for learned requests. */
 function registerPreFetchLearning(nuxt, monoConfig) {
@@ -478,7 +476,7 @@ function registerPreFetchLearning(nuxt, monoConfig) {
 	const runtimeConfig = nuxt.options.runtimeConfig;
 	runtimeConfig.nuxtPreFetch ??= {};
 	const dynamic = runtimeConfig.nuxtPreFetch.dynamic ??= {};
-	const merge = (current, add) => [...new Set([...Array.isArray(current) ? current : [], ...add])];
+	const merge = (current, add) => [.../* @__PURE__ */ new Set([...Array.isArray(current) ? current : [], ...add])];
 	dynamic.allowedHosts = merge(dynamic.allowedHosts, [...hosts]);
 	dynamic.authCookies = merge(dynamic.authCookies, cookies);
 	if (headers.length) dynamic.forwardHeaders = merge(dynamic.forwardHeaders ?? ["accept"], headers);
@@ -558,7 +556,7 @@ function registerRemotePages(dirs, exclude, label) {
 					name: "remote-" + rel.replace(/\.vue$/, "").replace(/[^a-zA-Z0-9]+/g, "-"),
 					path: routePath,
 					file,
-					meta: parsePageMeta(safeRead(file))
+					meta: { ...parsePageMeta(safeRead(file)) }
 				});
 				added.push(routePath);
 			}

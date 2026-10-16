@@ -1,3 +1,4 @@
+//#region src/composables/visibility.d.ts
 /**
  * Shared `visible` / `visibleType` support for the controls `monoForm` drives.
  *
@@ -16,10 +17,10 @@
 export type MonoVisibleType = 'invisible' | 'none';
 /** The two visibility props shared by every form-driven control. */
 export interface VisibilityProps {
-    /** Whether the control is shown. Defaults to `true`. */
-    visible?: boolean;
-    /** How it hides when `visible` is `false`. Defaults to `'none'`. */
-    visibleType?: MonoVisibleType;
+  /** Whether the control is shown. Defaults to `true`. */
+  visible?: boolean;
+  /** How it hides when `visible` is `false`. Defaults to `'none'`. */
+  visibleType?: MonoVisibleType;
 }
 /**
  * Write (or clear) the hide style on a HOST element.
@@ -34,3 +35,4 @@ export interface VisibilityProps {
  * host survives a hide/show round trip.
  */
 export declare function applyVisibility(host: HTMLElement, visible: boolean, type: MonoVisibleType): void;
+//#endregion

@@ -1,6 +1,5 @@
-import { i as monoEcosystem, n as MonoEcosystemOptions, r as mergeEcosystem } from "./merge-file-C5nzi_MY.js";
+import { i as monoEcosystem, n as MonoEcosystemOptions, r as mergeEcosystem } from "./merge-file-CLc3wxY4.js";
 import { Plugin } from "vite";
-
 //#region src/composables/vite-html-to-vue.d.ts
 type HtmlToVueOptions = {
   overridePath?: string;
@@ -18,12 +17,9 @@ type HtmlToVueOptions = {
 declare function htmlToVue(options: HtmlToVueOptions): Plugin;
 //#endregion
 //#region src/composables/html-path.d.ts
-declare function htmlPath({
-  dir,
-  dirname
-}: {
+export declare function htmlPath({ dir, dirname }: {
   dir: string;
   dirname: string;
 }): Record<string, string>;
 //#endregion
-export { type MonoEcosystemOptions, htmlPath, htmlToVue, mergeEcosystem, monoEcosystem };
+export { type MonoEcosystemOptions, htmlToVue, mergeEcosystem, monoEcosystem };

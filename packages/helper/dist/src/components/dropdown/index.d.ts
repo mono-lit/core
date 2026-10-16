@@ -1,3 +1,4 @@
 /// <reference path="../../../vue.d.ts" />
-export { MonoDropdown } from './mono-dropdown.js';
-export type { DropdownPlacement, DropdownSide, DropdownAlign, DropdownTrigger, DropdownSize, DropdownColor, DropdownSource, DropdownCssClass, DropdownClickEventDetail, DropdownClickEvent, DropdownOpenEventDetail, DropdownOpenEvent, DropdownCloseEventDetail, DropdownCloseEvent, DropdownProps, DropdownEvents, } from './dropdown-types.js';
+import { DropdownAlign, DropdownClickEvent, DropdownClickEventDetail, DropdownCloseEvent, DropdownCloseEventDetail, DropdownColor, DropdownCssClass, DropdownEvents, DropdownOpenEvent, DropdownOpenEventDetail, DropdownPlacement, DropdownProps, DropdownSide, DropdownSize, DropdownSource, DropdownTrigger } from "./dropdown-types.js";
+import { MonoDropdown } from "./mono-dropdown.js";
+export { type DropdownAlign, type DropdownClickEvent, type DropdownClickEventDetail, type DropdownCloseEvent, type DropdownCloseEventDetail, type DropdownColor, type DropdownCssClass, type DropdownEvents, type DropdownOpenEvent, type DropdownOpenEventDetail, type DropdownPlacement, type DropdownProps, type DropdownSide, type DropdownSize, type DropdownSource, type DropdownTrigger, MonoDropdown };

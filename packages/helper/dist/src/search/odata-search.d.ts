@@ -1,12 +1,13 @@
-import { MonoSearchExpr } from './search-expr.js';
+import { MonoSearchExpr } from "./search-expr.js";
+//#region src/search/odata-search.d.ts
 /** Metadata and selected properties used to compile a safe remote OData search. */
 export interface MonoODataSearchOptions {
-    /** CSDL returned by the service's `$metadata` endpoint. */
-    metadata: string | XMLDocument;
-    /** Fully qualified EDM type (`Default.Customer`) or its short name (`Customer`). */
-    entityType: string;
-    /** Properties made available to the search box, in display order. */
-    fields: readonly string[];
+  /** CSDL returned by the service's `$metadata` endpoint. */
+  metadata: string | XMLDocument;
+  /** Fully qualified EDM type (`Default.Customer`) or its short name (`Customer`). */
+  entityType: string;
+  /** Properties made available to the search box, in display order. */
+  fields: readonly string[];
 }
 /**
  * Compile selected CSDL properties into the grid's existing `searchExpr` contract.
@@ -16,3 +17,4 @@ export interface MonoODataSearchOptions {
  * input as equality. Unsupported EDM types do not generate invalid text predicates.
  */
 export declare function odataSearchExpr(options: MonoODataSearchOptions): MonoSearchExpr;
+//#endregion

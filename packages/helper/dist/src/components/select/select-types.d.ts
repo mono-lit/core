@@ -1,8 +1,9 @@
-import { PanelSizeProps } from '../../composables/css-size';
-import { DescribedError } from '../../utils/normalize-error';
-import { MonoDataSource, LoadMoreMode } from '../../composables/data-source-controller';
-import { VisibilityProps } from '../../composables/visibility';
-import { MonoSearchValue } from '../../search/data-search';
+import { PanelSizeProps } from "../../composables/css-size.js";
+import { DescribedError } from "../../utils/normalize-error.js";
+import { LoadMoreMode, MonoDataSource } from "../../composables/data-source-controller.js";
+import { VisibilityProps } from "../../composables/visibility.js";
+import { MonoSearchValue } from "../../search/data-search.js";
+//#region src/components/select/select-types.d.ts
 /**
  * Sizes the popup PANEL only, independent of the field — the same object
  * `<mono-tag-input>` and `<mono-dropdown-table>` take. `height` is an exact height and
@@ -15,10 +16,10 @@ export type SelectVariant = 'outlined' | 'filled' | 'underlined';
 export type SelectValidationState = 'default' | 'valid' | 'invalid' | 'warning';
 export type SelectValue = unknown;
 export interface SelectItem {
-    label?: string;
-    value?: unknown;
-    disabled?: boolean;
-    [key: string]: unknown;
+  label?: string;
+  value?: unknown;
+  disabled?: boolean;
+  [key: string]: unknown;
 }
 /**
  * A field name, or an accessor over the consumer's OWN row type. The parameter is
@@ -33,8 +34,6 @@ export type SelectDisplayValue = string | ((item: any) => string);
  * a string reads `row[field]`; a function receives the row.
  */
 export type SelectDisplayGroup = Array<string | ((item: any) => string)>;
-/** Re-exported so consumers can type a `search-value` binding without a deep import. */
-export type { MonoSearchValue };
 /**
  * Structural shape of a devextreme DataSource (duck-typed; no hard dependency).
  * Aliased to the shared {@link MonoDataSource} so select and other components
@@ -51,216 +50,216 @@ export type SelectLoadMore = LoadMoreMode;
 /** @deprecated Use {@link SelectLoadMore}. */
 export type SelectDataSourceLoadMore = SelectLoadMore;
 export interface SelectCssClass {
-    root?: string;
-    label?: string;
-    required?: string;
-    trigger?: string;
-    value?: string;
-    placeholder?: string;
-    searchField?: string;
-    actions?: string;
-    clear?: string;
-    arrow?: string;
-    dropdown?: string;
-    dropdownBody?: string;
-    group?: string;
-    item?: string;
-    itemActive?: string;
-    itemSelected?: string;
-    itemDisabled?: string;
-    loadMore?: string;
-    messageWrap?: string;
-    message?: string;
+  root?: string;
+  label?: string;
+  required?: string;
+  trigger?: string;
+  value?: string;
+  placeholder?: string;
+  searchField?: string;
+  actions?: string;
+  clear?: string;
+  arrow?: string;
+  dropdown?: string;
+  dropdownBody?: string;
+  group?: string;
+  item?: string;
+  itemActive?: string;
+  itemSelected?: string;
+  itemDisabled?: string;
+  loadMore?: string;
+  messageWrap?: string;
+  message?: string;
 }
 export type SelectModelEventDetail<TValue = SelectValue> = {
-    modelValue: TValue;
-    currentValue: TValue;
-    oldValue: TValue;
-    value: TValue;
-    selectedItem?: SelectItem;
-    sourceEvent?: Event;
+  modelValue: TValue;
+  currentValue: TValue;
+  oldValue: TValue;
+  value: TValue;
+  selectedItem?: SelectItem;
+  sourceEvent?: Event;
 };
 export type SelectModelEvent<TValue = SelectValue> = CustomEvent<SelectModelEventDetail<TValue>>;
 export interface SelectProps extends VisibilityProps {
-    /** The currently selected value. */
-    modelValue?: SelectValue;
-    'model-value'?: SelectValue;
-    modelvalue?: SelectValue;
-    /** Alias for the selected value, kept in sync with modelValue. */
-    value?: SelectValue;
-    /** List of selectable items, as an array or JSON string. */
-    items?: SelectItem[] | string;
-    /** DataSource used to drive the item list, taking precedence over items. */
-    dataSource?: SelectDataSource;
-    'data-source'?: SelectDataSource;
-    datasource?: SelectDataSource;
-    /** Auto-load the DataSource on attach when it has no items yet. */
-    immediate?: boolean;
-    /** Incremental loading mode: scroll, button, or off. */
-    loadMore?: SelectLoadMore | boolean | '';
-    'load-more'?: SelectLoadMore | boolean | '';
-    loadmore?: SelectLoadMore | boolean | '';
-    /** Chunk size used when paging a plain items array. */
-    pageSize?: number;
-    'page-size'?: number;
-    pagesize?: number;
-    /** Item property name used as the model value. */
-    keyValue?: string;
-    'key-value'?: string;
-    keyvalue?: string;
-    /** Item property name or function used to derive display text. */
-    displayValue?: SelectDisplayValue;
-    'display-value'?: SelectDisplayValue;
-    displayvalue?: SelectDisplayValue;
-    /** Per-level accessors for grouped options (header label per group level). */
-    displayGroup?: SelectDisplayGroup;
-    'display-group'?: SelectDisplayGroup;
-    displaygroup?: SelectDisplayGroup;
-    /** Field holding a group node's key (default 'key'). */
-    groupKey?: string;
-    'group-key'?: string;
-    groupkey?: string;
-    /** Field holding a group node's child array (default 'items'). */
-    groupItems?: string;
-    'group-items'?: string;
-    groupitems?: string;
-    /** Turn the field itself into a search input (combobox); server query when a DataSource is bound. */
-    searchable?: boolean;
-    /**
-     * Field(s) the search matches (server query + client filter target). A comma
-     * string or an array; entries may be plain columns, paths (`Company.Name`,
-     * `Transaction.[*].Price`), `*` patterns (`'*'`, `'*.[*].*'`) or, in array
-     * form, `{ field, custom }` clause builders.
-     */
-    searchValue?: MonoSearchValue;
-    'search-value'?: MonoSearchValue;
-    searchvalue?: MonoSearchValue;
-    /** devextreme search operation for server search (default 'contains'). */
-    searchOperation?: string;
-    'search-operation'?: string;
-    searchoperation?: string;
-    /** Debounce (ms) before a server search fires (default 300). */
-    searchDebounce?: number;
-    'search-debounce'?: number;
-    searchdebounce?: number;
-    /** Placeholder shown in the field while it is open/searching (falls back to `placeholder`). */
-    searchPlaceholder?: string;
-    'search-placeholder'?: string;
-    searchplaceholder?: string;
-    /** Group a plain, paginated DataSource client-side (keeps scroll/load-more). */
-    group?: boolean;
-    /** Keep group headers pinned to the top while their rows scroll. */
-    groupSticky?: boolean;
-    'group-sticky'?: boolean;
-    groupsticky?: boolean;
-    /**
-     * Sizes the popup PANEL only, independent of the field —
-     * `:dropdown.prop="{ width: 460, maxHeight: 320 }"`.
-     *
-     * Without it the panel matches the field's width, which is right for a picker whose options read
-     * as continuations of the field, and wrong for a wide one. Setting `width` also stops the panel
-     * tracking the field.
-     *
-     * The widths land on the panel and the heights on its scrolling body, which is why a fixed
-     * `height` here still scrolls rather than clipping.
-     */
-    dropdown?: SelectDropdownOptions;
-    /** Fixed height of the scrollable dropdown list. */
-    dropdownHeight?: string | number;
-    'dropdown-height'?: string | number;
-    dropdownheight?: string | number;
-    /** Maximum height of the scrollable dropdown list. */
-    dropdownMaxHeight?: string | number;
-    'dropdown-max-height'?: string | number;
-    dropdownmaxheight?: string | number;
-    /**
-     * Exempt this select from every automatic close — clicking or focusing
-     * anything outside it, which includes opening another select. Not a lock: its
-     * own trigger, Escape and picking an item still close it. Set it on every
-     * select to allow several dropdowns open at once.
-     */
-    stayOpen?: boolean;
-    'stay-open'?: boolean;
-    stayopen?: boolean;
-    /** Visual size of the select. */
-    size?: SelectSize;
-    /** Color theme applied to the select. */
-    color?: SelectColor;
-    /** Visual style variant of the select. */
-    variant?: SelectVariant;
-    /** Text label shown above the select. */
-    label?: string;
-    /** Placeholder text shown when no value is selected. */
-    placeholder?: string;
-    /** Helper text shown below the select. */
-    helperText?: string;
-    'helper-text'?: string;
-    helpertext?: string;
-    /** Validation state controlling the select's appearance. */
-    validationState?: SelectValidationState;
-    'validation-state'?: SelectValidationState;
-    validationstate?: SelectValidationState;
-    /** Validation message shown below the select. */
-    validationMessage?: string;
-    'validation-message'?: string;
-    validationmessage?: string;
-    /** Error message shown below the select. */
-    errorMessage?: string;
-    'error-message'?: string;
-    errormessage?: string;
-    /** Success message shown below the select. */
-    successMessage?: string;
-    'success-message'?: string;
-    successmessage?: string;
-    /** Form field name submitted with the value. */
-    name?: string;
-    /** Disables the select, preventing interaction. */
-    disabled?: boolean;
-    /** Makes the select read-only, blocking value changes. */
-    readonly?: boolean;
-    /** Marks the select as required and shows a required indicator. */
-    required?: boolean;
-    /** Shows a clear button to reset the selected value. */
-    clearable?: boolean;
-    /** Show "Loading…" + a spinner and lock the select — the app is still fetching its options. */
-    loading?: boolean;
-    /** Text shown while loading (default `'Loading…'`). */
-    loadingText?: string;
-    'loading-text'?: string;
-    loadingtext?: string;
-    /** The app's fetch failed: a string or the error itself. Painted with ↻, which fires `retry`. */
-    loadingError?: unknown;
-    'loading-error'?: unknown;
-    loadingerror?: unknown;
-    /** Accessible name of the ↻ button (default `'Retry'`). */
-    retryLabel?: string;
-    'retry-label'?: string;
-    /** Accessible label used when no visible label is present. */
-    ariaLabelText?: string;
-    ariaLabel?: string;
-    'aria-label'?: string;
-    'aria-label-text'?: string;
-    arialabel?: string;
-    arialabeltext?: string;
-    /**
-     * Explicit sizing of the field. Each accepts a CSS length string (`"320px"`,
-     * `"80%"`) or a number (interpreted as px). Use `width="100%"` for full width.
-     * (Distinct from `dropdownHeight`/`dropdownMaxHeight`, which size the popup.)
-     */
-    width?: string | number;
-    height?: string | number;
-    minWidth?: string | number;
-    'min-width'?: string | number;
-    maxWidth?: string | number;
-    'max-width'?: string | number;
-    minHeight?: string | number;
-    'min-height'?: string | number;
-    maxHeight?: string | number;
-    'max-height'?: string | number;
-    /** Custom CSS classes applied to internal select parts. */
-    cssClass?: SelectCssClass;
-    cssclass?: SelectCssClass;
-    'css-class'?: SelectCssClass | string;
+  /** The currently selected value. */
+  modelValue?: SelectValue;
+  'model-value'?: SelectValue;
+  modelvalue?: SelectValue;
+  /** Alias for the selected value, kept in sync with modelValue. */
+  value?: SelectValue;
+  /** List of selectable items, as an array or JSON string. */
+  items?: SelectItem[] | string;
+  /** DataSource used to drive the item list, taking precedence over items. */
+  dataSource?: SelectDataSource;
+  'data-source'?: SelectDataSource;
+  datasource?: SelectDataSource;
+  /** Auto-load the DataSource on attach when it has no items yet. */
+  immediate?: boolean;
+  /** Incremental loading mode: scroll, button, or off. */
+  loadMore?: SelectLoadMore | boolean | '';
+  'load-more'?: SelectLoadMore | boolean | '';
+  loadmore?: SelectLoadMore | boolean | '';
+  /** Chunk size used when paging a plain items array. */
+  pageSize?: number;
+  'page-size'?: number;
+  pagesize?: number;
+  /** Item property name used as the model value. */
+  keyValue?: string;
+  'key-value'?: string;
+  keyvalue?: string;
+  /** Item property name or function used to derive display text. */
+  displayValue?: SelectDisplayValue;
+  'display-value'?: SelectDisplayValue;
+  displayvalue?: SelectDisplayValue;
+  /** Per-level accessors for grouped options (header label per group level). */
+  displayGroup?: SelectDisplayGroup;
+  'display-group'?: SelectDisplayGroup;
+  displaygroup?: SelectDisplayGroup;
+  /** Field holding a group node's key (default 'key'). */
+  groupKey?: string;
+  'group-key'?: string;
+  groupkey?: string;
+  /** Field holding a group node's child array (default 'items'). */
+  groupItems?: string;
+  'group-items'?: string;
+  groupitems?: string;
+  /** Turn the field itself into a search input (combobox); server query when a DataSource is bound. */
+  searchable?: boolean;
+  /**
+   * Field(s) the search matches (server query + client filter target). A comma
+   * string or an array; entries may be plain columns, paths (`Company.Name`,
+   * `Transaction.[*].Price`), `*` patterns (`'*'`, `'*.[*].*'`) or, in array
+   * form, `{ field, custom }` clause builders.
+   */
+  searchValue?: MonoSearchValue;
+  'search-value'?: MonoSearchValue;
+  searchvalue?: MonoSearchValue;
+  /** devextreme search operation for server search (default 'contains'). */
+  searchOperation?: string;
+  'search-operation'?: string;
+  searchoperation?: string;
+  /** Debounce (ms) before a server search fires (default 300). */
+  searchDebounce?: number;
+  'search-debounce'?: number;
+  searchdebounce?: number;
+  /** Placeholder shown in the field while it is open/searching (falls back to `placeholder`). */
+  searchPlaceholder?: string;
+  'search-placeholder'?: string;
+  searchplaceholder?: string;
+  /** Group a plain, paginated DataSource client-side (keeps scroll/load-more). */
+  group?: boolean;
+  /** Keep group headers pinned to the top while their rows scroll. */
+  groupSticky?: boolean;
+  'group-sticky'?: boolean;
+  groupsticky?: boolean;
+  /**
+   * Sizes the popup PANEL only, independent of the field —
+   * `:dropdown.prop="{ width: 460, maxHeight: 320 }"`.
+   *
+   * Without it the panel matches the field's width, which is right for a picker whose options read
+   * as continuations of the field, and wrong for a wide one. Setting `width` also stops the panel
+   * tracking the field.
+   *
+   * The widths land on the panel and the heights on its scrolling body, which is why a fixed
+   * `height` here still scrolls rather than clipping.
+   */
+  dropdown?: SelectDropdownOptions;
+  /** Fixed height of the scrollable dropdown list. */
+  dropdownHeight?: string | number;
+  'dropdown-height'?: string | number;
+  dropdownheight?: string | number;
+  /** Maximum height of the scrollable dropdown list. */
+  dropdownMaxHeight?: string | number;
+  'dropdown-max-height'?: string | number;
+  dropdownmaxheight?: string | number;
+  /**
+   * Exempt this select from every automatic close — clicking or focusing
+   * anything outside it, which includes opening another select. Not a lock: its
+   * own trigger, Escape and picking an item still close it. Set it on every
+   * select to allow several dropdowns open at once.
+   */
+  stayOpen?: boolean;
+  'stay-open'?: boolean;
+  stayopen?: boolean;
+  /** Visual size of the select. */
+  size?: SelectSize;
+  /** Color theme applied to the select. */
+  color?: SelectColor;
+  /** Visual style variant of the select. */
+  variant?: SelectVariant;
+  /** Text label shown above the select. */
+  label?: string;
+  /** Placeholder text shown when no value is selected. */
+  placeholder?: string;
+  /** Helper text shown below the select. */
+  helperText?: string;
+  'helper-text'?: string;
+  helpertext?: string;
+  /** Validation state controlling the select's appearance. */
+  validationState?: SelectValidationState;
+  'validation-state'?: SelectValidationState;
+  validationstate?: SelectValidationState;
+  /** Validation message shown below the select. */
+  validationMessage?: string;
+  'validation-message'?: string;
+  validationmessage?: string;
+  /** Error message shown below the select. */
+  errorMessage?: string;
+  'error-message'?: string;
+  errormessage?: string;
+  /** Success message shown below the select. */
+  successMessage?: string;
+  'success-message'?: string;
+  successmessage?: string;
+  /** Form field name submitted with the value. */
+  name?: string;
+  /** Disables the select, preventing interaction. */
+  disabled?: boolean;
+  /** Makes the select read-only, blocking value changes. */
+  readonly?: boolean;
+  /** Marks the select as required and shows a required indicator. */
+  required?: boolean;
+  /** Shows a clear button to reset the selected value. */
+  clearable?: boolean;
+  /** Show "Loading…" + a spinner and lock the select — the app is still fetching its options. */
+  loading?: boolean;
+  /** Text shown while loading (default `'Loading…'`). */
+  loadingText?: string;
+  'loading-text'?: string;
+  loadingtext?: string;
+  /** The app's fetch failed: a string or the error itself. Painted with ↻, which fires `retry`. */
+  loadingError?: unknown;
+  'loading-error'?: unknown;
+  loadingerror?: unknown;
+  /** Accessible name of the ↻ button (default `'Retry'`). */
+  retryLabel?: string;
+  'retry-label'?: string;
+  /** Accessible label used when no visible label is present. */
+  ariaLabelText?: string;
+  ariaLabel?: string;
+  'aria-label'?: string;
+  'aria-label-text'?: string;
+  arialabel?: string;
+  arialabeltext?: string;
+  /**
+   * Explicit sizing of the field. Each accepts a CSS length string (`"320px"`,
+   * `"80%"`) or a number (interpreted as px). Use `width="100%"` for full width.
+   * (Distinct from `dropdownHeight`/`dropdownMaxHeight`, which size the popup.)
+   */
+  width?: string | number;
+  height?: string | number;
+  minWidth?: string | number;
+  'min-width'?: string | number;
+  maxWidth?: string | number;
+  'max-width'?: string | number;
+  minHeight?: string | number;
+  'min-height'?: string | number;
+  maxHeight?: string | number;
+  'max-height'?: string | number;
+  /** Custom CSS classes applied to internal select parts. */
+  cssClass?: SelectCssClass;
+  cssclass?: SelectCssClass;
+  'css-class'?: SelectCssClass | string;
 }
 /**
  * ↻ was pressed on a failed field. `source: 'dataSource'` — the bound source
@@ -268,17 +267,19 @@ export interface SelectProps extends VisibilityProps {
  * app re-runs its own fetch.
  */
 export type MonoRetryEvent = CustomEvent<{
-    error: DescribedError;
-    source: 'app' | 'dataSource';
+  error: DescribedError;
+  source: 'app' | 'dataSource';
 }>;
 export interface SelectEvents {
-    change: SelectModelEvent;
-    clear: SelectModelEvent;
-    retry: MonoRetryEvent;
-    'mno-change': SelectModelEvent;
-    mnoChange: SelectModelEvent;
-    'mno-clear': SelectModelEvent;
-    mnoClear: SelectModelEvent;
-    'mno-retry': MonoRetryEvent;
-    mnoRetry: MonoRetryEvent;
+  change: SelectModelEvent;
+  clear: SelectModelEvent;
+  retry: MonoRetryEvent;
+  'mno-change': SelectModelEvent;
+  mnoChange: SelectModelEvent;
+  'mno-clear': SelectModelEvent;
+  mnoClear: SelectModelEvent;
+  'mno-retry': MonoRetryEvent;
+  mnoRetry: MonoRetryEvent;
 }
+//#endregion
+export type { MonoSearchValue };

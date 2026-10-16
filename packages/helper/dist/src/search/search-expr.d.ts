@@ -1,3 +1,4 @@
+//#region src/search/search-expr.d.ts
 /**
  * Search-expression entries: the fields a typed term is matched against.
  *
@@ -63,12 +64,12 @@
  */
 /** What a `custom` builder is handed for the term being applied. */
 export interface MonoSearchCustomCtx {
-    /** The column this entry declares — echoed so the builder needn't repeat it. */
-    field: string;
-    /** The raw text the user typed, exactly as typed. */
-    value: string;
-    /** The grid's configured `searchOperation` (default `'contains'`). */
-    operation: string;
+  /** The column this entry declares — echoed so the builder needn't repeat it. */
+  field: string;
+  /** The raw text the user typed, exactly as typed. */
+  value: string;
+  /** The grid's configured `searchOperation` (default `'contains'`). */
+  operation: string;
 }
 /**
  * What a `custom` builder may return. `null` / `undefined` / `false` all mean
@@ -77,10 +78,10 @@ export interface MonoSearchCustomCtx {
 export type MonoSearchCustomResult = string | unknown[] | ((row: any) => boolean) | null | undefined | false;
 /** A `searchExpr` entry that builds its own clause. */
 export interface MonoSearchExprCustom {
-    /** Column this entry covers — the name a bound `MonoSearchTerm.field` matches. */
-    field: string;
-    /** Build the clause for one term. See {@link MonoSearchCustomResult}. */
-    custom: (ctx: MonoSearchCustomCtx) => MonoSearchCustomResult;
+  /** Column this entry covers — the name a bound `MonoSearchTerm.field` matches. */
+  field: string;
+  /** Build the clause for one term. See {@link MonoSearchCustomResult}. */
+  custom: (ctx: MonoSearchCustomCtx) => MonoSearchCustomResult;
 }
 /** One `searchExpr` entry: a plain column name, or a custom builder. */
 export type MonoSearchExprEntry = string | MonoSearchExprCustom;
@@ -124,10 +125,10 @@ export declare function isWildcardPattern(field: string): boolean;
 export declare function expandWildcard(pattern: string, rows: readonly unknown[], textOnly: boolean): string[];
 /** Options for {@link resolveSearchEntries}. */
 export interface ResolveSearchOptions {
-    /** Rows to resolve `*` patterns against (the loaded data). */
-    rows?: readonly unknown[];
-    /** Keep only string-valued leaves — required for a remote OData source. */
-    textOnly?: boolean;
+  /** Rows to resolve `*` patterns against (the loaded data). */
+  rows?: readonly unknown[];
+  /** Keep only string-valued leaves — required for a remote OData source. */
+  textOnly?: boolean;
 }
 /**
  * The entries a search actually runs over: every `*` pattern replaced by the
@@ -158,3 +159,4 @@ export declare function customRemoteClause(entry: MonoSearchExprCustom, value: s
  * `[field, op, value]` a remote source receives also narrows an array source.
  */
 export declare function customPredicate(entry: MonoSearchExprCustom, value: string, operation: string): ((row: any) => boolean) | null;
+//#endregion

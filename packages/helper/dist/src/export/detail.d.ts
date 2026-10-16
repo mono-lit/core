@@ -1,22 +1,23 @@
-import { MonoExportDetail } from './types';
+import { MonoExportDetail } from "./types.js";
+//#region src/export/detail.d.ts
 /** One document's resolved rows, plus the key that names its sheet. */
 export interface ResolvedDetail {
-    /** The master row it came from. */
-    row: Record<string, unknown>;
-    /** The value of `detail.key` on that row, as a string. */
-    key: string;
-    rows: unknown[];
+  /** The master row it came from. */
+  row: Record<string, unknown>;
+  /** The value of `detail.key` on that row, as a string. */
+  key: string;
+  rows: unknown[];
 }
 /** A document that will get no sheet, and why. */
 export interface SkippedDetail {
-    key: string;
-    reason: 'empty' | 'failed';
-    /** Present when `reason` is `failed`. */
-    error?: unknown;
+  key: string;
+  reason: 'empty' | 'failed';
+  /** Present when `reason` is `failed`. */
+  error?: unknown;
 }
 export interface ResolveDetailResult {
-    details: ResolvedDetail[];
-    skipped: SkippedDetail[];
+  details: ResolvedDetail[];
+  skipped: SkippedDetail[];
 }
 /**
  * Turn master rows into per-document detail rows.
@@ -27,3 +28,4 @@ export interface ResolveDetailResult {
  * tab list.
  */
 export declare function resolveDetails(masterRows: unknown[], detail: MonoExportDetail): Promise<ResolveDetailResult>;
+//#endregion

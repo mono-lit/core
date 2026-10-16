@@ -1,19 +1,20 @@
-import { MonoTooltipGlobalOptions, MonoTooltipOptions } from './tooltip-types';
+import { MonoTooltipGlobalOptions, MonoTooltipOptions } from "./tooltip-types.js";
+//#region src/components/tooltip/tooltip-config.d.ts
 export declare const DEFAULT_TOOLTIP_OPTIONS: {
-    allowHTML: false;
-    placement: "top";
-    offset: number;
-    padding: number;
-    flip: true;
-    shift: true;
-    arrow: true;
-    trigger: ("focus" | "hover")[];
-    delay: [number, number];
-    interactive: false;
-    variant: "inverted";
-    size: "md";
-    disabled: false;
-    hideOnClick: true;
+  allowHTML: false;
+  placement: "top";
+  offset: number;
+  padding: number;
+  flip: true;
+  shift: true;
+  arrow: true;
+  trigger: ("hover" | "focus")[];
+  delay: [number, number];
+  interactive: false;
+  variant: "inverted";
+  size: "md";
+  disabled: false;
+  hideOnClick: true;
 };
 export type ResolvedTooltipOptions = MonoTooltipOptions & typeof DEFAULT_TOOLTIP_OPTIONS;
 /** @internal — written by `createMonoTooltip` / `resetMonoTooltip`. */
@@ -25,3 +26,4 @@ export declare function getMonoTooltipGlobal(): Readonly<MonoTooltipGlobalOption
  * overwrites. `anchor` is the options read off the element's own attributes.
  */
 export declare function resolveTooltipOptions(local?: MonoTooltipOptions | null, anchor?: MonoTooltipOptions | null): ResolvedTooltipOptions;
+//#endregion

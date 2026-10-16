@@ -1,46 +1,47 @@
-import { LitElement, TemplateResult } from 'lit';
-import { SortOrder } from './mono-data-grid.js';
-import { MonoTableControllerCoreInterface } from './table-controller-core.js';
-import { Constructor } from '../../composables/hybird-prop';
-import { PopupPortalController } from '../../composables/popup-portal.js';
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableControllerCoreInterface } from "./table-controller-core.js";
+import { SortOrder } from "./mono-data-grid.js";
+import { PopupPortalController } from "../../composables/popup-portal.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/table/table-menu-core.d.ts
 /** Resolved sort config — see {@link MonoColumnSort}. */
 export interface MonoResolvedSort {
-    enable: boolean;
-    showIcon: boolean;
-    noClear: boolean;
-    disabled: boolean;
+  enable: boolean;
+  showIcon: boolean;
+  noClear: boolean;
+  disabled: boolean;
 }
 /** Public surface added by the menu core mixin. */
 export declare class MonoTableMenuCoreInterface extends MonoTableControllerCoreInterface {
-    protected _menuOpen: boolean;
-    protected _sortMenuOpen: boolean;
-    protected _menuPopup?: PopupPortalController;
-    protected _sortMenuPopup?: PopupPortalController;
-    protected _menuPanelEl: HTMLElement | null;
-    protected _cell: HTMLElement | null;
-    protected get _sortDir(): SortOrder;
-    protected resolveSort(raw?: {
-        enable?: boolean;
-        showIcon?: boolean;
-        noClear?: boolean;
-        disabled?: boolean;
-    }): MonoResolvedSort;
-    protected bindContextMenu(wanted: boolean): void;
-    protected detachContextMenu(): void;
-    protected ensurePopups(): void;
-    protected openMenu(e?: Event): void;
-    protected closeMenu(): void;
-    protected _menuKeepsPath(path: EventTarget[]): boolean;
-    protected bindDocListeners(): void;
-    protected teardownDocListeners(): void;
-    protected renderSortMenuItem(): TemplateResult;
-    protected renderSortSubmenu(noClear?: boolean): TemplateResult;
-    protected pickSort(order: SortOrder): Promise<void>;
-    protected clearAllSorts(): Promise<void>;
-    protected _caretIcon(): TemplateResult;
-    protected _sortGlyph(dir: 'asc' | 'desc' | 'clear'): TemplateResult;
-    protected _clearAllIcon(): TemplateResult;
-    protected _checkIcon(): TemplateResult;
+  protected _menuOpen: boolean;
+  protected _sortMenuOpen: boolean;
+  protected _menuPopup?: PopupPortalController;
+  protected _sortMenuPopup?: PopupPortalController;
+  protected _menuPanelEl: HTMLElement | null;
+  protected _cell: HTMLElement | null;
+  protected get _sortDir(): SortOrder;
+  protected resolveSort(raw?: {
+    enable?: boolean;
+    showIcon?: boolean;
+    noClear?: boolean;
+    disabled?: boolean;
+  }): MonoResolvedSort;
+  protected bindContextMenu(wanted: boolean): void;
+  protected detachContextMenu(): void;
+  protected ensurePopups(): void;
+  protected openMenu(e?: Event): void;
+  protected closeMenu(): void;
+  protected _menuKeepsPath(path: EventTarget[]): boolean;
+  protected bindDocListeners(): void;
+  protected teardownDocListeners(): void;
+  protected renderSortMenuItem(): TemplateResult;
+  protected renderSortSubmenu(noClear?: boolean): TemplateResult;
+  protected pickSort(order: SortOrder): Promise<void>;
+  protected clearAllSorts(): Promise<void>;
+  protected _caretIcon(): TemplateResult;
+  protected _sortGlyph(dir: 'asc' | 'desc' | 'clear'): TemplateResult;
+  protected _clearAllIcon(): TemplateResult;
+  protected _checkIcon(): TemplateResult;
 }
 /**
  * `MonoTableMenuCore` — the header context-menu machinery shared by
@@ -63,3 +64,4 @@ export declare class MonoTableMenuCoreInterface extends MonoTableControllerCoreI
  * reactive properties, and re-declaring would shadow them.
  */
 export declare const MonoTableMenuCore: <T extends Constructor<LitElement>>(superClass: T) => Constructor<MonoTableMenuCoreInterface> & T;
+//#endregion

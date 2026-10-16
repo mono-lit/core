@@ -1,5 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-declare const MonoCard_base: import('../../composables/hybird-prop').Constructor<import('./card-core.js').MonoCardCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoCardCoreInterface } from "./card-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/card/mono-card.d.ts
+declare const MonoCard_base: Constructor<MonoCardCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-card` (default build, `@mono-lit/helper/ui/card`).
  *
@@ -21,36 +24,37 @@ declare const MonoCard_base: import('../../composables/hybird-prop').Constructor
  * same document.
  */
 export declare class MonoCard extends MonoCard_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
-    private _slotsCaptured;
-    private _buckets;
-    private _renderMedia;
-    private _renderHeader;
-    /**
-     * The body is the only region rendered unconditionally.
-     *
-     * It's the home for the fallback bucket, which holds the consumer framework's
-     * positional anchors. Those need a live parent even when the card starts with
-     * no visible body content — that's what lets a `v-if` flipping on later insert
-     * *inside* the card instead of beside it, and it stops Lit from ever destroying
-     * a container that holds the consumer's nodes. `.mono-card-body:empty` collapses
-     * it while it holds nothing but anchors.
-     */
-    private _renderBody;
-    private _renderActions;
-    private _renderFooter;
-    private _renderLoading;
-    private _renderContent;
-    protected render(): TemplateResult;
-    connectedCallback(): void;
-    private _captureSlots;
-    protected updated(changed: Map<string, unknown>): void;
-    private _parked?;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
+  private _slotsCaptured;
+  private _buckets;
+  private _renderMedia;
+  private _renderHeader;
+  /**
+   * The body is the only region rendered unconditionally.
+   *
+   * It's the home for the fallback bucket, which holds the consumer framework's
+   * positional anchors. Those need a live parent even when the card starts with
+   * no visible body content — that's what lets a `v-if` flipping on later insert
+   * *inside* the card instead of beside it, and it stops Lit from ever destroying
+   * a container that holds the consumer's nodes. `.mono-card-body:empty` collapses
+   * it while it holds nothing but anchors.
+   */
+  private _renderBody;
+  private _renderActions;
+  private _renderFooter;
+  private _renderLoading;
+  private _renderContent;
+  protected render(): TemplateResult;
+  connectedCallback(): void;
+  private _captureSlots;
+  protected updated(changed: Map<string, unknown>): void;
+  private _parked?;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-card': MonoCard;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-card': MonoCard;
+  }
 }
+//#endregion
 export {};

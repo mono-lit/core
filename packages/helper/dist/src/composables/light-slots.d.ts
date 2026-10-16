@@ -1,15 +1,16 @@
+//#region src/composables/light-slots.d.ts
 /** Captured nodes, keyed by slot name, in document order. */
 export type LightSlotBuckets = Map<string, Node[]>;
 export interface CaptureLightSlotsOptions {
-    /** Named `slot="…"` values this component lays out. */
-    names: readonly string[];
-    /** Bucket for unnamed content and framework anchors. Default `'default'`. */
-    fallback?: string;
-    /**
-     * Install the `textContent` guard on the host (default `true`). Opt out only for
-     * a component that never renders a `[data-mono-slot]` region for `fallback`.
-     */
-    guardTextContent?: boolean;
+  /** Named `slot="…"` values this component lays out. */
+  names: readonly string[];
+  /** Bucket for unnamed content and framework anchors. Default `'default'`. */
+  fallback?: string;
+  /**
+   * Install the `textContent` guard on the host (default `true`). Opt out only for
+   * a component that never renders a `[data-mono-slot]` region for `fallback`.
+   */
+  guardTextContent?: boolean;
 }
 /**
  * Take ownership of the host's current children. Run **once**, from
@@ -20,14 +21,14 @@ export interface CaptureLightSlotsOptions {
  */
 export declare function captureLightSlots(host: HTMLElement, options: CaptureLightSlotsOptions): LightSlotBuckets;
 export interface HostTextGuardOptions {
-    /** Bucket a bare text write lands in. Default `'default'`. */
-    fallback?: string;
-    /**
-     * Ran after a write that changed the captured content — normally
-     * `requestUpdate()`, because slot emptiness is read during render and is not
-     * itself reactive.
-     */
-    onWrite?: () => void;
+  /** Bucket a bare text write lands in. Default `'default'`. */
+  fallback?: string;
+  /**
+   * Ran after a write that changed the captured content — normally
+   * `requestUpdate()`, because slot emptiness is read during render and is not
+   * itself reactive.
+   */
+  onWrite?: () => void;
 }
 /**
  * Redirect `host.textContent = …` into the captured default region.
@@ -115,19 +116,20 @@ export declare function bucketHasContent(nodes: Node[] | undefined): boolean;
  * build, and all it needs is connect/disconnect.
  */
 export declare class LateSlotWatcher {
-    private readonly host;
-    private readonly name;
-    private readonly onFound;
-    private _observer?;
-    constructor(host: Element, name: string, onFound: () => void);
-    /**
-     * The host's own child carrying `slot="<name>"`, or `null`.
-     *
-     * Walks `children` rather than running a `:scope >` selector — only a DIRECT child is
-     * assignable to a slot, and this way the check is one cheap loop over a handful of nodes with
-     * no selector engine involved.
-     */
-    find(): Element | null;
-    start(): void;
-    stop(): void;
+  private readonly host;
+  private readonly name;
+  private readonly onFound;
+  private _observer?;
+  constructor(host: Element, name: string, onFound: () => void);
+  /**
+   * The host's own child carrying `slot="<name>"`, or `null`.
+   *
+   * Walks `children` rather than running a `:scope >` selector — only a DIRECT child is
+   * assignable to a slot, and this way the check is one cheap loop over a handful of nodes with
+   * no selector engine involved.
+   */
+  find(): Element | null;
+  start(): void;
+  stop(): void;
 }
+//#endregion

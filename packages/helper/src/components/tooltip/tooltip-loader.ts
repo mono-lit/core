@@ -3,8 +3,8 @@
  * `@floating-ui/core` — both are the consumer's to install).
  *
  * Loaded on the FIRST show, never at import: registering a tooltip in
- * `<script setup>` costs nothing until somebody actually hovers. Externalized in
- * both vite configs, so the consumer's bundler resolves and splits it.
+ * `<script setup>` costs nothing until somebody actually hovers. Externalized by
+ * `NEVER_BUNDLE` in `tsdown.config.ts`, so the consumer's bundler resolves and splits it.
  */
 let _floatingPromise: Promise<typeof import('@floating-ui/dom')> | null = null
 

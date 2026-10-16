@@ -1,17 +1,18 @@
-import { LitElement } from 'lit';
-import { Constructor } from '../../composables/hybird-prop';
-import { MonoVisibleType } from '../../composables/visibility';
-import { MonoFormController, MonoFormListEntry } from './form-types.js';
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoVisibleType } from "../../composables/visibility.js";
+import { MonoFormController, MonoFormListEntry } from "./form-types.js";
+import { LitElement } from "lit";
+//#region src/components/form/form-control-core.d.ts
 /** Public surface added by the form-control mixin. */
 export declare class MonoFormControlCoreInterface {
-    dataForm?: MonoFormController;
-    keyForm?: string;
-    visible: boolean;
-    visibleType: MonoVisibleType;
-    protected _formOff?: () => void;
-    protected _syncFromForm(): void;
-    /** Publish resolved options onto `form.items()[key].list` — list controls only. */
-    protected _publishList(entries: MonoFormListEntry[]): void;
+  dataForm?: MonoFormController;
+  keyForm?: string;
+  visible: boolean;
+  visibleType: MonoVisibleType;
+  protected _formOff?: () => void;
+  protected _syncFromForm(): void;
+  /** Publish resolved options onto `form.items()[key].list` — list controls only. */
+  protected _publishList(entries: MonoFormListEntry[]): void;
 }
 /**
  * `MonoFormControlCore` — the element half of {@link monoForm}.
@@ -35,3 +36,4 @@ export declare class MonoFormControlCoreInterface {
  * is inert and the element renders its normal shell.
  */
 export declare const MonoFormControlCore: <T extends Constructor<LitElement>>(superClass: T) => Constructor<MonoFormControlCoreInterface> & T;
+//#endregion

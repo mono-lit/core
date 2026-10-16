@@ -1,6 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-import { TableSortSlotName, TableSortIconName } from './mono-table-sort-core.js';
-declare const MonoTableSort_base: import('../../composables/hybird-prop').Constructor<import('./mono-table-sort-core.js').MonoTableSortCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableSortCoreInterface, TableSortIconName, TableSortSlotName } from "./mono-table-sort-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/table/mono-table-sort.d.ts
+declare const MonoTableSort_base: Constructor<MonoTableSortCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-table-sort` (default build, `@mono-lit/helper/ui/table`). A sort
  * control for a column header — place it inside a native `<th>`.
@@ -18,21 +20,22 @@ declare const MonoTableSort_base: import('../../composables/hybird-prop').Constr
  * <th><mono-table-sort :data-grid.prop="table" field="Nama">Name</mono-table-sort></th>
  */
 export declare class MonoTableSort extends MonoTableSort_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
-    /** The captured label nodes (the element's original light-DOM children). */
-    private _buckets;
-    private _slotsCaptured;
-    connectedCallback(): void;
-    protected updated(changed: Map<string, unknown>): void;
-    protected renderSlot(_name: TableSortSlotName): TemplateResult;
-    protected renderIcon(_name: TableSortIconName): TemplateResult;
-    private _captureSlots;
-    private _placeSlot;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
+  /** The captured label nodes (the element's original light-DOM children). */
+  private _buckets;
+  private _slotsCaptured;
+  connectedCallback(): void;
+  protected updated(changed: Map<string, unknown>): void;
+  protected renderSlot(_name: TableSortSlotName): TemplateResult;
+  protected renderIcon(_name: TableSortIconName): TemplateResult;
+  private _captureSlots;
+  private _placeSlot;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-table-sort': MonoTableSort;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-table-sort': MonoTableSort;
+  }
 }
+//#endregion
 export {};

@@ -1,5 +1,8 @@
-import { LitElement } from 'lit';
-declare const MonoDropdownTable_base: import('../../composables/hybird-prop').Constructor<import('./dropdown-table-core.js').MonoDropdownTableCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoDropdownTableCoreInterface } from "./dropdown-table-core.js";
+import { LitElement } from "lit";
+//#region src/components/dropdown-table/mono-dropdown-table.d.ts
+declare const MonoDropdownTable_base: Constructor<MonoDropdownTableCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-dropdown-table` (default build, `@mono-lit/helper/ui/dropdown-table`).
  * A dropdown whose panel holds a **native `<table>`** for picking row(s), driven by
@@ -27,20 +30,21 @@ declare const MonoDropdownTable_base: import('../../composables/hybird-prop').Co
  * </mono-dropdown-table>
  */
 export declare class MonoDropdownTable extends MonoDropdownTable_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
-    private _slotsCaptured;
-    private _slotSearch;
-    private _slotBody;
-    private _slotFooter;
-    connectedCallback(): void;
-    protected updated(changed: Map<string, unknown>): void;
-    private _captureSlots;
-    private _placeSlot;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
+  private _slotsCaptured;
+  private _slotSearch;
+  private _slotBody;
+  private _slotFooter;
+  connectedCallback(): void;
+  protected updated(changed: Map<string, unknown>): void;
+  private _captureSlots;
+  private _placeSlot;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-dropdown-table': MonoDropdownTable;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-dropdown-table': MonoDropdownTable;
+  }
 }
+//#endregion
 export {};

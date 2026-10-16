@@ -1,5 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-declare const MonoTableEmptyShadow_base: import('../../composables/hybird-prop').Constructor<import('./mono-table-empty-core.js').MonoTableEmptyCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableEmptyCoreInterface } from "./mono-table-empty-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/table/mono-table-empty.shadow.d.ts
+declare const MonoTableEmptyShadow_base: Constructor<MonoTableEmptyCoreInterface> & typeof LitElement;
 /**
  * Shadow-DOM `mono-shadow-table-empty` (SSR build, `@mono-lit/helper/ui/shadow/table`).
  *
@@ -21,20 +24,21 @@ declare const MonoTableEmptyShadow_base: import('../../composables/hybird-prop')
  *   two-shape branch exists.
  */
 export declare class MonoTableEmptyShadow extends MonoTableEmptyShadow_base {
-    static styles: import('lit').CSSResult[];
-    connectedCallback(): void;
-    protected firstUpdated(changed: Map<string, unknown>): void;
-    protected updated(changed: Map<string, unknown>): void;
-    private _maybeAdoptIcons;
-    private _syncBodySlot;
-    /**
-     * The body region as a real `<slot>`.
-     *
-     * `data-empty` collapses it while the props are in play rather than dropping it
-     * — a `<slot>` that is not in the tree has no assigned nodes, so removing it
-     * would make `_syncBodySlot` permanently report "no body" and the override
-     * could never turn on.
-     */
-    protected _renderBodySlot(): TemplateResult;
+  static styles: import("lit").CSSResult[];
+  connectedCallback(): void;
+  protected firstUpdated(changed: Map<string, unknown>): void;
+  protected updated(changed: Map<string, unknown>): void;
+  private _maybeAdoptIcons;
+  private _syncBodySlot;
+  /**
+   * The body region as a real `<slot>`.
+   *
+   * `data-empty` collapses it while the props are in play rather than dropping it
+   * — a `<slot>` that is not in the tree has no assigned nodes, so removing it
+   * would make `_syncBodySlot` permanently report "no body" and the override
+   * could never turn on.
+   */
+  protected _renderBodySlot(): TemplateResult;
 }
+//#endregion
 export {};

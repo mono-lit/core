@@ -1,6 +1,7 @@
-import { arrayToODataString } from '../filter/filter-odata.js';
-import { MonoDataSourceOptions } from '../../utils/data-source-options.js';
-import { MonoChartAggregateCtx, MonoChartSeries } from './chart-types.js';
+import { MonoDataSourceOptions } from "../../utils/data-source-options.js";
+import { MonoChartAggregateCtx, MonoChartSeries } from "./chart-types.js";
+import { arrayToODataString } from "../filter/filter-odata.js";
+//#region src/components/chart/chart-odata.d.ts
 /**
  * Build `groupby((<groupBy>),aggregate(<field> with <agg> as <field>, …))`.
  *
@@ -20,16 +21,14 @@ export declare function buildChartApply(groupBy: string, series?: readonly MonoC
  * rows, which is the whole point of doing this server-side.
  */
 export declare function composeApply(apply: string, filter: unknown): string;
-/** Re-exported so an `aggregate()` hook can convert a devextreme filter itself. */
-export { arrayToODataString as chartODataFilter };
 /** What `buildChartOdataRequest` hands to the transport. */
 export interface MonoChartOdataRequest {
-    /** devextreme load options for the DataSource `monoOdataFetch` builds. */
-    options: Record<string, unknown>;
-    /** Raw query-string parameters (`$apply`, custom keys) — sent verbatim. */
-    params: Record<string, unknown>;
-    /** Whether the rows will come back rolled up (an `$apply` was built). */
-    aggregated: boolean;
+  /** devextreme load options for the DataSource `monoOdataFetch` builds. */
+  options: Record<string, unknown>;
+  /** Raw query-string parameters (`$apply`, custom keys) — sent verbatim. */
+  params: Record<string, unknown>;
+  /** Whether the rows will come back rolled up (an `$apply` was built). */
+  aggregated: boolean;
 }
 /**
  * Compose the request an `odata` chart sends — pure, so the merge of
@@ -44,9 +43,11 @@ export interface MonoChartOdataRequest {
  * `$filter`; `paginate` is forced off so every bucket comes back.
  */
 export declare function buildChartOdataRequest(input: {
-    options?: Record<string, unknown>;
-    base?: MonoDataSourceOptions;
-    aggregate?: (ctx: MonoChartAggregateCtx) => string;
-    groupBy?: string;
-    series: readonly MonoChartSeries[];
+  options?: Record<string, unknown>;
+  base?: MonoDataSourceOptions;
+  aggregate?: (ctx: MonoChartAggregateCtx) => string;
+  groupBy?: string;
+  series: readonly MonoChartSeries[];
 }): MonoChartOdataRequest;
+//#endregion
+export { arrayToODataString as chartODataFilter };

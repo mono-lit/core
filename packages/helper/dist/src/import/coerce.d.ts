@@ -1,4 +1,5 @@
-import { MonoImportNumberFormat, MonoImportValueType } from './types';
+import { MonoImportNumberFormat, MonoImportValueType } from "./types.js";
+//#region src/import/coerce.d.ts
 /**
  * Normalise a header for lookup: NBSP → space, drop dots/underscores (`No. Dok`
  * and `No_Dok` should both find `No Dok`), collapse whitespace, lowercase.
@@ -27,8 +28,8 @@ export declare function parseBoolean(raw: unknown): boolean | null;
  * skip this cell" so a stray `-` in a number column can't stage `NaN`.
  */
 export declare function coerceValue(raw: unknown, type: MonoImportValueType | undefined, opts?: {
-    numberFormat?: MonoImportNumberFormat;
-    allowNegative?: boolean;
+  numberFormat?: MonoImportNumberFormat;
+  allowNegative?: boolean;
 }): unknown;
 /**
  * Whether a staged value would actually change the row. Numbers are compared
@@ -36,3 +37,4 @@ export declare function coerceValue(raw: unknown, type: MonoImportValueType | un
  * dates by timestamp so two equal instants don't churn.
  */
 export declare function isSameValue(current: unknown, next: unknown, type?: MonoImportValueType): boolean;
+//#endregion

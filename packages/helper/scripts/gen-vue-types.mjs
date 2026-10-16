@@ -11,8 +11,8 @@
  * needed here (the docs' `extract-component-types.ts` pays for a full type checker
  * because it renders prop tables), so this stays fast enough to run on every build.
  *
- * Run after BOTH vite builds — `vite-plugin-dts` rewrites the entry declarations
- * each time, and the shadow build goes second.
+ * Run after `tsdown` — its declaration pass rewrites dist/src/** on every build,
+ * dropping the `/// <reference>` lines added below.
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -130,7 +130,7 @@ for (const [tag, className] of [...tags].sort(([a], [b]) => a.localeCompare(b)))
 /* -------------------------------- emit ----------------------------------- */
 
 // Import specifier from `dist/vue.d.ts` into the emitted declarations, which
-// vite-plugin-dts writes under `dist/src/**` mirroring the source tree.
+// tsdown's declaration pass writes under `dist/src/**` mirroring the source tree.
 const specifierFor = (srcFile) =>
   './' + path.posix.join('src', path.relative(SRC, srcFile).replaceAll('\\', '/')).replace(/\.ts$/, '.js')
 
@@ -250,7 +250,7 @@ fs.writeFileSync(path.join(DIST, 'vue.d.ts'), out)
 // the common case — with no suggestions at all.
 //
 // The list is read from package.json `exports` so a new subpath is covered the day
-// it's added. Idempotent: the dts plugin rewrites these files on every build, so
+// it's added. Idempotent: the dts pass rewrites these files on every build, so
 // the line is re-added each time.
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
 

@@ -1,6 +1,6 @@
-import { Root, RootContent, PhrasingContent } from 'mdast';
-import { MonoExportDirective } from './sentinel';
-export type { Root, RootContent };
+import { MonoExportDirective } from "./sentinel.js";
+import { PhrasingContent, Root, RootContent } from "mdast";
+//#region src/export/markdown.d.ts
 /**
  * Parse rendered Markdown into an mdast tree, with GFM tables enabled.
  *
@@ -26,20 +26,20 @@ export type { Root, RootContent };
 export declare function parseMarkdown(md: string): Root;
 /** Inline formatting collected while flattening a run of phrasing content. */
 export interface InlineText {
-    text: string;
-    bold: boolean;
-    italic: boolean;
-    code: boolean;
-    strike: boolean;
-    /** Directives found anywhere in the run. */
-    directives: MonoExportDirective[];
-    /** Images found in the run (from `![alt](src)` — `{{image}}` is a directive). */
-    images: Array<{
-        url: string;
-        alt?: string;
-    }>;
-    /** The first link URL in the run, if any. */
-    link?: string;
+  text: string;
+  bold: boolean;
+  italic: boolean;
+  code: boolean;
+  strike: boolean;
+  /** Directives found anywhere in the run. */
+  directives: MonoExportDirective[];
+  /** Images found in the run (from `![alt](src)` — `{{image}}` is a directive). */
+  images: Array<{
+    url: string;
+    alt?: string;
+  }>;
+  /** The first link URL in the run, if any. */
+  link?: string;
 }
 /**
  * Flatten phrasing content (the inline children of a cell, heading, paragraph
@@ -50,3 +50,5 @@ export interface InlineText {
  * report author actually expects from `| **Total** | 123 |`.
  */
 export declare function flattenInline(nodes: readonly PhrasingContent[] | undefined): InlineText;
+//#endregion
+export type { Root, RootContent };

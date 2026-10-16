@@ -1,3 +1,4 @@
+//#region src/search/filter-eval.d.ts
 /**
  * Compile a devextreme filter expression (the array form `monoFilterBuilder`
  * emits via `changed({ type: 'array' })`) into a client-side row predicate, so a
@@ -28,3 +29,4 @@ export declare function andPredicates(...fns: Array<RowPredicate | null | undefi
  * members (`[a, 'or', b, 'or', c]`) rather than nesting pairs.
  */
 export declare function joinFilters(parts: unknown[], join: 'and' | 'or'): unknown;
+//#endregion

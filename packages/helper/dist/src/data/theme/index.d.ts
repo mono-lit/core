@@ -1,17 +1,18 @@
-import { FlavorName, ThemeName } from './presets';
+import { FlavorName, ThemeName } from "./presets.js";
+//#region src/data/theme/index.d.ts
 export interface ThemeConfig {
-    name: ThemeName;
-    displayName: string;
+  name: ThemeName;
+  displayName: string;
 }
 export interface FlavorConfig {
-    name: FlavorName;
-    displayName: string;
+  name: FlavorName;
+  displayName: string;
 }
 export declare const themes: Record<ThemeName, ThemeConfig>;
 export declare const flavors: Record<FlavorName, FlavorConfig>;
 export type ApplyThemeInput = ThemeName | {
-    color?: ThemeName;
-    flavor?: FlavorName;
+  color?: ThemeName;
+  flavor?: FlavorName;
 };
 export declare function applyTheme(input: ApplyThemeInput): void;
 export declare function applyFlavor(flavorName: FlavorName): void;
@@ -28,3 +29,4 @@ export declare function resetFlavor(): void;
 export declare function createThemeClass(themeName: ThemeName): string;
 /** Structure class for a flavor — empty for `one` (the default, no class). */
 export declare function createFlavorClass(flavorName: FlavorName): string;
+//#endregion

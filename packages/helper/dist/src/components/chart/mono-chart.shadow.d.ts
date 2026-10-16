@@ -1,5 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-declare const MonoChartShadow_base: import('../../composables/hybird-prop').Constructor<import('./chart-core.js').MonoChartCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoChartCoreInterface } from "./chart-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/chart/mono-chart.shadow.d.ts
+declare const MonoChartShadow_base: Constructor<MonoChartCoreInterface> & typeof LitElement;
 /**
  * Shadow-DOM `<mono-shadow-chart>` (`@mono-lit/helper/ui/shadow/chart`).
  *
@@ -10,13 +13,14 @@ declare const MonoChartShadow_base: import('../../composables/hybird-prop').Cons
  * disabled, so `firstUpdated` would never run and the canvas would stay blank.
  */
 export declare class MonoChartShadow extends MonoChartShadow_base {
-    static styles: import('lit').CSSResult[];
-    connectedCallback(): void;
-    protected render(): TemplateResult;
+  static styles: import("lit").CSSResult[];
+  connectedCallback(): void;
+  protected render(): TemplateResult;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-shadow-chart': MonoChartShadow;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-shadow-chart': MonoChartShadow;
+  }
 }
+//#endregion
 export {};

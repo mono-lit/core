@@ -1,5 +1,8 @@
-import { LitElement } from 'lit';
-declare const MonoRichTextEditor_base: import('../../composables/hybird-prop').Constructor<import('./rich-text-editor-core.js').MonoRichTextEditorCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoRichTextEditorCoreInterface } from "./rich-text-editor-core.js";
+import { LitElement } from "lit";
+//#region src/components/rich-text-editor/mono-rich-text-editor.d.ts
+declare const MonoRichTextEditor_base: Constructor<MonoRichTextEditorCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-rich-text-editor` (default build, `@mono-lit/helper/ui/rich-text-editor`).
  *
@@ -13,19 +16,20 @@ declare const MonoRichTextEditor_base: import('../../composables/hybird-prop').C
  * `MonoRichTextEditorCore`.
  */
 export declare class MonoRichTextEditor extends MonoRichTextEditor_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
-    private _slotsCaptured;
-    private _slotLabel;
-    private _slotHelper;
-    connectedCallback(): void;
-    protected updated(changed: Map<string, unknown>): void;
-    private _captureSlots;
-    private _placeSlot;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
+  private _slotsCaptured;
+  private _slotLabel;
+  private _slotHelper;
+  connectedCallback(): void;
+  protected updated(changed: Map<string, unknown>): void;
+  private _captureSlots;
+  private _placeSlot;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-rich-text-editor': MonoRichTextEditor;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-rich-text-editor': MonoRichTextEditor;
+  }
 }
+//#endregion
 export {};

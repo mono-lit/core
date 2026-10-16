@@ -1,57 +1,30 @@
-import { C as MonoSyncTransport, _ as MonoMergeableKey, c as MonoConfig, n as JWTCompleteTokenTypes, o as MonoAppType, t as DefaultJWTTokenTypes, w as MonoTemplate } from "./create-config-D3m6xTaQ.js";
+import { C as MonoSyncTransport, _ as MonoMergeableKey, c as MonoConfig, n as JWTCompleteTokenTypes, o as MonoAppType, t as DefaultJWTTokenTypes, w as MonoTemplate } from "./create-config-B8IhX4ht.js";
 import { a as MonoFetchCookieOptions, i as LocalStorageParams, n as CookieTokenParams, o as NormalFetchOptions$1, r as JWTPayload, s as NormalFetchResult$1, t as CookieParams } from "./types-B6FdB7LJ.js";
-import { a as monoToken, i as monoStorage, n as monoCookie, o as setMonoEventResolver, r as monoJwt, s as CookieApi, t as MonoRequestEvent } from "./universal-B2eD9xho.js";
-import { A as ValidateErrorItem, B as NormalFetchOptions, C as Format, D as SchemaType, E as SchemaObject, F as LoopTemplate, G as NotifProps, H as OdataFetchTypes, I as PathValue, J as MonoNotifButton, K as MonoNotifActionProps, L as FetchLoading, M as ValidateSchema, N as Col, O as ValidateError, P as GroupTemplate, R as FetchOData, S as FilterExpression, T as Schema, U as TanstackFetchOptions, V as NormalFetchResult, W as useHelper, X as createStaticDatasource, Y as UseOdataStaticOpts, _ as getPrefetchBridge, a as TryCatchDatasourceParams, b as CustomSummary, c as extractErrorMessage, d as promiseWrapper, f as tryCatchDatasource, g as MonoPrefetchRequest, h as MonoPrefetchBridge, i as OdataFetchUniqueTypes, j as ValidateErrorSingle, k as ValidateErrorComplex, l as loadChuckStore, m as useNormalFetch, n as FetchOverrides, o as createFetcher, p as useFetchOData, q as MonoNotifActionTypes, r as LoadChunkStoreArgs, s as createUniqueFetcher, t as _default, u as parseDxError, v as setPrefetchBridge, w as HeaderFilter, x as DataGrid, y as OdataMapTypes, z as FetchParam } from "./index-D70EYjBS.js";
+import { a as monoToken, i as monoStorage, n as monoCookie, o as setMonoEventResolver, r as monoJwt, s as CookieApi, t as MonoRequestEvent } from "./universal-BR0O7Qwk.js";
+import { A as ValidateErrorItem, B as NormalFetchOptions, C as Format, D as SchemaType, E as SchemaObject, F as LoopTemplate, G as NotifProps, H as OdataFetchTypes, I as PathValue, J as MonoNotifButton, K as MonoNotifActionProps, L as FetchLoading, M as ValidateSchema, N as Col, O as ValidateError, P as GroupTemplate, R as FetchOData, S as FilterExpression, T as Schema, U as TanstackFetchOptions, V as NormalFetchResult, W as useHelper, X as createStaticDatasource, Y as UseOdataStaticOpts, _ as getPrefetchBridge, a as TryCatchDatasourceParams, b as CustomSummary, c as extractErrorMessage, d as promiseWrapper, f as tryCatchDatasource, g as MonoPrefetchRequest, h as MonoPrefetchBridge, i as OdataFetchUniqueTypes, j as ValidateErrorSingle, k as ValidateErrorComplex, l as loadChuckStore, m as useNormalFetch, n as FetchOverrides, o as createFetcher, p as useFetchOData, q as MonoNotifActionTypes, r as LoadChunkStoreArgs, s as createUniqueFetcher, t as _default, u as parseDxError, v as setPrefetchBridge, w as HeaderFilter, x as DataGrid, y as OdataMapTypes, z as FetchParam } from "./index-DYlzhHq7.js";
 import { InjectionKey, Plugin, Ref as Ref$1 } from "vue";
 import { RouteRecordRaw } from "vue-router";
-
 //#region src/token/client.d.ts
 /** Client cookie util — `document.cookie` backed (unchanged public shape). */
-declare const useMyCookie: () => CookieApi;
+export declare const useMyCookie: () => CookieApi;
 /** Client token util — `document.cookie` backed (unchanged public shape). */
-declare const useMyToken: (options?: CookieTokenParams) => {
+export declare const useMyToken: (options?: CookieTokenParams) => {
   decode: <T extends object>(name?: CookieTokenParams["name"], split?: boolean) => JWTPayload<T> | null;
-  add: ({
-    name,
-    value,
-    days,
-    milis,
-    splitCookie
-  }: Pick<CookieTokenParams, "name" | "value" | "days" | "milis" | "splitCookie">) => string | null | undefined;
+  add: ({ name, value, days, milis, splitCookie }: Pick<CookieTokenParams, "name" | "value" | "days" | "milis" | "splitCookie">) => string | null | undefined;
   get: (name?: CookieTokenParams["name"], split?: boolean) => CookieTokenParams["value"] | null;
-  replace: ({
-    name,
-    value,
-    days,
-    milis,
-    splitCookie
-  }: Pick<CookieTokenParams, "name" | "value" | "days" | "milis" | "splitCookie">) => boolean;
-  fetch: <T = Record<string, any>>({
-    fetchParams,
-    name,
-    path,
-    splitCookie
-  }?: MonoFetchCookieOptions) => Promise<{
+  replace: ({ name, value, days, milis, splitCookie }: Pick<CookieTokenParams, "name" | "value" | "days" | "milis" | "splitCookie">) => boolean;
+  fetch: <T = Record<string, any>>({ fetchParams, name, path, splitCookie }?: MonoFetchCookieOptions) => Promise<{
     response: T | null;
     cookie: string | null | undefined;
   }>;
   validate: (name?: CookieTokenParams["name"], split?: boolean) => boolean;
-  wrap: <T = any>({
-    name,
-    fetchParams,
-    path,
-    splitCookie
-  }?: Pick<CookieTokenParams, "name" | "splitCookie" | "fetchParams" | "path">, callback?: (value?: string | null) => T | undefined | Promise<T | undefined>) => Promise<T | undefined>;
+  wrap: <T = any>({ name, fetchParams, path, splitCookie }?: Pick<CookieTokenParams, "name" | "splitCookie" | "fetchParams" | "path">, callback?: (value?: string | null) => T | undefined | Promise<T | undefined>) => Promise<T | undefined>;
 };
 //#endregion
 //#region src/token/jwt.d.ts
-declare const useMyJwt: () => {
+export declare const useMyJwt: () => {
   isJwt: (jwt: string) => boolean;
-  cookieDecode: <T extends object>({
-    cookie,
-    token,
-    splitCookie
-  }: {
+  cookieDecode: <T extends object>({ cookie, token, splitCookie }: {
     splitCookie?: CookieParams["split"];
     cookie?: CookieParams["name"];
     token?: CookieParams["value"];
@@ -59,28 +32,17 @@ declare const useMyJwt: () => {
 };
 //#endregion
 //#region src/token/storage.d.ts
-declare const useMyStorage: (options?: LocalStorageParams) => {
+export declare const useMyStorage: (options?: LocalStorageParams) => {
   get: (name: LocalStorageParams["name"]) => LocalStorageParams["value"] | LocalStorageParams[] | null;
-  add: ({
-    name,
-    value,
-    items
-  }: Pick<LocalStorageParams, "name" | "value" | "items">) => string | null;
+  add: ({ name, value, items }: Pick<LocalStorageParams, "name" | "value" | "items">) => string | null;
   remove: (name: LocalStorageParams["name"]) => boolean;
-  change: ({
-    name,
-    value
-  }: Pick<LocalStorageParams, "name" | "value">) => string | null;
+  change: ({ name, value }: Pick<LocalStorageParams, "name" | "value">) => string | null;
   pull: (name: LocalStorageParams["name"]) => LocalStorageParams["value"] | null;
-  redirect: (url: string, {
-    name,
-    value,
-    items
-  }: Pick<LocalStorageParams, "name" | "value" | "items">) => void;
+  redirect: (url: string, { name, value, items }: Pick<LocalStorageParams, "name" | "value" | "items">) => void;
 };
 //#endregion
 //#region src/token/fetch.d.ts
-declare function useMyFetch<T>(url: string, options: NormalFetchOptions$1): Promise<NormalFetchResult$1<T>>;
+export declare function useMyFetch<T>(url: string, options: NormalFetchOptions$1): Promise<NormalFetchResult$1<T>>;
 //#endregion
 //#region src/composables/state.d.ts
 /**
@@ -97,13 +59,13 @@ type MonoStateShape = {
   cookie: Record<string, any>;
   jwt: MonoJwtState;
 };
-declare function monoStatePatch(patch: {
+export declare function monoStatePatch(patch: {
   cookie?: Record<string, any>;
   jwt?: Partial<MonoJwtState>;
 }): void;
-type DeepMerge<A, B> = { [K in keyof (A & B)]: K extends keyof A ? K extends keyof B ? A[K] extends object ? B[K] extends object ? DeepMerge<A[K], B[K]> : A[K] & B[K] : A[K] & B[K] : A[K] : K extends keyof B ? B[K] : never };
-declare function monoState<Override extends object = {}>(): Readonly<Pick<DeepMerge<MonoStateShape, Override>, 'config' | 'cookie' | 'jwt'>>;
-declare function monoStateReset(): void;
+type DeepMerge<A, B> = { [K in keyof (A & B)]: K extends keyof A ? K extends keyof B ? A[K] extends object ? B[K] extends object ? DeepMerge<A[K], B[K]> : A[K] & B[K] : A[K] & B[K] : A[K] : K extends keyof B ? B[K] : never; };
+export declare function monoState<Override extends object = {}>(): Readonly<Pick<DeepMerge<MonoStateShape, Override>, 'config' | 'cookie' | 'jwt'>>;
+export declare function monoStateReset(): void;
 /**
  * Bridge between mono.config.ts and monoState().
  *
@@ -114,12 +76,12 @@ declare function monoStateReset(): void;
  *
  * Then patches the shared reactive mono state.
  */
-declare function initMono(option: MonoConfig): MonoConfig;
+export declare function initMono(option: MonoConfig): MonoConfig;
 declare function monoConfig(): {
   readonly extends?: string | (() => Partial<MonoConfig> | undefined) | {
     readonly config: (() => Partial<MonoConfig> | undefined) | {
-      readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | {
-        readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | /*elided*/any | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | /*elided*/any | readonly [string, {
+      readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | {
+        readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | /*elided*/ any | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | /*elided*/ any | readonly [string, {
           readonly [x: string]: any;
         }])[] | undefined;
         readonly name?: string | undefined;
@@ -139,7 +101,7 @@ declare function monoConfig(): {
             readonly title?: string | undefined;
             readonly icon?: string | undefined;
           } | undefined;
-          readonly items?: readonly /*elided*/any[] | undefined;
+          readonly items?: readonly /*elided*/ any[] | undefined;
           readonly remoteName?: string | undefined;
           readonly visible?: boolean | undefined;
           readonly order?: number | undefined;
@@ -293,8 +255,8 @@ declare function monoConfig(): {
         readonly config?: never | undefined;
         readonly merges?: never | undefined;
         readonly ecosystems?: never | undefined;
-      } | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | {
-        readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | /*elided*/any | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | /*elided*/any | readonly [string, {
+      } | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | {
+        readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | /*elided*/ any | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | /*elided*/ any | readonly [string, {
           readonly [x: string]: any;
         }])[] | undefined;
         readonly name?: string | undefined;
@@ -314,7 +276,7 @@ declare function monoConfig(): {
             readonly title?: string | undefined;
             readonly icon?: string | undefined;
           } | undefined;
-          readonly items?: readonly /*elided*/any[] | undefined;
+          readonly items?: readonly /*elided*/ any[] | undefined;
           readonly remoteName?: string | undefined;
           readonly visible?: boolean | undefined;
           readonly order?: number | undefined;
@@ -488,7 +450,7 @@ declare function monoConfig(): {
           readonly title?: string | undefined;
           readonly icon?: string | undefined;
         } | undefined;
-        readonly items?: readonly /*elided*/any[] | undefined;
+        readonly items?: readonly /*elided*/ any[] | undefined;
         readonly remoteName?: string | undefined;
         readonly visible?: boolean | undefined;
         readonly order?: number | undefined;
@@ -645,7 +607,7 @@ declare function monoConfig(): {
   } | {
     readonly extends?: string | (() => Partial<MonoConfig> | undefined) | {
       readonly config: (() => Partial<MonoConfig> | undefined) | {
-        readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | /*elided*/any | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | /*elided*/any | readonly [string, {
+        readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | /*elided*/ any | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | /*elided*/ any | readonly [string, {
           readonly [x: string]: any;
         }])[] | undefined;
         readonly name?: string | undefined;
@@ -665,7 +627,7 @@ declare function monoConfig(): {
             readonly title?: string | undefined;
             readonly icon?: string | undefined;
           } | undefined;
-          readonly items?: readonly /*elided*/any[] | undefined;
+          readonly items?: readonly /*elided*/ any[] | undefined;
           readonly remoteName?: string | undefined;
           readonly visible?: boolean | undefined;
           readonly order?: number | undefined;
@@ -819,9 +781,9 @@ declare function monoConfig(): {
       };
       readonly merges?: readonly MonoMergeableKey[] | undefined;
       readonly ecosystems?: readonly string[] | undefined;
-    } | /*elided*/any | readonly (string | (() => Partial<MonoConfig> | undefined) | {
+    } | /*elided*/ any | readonly (string | (() => Partial<MonoConfig> | undefined) | {
       readonly config: (() => Partial<MonoConfig> | undefined) | {
-        readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | /*elided*/any | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | /*elided*/any | readonly [string, {
+        readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | /*elided*/ any | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | /*elided*/ any | readonly [string, {
           readonly [x: string]: any;
         }])[] | undefined;
         readonly name?: string | undefined;
@@ -841,7 +803,7 @@ declare function monoConfig(): {
             readonly title?: string | undefined;
             readonly icon?: string | undefined;
           } | undefined;
-          readonly items?: readonly /*elided*/any[] | undefined;
+          readonly items?: readonly /*elided*/ any[] | undefined;
           readonly remoteName?: string | undefined;
           readonly visible?: boolean | undefined;
           readonly order?: number | undefined;
@@ -995,7 +957,7 @@ declare function monoConfig(): {
       };
       readonly merges?: readonly MonoMergeableKey[] | undefined;
       readonly ecosystems?: readonly string[] | undefined;
-    } | /*elided*/any | readonly [string, {
+    } | /*elided*/ any | readonly [string, {
       readonly [x: string]: any;
     }])[] | undefined;
     readonly name?: string | undefined;
@@ -1015,7 +977,7 @@ declare function monoConfig(): {
         readonly title?: string | undefined;
         readonly icon?: string | undefined;
       } | undefined;
-      readonly items?: readonly /*elided*/any[] | undefined;
+      readonly items?: readonly /*elided*/ any[] | undefined;
       readonly remoteName?: string | undefined;
       readonly visible?: boolean | undefined;
       readonly order?: number | undefined;
@@ -1171,8 +1133,8 @@ declare function monoConfig(): {
     readonly ecosystems?: never | undefined;
   } | readonly (string | (() => Partial<MonoConfig> | undefined) | {
     readonly config: (() => Partial<MonoConfig> | undefined) | {
-      readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | {
-        readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | /*elided*/any | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | /*elided*/any | readonly [string, {
+      readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | {
+        readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | /*elided*/ any | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | /*elided*/ any | readonly [string, {
           readonly [x: string]: any;
         }])[] | undefined;
         readonly name?: string | undefined;
@@ -1192,7 +1154,7 @@ declare function monoConfig(): {
             readonly title?: string | undefined;
             readonly icon?: string | undefined;
           } | undefined;
-          readonly items?: readonly /*elided*/any[] | undefined;
+          readonly items?: readonly /*elided*/ any[] | undefined;
           readonly remoteName?: string | undefined;
           readonly visible?: boolean | undefined;
           readonly order?: number | undefined;
@@ -1346,8 +1308,8 @@ declare function monoConfig(): {
         readonly config?: never | undefined;
         readonly merges?: never | undefined;
         readonly ecosystems?: never | undefined;
-      } | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | {
-        readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | /*elided*/any | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | /*elided*/any | readonly [string, {
+      } | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | {
+        readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | /*elided*/ any | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | /*elided*/ any | readonly [string, {
           readonly [x: string]: any;
         }])[] | undefined;
         readonly name?: string | undefined;
@@ -1367,7 +1329,7 @@ declare function monoConfig(): {
             readonly title?: string | undefined;
             readonly icon?: string | undefined;
           } | undefined;
-          readonly items?: readonly /*elided*/any[] | undefined;
+          readonly items?: readonly /*elided*/ any[] | undefined;
           readonly remoteName?: string | undefined;
           readonly visible?: boolean | undefined;
           readonly order?: number | undefined;
@@ -1541,7 +1503,7 @@ declare function monoConfig(): {
           readonly title?: string | undefined;
           readonly icon?: string | undefined;
         } | undefined;
-        readonly items?: readonly /*elided*/any[] | undefined;
+        readonly items?: readonly /*elided*/ any[] | undefined;
         readonly remoteName?: string | undefined;
         readonly visible?: boolean | undefined;
         readonly order?: number | undefined;
@@ -1698,7 +1660,7 @@ declare function monoConfig(): {
   } | {
     readonly extends?: string | (() => Partial<MonoConfig> | undefined) | {
       readonly config: (() => Partial<MonoConfig> | undefined) | {
-        readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | /*elided*/any | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | /*elided*/any | readonly [string, {
+        readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | /*elided*/ any | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | /*elided*/ any | readonly [string, {
           readonly [x: string]: any;
         }])[] | undefined;
         readonly name?: string | undefined;
@@ -1718,7 +1680,7 @@ declare function monoConfig(): {
             readonly title?: string | undefined;
             readonly icon?: string | undefined;
           } | undefined;
-          readonly items?: readonly /*elided*/any[] | undefined;
+          readonly items?: readonly /*elided*/ any[] | undefined;
           readonly remoteName?: string | undefined;
           readonly visible?: boolean | undefined;
           readonly order?: number | undefined;
@@ -1872,9 +1834,9 @@ declare function monoConfig(): {
       };
       readonly merges?: readonly MonoMergeableKey[] | undefined;
       readonly ecosystems?: readonly string[] | undefined;
-    } | /*elided*/any | readonly (string | (() => Partial<MonoConfig> | undefined) | {
+    } | /*elided*/ any | readonly (string | (() => Partial<MonoConfig> | undefined) | {
       readonly config: (() => Partial<MonoConfig> | undefined) | {
-        readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | /*elided*/any | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/any | /*elided*/any | readonly [string, {
+        readonly extends?: string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | /*elided*/ any | readonly (string | (() => Partial<MonoConfig> | undefined) | /*elided*/ any | /*elided*/ any | readonly [string, {
           readonly [x: string]: any;
         }])[] | undefined;
         readonly name?: string | undefined;
@@ -1894,7 +1856,7 @@ declare function monoConfig(): {
             readonly title?: string | undefined;
             readonly icon?: string | undefined;
           } | undefined;
-          readonly items?: readonly /*elided*/any[] | undefined;
+          readonly items?: readonly /*elided*/ any[] | undefined;
           readonly remoteName?: string | undefined;
           readonly visible?: boolean | undefined;
           readonly order?: number | undefined;
@@ -2048,7 +2010,7 @@ declare function monoConfig(): {
       };
       readonly merges?: readonly MonoMergeableKey[] | undefined;
       readonly ecosystems?: readonly string[] | undefined;
-    } | /*elided*/any | readonly [string, {
+    } | /*elided*/ any | readonly [string, {
       readonly [x: string]: any;
     }])[] | undefined;
     readonly name?: string | undefined;
@@ -2068,7 +2030,7 @@ declare function monoConfig(): {
         readonly title?: string | undefined;
         readonly icon?: string | undefined;
       } | undefined;
-      readonly items?: readonly /*elided*/any[] | undefined;
+      readonly items?: readonly /*elided*/ any[] | undefined;
       readonly remoteName?: string | undefined;
       readonly visible?: boolean | undefined;
       readonly order?: number | undefined;
@@ -2242,7 +2204,7 @@ declare function monoConfig(): {
       readonly title?: string | undefined;
       readonly icon?: string | undefined;
     } | undefined;
-    readonly items?: readonly /*elided*/any[] | undefined;
+    readonly items?: readonly /*elided*/ any[] | undefined;
     readonly remoteName?: string | undefined;
     readonly visible?: boolean | undefined;
     readonly order?: number | undefined;
@@ -2417,7 +2379,7 @@ declare function monoEnv<T = string | number | boolean>(key: string): T | undefi
  *   .use(createMono(config))
  *   .mount('#app')
  */
-declare function createMono(option: MonoConfig): Plugin;
+export declare function createMono(option: MonoConfig): Plugin;
 //#endregion
 //#region src/composables/nuxt-state.d.ts
 /**
@@ -2435,10 +2397,10 @@ declare function createMono(option: MonoConfig): Plugin;
  * the existing ref untouched, even if their `init` differs. Returning a ref from
  * `init` adopts that ref rather than nesting it.
  */
-declare function useState<T = any>(init?: (() => T | Ref$1<T>) | T): Ref$1<T>;
-declare function useState<T = any>(key: string, init?: (() => T | Ref$1<T>) | T): Ref$1<T>;
+export declare function useState<T = any>(init?: (() => T | Ref$1<T>) | T): Ref$1<T>;
+export declare function useState<T = any>(key: string, init?: (() => T | Ref$1<T>) | T): Ref$1<T>;
 /** Explicit alias — for hosts that don't want the bare Nuxt name in scope. */
-declare const monoUseState: typeof useState;
+export declare const monoUseState: typeof useState;
 /**
  * Drop keyed state so the next `useState(key, init)` re-runs `init` (Nuxt's
  * `clearNuxtState`). No argument clears everything; a predicate filters by key.
@@ -2446,9 +2408,9 @@ declare const monoUseState: typeof useState;
  * Only the registry entry goes — refs already handed out keep working, they're
  * just no longer what that key resolves to.
  */
-declare function clearNuxtState(keys?: string | string[] | ((key: string) => boolean)): void;
+export declare function clearNuxtState(keys?: string | string[] | ((key: string) => boolean)): void;
 /** The live keyed refs — for devtools/debugging, not app logic. */
-declare function nuxtStateKeys(): string[];
+export declare function nuxtStateKeys(): string[];
 //#endregion
 //#region src/composables/combine-layout.d.ts
 interface SidebarMenu {
@@ -2472,10 +2434,7 @@ interface SidebarMenu {
     };
   };
 }
-declare let defineLayout: ({
-  menu,
-  routes
-}: {
+export declare let defineLayout: ({ menu, routes }: {
   menu: SidebarMenu[];
   routes: RouteRecordRaw[];
 }) => RouteRecordRaw[];
@@ -2495,8 +2454,8 @@ type HostProviderOptions<T> = {
   resetValue?: T;
   deleteOnUnmount?: boolean;
 };
-declare function monoInject<T>(options: InjectHostOptions<T>): Ref$1<T>;
-declare function monoProvide<T>(options: HostProviderOptions<T>): Ref$1<T>;
+export declare function monoInject<T>(options: InjectHostOptions<T>): Ref$1<T>;
+export declare function monoProvide<T>(options: HostProviderOptions<T>): Ref$1<T>;
 //#endregion
 //#region src/composables/use-mono-utility.d.ts
 /**
@@ -2511,25 +2470,15 @@ declare function monoProvide<T>(options: HostProviderOptions<T>): Ref$1<T>;
  *
  * Same surface as the core `useUtils()` (src/core); `useMonoUtility` is the public name.
  */
-declare const useMonoUtility: () => {
+export declare const useMonoUtility: () => {
   isDate: (value: unknown) => value is Date;
-  isJSONString: ({
-    input,
-    strict,
-    root
-  }: {
+  isJSONString: ({ input, strict, root }: {
     input: unknown;
     strict?: boolean;
     root?: ("object" | "any" | "array" | "primitive") | ReadonlyArray<"object" | "any" | "array" | "primitive">;
   }) => boolean;
   safeJSONParse: (str: string) => any;
-  replacerData: <ComT>({
-    fn,
-    type,
-    item,
-    key,
-    items
-  }: {
+  replacerData: <ComT>({ fn, type, item, key, items }: {
     fn: "push" | "remove" | "replace";
     type: "data";
     item: ComT;
@@ -2549,30 +2498,16 @@ declare const useMonoUtility: () => {
     };
   }) => void;
   filterOrIn: (field: string, values: any[], combine?: boolean) => any;
-  validateAllSchema: <T extends object = any>({
-    schema,
-    input,
-    error
-  }: ValidateSchema<T>, callback?: () => void) => Promise<boolean>;
-  validateSchema: <T = any>({
-    schema,
-    field,
-    input,
-    error
-  }: ValidateSchema<T>, callback?: Function) => Promise<boolean>;
+  validateAllSchema: <T extends object = any>({ schema, input, error }: ValidateSchema<T>, callback?: () => void) => Promise<boolean>;
+  validateSchema: <T = any>({ schema, field, input, error }: ValidateSchema<T>, callback?: Function) => Promise<boolean>;
   validateAllSchemaCheck: (error: ValidateError<any>) => boolean;
-  clearSchemaValidation: ({
-    error
-  }: {
+  clearSchemaValidation: ({ error }: {
     error: Ref<any>;
   }) => void;
   notif: (options: NotifProps) => Promise<import("notivue").NotificationClearMethods | undefined>;
-  dxFilterToString: ({
-    filter,
-    encode
-  }: {
+  dxFilterToString: ({ filter, encode }: {
     encode?: boolean;
-    filter: string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | /*elided*/any | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined;
+    filter: string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | (string | number | boolean | Date | /*elided*/ any | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined)[] | [string, string, any] | null | undefined;
   }) => string;
 };
 //#endregion
@@ -2580,4 +2515,4 @@ declare const useMonoUtility: () => {
 declare const __VLS_export: import("vue").DefineComponent<{}, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<{}> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, true, {}, any>;
 declare const _default$1: typeof __VLS_export;
 //#endregion
-export { type Col, type Col as MonoDataGridCol, type CustomSummary, type DataGrid, type DataGrid as MonoDataGridTypes, type FetchLoading, type FetchOData, type FetchParam, type FilterExpression, type Format, type GroupTemplate, type HeaderFilter, type LoopTemplate, type createStaticDatasource as MonoCreateStaticDatasource, type FetchOverrides as MonoFetchOverrides, type NormalFetchOptions as MonoNormalFetchTypes, type NormalFetchOptions, _default as MonoNotifAction, type MonoNotifActionProps as MonoNotifActionPropsTypes, type MonoNotifActionTypes, type MonoNotifButton as MonoNotifButtonTypes, type NotifProps as MonoNotifPropsTypes, type NotifProps, _default$1 as MonoNotivue, type OdataFetchTypes as MonoOdataFetchTypes, type OdataFetchTypes, type OdataFetchUniqueTypes as MonoOdataFetchUniqueTypes, type OdataMapTypes as MonoOdataMapTypes, type OdataMapTypes, type MonoPrefetchBridge, type MonoPrefetchRequest, type MonoRequestEvent, type SchemaObject as MonoSchemaObject, type SchemaObject, type LoadChunkStoreArgs as MonoStoreChunkTypes, type TanstackFetchOptions as MonoTanstackFetchTypes, type TanstackFetchOptions, type TryCatchDatasourceParams as MonoTryCatchDatasourceTypes, type UseOdataStaticOpts as MonoUseOdataStaticTypes, type ValidateErrorComplex as MonoValidateError, type ValidateErrorComplex, type ValidateErrorSingle as MonoValidateErrorSingle, type ValidateErrorSingle, type NormalFetchResult, type PathValue, type Schema, type SchemaType, type ValidateError, type ValidateErrorItem, type ValidateSchema, clearNuxtState, type createFetcher, createMono, type createUniqueFetcher, defineLayout, type extractErrorMessage, type useNormalFetch as fetchNormal, type useFetchOData as fetchOData, type getPrefetchBridge, initMono, type loadChuckStore, monoConfig, monoCookie, monoEnv, monoInject, monoJwt, monoProvide, monoState, monoStatePatch, monoStateReset, monoStorage, monoToken, monoUseState, nuxtStateKeys, type parseDxError, type promiseWrapper, setMonoEventResolver, type setPrefetchBridge, type tryCatchDatasource, useMonoUtility, useMonoUtility as useMonoUtils, useMyCookie, useMyFetch, useMyJwt, useMyStorage, useMyToken, useState, useHelper as useUtils };
+export { type Col, type Col as MonoDataGridCol, type CustomSummary, type DataGrid, type DataGrid as MonoDataGridTypes, type FetchLoading, type FetchOData, type FetchParam, type FilterExpression, type Format, type GroupTemplate, type HeaderFilter, type LoopTemplate, type createStaticDatasource as MonoCreateStaticDatasource, type FetchOverrides as MonoFetchOverrides, type NormalFetchOptions as MonoNormalFetchTypes, type NormalFetchOptions, _default as MonoNotifAction, type MonoNotifActionProps as MonoNotifActionPropsTypes, type MonoNotifActionTypes, type MonoNotifButton as MonoNotifButtonTypes, type NotifProps as MonoNotifPropsTypes, type NotifProps, _default$1 as MonoNotivue, type OdataFetchTypes as MonoOdataFetchTypes, type OdataFetchTypes, type OdataFetchUniqueTypes as MonoOdataFetchUniqueTypes, type OdataMapTypes as MonoOdataMapTypes, type OdataMapTypes, type MonoPrefetchBridge, type MonoPrefetchRequest, type MonoRequestEvent, type SchemaObject as MonoSchemaObject, type SchemaObject, type LoadChunkStoreArgs as MonoStoreChunkTypes, type TanstackFetchOptions as MonoTanstackFetchTypes, type TanstackFetchOptions, type TryCatchDatasourceParams as MonoTryCatchDatasourceTypes, type UseOdataStaticOpts as MonoUseOdataStaticTypes, type ValidateErrorComplex as MonoValidateError, type ValidateErrorComplex, type ValidateErrorSingle as MonoValidateErrorSingle, type ValidateErrorSingle, type NormalFetchResult, type PathValue, type Schema, type SchemaType, type ValidateError, type ValidateErrorItem, type ValidateSchema, type createFetcher, type createUniqueFetcher, type extractErrorMessage, type useNormalFetch as fetchNormal, type useFetchOData as fetchOData, type getPrefetchBridge, type loadChuckStore, monoConfig, monoCookie, monoEnv, monoJwt, monoStorage, monoToken, type parseDxError, type promiseWrapper, setMonoEventResolver, type setPrefetchBridge, type tryCatchDatasource, useMonoUtility as useMonoUtils, useHelper as useUtils };

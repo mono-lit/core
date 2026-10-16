@@ -1,10 +1,11 @@
-import { LitElement } from 'lit';
-import { MonoTableControllerCoreInterface } from './table-controller-core.js';
-import { Constructor } from '../../composables/hybird-prop';
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableControllerCoreInterface } from "./table-controller-core.js";
+import { LitElement } from "lit";
+//#region src/components/table/mono-table-loading-core.d.ts
 /** Public surface added by the loading-overlay core mixin. */
 export declare class MonoTableLoadingCoreInterface extends MonoTableControllerCoreInterface {
-    minDuration: number;
-    loading: boolean | null;
+  minDuration: number;
+  loading: boolean | null;
 }
 /**
  * `MonoTableLoadingCore` — render-mode-agnostic logic for `mono-table-loading`, a
@@ -39,3 +40,4 @@ export declare class MonoTableLoadingCoreInterface extends MonoTableControllerCo
  * SSR-safe: all DOM/timer work is guarded behind `isServer`.
  */
 export declare const MonoTableLoadingCore: <T extends Constructor<LitElement>>(superClass: T) => Constructor<MonoTableLoadingCoreInterface> & T;
+//#endregion

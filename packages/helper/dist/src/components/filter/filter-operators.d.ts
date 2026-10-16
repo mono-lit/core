@@ -1,4 +1,5 @@
-import { MonoFilterDataType, MonoFilterOperator, MonoFilterTexts } from './filter-types.js';
+import { MonoFilterDataType, MonoFilterOperator, MonoFilterTexts } from "./filter-types.js";
+//#region src/components/filter/filter-operators.d.ts
 /** How many value inputs an operator needs. */
 export type MonoFilterArity = 0 | 1 | 2 | 'many';
 /** Value inputs required per operator — drives the value cell. */
@@ -11,3 +12,4 @@ export declare const DEFAULT_TEXTS: Required<MonoFilterTexts>;
 export declare function resolveTexts(texts?: MonoFilterTexts): Required<MonoFilterTexts>;
 /** Coerce a raw input string to the field's data type for the emitted filter. */
 export declare function coerceValue(raw: unknown, dataType?: MonoFilterDataType): unknown;
+//#endregion

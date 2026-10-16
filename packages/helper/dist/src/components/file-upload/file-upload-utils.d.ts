@@ -1,9 +1,10 @@
-import { FileUploadValidationState, FileUploadVariant, FileUploadItem } from './file-upload-types.js';
+import { isIconifyClass } from "../../composables/icon.js";
+import { FileUploadItem, FileUploadValidationState, FileUploadVariant } from "./file-upload-types.js";
+//#region src/components/file-upload/file-upload-utils.d.ts
 export declare function validateFileUploadProps(props: {
-    variant?: FileUploadVariant;
-    validationState?: FileUploadValidationState;
+  variant?: FileUploadVariant;
+  validationState?: FileUploadValidationState;
 }): boolean;
-export { isIconifyClass } from '../../composables/icon.js';
 export declare function formatFileSize(size: number): string;
 /**
  * Pick a default file-type icon. Returns an MDI iconify utility class
@@ -14,3 +15,5 @@ export declare function formatFileSize(size: number): string;
  */
 export declare function getFileIcon(type: string, name: string): string;
 export declare function createUploadItem(file: File): FileUploadItem;
+//#endregion
+export { isIconifyClass };

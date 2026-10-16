@@ -1,12 +1,13 @@
-import { LitElement } from 'lit';
-import { MonoTableControllerCoreInterface } from './table-controller-core.js';
-import { MonoSummaryType } from './mono-data-grid.js';
-import { Constructor } from '../../composables/hybird-prop';
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableControllerCoreInterface } from "./table-controller-core.js";
+import { MonoSummaryType } from "./mono-data-grid.js";
+import { LitElement } from "lit";
+//#region src/components/table/mono-table-summary-core.d.ts
 /** Public surface added by the summary core mixin. */
 export declare class MonoTableSummaryCoreInterface extends MonoTableControllerCoreInterface {
-    field?: string;
-    type?: MonoSummaryType;
-    name?: string;
+  field?: string;
+  type?: MonoSummaryType;
+  name?: string;
 }
 /**
  * `MonoTableSummaryCore` — render-mode-agnostic logic for `mono-table-summary`: an
@@ -24,3 +25,4 @@ export declare class MonoTableSummaryCoreInterface extends MonoTableControllerCo
  * SSR-safe: `dataGrid` is undefined on the server, so it renders an empty shell.
  */
 export declare const MonoTableSummaryCore: <T extends Constructor<LitElement>>(superClass: T) => Constructor<MonoTableSummaryCoreInterface> & T;
+//#endregion

@@ -23,10 +23,12 @@ import { defineCommand, runMain } from "citty";
 */
 async function loadMergedConfig(cwd) {
 	const dirname = path.resolve(cwd ?? process.cwd());
-	return resolveMonoConfig(await getMonoConfig({
+	const alias = monoAlias({ dirname });
+	const raw = await getMonoConfig({
 		cwd: dirname,
-		jitiOptions: { alias: monoAlias({ dirname }) }
-	}));
+		jitiOptions: { alias }
+	});
+	return resolveMonoConfig(raw);
 }
 function requireMock(config) {
 	const mock = config?.mockIndexedDB;
@@ -36,116 +38,121 @@ function requireMock(config) {
 	}
 	return mock;
 }
-runMain(defineCommand({
+const validateCommand = defineCommand({
+	meta: {
+		name: "validate",
+		description: "Parse every mock schema and report bad fields/relations."
+	},
+	args: { cwd: {
+		type: "string",
+		description: "App root (defaults to the current directory)."
+	} },
+	async run({ args }) {
+		const mock = requireMock(await loadMergedConfig(args.cwd));
+		const { schemas, errors } = parseMockSchema(mock);
+		for (const schema of schemas) {
+			const entities = Object.values(schema.entities);
+			console.log(`\n  ${schema.baseUrl}  (${entities.length} entit${entities.length === 1 ? "y" : "ies"})`);
+			for (const entity of entities) {
+				const relations = entity.relations.map((f) => f.name);
+				console.log(`    - ${entity.name}  pk=${entity.primaryKey}  columns=${entity.columns.length}` + (relations.length ? `  expand=[${relations.join(", ")}]` : "") + (entity.seed ? `  seed=${entity.seed.length} row(s)` : ""));
+			}
+		}
+		if (errors.length) {
+			console.error(`\n  ${errors.length} error(s):`);
+			for (const error of errors) console.error(`    x ${error.baseUrl} -> ${error.entity}${error.field ? `.${error.field}` : ""}: ${error.message}`);
+			process.exit(1);
+		}
+		console.log("\n  schema OK\n");
+	}
+});
+const previewCommand = defineCommand({
+	meta: {
+		name: "preview",
+		description: "Print the rows the generator would produce."
+	},
+	args: {
+		cwd: {
+			type: "string",
+			description: "App root (defaults to the current directory)."
+		},
+		entity: {
+			type: "string",
+			description: "Only this entity."
+		},
+		count: {
+			type: "string",
+			description: "Rows per entity (overrides seedCount)."
+		}
+	},
+	async run({ args }) {
+		const mock = requireMock(await loadMergedConfig(args.cwd));
+		const { schemas, errors } = parseMockSchema(mock);
+		if (errors.length) {
+			console.error("[mono db] schema has errors — run `mono db validate` first.");
+			process.exit(1);
+		}
+		for (const schema of schemas) {
+			const seed = generateSeed(schema, {
+				count: args.count ? Number(args.count) : mock.seedCount,
+				random: mock.seedRandom
+			});
+			for (const [entityName, rows] of Object.entries(seed)) {
+				if (args.entity && args.entity !== entityName) continue;
+				console.log(`\n  ${schema.baseUrl} / ${entityName}  (${rows.length} rows)`);
+				console.log(JSON.stringify(rows, null, 2));
+			}
+		}
+	}
+});
+const exportCommand = defineCommand({
+	meta: {
+		name: "export",
+		description: "Write generated rows to a JSON file (to promote them into an explicit `seed`)."
+	},
+	args: {
+		cwd: {
+			type: "string",
+			description: "App root (defaults to the current directory)."
+		},
+		out: {
+			type: "string",
+			description: "Output file.",
+			default: "mock-seed.json"
+		},
+		count: {
+			type: "string",
+			description: "Rows per entity (overrides seedCount)."
+		}
+	},
+	async run({ args }) {
+		const mock = requireMock(await loadMergedConfig(args.cwd));
+		const { schemas, errors } = parseMockSchema(mock);
+		if (errors.length) {
+			console.error("[mono db] schema has errors — run `mono db validate` first.");
+			process.exit(1);
+		}
+		const out = {};
+		for (const schema of schemas) out[schema.baseUrl] = generateSeed(schema, {
+			count: args.count ? Number(args.count) : mock.seedCount,
+			random: mock.seedRandom
+		});
+		const file = path.resolve(process.cwd(), args.out);
+		writeFileSync(file, JSON.stringify(out, null, 2));
+		console.log(`[mono db] wrote ${file}`);
+	}
+});
+const main = defineCommand({
 	meta: {
 		name: "db",
 		description: "Mock IndexedDB backend: validate schemas and preview generated seed data. The store itself lives in the browser — use monoMockDb().reset()/.export() at runtime."
 	},
 	subCommands: {
-		validate: defineCommand({
-			meta: {
-				name: "validate",
-				description: "Parse every mock schema and report bad fields/relations."
-			},
-			args: { cwd: {
-				type: "string",
-				description: "App root (defaults to the current directory)."
-			} },
-			async run({ args }) {
-				const { schemas, errors } = parseMockSchema(requireMock(await loadMergedConfig(args.cwd)));
-				for (const schema of schemas) {
-					const entities = Object.values(schema.entities);
-					console.log(`\n  ${schema.baseUrl}  (${entities.length} entit${entities.length === 1 ? "y" : "ies"})`);
-					for (const entity of entities) {
-						const relations = entity.relations.map((f) => f.name);
-						console.log(`    - ${entity.name}  pk=${entity.primaryKey}  columns=${entity.columns.length}` + (relations.length ? `  expand=[${relations.join(", ")}]` : "") + (entity.seed ? `  seed=${entity.seed.length} row(s)` : ""));
-					}
-				}
-				if (errors.length) {
-					console.error(`\n  ${errors.length} error(s):`);
-					for (const error of errors) console.error(`    x ${error.baseUrl} -> ${error.entity}${error.field ? `.${error.field}` : ""}: ${error.message}`);
-					process.exit(1);
-				}
-				console.log("\n  schema OK\n");
-			}
-		}),
-		preview: defineCommand({
-			meta: {
-				name: "preview",
-				description: "Print the rows the generator would produce."
-			},
-			args: {
-				cwd: {
-					type: "string",
-					description: "App root (defaults to the current directory)."
-				},
-				entity: {
-					type: "string",
-					description: "Only this entity."
-				},
-				count: {
-					type: "string",
-					description: "Rows per entity (overrides seedCount)."
-				}
-			},
-			async run({ args }) {
-				const mock = requireMock(await loadMergedConfig(args.cwd));
-				const { schemas, errors } = parseMockSchema(mock);
-				if (errors.length) {
-					console.error("[mono db] schema has errors — run `mono db validate` first.");
-					process.exit(1);
-				}
-				for (const schema of schemas) {
-					const seed = generateSeed(schema, {
-						count: args.count ? Number(args.count) : mock.seedCount,
-						random: mock.seedRandom
-					});
-					for (const [entityName, rows] of Object.entries(seed)) {
-						if (args.entity && args.entity !== entityName) continue;
-						console.log(`\n  ${schema.baseUrl} / ${entityName}  (${rows.length} rows)`);
-						console.log(JSON.stringify(rows, null, 2));
-					}
-				}
-			}
-		}),
-		export: defineCommand({
-			meta: {
-				name: "export",
-				description: "Write generated rows to a JSON file (to promote them into an explicit `seed`)."
-			},
-			args: {
-				cwd: {
-					type: "string",
-					description: "App root (defaults to the current directory)."
-				},
-				out: {
-					type: "string",
-					description: "Output file.",
-					default: "mock-seed.json"
-				},
-				count: {
-					type: "string",
-					description: "Rows per entity (overrides seedCount)."
-				}
-			},
-			async run({ args }) {
-				const mock = requireMock(await loadMergedConfig(args.cwd));
-				const { schemas, errors } = parseMockSchema(mock);
-				if (errors.length) {
-					console.error("[mono db] schema has errors — run `mono db validate` first.");
-					process.exit(1);
-				}
-				const out = {};
-				for (const schema of schemas) out[schema.baseUrl] = generateSeed(schema, {
-					count: args.count ? Number(args.count) : mock.seedCount,
-					random: mock.seedRandom
-				});
-				const file = path.resolve(process.cwd(), args.out);
-				writeFileSync(file, JSON.stringify(out, null, 2));
-				console.log(`[mono db] wrote ${file}`);
-			}
-		})
+		validate: validateCommand,
+		preview: previewCommand,
+		export: exportCommand
 	}
-}));
+});
+runMain(main);
 
 //#endregion

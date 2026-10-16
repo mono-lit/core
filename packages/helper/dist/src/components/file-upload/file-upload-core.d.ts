@@ -1,47 +1,48 @@
-import { LitElement, TemplateResult } from 'lit';
-import { FileUploadCssClass, FileUploadItem, FileUploadValidationState, FileUploadVariant } from './file-upload-types.js';
-import { Constructor } from '../../composables/hybird-prop';
+import { Constructor } from "../../composables/hybird-prop.js";
+import { FileUploadCssClass, FileUploadItem, FileUploadValidationState, FileUploadVariant } from "./file-upload-types.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/file-upload/file-upload-core.d.ts
 /** Public + shared-protected surface added by the core mixin. */
 export declare class MonoFileUploadCoreInterface {
-    label: string;
-    helperText: string;
-    /** Dropzone headline. `placeholder` is the old name, kept as an alias. */
-    title: string;
-    /** Dropzone secondary line. `subtext` is the old name, kept as an alias. */
-    subtitle: string;
-    /** @deprecated alias of `title` */
-    placeholder: string;
-    /** @deprecated alias of `subtitle` */
-    subtext: string;
-    icon: string;
-    removeIcon: string;
-    accept: string;
-    multiple: boolean;
-    disabled: boolean;
-    required: boolean;
-    dragdrop: boolean;
-    maxFileSize: number;
-    maxFiles: number;
-    modelValue: FileUploadItem[];
-    cssClass: FileUploadCssClass;
-    variant: FileUploadVariant;
-    validationState: FileUploadValidationState;
-    validationMessage: string;
-    clear(): void;
-    protected _hasIconSlot: boolean;
-    protected _hasTitleSlot: boolean;
-    protected _hasSubtitleSlot: boolean;
-    protected _inputEl: HTMLInputElement;
-    protected _cls(base: string, key: keyof FileUploadCssClass): string;
-    protected get _wrapperClasses(): string;
-    protected get _subtitleClasses(): string;
-    protected _useIconSlots(): boolean;
-    protected _renderDropzoneIcon(): TemplateResult;
-    protected _renderTitle(): TemplateResult;
-    protected _renderSubtitle(): TemplateResult;
-    protected _renderDefaultGlyph(): TemplateResult;
-    protected _renderRemoveIcon(): TemplateResult;
-    protected _renderThumbGlyph(item: FileUploadItem): TemplateResult;
+  label: string;
+  helperText: string;
+  /** Dropzone headline. `placeholder` is the old name, kept as an alias. */
+  title: string;
+  /** Dropzone secondary line. `subtext` is the old name, kept as an alias. */
+  subtitle: string;
+  /** @deprecated alias of `title` */
+  placeholder: string;
+  /** @deprecated alias of `subtitle` */
+  subtext: string;
+  icon: string;
+  removeIcon: string;
+  accept: string;
+  multiple: boolean;
+  disabled: boolean;
+  required: boolean;
+  dragdrop: boolean;
+  maxFileSize: number;
+  maxFiles: number;
+  modelValue: FileUploadItem[];
+  cssClass: FileUploadCssClass;
+  variant: FileUploadVariant;
+  validationState: FileUploadValidationState;
+  validationMessage: string;
+  clear(): void;
+  protected _hasIconSlot: boolean;
+  protected _hasTitleSlot: boolean;
+  protected _hasSubtitleSlot: boolean;
+  protected _inputEl: HTMLInputElement;
+  protected _cls(base: string, key: keyof FileUploadCssClass): string;
+  protected get _wrapperClasses(): string;
+  protected get _subtitleClasses(): string;
+  protected _useIconSlots(): boolean;
+  protected _renderDropzoneIcon(): TemplateResult;
+  protected _renderTitle(): TemplateResult;
+  protected _renderSubtitle(): TemplateResult;
+  protected _renderDefaultGlyph(): TemplateResult;
+  protected _renderRemoveIcon(): TemplateResult;
+  protected _renderThumbGlyph(item: FileUploadItem): TemplateResult;
 }
 /**
  * `MonoFileUploadCore` — all render-mode-agnostic logic for `mono-file-upload`:
@@ -58,3 +59,4 @@ export declare class MonoFileUploadCoreInterface {
  * and `_inputEl` (`@query`) only run client-side from user interaction.
  */
 export declare const MonoFileUploadCore: <T extends Constructor<LitElement>>(superClass: T) => Constructor<MonoFileUploadCoreInterface> & T;
+//#endregion

@@ -1,22 +1,6 @@
-/**
- * `@mono-lit/helper/search` — the shared data-search module.
- *
- * Everything about "which fields does a typed term match, and how does that
- * become a filter" lives here, independent of any component: path expressions,
- * `*` patterns, custom clause builders, the client predicate, the remote
- * `$filter`, and the DataSource application strategy.
- *
- * Consumed by `monoDataGrid`, `mono-select`, `mono-tag-input` and
- * `mono-dropdown-table`. It imports nothing outside this folder, so it can be
- * lifted into another package unchanged.
- */
-export { isPath, parseFieldPath, getFieldValue, setFieldValue, projectFields, mergePatch, toODataSelector, odataLiteral, odataComparison, toODataClause, } from './field-path.js';
-export type { FieldSegment, ParsedFieldPath, ODataClause } from './field-path.js';
-export { compileFilterPredicate, andFilters, andPredicates, joinFilters } from './filter-eval.js';
-export type { RowPredicate } from './filter-eval.js';
-export { normalizeSearchExpr, plainSearchColumns, searchEntryField, searchEntryFor, hasCustomSearch, hasWildcardSearch, isWildcardPattern, expandWildcard, resolveSearchEntries, customRemoteClause, customPredicate, } from './search-expr.js';
-export type { MonoSearchCustomCtx, MonoSearchCustomResult, MonoSearchExpr, MonoSearchExprCustom, MonoSearchExprEntry, ResolveSearchOptions, } from './search-expr.js';
-export { odataSearchExpr } from './odata-search.js';
-export type { MonoODataSearchOptions } from './odata-search.js';
-export { DEFAULT_SEARCH_OPERATION, SEARCH_FIELDS_KEYS, parseSearchValue, mergeSearchFields, resolveSearchFields, isFoldableSearch, plainSearchFields, readSearchField, searchRowPredicate, searchRemoteFilter, MonoSourceSearch, } from './data-search.js';
-export type { MonoSearchValue, MonoSearchFieldsAliases, ResolveSearchFieldsOptions, ApplySourceSearchOptions, SearchableSource, } from './data-search.js';
+import { MonoSearchCustomCtx, MonoSearchCustomResult, MonoSearchExpr, MonoSearchExprCustom, MonoSearchExprEntry, ResolveSearchOptions, customPredicate, customRemoteClause, expandWildcard, hasCustomSearch, hasWildcardSearch, isWildcardPattern, normalizeSearchExpr, plainSearchColumns, resolveSearchEntries, searchEntryField, searchEntryFor } from "./search-expr.js";
+import { ApplySourceSearchOptions, DEFAULT_SEARCH_OPERATION, MonoSearchFieldsAliases, MonoSearchValue, MonoSourceSearch, ResolveSearchFieldsOptions, SEARCH_FIELDS_KEYS, SearchableSource, isFoldableSearch, mergeSearchFields, parseSearchValue, plainSearchFields, readSearchField, resolveSearchFields, searchRemoteFilter, searchRowPredicate } from "./data-search.js";
+import { FieldSegment, ODataClause, ParsedFieldPath, getFieldValue, isPath, mergePatch, odataComparison, odataLiteral, parseFieldPath, projectFields, setFieldValue, toODataClause, toODataSelector } from "./field-path.js";
+import { MonoODataSearchOptions, odataSearchExpr } from "./odata-search.js";
+import { RowPredicate, andFilters, andPredicates, compileFilterPredicate, joinFilters } from "./filter-eval.js";
+export { type ApplySourceSearchOptions, DEFAULT_SEARCH_OPERATION, type FieldSegment, type MonoODataSearchOptions, type MonoSearchCustomCtx, type MonoSearchCustomResult, type MonoSearchExpr, type MonoSearchExprCustom, type MonoSearchExprEntry, type MonoSearchFieldsAliases, type MonoSearchValue, MonoSourceSearch, type ODataClause, type ParsedFieldPath, type ResolveSearchFieldsOptions, type ResolveSearchOptions, type RowPredicate, SEARCH_FIELDS_KEYS, type SearchableSource, andFilters, andPredicates, compileFilterPredicate, customPredicate, customRemoteClause, expandWildcard, getFieldValue, hasCustomSearch, hasWildcardSearch, isFoldableSearch, isPath, isWildcardPattern, joinFilters, mergePatch, mergeSearchFields, normalizeSearchExpr, odataComparison, odataLiteral, odataSearchExpr, parseFieldPath, parseSearchValue, plainSearchColumns, plainSearchFields, projectFields, readSearchField, resolveSearchEntries, resolveSearchFields, searchEntryField, searchEntryFor, searchRemoteFilter, searchRowPredicate, setFieldValue, toODataClause, toODataSelector };

@@ -1,4 +1,5 @@
 /// <reference path="../../../vue.d.ts" />
-export { MonoCheckbox } from './mono-checkbox.js';
-export type { CheckboxSize, CheckboxColor, CheckboxProps, CheckboxEvents } from './checkbox-types.js';
-export { validateCheckboxProps, generateCheckboxAttributes } from './checkbox-utils.js';
+import { CheckboxColor, CheckboxEvents, CheckboxProps, CheckboxSize } from "./checkbox-types.js";
+import { generateCheckboxAttributes, validateCheckboxProps } from "./checkbox-utils.js";
+import { MonoCheckbox } from "./mono-checkbox.js";
+export { type CheckboxColor, type CheckboxEvents, type CheckboxProps, type CheckboxSize, MonoCheckbox, generateCheckboxAttributes, validateCheckboxProps };

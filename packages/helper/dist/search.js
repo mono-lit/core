@@ -1,17 +1,17 @@
 //#region src/search/odata-search.ts
-var INTEGER_TYPES = {
+const INTEGER_TYPES = {
 	"Edm.Byte": true,
 	"Edm.SByte": true,
 	"Edm.Int16": true,
 	"Edm.Int32": true,
 	"Edm.Int64": true
 };
-var DECIMAL_TYPES = {
+const DECIMAL_TYPES = {
 	"Edm.Decimal": true,
 	"Edm.Double": true,
 	"Edm.Single": true
 };
-var CASE_FOLD_TERM = "Mono.Search.CaseFold";
+const CASE_FOLD_TERM = "Mono.Search.CaseFold";
 function childElements(element, name) {
 	return Array.from(element.children).filter((child) => child.localName === name);
 }
@@ -93,5 +93,6 @@ function odataSearchExpr(options) {
 	}
 	return entries;
 }
+
 //#endregion
 export { odataSearchExpr };

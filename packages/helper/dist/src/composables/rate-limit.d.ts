@@ -1,19 +1,20 @@
-import { ComplexAttributeConverter } from 'lit';
+import { ComplexAttributeConverter } from "lit";
+//#region src/composables/rate-limit.d.ts
 /** `p-throttle` options we expose. Mirrors the upstream option names. */
 export interface ThrottleConfig {
-    /** Maximum number of calls within `interval`. Default 1. */
-    limit?: number;
-    /** Timespan for `limit`, in ms. Default 1000. */
-    interval?: number;
-    /** Throttle each call individually instead of using a window. Default false. */
-    strict?: boolean;
+  /** Maximum number of calls within `interval`. Default 1. */
+  limit?: number;
+  /** Timespan for `limit`, in ms. Default 1000. */
+  interval?: number;
+  /** Throttle each call individually instead of using a window. Default false. */
+  strict?: boolean;
 }
 /** `p-debounce` options we expose. Mirrors the upstream option names. */
 export interface DebounceConfig {
-    /** Milliseconds to wait after the last call. Default 300. */
-    wait?: number;
-    /** Run on the leading edge instead of the trailing edge. Default false. */
-    before?: boolean;
+  /** Milliseconds to wait after the last call. Default 300. */
+  wait?: number;
+  /** Run on the leading edge instead of the trailing edge. Default false. */
+  before?: boolean;
 }
 /**
  * What a rate-limit prop accepts: the config object, a bare number shorthand, a
@@ -60,28 +61,28 @@ export declare const rateLimitConverter: ComplexAttributeConverter<unknown>;
  */
 export type RateLimitPhase = 'pending' | 'running' | 'idle';
 export interface RateLimiter {
-    /** Put a call through the limiter. Never rejects on cancellation. */
-    call(...args: unknown[]): Promise<unknown>;
-    /** Drop everything pending. The wrapper is rebuilt on the next `call()`. */
-    cancel(): void;
-    /** Cancel and release the wrapper (use on disconnect). */
-    dispose(): void;
-    /** Calls accepted but not yet settled (waiting *or* executing). */
-    readonly pending: number;
-    /** Calls currently executing `run`. */
-    readonly running: number;
-    /** Derived phase, for reporting. */
-    readonly phase: RateLimitPhase;
-    /** Calls waiting in the throttle queue (always 0 for a debouncer). */
-    readonly queueSize: number;
+  /** Put a call through the limiter. Never rejects on cancellation. */
+  call(...args: unknown[]): Promise<unknown>;
+  /** Drop everything pending. The wrapper is rebuilt on the next `call()`. */
+  cancel(): void;
+  /** Cancel and release the wrapper (use on disconnect). */
+  dispose(): void;
+  /** Calls accepted but not yet settled (waiting *or* executing). */
+  readonly pending: number;
+  /** Calls currently executing `run`. */
+  readonly running: number;
+  /** Derived phase, for reporting. */
+  readonly phase: RateLimitPhase;
+  /** Calls waiting in the throttle queue (always 0 for a debouncer). */
+  readonly queueSize: number;
 }
 export interface CreateRateLimiterOptions {
-    kind: 'throttle' | 'debounce';
-    config: ResolvedThrottleConfig | ResolvedDebounceConfig;
-    /** The work to rate-limit. Its promise defines the `running` phase. */
-    run: (...args: unknown[]) => unknown | Promise<unknown>;
-    /** Called whenever `pending` / `running` change, so the host can re-render. */
-    onChange?: () => void;
+  kind: 'throttle' | 'debounce';
+  config: ResolvedThrottleConfig | ResolvedDebounceConfig;
+  /** The work to rate-limit. Its promise defines the `running` phase. */
+  run: (...args: unknown[]) => unknown | Promise<unknown>;
+  /** Called whenever `pending` / `running` change, so the host can re-render. */
+  onChange?: () => void;
 }
 /**
  * Build a limiter around `run`.
@@ -106,3 +107,4 @@ export interface CreateRateLimiterOptions {
  * it with a fresh controller.
  */
 export declare function createRateLimiter(options: CreateRateLimiterOptions): RateLimiter;
+//#endregion

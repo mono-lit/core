@@ -1,5 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-declare const MonoCardShadow_base: import('../../composables/hybird-prop').Constructor<import('./card-core.js').MonoCardCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoCardCoreInterface } from "./card-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/card/mono-card.shadow.d.ts
+declare const MonoCardShadow_base: Constructor<MonoCardCoreInterface> & typeof LitElement;
 /**
  * Shadow-DOM card (the opt-in SSR build, `@mono-lit/helper/ui/shadow/card`).
  *
@@ -21,32 +24,33 @@ declare const MonoCardShadow_base: import('../../composables/hybird-prop').Const
  * build via `MonoCardCore`.
  */
 export declare class MonoCardShadow extends MonoCardShadow_base {
-    static styles: import('lit').CSSResult[];
-    firstUpdated(changed: Map<string, unknown>): void;
-    private _slotFor;
-    /**
-     * Whether something is ASSIGNED to this slot. Not `flatten: true`: for an
-     * empty slot that returns the FALLBACK content, and `<slot name="header">`'s
-     * fallback is the title/subtitle markup — every card would look like it had a
-     * header slot and hide its icon.
-     */
-    private _slotHasContent;
-    private _setSlotState;
-    private _onSlotChange;
-    private _slot;
-    private _renderMedia;
-    private _renderHeader;
-    private _renderBody;
-    private _renderActions;
-    private _renderFooter;
-    private _renderLoading;
-    private _renderContent;
-    protected render(): TemplateResult;
-    connectedCallback(): void;
+  static styles: import("lit").CSSResult[];
+  firstUpdated(changed: Map<string, unknown>): void;
+  private _slotFor;
+  /**
+   * Whether something is ASSIGNED to this slot. Not `flatten: true`: for an
+   * empty slot that returns the FALLBACK content, and `<slot name="header">`'s
+   * fallback is the title/subtitle markup — every card would look like it had a
+   * header slot and hide its icon.
+   */
+  private _slotHasContent;
+  private _setSlotState;
+  private _onSlotChange;
+  private _slot;
+  private _renderMedia;
+  private _renderHeader;
+  private _renderBody;
+  private _renderActions;
+  private _renderFooter;
+  private _renderLoading;
+  private _renderContent;
+  protected render(): TemplateResult;
+  connectedCallback(): void;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-shadow-card': MonoCardShadow;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-shadow-card': MonoCardShadow;
+  }
 }
+//#endregion
 export {};

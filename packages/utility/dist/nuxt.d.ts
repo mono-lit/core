@@ -1,9 +1,8 @@
 /// <reference path="../../vue.d.ts" />
-import { c as MonoConfig } from "./create-config-D3m6xTaQ.js";
-import { t as MergeEcosystemOptions } from "./merge-file-C5nzi_MY.js";
+import { c as MonoConfig } from "./create-config-B8IhX4ht.js";
+import { t as MergeEcosystemOptions } from "./merge-file-CLc3wxY4.js";
 import { Plugin } from "vite";
 import { NuxtModule } from "@nuxt/schema";
-
 //#region src/nuxt/nuxt-ecosystem.d.ts
 /**
  * Which Nuxt API consumes the discovered folders (the "destination").
@@ -13,39 +12,8 @@ import { NuxtModule } from "@nuxt/schema";
  */
 type EcosystemType = 'imports' | 'components' | 'pages' | 'layouts' | 'middleware' | 'plugins';
 //#endregion
-//#region ../helper/dist/src/vite/index.d.ts
-interface MonoSsrOptions {
-  /** Custom-element tag prefix wrapped in <ClientOnly>. Default 'mono-'. */
-  prefix?: string;
-  /** Wrapper component used for client-only rendering. Default 'ClientOnly'. */
-  wrapper?: string;
-  /** Import prefix of registration modules stubbed during SSR. Default '@mono-lit/helper/ui/'. */
-  ssrStubPrefix?: string;
-  /**
-   * Tag names (e.g. `['mono-nav']`) to NOT wrap in `<ClientOnly>` — for
-   * components server-rendered by another mechanism (e.g. `nuxt-ssr-lit`
-   * shadow-DOM builds). Default `[]`.
-   */
-  exclude?: string[];
-  /**
-   * Wrap LIGHT `<prefix*>` elements in `<ClientOnly>`. Default `true`. `false`
-   * keeps the server import-stub and the shadow `<LitWrapper>` wrap but leaves
-   * light tags as they are — see `MonoClientOnlyOptions.lightWrap`.
-   */
-  lightWrap?: boolean;
-  /**
-   * Enable the import-driven SSR wrap: `<mono-*>` whose `@mono-lit/helper/ui/shadow/
-   * <entry>` build a `.vue` file imports get wrapped in `<LitWrapper>`
-   * (Declarative Shadow DOM) instead of `<ClientOnly>`. Default off.
-   */
-  litWrapper?: boolean;
-  /** Component name used for the SSR wrap. Default `'LitWrapper'`. */
-  litWrapperComponent?: string;
-  /** Tags to ALWAYS treat as shadow (for globally-registered components). */
-  shadowOverride?: string[];
-}
-//#endregion
 //#region ../helper/dist/src/components/tooltip/tooltip-types.d.ts
+//#region src/components/tooltip/tooltip-types.d.ts
 type Side = 'top' | 'right' | 'bottom' | 'left';
 type MonoTooltipPlacement = Side | `${Side}-start` | `${Side}-end`;
 /** What opens the tooltip. `manual` = only `show()` / `hide()` do. */
@@ -120,6 +88,7 @@ interface MonoTooltipGlobalOptions extends MonoTooltipOptions {
 }
 //#endregion
 //#region ../helper/dist/src/composables/mono-skeleton.d.ts
+//#region src/composables/mono-skeleton.d.ts
 /** phantom-ui's options, camelCase (applied to the wrapper as kebab-case attributes). */
 interface MonoPhantomProps {
   /** `shimmer` (default) | `pulse` | `breathe` | `solid`. */
@@ -166,12 +135,13 @@ interface MonoSkeletonDefaults extends Partial<MonoPhantomProps> {
 }
 //#endregion
 //#region ../helper/dist/src/composables/mono-ui.d.ts
+//#region src/composables/mono-ui.d.ts
 /**
  * Tag → props map for typed configs. `scripts/gen-vue-types.mjs` augments it in
  * the published types (`'mono-button': ButtonProps`, …); it is empty in source.
  */
 interface MonoUIComponents {}
-type KnownConfig = { [K in keyof MonoUIComponents]?: Partial<MonoUIComponents[K]> };
+type KnownConfig = { [K in keyof MonoUIComponents]?: Partial<MonoUIComponents[K]>; };
 /**
  * Per-component default props. Keys are tags (`mono-button`); props are camelCase or kebab-case.
  * The reserved `skeleton` key holds the global defaults of the automatic skeleton
@@ -183,7 +153,41 @@ type MonoUIConfig = KnownConfig & {
   [tag: `mono-${string}`]: Record<string, unknown> | undefined;
 };
 //#endregion
+//#region ../helper/dist/src/vite/index.d.ts
+//#region src/vite/index.d.ts
+interface MonoSsrOptions {
+  /** Custom-element tag prefix wrapped in <ClientOnly>. Default 'mono-'. */
+  prefix?: string;
+  /** Wrapper component used for client-only rendering. Default 'ClientOnly'. */
+  wrapper?: string;
+  /** Import prefix of registration modules stubbed during SSR. Default '@mono-lit/helper/ui/'. */
+  ssrStubPrefix?: string;
+  /**
+   * Tag names (e.g. `['mono-nav']`) to NOT wrap in `<ClientOnly>` — for
+   * components server-rendered by another mechanism (e.g. `nuxt-ssr-lit`
+   * shadow-DOM builds). Default `[]`.
+   */
+  exclude?: string[];
+  /**
+   * Wrap LIGHT `<prefix*>` elements in `<ClientOnly>`. Default `true`. `false`
+   * keeps the server import-stub and the shadow `<LitWrapper>` wrap but leaves
+   * light tags as they are — see `MonoClientOnlyOptions.lightWrap`.
+   */
+  lightWrap?: boolean;
+  /**
+   * Enable the import-driven SSR wrap: `<mono-*>` whose `@mono-lit/helper/ui/shadow/
+   * <entry>` build a `.vue` file imports get wrapped in `<LitWrapper>`
+   * (Declarative Shadow DOM) instead of `<ClientOnly>`. Default off.
+   */
+  litWrapper?: boolean;
+  /** Component name used for the SSR wrap. Default `'LitWrapper'`. */
+  litWrapperComponent?: string;
+  /** Tags to ALWAYS treat as shadow (for globally-registered components). */
+  shadowOverride?: string[];
+}
+//#endregion
 //#region ../helper/dist/src/nuxt/index.d.ts
+//#region src/nuxt/index.d.ts
 interface MonoHelperModuleOptions extends MonoSsrOptions {
   /** Auto-add `@mono-lit/helper/ui/index.css` to nuxt css. Default true. */
   css?: boolean;

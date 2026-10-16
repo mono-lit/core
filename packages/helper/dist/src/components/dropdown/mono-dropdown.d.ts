@@ -1,5 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-declare const MonoDropdown_base: import('../../composables/hybird-prop').Constructor<import('./dropdown-core.js').MonoDropdownCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoDropdownCoreInterface } from "./dropdown-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/dropdown/mono-dropdown.d.ts
+declare const MonoDropdown_base: Constructor<MonoDropdownCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-dropdown` (default build, `@mono-lit/helper/ui/dropdown`).
  *
@@ -12,23 +15,24 @@ declare const MonoDropdown_base: import('../../composables/hybird-prop').Constru
  * `<slot>`. Both register `mono-dropdown`, so a document loads only one.
  */
 export declare class MonoDropdown extends MonoDropdown_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
-    private _hasBodySlotState;
-    private _slotsCaptured;
-    private _slotMain;
-    private _slotBody;
-    connectedCallback(): void;
-    protected updated(changed: Map<string, unknown>): void;
-    protected _activeMainNodes(): HTMLElement[];
-    private _captureSlots;
-    private _placeSlot;
-    private _renderBody;
-    protected render(): TemplateResult;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
+  private _hasBodySlotState;
+  private _slotsCaptured;
+  private _slotMain;
+  private _slotBody;
+  connectedCallback(): void;
+  protected updated(changed: Map<string, unknown>): void;
+  protected _activeMainNodes(): HTMLElement[];
+  private _captureSlots;
+  private _placeSlot;
+  private _renderBody;
+  protected render(): TemplateResult;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-dropdown': MonoDropdown;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-dropdown': MonoDropdown;
+  }
 }
+//#endregion
 export {};

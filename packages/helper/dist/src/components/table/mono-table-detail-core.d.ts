@@ -1,39 +1,40 @@
-import { LitElement, TemplateResult } from 'lit';
-import { MonoTableControllerCoreInterface } from './table-controller-core.js';
-import { Constructor } from '../../composables/hybird-prop';
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableControllerCoreInterface } from "./table-controller-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/table/mono-table-detail-core.d.ts
 /** `detail` of the `toggle` / `open` / `close` events `<mono-table-detail>` emits (and of `mno-click`, the kept alias). */
 export interface TableDetailClickEventDetail {
-    /** The state the detail moved TO. */
-    open: boolean;
-    /** `data-row-key` of the row the toggle sits in, when the consumer set one. */
-    rowKey: string | null;
-    /** The chevron click that caused it; absent for `toggle()` / `expandAll()`. */
-    sourceEvent?: Event;
+  /** The state the detail moved TO. */
+  open: boolean;
+  /** `data-row-key` of the row the toggle sits in, when the consumer set one. */
+  rowKey: string | null;
+  /** The chevron click that caused it; absent for `toggle()` / `expandAll()`. */
+  sourceEvent?: Event;
 }
 export type TableDetailClickEvent = CustomEvent<TableDetailClickEventDetail>;
 /** Events emitted by `<mono-table-detail>` (feeds the generated Vue types). */
 export interface TableDetailEvents {
-    toggle: TableDetailClickEvent;
-    open: TableDetailClickEvent;
-    close: TableDetailClickEvent;
-    'mno-click': TableDetailClickEvent;
-    mnoClick: TableDetailClickEvent;
-    'mno-open': TableDetailClickEvent;
-    mnoOpen: TableDetailClickEvent;
-    'mno-close': TableDetailClickEvent;
-    mnoClose: TableDetailClickEvent;
+  toggle: TableDetailClickEvent;
+  open: TableDetailClickEvent;
+  close: TableDetailClickEvent;
+  'mno-click': TableDetailClickEvent;
+  mnoClick: TableDetailClickEvent;
+  'mno-open': TableDetailClickEvent;
+  mnoOpen: TableDetailClickEvent;
+  'mno-close': TableDetailClickEvent;
+  mnoClose: TableDetailClickEvent;
 }
 /** Public surface added by the detail core mixin. */
 export declare class MonoTableDetailCoreInterface extends MonoTableControllerCoreInterface {
-    icon: string;
-    iconExpanded: string;
-    open: boolean;
-    stayOpen: boolean;
-    disabled: boolean;
-    label?: string;
-    toggle(force?: boolean): void;
-    /** The chevron — overridden by the shadow build, which can't use icon classes. */
-    protected _renderIcon(): TemplateResult;
+  icon: string;
+  iconExpanded: string;
+  open: boolean;
+  stayOpen: boolean;
+  disabled: boolean;
+  label?: string;
+  toggle(force?: boolean): void;
+  /** The chevron — overridden by the shadow build, which can't use icon classes. */
+  protected _renderIcon(): TemplateResult;
 }
 /**
  * `MonoTableDetailCore` — render-mode-agnostic logic for `mono-table-detail`, the
@@ -85,3 +86,4 @@ export declare class MonoTableDetailCoreInterface extends MonoTableControllerCor
  * collapsed toggle.
  */
 export declare const MonoTableDetailCore: <T extends Constructor<LitElement>>(superClass: T) => Constructor<MonoTableDetailCoreInterface> & T;
+//#endregion

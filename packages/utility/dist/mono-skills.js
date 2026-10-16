@@ -1,4 +1,4 @@
-import { J as loadSkillsEnv, K as isGenericAppName, O as resolveRemote, R as redactUrl, S as SkillsAccessError, U as ALLOWED_FLAGS, Y as resolveSkillTarget, _ as stagingRoot, b as resolveAppId, i as runSearch, n as runCheck, o as buildSavePlan, p as listSessions, q as loadSkillConfig, r as runRead, s as runSave, t as runSessionShow, w as ensureRepo, x as detectActor } from "./session-Bk985AIM.js";
+import { J as loadSkillsEnv, K as isGenericAppName, O as resolveRemote, R as redactUrl, S as SkillsAccessError, U as ALLOWED_FLAGS, Y as resolveSkillTarget, _ as stagingRoot, b as resolveAppId, i as runSearch, n as runCheck, o as buildSavePlan, p as listSessions, q as loadSkillConfig, r as runRead, s as runSave, t as runSessionShow, w as ensureRepo, x as detectActor } from "./session-Bcig-rPi.js";
 import fs from "node:fs";
 import path from "node:path";
 import { defineCommand, runMain } from "citty";
@@ -160,9 +160,10 @@ const whoamiCommand = defineCommand({
 	},
 	async run({ rawArgs }) {
 		guardArgs(rawArgs);
+		const cwd = prelude();
 		printJson({
 			success: true,
-			...detectActor(prelude())
+			...detectActor(cwd)
 		});
 	}
 });
@@ -200,15 +201,16 @@ const readCommand = defineCommand({
 		const { remote } = connect(cwd, target, "if-stale");
 		try {
 			const type = args.type === "knowledge" || args.type === "skills" ? args.type : void 0;
+			const result = runRead({
+				cwd,
+				app: args.app,
+				type,
+				path: args.path,
+				remote
+			});
 			printJson({
 				success: true,
-				...runRead({
-					cwd,
-					app: args.app,
-					type,
-					path: args.path,
-					remote
-				})
+				...result
 			});
 		} catch (e) {
 			fail(e.message);
@@ -249,15 +251,16 @@ const searchCommand = defineCommand({
 		const { remote } = connect(cwd, target, "if-stale");
 		const limit = args.limit ? Math.max(1, parseInt(args.limit, 10) || 10) : 10;
 		try {
+			const result = runSearch({
+				cwd,
+				app: args.app,
+				query: args.query,
+				limit,
+				remote
+			});
 			printJson({
 				success: true,
-				...runSearch({
-					cwd,
-					app: args.app,
-					query: args.query,
-					limit,
-					remote
-				})
+				...result
 			});
 		} catch (e) {
 			fail(e.message);
@@ -420,12 +423,13 @@ const pendingCommand = defineCommand({
 	async run({ args, rawArgs }) {
 		guardArgs(rawArgs);
 		const cwd = prelude();
+		const app = resolveAppId({
+			app: args.app,
+			cwd
+		});
 		printJson({
 			success: true,
-			app: resolveAppId({
-				app: args.app,
-				cwd
-			}),
+			app,
 			kind: "pending",
 			sessions: listSessions(cwd, "pending")
 		});
@@ -447,12 +451,13 @@ const failedCommand = defineCommand({
 	async run({ args, rawArgs }) {
 		guardArgs(rawArgs);
 		const cwd = prelude();
+		const app = resolveAppId({
+			app: args.app,
+			cwd
+		});
 		printJson({
 			success: true,
-			app: resolveAppId({
-				app: args.app,
-				cwd
-			}),
+			app,
 			kind: "failed",
 			sessions: listSessions(cwd, "failed")
 		});
@@ -485,14 +490,15 @@ const showCommand = defineCommand({
 		const { target } = requireSkillConfig(cwd);
 		const { remote } = connect(cwd, target, "if-stale");
 		try {
+			const result = runSessionShow({
+				cwd,
+				app: args.app,
+				sessionId,
+				remote
+			});
 			printJson({
 				success: true,
-				...runSessionShow({
-					cwd,
-					app: args.app,
-					sessionId,
-					remote
-				})
+				...result
 			});
 		} catch (e) {
 			fail(e.message);
@@ -806,7 +812,7 @@ const syncCommand = defineCommand({
 
 //#endregion
 //#region pkg/cli/skills/index.ts
-runMain(defineCommand({
+const main = defineCommand({
 	meta: {
 		name: "skills",
 		description: "MONO Skills: read app knowledge/skills and save AI session history to the git repository configured as `skill` in mono.config.ts. Off unless `skill` is set; git credentials first, `envToken` as fallback."
@@ -825,6 +831,7 @@ runMain(defineCommand({
 		sync: syncCommand,
 		template: templateCommand
 	}
-}));
+});
+runMain(main);
 
 //#endregion

@@ -1,5 +1,8 @@
-import { LitElement, TemplateResult } from 'lit';
-declare const MonoChart_base: import('../../composables/hybird-prop').Constructor<import('./chart-core.js').MonoChartCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoChartCoreInterface } from "./chart-core.js";
+import { LitElement, TemplateResult } from "lit";
+//#region src/components/chart/mono-chart.d.ts
+declare const MonoChart_base: Constructor<MonoChartCoreInterface> & typeof LitElement;
 /**
  * `<mono-chart>` — a Chart.js canvas, light DOM.
  *
@@ -18,13 +21,14 @@ declare const MonoChart_base: import('../../composables/hybird-prop').Constructo
  * ```
  */
 export declare class MonoChart extends MonoChart_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
-    protected render(): TemplateResult;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
+  protected render(): TemplateResult;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-chart': MonoChart;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-chart': MonoChart;
+  }
 }
+//#endregion
 export {};

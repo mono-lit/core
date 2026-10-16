@@ -1,4 +1,5 @@
-import { StyleInfo } from 'lit/directives/style-map.js';
+import { StyleInfo } from "lit/directives/style-map.js";
+//#region src/composables/css-size.d.ts
 /** A sizing prop value: a CSS length string, or a number (interpreted as px). */
 export type CssSizeValue = string | number | undefined;
 /**
@@ -10,12 +11,12 @@ export type CssSizeValue = string | number | undefined;
 export declare function toCssSize(value: CssSizeValue): string | undefined;
 /** The six sizing props shared by sizing-driven components. */
 export interface SizeProps {
-    width?: CssSizeValue;
-    height?: CssSizeValue;
-    minWidth?: CssSizeValue;
-    maxWidth?: CssSizeValue;
-    minHeight?: CssSizeValue;
-    maxHeight?: CssSizeValue;
+  width?: CssSizeValue;
+  height?: CssSizeValue;
+  minWidth?: CssSizeValue;
+  maxWidth?: CssSizeValue;
+  minHeight?: CssSizeValue;
+  maxHeight?: CssSizeValue;
 }
 /**
  * The popup-PANEL sizing object shared by `mono-select`, `mono-tag-input` and
@@ -38,3 +39,4 @@ export type PanelSizeProps = SizeProps;
  * `toCssSize` and omitting the ones that aren't set.
  */
 export declare function buildSizeStyle(src: SizeProps): StyleInfo;
+//#endregion

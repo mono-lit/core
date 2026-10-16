@@ -8,7 +8,7 @@
 // instead of `<ClientOnly>`. Every shadow element registers a `mono-shadow-<name>`
 // tag — DISTINCT from the light build's `<mono-<name>>` — so both can coexist.
 //
-// Keep in sync with `vite.shadow.config.ts` `entry` keys. Most entries map to a
+// Keep in sync with the shadow build `entry` keys in `tsdown.config.ts`. Most entries map to a
 // single tag; `breadcrumb` and `table` register several from one module.
 
 export const SHADOW_ENTRY_TO_TAGS: Record<string, readonly string[]> = {

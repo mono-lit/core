@@ -1,5 +1,5 @@
 /// <reference path="../../../vue.d.ts" />
-export { MonoAccordionShadow } from './mono-accordion.shadow.js';
-export { MonoAccordionCore } from './accordion-core.js';
-export type { AccordionSlotName } from './accordion-core.js';
-export type { AccordionSize, AccordionColor, AccordionCssClass, AccordionClickEventDetail, AccordionClickEvent, AccordionProps, AccordionEvents, } from './accordion-types.js';
+import { AccordionClickEvent, AccordionClickEventDetail, AccordionColor, AccordionCssClass, AccordionEvents, AccordionProps, AccordionSize } from "./accordion-types.js";
+import { AccordionSlotName, MonoAccordionCore } from "./accordion-core.js";
+import { MonoAccordionShadow } from "./mono-accordion.shadow.js";
+export { type AccordionClickEvent, type AccordionClickEventDetail, type AccordionColor, type AccordionCssClass, type AccordionEvents, type AccordionProps, type AccordionSize, type AccordionSlotName, MonoAccordionCore, MonoAccordionShadow };

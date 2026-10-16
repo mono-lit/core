@@ -1,16 +1,17 @@
-import { MonoGridSource, MonoServerGroupSource } from './mono-data-grid.js';
+import { MonoGridSource, MonoServerGroupSource } from "./mono-data-grid.js";
+//#region src/components/table/store-group-source.d.ts
 type SummaryType = 'sum' | 'avg' | 'min' | 'max' | 'count';
 export interface StoreGroupSourceConfig {
-    /** The single field to group by. */
-    groupField: string;
-    /** Columns to fetch for a group's rows (omit = all). */
-    select?: string[];
-    /** Columns matched by search. */
-    searchExpr?: string | string[];
-    /** Search operation (default `'contains'`). */
-    searchOperation?: string;
-    /** Per-group aggregates, e.g. `{ TotalBudget: 'sum' }`. */
-    groupSummary?: Record<string, SummaryType>;
+  /** The single field to group by. */
+  groupField: string;
+  /** Columns to fetch for a group's rows (omit = all). */
+  select?: string[];
+  /** Columns matched by search. */
+  searchExpr?: string | string[];
+  /** Search operation (default `'contains'`). */
+  searchOperation?: string;
+  /** Per-group aggregates, e.g. `{ TotalBudget: 'sum' }`. */
+  groupSummary?: Record<string, SummaryType>;
 }
 /**
  * Build a {@link MonoServerGroupSource} that drives **server-side** group paging
@@ -21,4 +22,5 @@ export interface StoreGroupSourceConfig {
  * (e.g. a plain in-memory array), so the caller can fall back to client grouping.
  */
 export declare function storeGroupSource<T = any>(source: MonoGridSource<T>, config: StoreGroupSourceConfig): MonoServerGroupSource<T> | null;
+//#endregion
 export {};

@@ -1,3 +1,4 @@
+//#region src/composables/chip-limits.d.ts
 /**
  * Selection limits and display caps shared by `<mono-tag-input>` and
  * `<mono-dropdown-table>`.
@@ -22,16 +23,16 @@
 export type ChipLimitKey = 'max' | 'min' | 'maxVisible' | 'minVisible';
 /** The limit keys the `chip` object accepts, in both spellings. */
 export interface ChipLimitProps {
-    /** Most chips the user can select (unset = unlimited). Pins the element's `max`. */
-    max?: number;
-    /** Fewest chips the user can leave (unset = 0). Pins the element's `min`. */
-    min?: number;
-    /** Chips drawn before "+N more" (unset = all). Pins the element's `max-visible`. */
-    maxVisible?: number;
-    'max-visible'?: number;
-    /** Never collapse while the total is at or under this. Pins `min-visible`. */
-    minVisible?: number;
-    'min-visible'?: number;
+  /** Most chips the user can select (unset = unlimited). Pins the element's `max`. */
+  max?: number;
+  /** Fewest chips the user can leave (unset = 0). Pins the element's `min`. */
+  min?: number;
+  /** Chips drawn before "+N more" (unset = all). Pins the element's `max-visible`. */
+  maxVisible?: number;
+  'max-visible'?: number;
+  /** Never collapse while the total is at or under this. Pins `min-visible`. */
+  minVisible?: number;
+  'min-visible'?: number;
 }
 /** A non-negative integer, or undefined for anything that is not one (`''`, null, NaN, -1). */
 export declare function limitNumber(value: unknown): number | undefined;
@@ -46,3 +47,4 @@ export declare function resolveChipLimit(chip: ChipLimitProps | null | undefined
  * the total sits at or under the collapse floor.
  */
 export declare function visibleChipCap(total: number, maxVisible: number | undefined, minVisible: number | undefined): number;
+//#endregion

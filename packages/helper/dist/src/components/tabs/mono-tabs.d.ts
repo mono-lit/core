@@ -1,5 +1,8 @@
-import { LitElement } from 'lit';
-declare const MonoTabs_base: import('../../composables/hybird-prop').Constructor<import('./tabs-core.js').MonoTabsCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTabsCoreInterface } from "./tabs-core.js";
+import { LitElement } from "lit";
+//#region src/components/tabs/mono-tabs.d.ts
+declare const MonoTabs_base: Constructor<MonoTabsCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-tabs` (default build, `@mono-lit/helper/ui/tabs`).
  *
@@ -13,21 +16,22 @@ declare const MonoTabs_base: import('../../composables/hybird-prop').Constructor
  * so a document loads only one.
  */
 export declare class MonoTabs extends MonoTabs_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
-    private _slotsCaptured;
-    private _slotIcons;
-    private _orphanHolder?;
-    /** Light-DOM: a tab has an icon when a `slot="icon-<id>"` child was captured. */
-    protected _iconHasContent(id: string): boolean;
-    connectedCallback(): void;
-    protected updated(changed: Map<string, unknown>): void;
-    private _captureSlots;
-    private _placeIconSlots;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
+  private _slotsCaptured;
+  private _slotIcons;
+  private _orphanHolder?;
+  /** Light-DOM: a tab has an icon when a `slot="icon-<id>"` child was captured. */
+  protected _iconHasContent(id: string): boolean;
+  connectedCallback(): void;
+  protected updated(changed: Map<string, unknown>): void;
+  private _captureSlots;
+  private _placeIconSlots;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-tabs': MonoTabs;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-tabs': MonoTabs;
+  }
 }
+//#endregion
 export {};

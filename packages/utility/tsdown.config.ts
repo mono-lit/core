@@ -82,6 +82,9 @@ export default defineConfig({
     alwaysBundle: (id: string) =>
       ALWAYS_BUNDLE.some((p) => (p instanceof RegExp ? p.test(id) : id === p || id.startsWith(p + '/'))),
     neverBundle: [
+      // Node built-ins. `platform: "neutral"` doesn't know them, and tsdown 0.23
+      // warns UNRESOLVED_IMPORT for every `node:*` it has to guess is external.
+      /^node:/,
       "vite",
       'c12',
 

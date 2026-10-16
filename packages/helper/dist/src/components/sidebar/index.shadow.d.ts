@@ -1,6 +1,6 @@
 /// <reference path="../../../vue.d.ts" />
-export { MonoSidebarShadow } from './mono-sidebar.shadow.js';
-export { MonoSidebarCore } from './sidebar-core.js';
-export type { SidebarSlotName } from './sidebar-core.js';
-export type { SidebarMode, SidebarLocation, SidebarDensity, SidebarColor, SidebarVariant, SidebarSource, SidebarCssClass, SidebarChangeEventDetail, SidebarChangeEvent, SidebarClickEventDetail, SidebarClickEvent, SidebarOpenEventDetail, SidebarOpenEvent, SidebarCloseEventDetail, SidebarCloseEvent, SidebarProps, SidebarEvents, } from './sidebar-types.js';
-export { SIDEBAR_AUTO_BREAKPOINT, isAutoTemporary, resolveMode, generateSidebarRootClasses, validateSidebarProps, } from './sidebar-utils.js';
+import { SidebarChangeEvent, SidebarChangeEventDetail, SidebarClickEvent, SidebarClickEventDetail, SidebarCloseEvent, SidebarCloseEventDetail, SidebarColor, SidebarCssClass, SidebarDensity, SidebarEvents, SidebarLocation, SidebarMode, SidebarOpenEvent, SidebarOpenEventDetail, SidebarProps, SidebarSource, SidebarVariant } from "./sidebar-types.js";
+import { MonoSidebarCore, SidebarSlotName } from "./sidebar-core.js";
+import { SIDEBAR_AUTO_BREAKPOINT, generateSidebarRootClasses, isAutoTemporary, resolveMode, validateSidebarProps } from "./sidebar-utils.js";
+import { MonoSidebarShadow } from "./mono-sidebar.shadow.js";
+export { MonoSidebarCore, MonoSidebarShadow, SIDEBAR_AUTO_BREAKPOINT, type SidebarChangeEvent, type SidebarChangeEventDetail, type SidebarClickEvent, type SidebarClickEventDetail, type SidebarCloseEvent, type SidebarCloseEventDetail, type SidebarColor, type SidebarCssClass, type SidebarDensity, type SidebarEvents, type SidebarLocation, type SidebarMode, type SidebarOpenEvent, type SidebarOpenEventDetail, type SidebarProps, type SidebarSlotName, type SidebarSource, type SidebarVariant, generateSidebarRootClasses, isAutoTemporary, resolveMode, validateSidebarProps };

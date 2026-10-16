@@ -1,3 +1,4 @@
+//#region src/composables/layout-var.d.ts
 /**
  * Refcounted document-level layout variables.
  *
@@ -32,3 +33,4 @@ export declare function claimLayoutVar(name: string, owner: object, value: strin
  * that owner's last published value is restored instead.
  */
 export declare function releaseLayoutVar(name: string, owner: object): void;
+//#endregion

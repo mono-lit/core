@@ -1,8 +1,9 @@
-import { MaybeReactive } from '../composables/reactive.js';
+import { MaybeReactive } from "../composables/reactive.js";
+//#region src/utils/data-source-options.d.ts
 /** One sort entry, in devextreme's object form. */
 export interface MonoSourceSortEntry {
-    selector: string;
-    desc: boolean;
+  selector: string;
+  desc: boolean;
 }
 /**
  * DataSource-level knobs a controller keeps STICKY — `{ dataSourceOptions }`.
@@ -18,33 +19,33 @@ export interface MonoSourceSortEntry {
  * request. Changing it does not by itself run a query — that is `refresh()`.
  */
 export interface MonoDataSourceOptions {
-    /** Base filter, AND-ed under everything the controller adds. Array sources take a predicate too. */
-    filter?: unknown;
-    /** `$select`. */
-    select?: string | string[];
-    /** `$expand`. Simple navigation names union; a nested `Nav($select=…)` string is kept verbatim. */
-    expand?: string | string[];
-    /**
-     * Base sort. A sort the user picks wins; these follow as tiebreakers (entries
-     * whose selector is already sorted are skipped).
-     */
-    sort?: string | {
-        selector: string;
-        desc?: boolean;
-    } | Array<string | {
-        selector: string;
-        desc?: boolean;
-    }>;
-    /** Extra query-string parameters (ODataStore `customQueryParams`). */
-    customQueryParams?: Record<string, unknown>;
-    paginate?: boolean;
-    /** Source page size. A component's own page-size control still wins. */
-    pageSize?: number;
-    requireTotalCount?: boolean;
-    /** Source-level search columns/operation — used only when the controller declares none of its own. */
-    searchExpr?: string | string[];
-    searchOperation?: string;
-    [key: string]: unknown;
+  /** Base filter, AND-ed under everything the controller adds. Array sources take a predicate too. */
+  filter?: unknown;
+  /** `$select`. */
+  select?: string | string[];
+  /** `$expand`. Simple navigation names union; a nested `Nav($select=…)` string is kept verbatim. */
+  expand?: string | string[];
+  /**
+   * Base sort. A sort the user picks wins; these follow as tiebreakers (entries
+   * whose selector is already sorted are skipped).
+   */
+  sort?: string | {
+    selector: string;
+    desc?: boolean;
+  } | Array<string | {
+    selector: string;
+    desc?: boolean;
+  }>;
+  /** Extra query-string parameters (ODataStore `customQueryParams`). */
+  customQueryParams?: Record<string, unknown>;
+  paginate?: boolean;
+  /** Source page size. A component's own page-size control still wins. */
+  pageSize?: number;
+  requireTotalCount?: boolean;
+  /** Source-level search columns/operation — used only when the controller declares none of its own. */
+  searchExpr?: string | string[];
+  searchOperation?: string;
+  [key: string]: unknown;
 }
 /**
  * The same thing in raw OData vocabulary — `{ odataOptions }`.
@@ -62,11 +63,11 @@ export interface MonoDataSourceOptions {
  * sources cannot evaluate a raw string and ignore it (with one console warning).
  */
 export interface MonoOdataOptions {
-    $select?: string | string[];
-    $expand?: string | string[];
-    $orderby?: string;
-    $filter?: string;
-    [key: string]: unknown;
+  $select?: string | string[];
+  $expand?: string | string[];
+  $orderby?: string;
+  $filter?: string;
+  [key: string]: unknown;
 }
 /** The knobs with a meaning of their own; anything else is passed through as a load option. */
 export declare const DATA_SOURCE_KNOBS: ReadonlySet<string>;
@@ -114,3 +115,4 @@ export declare function resolveDataSourceOptions(dataSourceOptions: MaybeReactiv
 export declare function dataSourceOptionsKey(o: MonoDataSourceOptions): string;
 /** `expand` / `customQueryParams` / unknown keys — what goes onto a `store.load()` beside the knobs. */
 export declare function extraLoadOptions(o: MonoDataSourceOptions): Record<string, unknown>;
+//#endregion

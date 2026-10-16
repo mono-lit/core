@@ -1,3 +1,4 @@
+//#region src/composables/reactive.d.ts
 /**
  * Undoing framework reactivity, structurally.
  *
@@ -34,7 +35,7 @@ export declare function unwrapReactive<T = unknown>(value: T): T;
  * what makes the CURRENT reactive value the one that lands in the request.
  */
 export type MaybeReactive<T> = T | (() => T) | {
-    value: T;
+  value: T;
 };
 /**
  * Read a {@link MaybeReactive} option: call a getter, unwrap a ref/computed or a
@@ -51,3 +52,4 @@ export declare function resolveMaybeReactive<T>(option: MaybeReactive<T> | undef
  * into nested objects, which would rewrite data the consumer owns.
  */
 export declare function unwrapReactiveDeep<T = unknown>(value: T): T;
+//#endregion

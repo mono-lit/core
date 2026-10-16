@@ -1,5 +1,8 @@
-import { LitElement } from 'lit';
-declare const MonoRadio_base: import('../../composables/hybird-prop').Constructor<import('./radio-core.js').MonoRadioCoreInterface> & typeof LitElement;
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoRadioCoreInterface } from "./radio-core.js";
+import { LitElement } from "lit";
+//#region src/components/radio/mono-radio.d.ts
+declare const MonoRadio_base: Constructor<MonoRadioCoreInterface> & typeof LitElement;
 /**
  * Light-DOM `mono-radio` (default build, `@mono-lit/helper/ui/radio`).
  *
@@ -13,19 +16,20 @@ declare const MonoRadio_base: import('../../composables/hybird-prop').Constructo
  * document loads only one.
  */
 export declare class MonoRadio extends MonoRadio_base {
-    static styles: import('lit').CSSResult[];
-    protected createRenderRoot(): HTMLElement;
-    private _slotsCaptured;
-    private _slotLabel;
-    private _slotDescription;
-    connectedCallback(): void;
-    protected updated(changed: Map<string, unknown>): void;
-    private _captureSlots;
-    private _placeSlot;
+  static styles: import("lit").CSSResult[];
+  protected createRenderRoot(): HTMLElement;
+  private _slotsCaptured;
+  private _slotLabel;
+  private _slotDescription;
+  connectedCallback(): void;
+  protected updated(changed: Map<string, unknown>): void;
+  private _captureSlots;
+  private _placeSlot;
 }
 declare global {
-    interface HTMLElementTagNameMap {
-        'mono-radio': MonoRadio;
-    }
+  interface HTMLElementTagNameMap {
+    'mono-radio': MonoRadio;
+  }
 }
+//#endregion
 export {};

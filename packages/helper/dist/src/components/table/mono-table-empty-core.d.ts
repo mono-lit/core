@@ -1,34 +1,35 @@
-import { LitElement, nothing, TemplateResult } from 'lit';
-import { MonoTableControllerCoreInterface } from './table-controller-core.js';
-import { Constructor } from '../../composables/hybird-prop';
-import { MonoTableController } from './mono-data-grid.js';
+import { Constructor } from "../../composables/hybird-prop.js";
+import { MonoTableControllerCoreInterface } from "./table-controller-core.js";
+import { MonoTableController } from "./mono-data-grid.js";
+import { LitElement, TemplateResult, nothing } from "lit";
+//#region src/components/table/mono-table-empty-core.d.ts
 /** `detail` of the `reload` event `<mono-table-empty>` emits when its button is pressed. */
 export interface TableEmptyReloadEventDetail {
-    grid: MonoTableController;
+  grid: MonoTableController;
 }
 export type TableEmptyReloadEvent = CustomEvent<TableEmptyReloadEventDetail>;
 /** Events emitted by `<mono-table-empty>` (feeds the generated Vue types). */
 export interface TableEmptyEvents {
-    reload: TableEmptyReloadEvent;
-    'mno-reload': TableEmptyReloadEvent;
-    mnoReload: TableEmptyReloadEvent;
+  reload: TableEmptyReloadEvent;
+  'mno-reload': TableEmptyReloadEvent;
+  mnoReload: TableEmptyReloadEvent;
 }
 /** Public surface added by the empty-state core mixin. */
 export declare class MonoTableEmptyCoreInterface extends MonoTableControllerCoreInterface {
-    icon: string;
-    title: string;
-    subtitle: string;
-    reload: boolean;
-    reloadLabel: string;
-    height?: string;
-    minHeight?: string;
-    maxHeight?: string;
-    /** Set by each build once `slot="body"` is known to hold something. */
-    protected _hasBodySlot: boolean;
-    /** Overridden by the shadow build to emit a real `<slot>`. */
-    protected _renderBodySlot(): TemplateResult;
-    protected _renderProps(): TemplateResult;
-    protected _renderIcon(): TemplateResult | typeof nothing;
+  icon: string;
+  title: string;
+  subtitle: string;
+  reload: boolean;
+  reloadLabel: string;
+  height?: string;
+  minHeight?: string;
+  maxHeight?: string;
+  /** Set by each build once `slot="body"` is known to hold something. */
+  protected _hasBodySlot: boolean;
+  /** Overridden by the shadow build to emit a real `<slot>`. */
+  protected _renderBodySlot(): TemplateResult;
+  protected _renderProps(): TemplateResult;
+  protected _renderIcon(): TemplateResult | typeof nothing;
 }
 /**
  * `MonoTableEmptyCore` — render-mode-agnostic logic for `mono-table-empty`, the
@@ -58,3 +59,4 @@ export declare class MonoTableEmptyCoreInterface extends MonoTableControllerCore
  * SSR-safe: all DOM work is guarded behind `isServer`.
  */
 export declare const MonoTableEmptyCore: <T extends Constructor<LitElement>>(superClass: T) => Constructor<MonoTableEmptyCoreInterface> & T;
+//#endregion
