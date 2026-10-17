@@ -1,6 +1,6 @@
 {
     "name": "@mono-lit/helper",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "description": "Lit web components (tables, forms, inputs, dialogs, charts) for Vue and Nuxt, with light-DOM and shadow-DOM builds.",
     "keywords": [
         "lit",
@@ -325,8 +325,6 @@
         "@floating-ui/core": "1.8.0",
         "@floating-ui/dom": "1.8.0",
         "@iconify/json": "2.2.505",
-        "@nuxt/kit": "4.6.1",
-        "@nuxt/schema": "4.6.1",
         "@unocss/preset-web-fonts": "66.11.0",
         "basecoat-css": "1.0.2",
         "chart.js": "4.5.1",
@@ -358,17 +356,19 @@
         "jexl": "^2.3.0",
         "lit": "3.3.3",
         "magic-string": "^0.30.21",
-        "nuxt-ssr-lit": "1.6.33",
         "p-debounce": "^5.1.0",
         "p-throttle": "^8.1.0",
         "remark": "^15.0.1",
         "remark-gfm": "^4.0.1",
-        "unist-util-visit": "^5.1.0"
+        "unist-util-visit": "^5.1.0",
+        "@nuxt/kit": "^4.6.2",
+        "@nuxt/schema": "^4.6.2",
+        "@lit-labs/ssr-client": "^1.1.7",
+        "@webcomponents/template-shadowroot": "^0.2.1"
     },
     "peerDependencies": {
         "@floating-ui/core": "^1.7.0",
         "@floating-ui/dom": "^1.7.0",
-        "@nuxt/kit": ">=3",
         "chart.js": "4.5.1",
         "exceljs": ">=4",
         "handlebars": ">=4",
@@ -383,9 +383,6 @@
             "optional": true
         },
         "chart.js": {
-            "optional": true
-        },
-        "@nuxt/kit": {
             "optional": true
         },
         "exceljs": {

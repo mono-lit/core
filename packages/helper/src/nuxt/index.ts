@@ -2,7 +2,7 @@
 //
 // Wraps everything the host previously wired by hand for @mono-lit/helper SSR support:
 //   - the `monoSsr()` Vite plugins (import-stub + <ClientOnly> / <LitWrapper> wrap)
-//   - auto-wiring `nuxt-ssr-lit` (our own dependency) so importing a shadow build
+//   - the Lit SSR bridge (vendored from nuxt-ssr-lit, ./ssr-lit) so importing a shadow build
 //     (`@mono-lit/helper/ui/shadow/<c>`) is all it takes to SSR `<mono-c>`
 //   - the base stylesheet `@mono-lit/helper/ui/index.css`
 //   - the `mono-` `isCustomElement` compiler rule
@@ -21,7 +21,6 @@ import {
   defineNuxtModule,
   addVitePlugin,
   extendViteConfig,
-  installModule,
   hasNuxtModule,
   addPluginTemplate,
   tryResolveModule,
@@ -29,6 +28,7 @@ import {
 } from '@nuxt/kit'
 import type { NuxtModule } from '@nuxt/schema'
 import { monoSsr, type MonoSsrOptions } from '../vite'
+import { installSsrLit } from './ssr-lit'
 import type { MonoTooltipGlobalOptions } from '../components/tooltip/tooltip-types'
 import type { MonoUIConfig } from '../composables/mono-ui'
 import type { MonoSkeletonDefaults } from '../composables/mono-skeleton'
@@ -45,8 +45,8 @@ export interface MonoHelperModuleOptions extends MonoSsrOptions {
    * Auto-wire SSR for shadow builds: importing `@mono-lit/helper/ui/shadow/<c>` in a
    * `.vue` file makes its `<mono-c>` server-render (Declarative Shadow DOM) — no
    * manual `litElementPrefix` / `exclude` lists, and nothing for the app to
-   * install (`nuxt-ssr-lit` ships as a @mono-lit/helper dependency). Default true.
-   * Set false (or keep a manual `nuxt-ssr-lit` module entry) to use the legacy
+   * install (the Lit SSR bridge ships inside @mono-lit/helper). Default true.
+   * Set false (or keep a manual upstream `nuxt-ssr-lit` module entry) to use the legacy
    * manual wiring.
    */
   ssr?: boolean
@@ -153,21 +153,21 @@ const monoHelperModule: NuxtModule = defineNuxtModule({
       )
     }
 
-    // 0) Auto-wire nuxt-ssr-lit for import-driven SSR wrapping. We ship it as a
-    //    real dependency, so the consuming app doesn't declare anything.
-    // - If the host still lists `nuxt-ssr-lit` itself → legacy mode: it manages
-    //   `litElementPrefix` (and the host keeps `helper.exclude`); we stay out of
-    //   the way so the two transforms don't double-wrap.
-    // - Else auto-install it with an EMPTY prefix (we do the wrapping via the
-    //   import-driven `litWrapper` transform) and enable the LitWrapper branch.
-    // - If it can't be resolved at all → degrade to client-only (no SSR).
+    // 0) Auto-wire the Lit SSR bridge (<LitWrapper> + hydration/@lit-labs/ssr renderer,
+    //    vendored from nuxt-ssr-lit — see ./ssr-lit) for import-driven SSR wrapping.
+    //    It ships inside this package, so the consuming app installs nothing.
+    // - If the host still lists the upstream `nuxt-ssr-lit` module itself → legacy
+    //   mode: it manages `litElementPrefix` (and the host keeps `helper.exclude`); we
+    //   stay out of the way so the two transforms don't double-wrap.
+    // - Else install our bridge (OUR import-driven `litWrapper` transform decides what
+    //   wraps) and enable the LitWrapper branch.
     // - In an `ssr: false` app there is no server render for <LitWrapper> to feed,
     //   so it is not installed; the shadow builds then run as ordinary custom
     //   elements in the browser.
     let litWrapper = false
     if (helper.ssr !== false && !ssrApp) {
       logger.debug(
-        'ssr:false — skipping nuxt-ssr-lit; shadow builds render client-side as plain custom elements.',
+        'ssr:false — skipping the Lit SSR bridge; shadow builds render client-side as plain custom elements.',
       )
     } else if (helper.ssr !== false) {
       if (hasNuxtModule('nuxt-ssr-lit')) {
@@ -175,28 +175,8 @@ const monoHelperModule: NuxtModule = defineNuxtModule({
           'nuxt-ssr-lit is configured by the host — using legacy manual SSR wiring (litElementPrefix). Remove that module entry to enable @mono-lit/helper auto-wrap, or set mono.helper.ssr:false to silence.',
         )
       } else {
-        try {
-          // Resolve OUR copy explicitly. `installModule` resolves a bare specifier
-          // only against `nuxt.options.modulesDir` (the app's rootDir) — never from
-          // the calling module — and a module's own directory is added to that list
-          // only AFTER its setup() returns. So under pnpm, where our dependency sits
-          // in a nested node_modules the app can't see, the bare string would fail.
-          // An absolute path is fully supported and keeps the metadata identical:
-          // `parseNodeModulePath` still yields entryPath 'nuxt-ssr-lit', so
-          // build.transpile and dist/module.json behave exactly as before.
-          // NOTE: use tryResolveModule, not createRequire — the latter resolves via
-          // the `require` condition and hands back module.cjs instead of module.mjs.
-          const ssrLit = await tryResolveModule('nuxt-ssr-lit', import.meta.url)
-          // Install with an empty prefix: we only want its <LitWrapper> component
-          // + hydration/@lit-labs/ssr renderer; OUR transform decides what wraps.
-          // Fall back to the bare specifier for hoisted / npm / Yarn layouts.
-          await installModule(ssrLit ?? 'nuxt-ssr-lit', { litElementPrefix: [] })
-          litWrapper = true
-        } catch {
-          logger.info(
-            'nuxt-ssr-lit could not be loaded — mono shadow components fall back to client-only. It ships as a @mono-lit/helper dependency, so this usually means a broken or deduped install; try reinstalling, or set mono.helper.ssr:false to silence.',
-          )
-        }
+        await installSsrLit(nuxt)
+        litWrapper = true
       }
     }
 

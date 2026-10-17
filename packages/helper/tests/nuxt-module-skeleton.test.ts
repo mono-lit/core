@@ -14,7 +14,9 @@ const PEER = '@aejkatappaja/phantom-ui'
 const kit = vi.hoisted(() => ({
   addVitePlugin: vi.fn(),
   extendViteConfig: vi.fn(),
-  installModule: vi.fn(async () => {}),
+  addComponent: vi.fn(async () => {}),
+  addPlugin: vi.fn(),
+  createResolver: () => ({ resolve: (...p: string[]) => p.join('/') }),
   hasNuxtModule: vi.fn(() => false),
   addPluginTemplate: vi.fn(),
   tryResolveModule: vi.fn(async (_id: string) => null as string | null),
@@ -30,7 +32,9 @@ type Setup = (options: Record<string, unknown>, nuxt: { options: Record<string, 
 
 async function run(ssr: boolean, helper: Record<string, unknown> = {}) {
   const mod = (await import('../src/nuxt/index')).default as unknown as { setup: Setup }
-  const nuxt = { options: { ssr, css: [] as string[], rootDir: process.cwd(), vue: {} } }
+  const nuxt = {
+    options: { ssr, css: [] as string[], rootDir: process.cwd(), vue: {}, build: { transpile: [] as string[] }, nitro: {}, vite: {} },
+  }
   await mod.setup({ helper }, nuxt)
   return nuxt
 }
@@ -57,7 +61,7 @@ const viteConfig = () => {
 
 beforeEach(() => {
   for (const fn of Object.values(kit)) if (typeof fn === 'function' && 'mockReset' in fn) fn.mockReset()
-  kit.installModule.mockImplementation(async () => {})
+  kit.addComponent.mockImplementation(async () => {})
   kit.hasNuxtModule.mockImplementation(() => false)
   kit.tryResolveModule.mockImplementation(async () => null)
 })

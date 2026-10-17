@@ -191,9 +191,9 @@ export default defineNuxtConfig({
     // Aliases and the federated app dirs are derived from mono.config.ts —
     // nothing to repeat here.
     utils: {},
-    // SSR wrapping is automatic: @mono-lit/helper/nuxt auto-installs nuxt-ssr-lit
-    // (which ships as a @mono-lit/helper dependency — your app declares neither it nor
-    // @lit-labs/ssr) and wraps a `<mono-*>` in <LitWrapper> when the .vue file
+    // SSR wrapping is automatic: @mono-lit/helper/nuxt installs its built-in Lit SSR
+    // bridge (<LitWrapper>, vendored from nuxt-ssr-lit — your app declares neither it,
+    // @lit-labs/ssr nor @nuxt/kit) and wraps a `<mono-*>` in <LitWrapper> when the .vue file
     // imports its shadow build (`@mono-lit/helper/ui/shadow/<c>`). Everything else
     // stays client-only. The automatic skeleton (`pending`) is built in: install
     // `@aejkatappaja/phantom-ui` in the app and it is on (`helper: { skeleton: false }`
@@ -329,7 +329,7 @@ export default defineNuxtConfig({
   mono: {
     utils: {},
     // With `ssr: false` @mono-lit/helper/nuxt skips its SSR plumbing on its own: no
-    // nuxt-ssr-lit, and light `<mono-*>` are NOT wrapped in <ClientOnly> (that wrap
+    // Lit SSR bridge, and light `<mono-*>` are NOT wrapped in <ClientOnly> (that wrap
     // would defer them past the page's `onMounted`, breaking `controlMono*(ref)`
     // bindings). It still ships the css, the `mono-` compiler rule, the lit dedupe
     // and the ui/tooltip plugins. `helper: { clientOnly: true }` forces the wrap.

@@ -34,7 +34,7 @@ The right flavor depends on whether your app **renders on the server**.
 
   In a Nuxt host you don't hand-write `<mono-shadow-*>` or wrap anything: just `import '@mono-lit/helper/ui/shadow/<name>'` and the `@mono-lit/helper/nuxt` module **auto-wraps** it for SSR — you keep using the component normally.
 
-  A Nuxt app that runs **client-only** (`ssr: false`) is an SPA like a Vue app: use the **light** build there. `@mono-lit/helper/nuxt` notices the flag and skips its SSR wrapping entirely (no `<ClientOnly>` around `<mono-*>`, no `nuxt-ssr-lit`), so the elements exist by the time your page's `onMounted` binds a `controlMono*` controller to them.
+  A Nuxt app that runs **client-only** (`ssr: false`) is an SPA like a Vue app: use the **light** build there. `@mono-lit/helper/nuxt` notices the flag and skips its SSR wrapping entirely (no `<ClientOnly>` around `<mono-*>`, no `<LitWrapper>` SSR bridge), so the elements exist by the time your page's `onMounted` binds a `controlMono*` controller to them.
 
 > **Rule of thumb: Vue → light · Nuxt host → shadow.** A **Vue remote stays light even under a Nuxt host** — it's still a client-rendered island; the shadow build is for the Nuxt host's own server-rendered shell and pages. That Nuxt-host + Vue-remote pairing is a possible-but-risky **hybrid** — the standard is same-framework (see [Setup](../repo/setup)).
 

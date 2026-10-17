@@ -14,8 +14,8 @@ export interface MonoHelperModuleOptions extends MonoSsrOptions {
    * Auto-wire SSR for shadow builds: importing `@mono-lit/helper/ui/shadow/<c>` in a
    * `.vue` file makes its `<mono-c>` server-render (Declarative Shadow DOM) — no
    * manual `litElementPrefix` / `exclude` lists, and nothing for the app to
-   * install (`nuxt-ssr-lit` ships as a @mono-lit/helper dependency). Default true.
-   * Set false (or keep a manual `nuxt-ssr-lit` module entry) to use the legacy
+   * install (the Lit SSR bridge ships inside @mono-lit/helper). Default true.
+   * Set false (or keep a manual upstream `nuxt-ssr-lit` module entry) to use the legacy
    * manual wiring.
    */
   ssr?: boolean;

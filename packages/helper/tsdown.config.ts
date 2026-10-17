@@ -317,6 +317,9 @@ export default defineConfig([
             // Nuxt module entry: `@mono-lit/helper/nuxt`.
             'nuxt': './src/nuxt/index.ts',
         },
+        // The Lit SSR bridge's runtime (vendored from nuxt-ssr-lit, see src/nuxt/ssr-lit)
+        // ships verbatim: plugins and `.vue` components the app's Nuxt build compiles.
+        copy: [{ from: './src/nuxt/ssr-lit/runtime', to: './dist/ssr-lit' }],
         plugins: [rawImports(), unocss(CSS_FILE), emitFlavorThemes()],
     },
     // Shadow-DOM / SSR build (`@mono-lit/helper/ui/shadow/*`). Its own chunk graph,

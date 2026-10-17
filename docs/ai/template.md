@@ -1783,8 +1783,8 @@ when Lit hydrates. See [Mono-UI → Getting started](/ui/getting-started).
 ::: tip `ssr: false` apps keep the light build, unwrapped
 A Nuxt app running client-only (`ssr: false` — a Remote standalone, or a Host before its SSR
 phase) has no server paint to protect, so it uses the **light** build (`@mono-lit/helper/ui/<c>`) like
-a Vue app, and `@mono-lit/helper/nuxt` wraps nothing: the `<ClientOnly>` wrap and `nuxt-ssr-lit` are
-registered only when `ssr` is on. (Wrapping would defer every `<mono-*>` past the page's
+a Vue app, and `@mono-lit/helper/nuxt` wraps nothing: the `<ClientOnly>` wrap and the Lit SSR bridge
+(`<LitWrapper>`) are registered only when `ssr` is on. (Wrapping would defer every `<mono-*>` past the page's
 `onMounted`, where `controlMonoTable/Form/Modal` refs are bound.) Force either way with
 `mono: { helper: { clientOnly: true | false } }`.
 :::

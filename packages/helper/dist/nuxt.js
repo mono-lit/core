@@ -1,8 +1,39 @@
 import { t as monoSsr } from "./vite-DcyRlTTf.js";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { addPluginTemplate, addVitePlugin, defineNuxtModule, extendViteConfig, hasNuxtModule, installModule, tryResolveModule, useLogger } from "@nuxt/kit";
+import { addComponent, addPlugin, addPluginTemplate, addVitePlugin, createResolver, defineNuxtModule, extendViteConfig, hasNuxtModule, tryResolveModule, useLogger } from "@nuxt/kit";
 
+//#region src/nuxt/ssr-lit/index.ts
+async function installSsrLit(nuxt) {
+	const { resolve } = createResolver(import.meta.url);
+	const runtimeDir = resolve("./ssr-lit/runtime");
+	nuxt.options.build.transpile.push(runtimeDir);
+	const nitro = nuxt.options.nitro;
+	nitro.moduleSideEffects ||= [];
+	nitro.moduleSideEffects.push("@lit-labs/ssr/lib/render-lit-html.js");
+	nuxt.options.vite.ssr ||= {};
+	const ssrExternal = nuxt.options.vite.ssr.external;
+	if (Array.isArray(ssrExternal)) {
+		if (!ssrExternal.includes("@vue/server-renderer")) ssrExternal.push("@vue/server-renderer");
+	} else if (ssrExternal === void 0) nuxt.options.vite.ssr.external = ["@vue/server-renderer"];
+	addPlugin(resolve(runtimeDir, "plugins/antiFouc.server"));
+	addPlugin(resolve(runtimeDir, "plugins/polyfill.client"));
+	addPlugin(resolve(runtimeDir, "plugins/hydrateSupport.client"));
+	await addComponent({
+		name: "LitWrapper",
+		filePath: resolve(runtimeDir, "components/LitWrapper.vue")
+	});
+	await addComponent({
+		name: "LitWrapperClient",
+		filePath: resolve(runtimeDir, "components/LitWrapperClient.vue")
+	});
+	await addComponent({
+		name: "LitWrapperServer",
+		filePath: resolve(runtimeDir, "components/LitWrapperServer.vue")
+	});
+}
+
+//#endregion
 //#region src/nuxt/index.ts
 /** The optional peer the automatic skeleton (`pending`) renders with. */
 const PHANTOM_UI = "@aejkatappaja/phantom-ui";
@@ -30,15 +61,12 @@ const monoHelperModule = defineNuxtModule({
 		const phantom = helper.skeleton === false ? null : await tryResolveModule(PHANTOM_UI, appAnchor);
 		if (!phantom && helper.skeleton !== false) logger.debug(`skeleton: "${PHANTOM_UI}" is not installed in the app — \`pending\` stays a no-op. Install it to turn the automatic skeleton on.`);
 		let litWrapper = false;
-		if (helper.ssr !== false && !ssrApp) logger.debug("ssr:false — skipping nuxt-ssr-lit; shadow builds render client-side as plain custom elements.");
+		if (helper.ssr !== false && !ssrApp) logger.debug("ssr:false — skipping the Lit SSR bridge; shadow builds render client-side as plain custom elements.");
 		else if (helper.ssr !== false) {
 			if (hasNuxtModule("nuxt-ssr-lit")) logger.info("nuxt-ssr-lit is configured by the host — using legacy manual SSR wiring (litElementPrefix). Remove that module entry to enable @mono-lit/helper auto-wrap, or set mono.helper.ssr:false to silence.");
-			else try {
-				const ssrLit = await tryResolveModule("nuxt-ssr-lit", import.meta.url);
-				await installModule(ssrLit ?? "nuxt-ssr-lit", { litElementPrefix: [] });
+			else {
+				await installSsrLit(nuxt);
 				litWrapper = true;
-			} catch {
-				logger.info("nuxt-ssr-lit could not be loaded — mono shadow components fall back to client-only. It ships as a @mono-lit/helper dependency, so this usually means a broken or deduped install; try reinstalling, or set mono.helper.ssr:false to silence.");
 			}
 		}
 		if (ssrApp || clientOnlyWrap) {

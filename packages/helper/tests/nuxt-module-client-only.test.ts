@@ -4,7 +4,7 @@
 // nor renders a light custom element there. In a client-only app (`ssr: false`) it
 // only costs: Nuxt's <ClientOnly> renders its slot one tick after it mounts, so a
 // page binding `controlMonoTable(ref)` in `onMounted` sees `null`. So the module
-// must register the `monoSsr()` Vite plugins (and install nuxt-ssr-lit) only when
+// must register the `monoSsr()` Vite plugins (and the Lit SSR bridge) only when
 // the app server-renders, unless `clientOnly` says otherwise explicitly.
 //
 // Drives the SOURCE module with `@nuxt/kit` mocked — no Nuxt instance is booted;
@@ -14,11 +14,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const kit = vi.hoisted(() => ({
   addVitePlugin: vi.fn(),
   extendViteConfig: vi.fn(),
-  installModule: vi.fn(async () => {}),
+  // The vendored Lit SSR bridge (src/nuxt/ssr-lit) registers through these three.
+  addComponent: vi.fn(async () => {}),
+  addPlugin: vi.fn(),
+  createResolver: () => ({ resolve: (...p: string[]) => p.join('/') }),
   hasNuxtModule: vi.fn(() => false),
   addPluginTemplate: vi.fn(),
-  // `null` = "not resolvable from the app" so optimizeDeps.include stays empty and
-  // nuxt-ssr-lit falls back to its bare specifier (which the mocked installModule accepts).
+  // `null` = "not resolvable from the app", so optimizeDeps.include stays empty.
   tryResolveModule: vi.fn(async () => null),
   useLogger: () => ({ info: vi.fn(), debug: vi.fn(), warn: vi.fn() }),
 }))
@@ -33,10 +35,15 @@ type Setup = (options: Record<string, unknown>, nuxt: { options: Record<string, 
 
 async function run(ssr: boolean, helper: Record<string, unknown> = {}) {
   const mod = (await import('../src/nuxt/index')).default as unknown as { setup: Setup }
-  const nuxt = { options: { ssr, css: [] as string[], rootDir: process.cwd(), vue: {} } }
+  const nuxt = {
+    options: { ssr, css: [] as string[], rootDir: process.cwd(), vue: {}, build: { transpile: [] as string[] }, nitro: {}, vite: {} },
+  }
   await mod.setup({ helper }, nuxt)
   return nuxt
 }
+
+/** Components the Lit SSR bridge registered in this run (empty = bridge not installed). */
+const litWrappers = () => kit.addComponent.mock.calls.map(([c]) => (c as { name: string }).name)
 
 /** Names of the Vite plugins the module registered in this run. */
 const registeredPlugins = () =>
@@ -47,20 +54,28 @@ beforeEach(() => {
 })
 
 describe('@mono-lit/helper/nuxt — client-only wrap follows `ssr`', () => {
-  it('ssr: true (default) — registers the SSR stub + the <ClientOnly> wrap and wires nuxt-ssr-lit', async () => {
-    await run(true)
+  it('ssr: true (default) — registers the SSR stub + the <ClientOnly> wrap and the Lit SSR bridge', async () => {
+    const nuxt = await run(true)
     expect(registeredPlugins()).toEqual([
       '@mono-lit/helper:mono-ssr-stub',
       '@mono-lit/helper:mono-client-only',
     ])
-    expect(kit.installModule).toHaveBeenCalledTimes(1)
-    expect(kit.installModule.mock.calls[0]?.[0]).toBe('nuxt-ssr-lit')
+    expect(litWrappers()).toEqual(['LitWrapper', 'LitWrapperClient', 'LitWrapperServer'])
+    expect(kit.addPlugin).toHaveBeenCalledTimes(3)
+    expect(nuxt.options.nitro.moduleSideEffects).toContain('@lit-labs/ssr/lib/render-lit-html.js')
+    expect(nuxt.options.vite.ssr.external).toContain('@vue/server-renderer')
   })
 
-  it('ssr: false — registers NO transform and does not install nuxt-ssr-lit', async () => {
+  it('ssr: true with the upstream nuxt-ssr-lit module configured by the host — leaves SSR to it', async () => {
+    kit.hasNuxtModule.mockImplementationOnce(() => true)
+    await run(true)
+    expect(litWrappers()).toEqual([])
+  })
+
+  it('ssr: false — registers NO transform and does not install the Lit SSR bridge', async () => {
     await run(false)
     expect(registeredPlugins()).toEqual([])
-    expect(kit.installModule).not.toHaveBeenCalled()
+    expect(litWrappers()).toEqual([])
   })
 
   it('ssr: false — the non-SSR parts still apply (css, isCustomElement, dedupe)', async () => {
@@ -78,8 +93,8 @@ describe('@mono-lit/helper/nuxt — client-only wrap follows `ssr`', () => {
       '@mono-lit/helper:mono-ssr-stub',
       '@mono-lit/helper:mono-client-only',
     ])
-    // Still no nuxt-ssr-lit: there is no server render for <LitWrapper> to feed.
-    expect(kit.installModule).not.toHaveBeenCalled()
+    // Still no Lit SSR bridge: there is no server render for <LitWrapper> to feed.
+    expect(litWrappers()).toEqual([])
   })
 
   it('clientOnly: false in an ssr: true app keeps the stub + transform, but stops wrapping light tags', async () => {
@@ -90,7 +105,7 @@ describe('@mono-lit/helper/nuxt — client-only wrap follows `ssr`', () => {
       '@mono-lit/helper:mono-ssr-stub',
       '@mono-lit/helper:mono-client-only',
     ])
-    expect(kit.installModule).toHaveBeenCalledTimes(1)
+    expect(litWrappers()).toEqual(['LitWrapper', 'LitWrapperClient', 'LitWrapperServer'])
     const light = '<script setup lang="ts">\nimport "@mono-lit/helper/ui/button"\n</script>\n<template><div><mono-button>Save</mono-button></div></template>\n'
     const transform = (kit.addVitePlugin.mock.calls[1]?.[0] as any).transform as (code: string, id: string) => any
     expect(transform(light, '/app/pages/x.vue')).toBeNull()
