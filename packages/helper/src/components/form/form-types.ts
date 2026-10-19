@@ -16,6 +16,8 @@ import type {
 import type { CheckboxEvents, CheckboxProps } from '../checkbox/checkbox-types.js'
 import type { RadioEvents, RadioProps } from '../radio/radio-types.js'
 import type { SwitchEvents, SwitchProps } from '../switch/switch-types.js'
+import type { SliderEvents, SliderProps } from '../slider/slider-types.js'
+import type { OtpEvents, OtpProps } from '../otp/otp-types.js'
 
 /**
  * Tag name → its props, so `inputs[key].props` and `setProp()` autocomplete against the
@@ -38,6 +40,8 @@ export interface MonoFormComponentProps {
   'mono-checkbox': Partial<CheckboxProps> & MonoEventProps<CheckboxEvents>
   'mono-radio': Partial<RadioProps> & MonoEventProps<RadioEvents>
   'mono-switch': Partial<SwitchProps> & MonoEventProps<SwitchEvents>
+  'mono-slider': Partial<SliderProps> & MonoEventProps<SliderEvents>
+  'mono-otp': Partial<OtpProps> & MonoEventProps<OtpEvents>
 }
 
 /** Every component `monoForm` can drive. */
@@ -64,13 +68,23 @@ export interface MonoFormRuleCtx<V = unknown> {
 }
 
 /**
- * Anything schema-shaped — yup and friends. Duck-typed on purpose: @mono-lit/helper
- * takes no validation dependency, so any object exposing `validateSync` (or an
- * async `validate`) works, and the thrown error's `message` becomes the message.
+ * Anything schema-shaped. Duck-typed on purpose: @mono-lit/helper takes no
+ * validation dependency. Two shapes are accepted:
+ * - yup-shaped: `validateSync` (or an async `validate`) that throws; the
+ *   error's `errors[0]` / `message` becomes the message.
+ * - Standard Schema v1 (Valibot, Zod, ArkType, …): `['~standard'].validate`;
+ *   the first issue's `message` becomes the message.
  */
 export interface MonoFormSchemaLike {
-  validateSync?: (value: unknown, options?: unknown) => unknown
-  validate?: (value: unknown, options?: unknown) => unknown
+  // `options?: any` (not `unknown`): yup declares `options?: ValidateOptions`, and a
+  // parameter typed `unknown` here would reject it under strictFunctionTypes.
+  validateSync?: (value: unknown, options?: any) => unknown
+  validate?: (value: unknown, options?: any) => unknown
+  readonly '~standard'?: {
+    readonly validate: (value: unknown) =>
+      | { readonly issues?: ReadonlyArray<{ readonly message: string }> | undefined }
+      | Promise<{ readonly issues?: ReadonlyArray<{ readonly message: string }> | undefined }>
+  }
 }
 
 interface MonoFormRuleBase {

@@ -3,7 +3,7 @@ import { t as customElement } from "../mono-element-C7vCschg.js";
 import { a as defineHybridPropAliases, o as numberStringConverter, r as booleanStringConverter, t as __decorate } from "../decorate-DbYFpi8R.js";
 import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
 import { i as guardHostTextContent, s as placeSlotNode } from "../light-slots-DdDdZ6zs.js";
-import { n as applyPopupPlacement, r as computePopupPlacement, t as PopupPortalController } from "../popup-portal-HWhkd7oy.js";
+import { n as applyPopupPlacement, r as computePopupPlacement, t as PopupPortalController } from "../popup-portal-C8ttHDRX.js";
 import { n as cssPart, r as defineCssClassAliases, t as applyCssClass } from "../css-class-B6Tc_MAx.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { property, state } from "lit/decorators.js";
@@ -178,7 +178,8 @@ const MonoDropdownCore = (superClass) => {
 			};
 			this._handleDocumentKeydown = (event) => {
 				if (!this.modelValue || !this.closeOnEscape || event.key !== "Escape") return;
-				if (this._popup.ownsNestedInPath(event.composedPath())) return;
+				const path = event.composedPath();
+				if (this._popup.ownsNestedInPath(path) || this._popup.inLayerAbove(path)) return;
 				event.preventDefault();
 				this._setOpen(false, "escape", event);
 			};

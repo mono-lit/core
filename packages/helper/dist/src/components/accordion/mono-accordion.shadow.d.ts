@@ -1,6 +1,6 @@
 import { Constructor } from "../../composables/hybird-prop.js";
 import { MonoAccordionCoreInterface } from "./accordion-core.js";
-import { LitElement, TemplateResult } from "lit";
+import { LitElement, TemplateResult, nothing } from "lit";
 //#region src/components/accordion/mono-accordion.shadow.d.ts
 declare const MonoAccordionShadow_base: Constructor<MonoAccordionCoreInterface> & typeof LitElement;
 /**
@@ -23,6 +23,9 @@ export declare class MonoAccordionShadow extends MonoAccordionShadow_base {
   static styles: import("lit").CSSResult[];
   connectedCallback(): void;
   firstUpdated(changed: Map<string, unknown>): void;
+  protected updated(changed: Map<string, unknown>): void;
+  /** Iconify classes are drawn as inline SVG — page utility CSS cannot reach here. */
+  protected _renderIconGlyph(): TemplateResult | typeof nothing;
   /**
    * Presence of a region that may also answer to an old name (`label` →
    * `title`, `description` → `subtitle`): the union of both slots.

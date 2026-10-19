@@ -197,7 +197,7 @@ export default withMermaid({
         },
         {
           // Optional extras that pull in heavy externalized deps (exceljs,
-          // notivue, yup) — kept out of the core bundle, hence "Addons".
+          // notivue, yup, valibot) — kept out of the core bundle, hence "Addons".
           text: 'Mono-Addons',
           items: [
             { text: 'Chart.js', link: '/addons/chart' },
@@ -208,6 +208,7 @@ export default withMermaid({
             { text: 'Tooltip', link: '/addons/tooltip' },
             { text: 'Skeleton', link: '/addons/skeleton' },
             { text: 'Yup', link: '/addons/yup' },
+            { text: 'Valibot', link: '/addons/valibot' },
           ],
         },
         {
@@ -227,6 +228,8 @@ export default withMermaid({
                 { text: 'Radio', link: '/ui/radio' },
                 { text: 'Switch', link: '/ui/switch' },
                 { text: 'Input', link: '/ui/input' },
+                { text: 'Slider', link: '/ui/slider' },
+                { text: 'OTP', link: '/ui/otp' },
                 { text: 'Date', link: '/ui/date' },
                 { text: 'Textarea', link: '/ui/textarea' },
                 { text: 'Select', link: '/ui/select' },

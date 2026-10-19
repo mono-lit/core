@@ -56,6 +56,7 @@ export declare class MonoDrawerCoreInterface implements PopupLayer {
   get hasBackdrop(): boolean;
   get pinnedZ(): number | undefined;
   onStackEscape(event: KeyboardEvent): void;
+  containsEventPath(path: EventTarget[]): boolean;
   setStackZ(z: number, isTopBackdrop: boolean): void;
   protected _slotsCaptured: boolean;
   protected _hasHeaderSlotState: boolean;

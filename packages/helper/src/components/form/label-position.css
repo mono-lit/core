@@ -1,0 +1,103 @@
+/* =========================================
+   label-position — shared by every field-like control
+   (input, select, tag-input, date, textarea, dropdown-table; otp — left / right only).
+
+   `top` (default) emits NO attribute, so nothing here touches it. The other
+   three are layout-only: the label's type, colour and states stay with each
+   component's own label rules.
+
+   Each component's root writes the private slots read below:
+     --_mono-lp-width      left/right label column  (--mono-<c>-label-width, auto)
+     --_mono-lp-gap        left/right column gap    (--mono-<c>-label-side-gap)
+     --_mono-lp-height     one control row — the side label centres on it
+     --_mono-lp-box-min    the box's resting min-height (textarea: its rows)
+     --_mono-lp-padding-x  the box's inline-start padding — the notch lines up with the text
+     --_mono-lp-font       notched label font-size  (--mono-<c>-label-notch-font-size)
+     --_mono-lp-notch-bg   the surface the notch is cut from (--mono-<c>-label-notch-bg)
+     --_mono-lp-field-bg   the box's own surface — paints the notch's lower half
+
+   Light: imported once by entries/index.css. Shadow: appended to each
+   component's shadow sheet (the inner root keeps its `mono-<c>` attribute).
+   ========================================= */
+
+/* ── left / right — label column + field column; messages stay under the box ── */
+:is([mono-input], [mono-select], [mono-tag-input], [mono-date], [mono-textarea], [mono-dropdown-table], [mono-otp]):is([mono-label-position="left"], [mono-label-position="right"]) {
+  display: grid;
+  grid-template-columns: var(--_mono-lp-width) minmax(0, 1fr);
+  column-gap: var(--_mono-lp-gap);
+  align-items: start;
+}
+
+:is([mono-input], [mono-select], [mono-tag-input], [mono-date], [mono-textarea], [mono-dropdown-table], [mono-otp])[mono-label-position="right"] {
+  grid-template-columns: minmax(0, 1fr) var(--_mono-lp-width);
+}
+
+/* Everything but the label lives in the field column (an absolute panel then
+   measures against that column too). */
+:is([mono-input], [mono-select], [mono-tag-input], [mono-date], [mono-textarea], [mono-dropdown-table], [mono-otp])[mono-label-position="left"] > * {
+  grid-column: 2;
+}
+:is([mono-input], [mono-select], [mono-tag-input], [mono-date], [mono-textarea], [mono-dropdown-table], [mono-otp])[mono-label-position="right"] > * {
+  grid-column: 1;
+}
+
+/* The label centres on the FIRST control row, so a tag-input growing chip
+   rows or a tall textarea keeps it beside the top line. */
+:is([mono-input], [mono-select], [mono-tag-input], [mono-date], [mono-textarea], [mono-dropdown-table], [mono-otp]):is([mono-label-position="left"], [mono-label-position="right"]) > :is([mono-label], [mono-dd-label]) {
+  grid-row: 1;
+  grid-column: 1;
+  min-height: var(--_mono-lp-height);
+  margin: 0;
+}
+:is([mono-input], [mono-select], [mono-tag-input], [mono-date], [mono-textarea], [mono-dropdown-table], [mono-otp])[mono-label-position="right"] > :is([mono-label], [mono-dd-label]) {
+  grid-column: 2;
+}
+
+/* ── notched — shared by both looks: the label leaves the flow ── */
+:is([mono-input], [mono-select], [mono-tag-input], [mono-date], [mono-textarea], [mono-dropdown-table])[mono-label-position="notched"] {
+  position: relative;
+}
+
+:is([mono-input], [mono-select], [mono-tag-input], [mono-date], [mono-textarea], [mono-dropdown-table])[mono-label-position="notched"] > :is([mono-label], [mono-dd-label]) {
+  position: absolute;
+  z-index: 1;
+  max-width: calc(100% - 2 * var(--_mono-lp-padding-x) - 2 * var(--mono-spacing));
+  margin: 0;
+  font-size: var(--_mono-lp-font);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ── notched + outlined — the label sits ON the top border: ──Label── ──
+   The "notch" is a background patch: page surface above the border line, the
+   box's surface below it. On a non-solid parent set --mono-<c>-label-notch-bg. */
+:is([mono-input], [mono-select], [mono-tag-input], [mono-date], [mono-textarea], [mono-dropdown-table])[mono-label-position="notched"]:is(:not([mono-variant]), [mono-variant="outlined"]) {
+  padding-top: calc(var(--_mono-lp-font) / 2);
+}
+
+:is([mono-input], [mono-select], [mono-tag-input], [mono-date], [mono-textarea], [mono-dropdown-table])[mono-label-position="notched"]:is(:not([mono-variant]), [mono-variant="outlined"]) > :is([mono-label], [mono-dd-label]) {
+  top: 0;
+  inset-inline-start: calc(var(--mono-border-width) + var(--_mono-lp-padding-x) - var(--mono-spacing));
+  padding-inline: var(--mono-spacing);
+  background:
+    linear-gradient(var(--_mono-lp-field-bg), var(--_mono-lp-field-bg)) bottom / 100% 50% no-repeat,
+    var(--_mono-lp-notch-bg);
+}
+
+/* ── notched + filled / underlined — no outline to cut, so the label insets
+   into the top of the box (Material "filled") and the box grows by its line ── */
+:is([mono-input], [mono-select], [mono-tag-input], [mono-date], [mono-textarea], [mono-dropdown-table])[mono-label-position="notched"]:is([mono-variant="filled"], [mono-variant="underlined"]) > :is([mono-label], [mono-dd-label]) {
+  top: calc(var(--mono-border-width) + var(--_mono-lp-inset-y));
+  inset-inline-start: calc(var(--mono-border-width) + var(--_mono-lp-padding-x));
+}
+
+:is([mono-input], [mono-select], [mono-tag-input], [mono-date], [mono-textarea])[mono-label-position="notched"]:is([mono-variant="filled"], [mono-variant="underlined"]) > :is([mono-field], [mono-trigger], textarea[mono-native]),
+[mono-dropdown-table][mono-label-position="notched"]:is([mono-variant="filled"], [mono-variant="underlined"]) > [mono-dd-control] > [mono-dd-trigger] {
+  min-height: calc(var(--_mono-lp-box-min) + var(--_mono-lp-font) + var(--_mono-lp-inset-y));
+  padding-top: calc(var(--_mono-lp-inset-y) + var(--_mono-lp-font) + var(--_mono-lp-padding-y, 0px));
+}
+
+/* Slots the component sheets don't need to set. */
+:is([mono-input], [mono-select], [mono-tag-input], [mono-date], [mono-textarea], [mono-dropdown-table])[mono-label-position] {
+  --_mono-lp-inset-y: calc(var(--mono-spacing) * 1.5);
+}

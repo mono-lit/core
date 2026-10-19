@@ -52,6 +52,50 @@ Disabled, readonly and required.
 
 <DemoSingle name="select" id="states" />
 
+## Tooltip
+
+When the extra explanation is too long for `helper-text`, put it behind an info icon at the end of the label. `tooltip="…"` takes plain text; `:tooltip.prop="{ content, placement, color, … }"` takes any [tooltip](../addons/tooltip) option. The icon is keyboard-focusable and also works on a disabled field — a good place to say *why* it is disabled.
+
+::: tip Plain text needs nothing extra
+`tooltip="…"` (plain text) shows a small built-in bubble — no dependency. It sits above the icon (below when there's no room), stays on screen, and isn't clipped by an `overflow: hidden` parent. It reads the tooltip addon's `--mono-tooltip-bg` / `-color` / `-radius` / `-max-width` / `-font-size` / `-padding-x` / `-padding-y` knobs.
+
+The **object** form is the [tooltip addon](../addons/tooltip) (`mono-tooltip`: placement, color, delay…), which needs the optional peers `pnpm add @floating-ui/dom @floating-ui/core`. Without them an object-form tooltip renders **no icon** (and nothing is logged). Either way the icon only appears beside a label.
+:::
+
+<DemoSingle name="select" id="tooltip" />
+
+## Label position
+
+`label-position` moves the label without touching its type or colours:
+
+| value | look |
+|---|---|
+| `top` | above the box (default) |
+| `notched` | outlined: on the top border, `──Label──`. filled / underlined: inset inside the top of the box, which grows by the label's line |
+| `left` / `right` | beside the box, centred on its first row; helper / validation messages stay under the box |
+
+Set it for every field at once with `createMonoUI({ 'mono-select': { labelPosition: 'notched' } })`. `--mono-select-label-width` fixes the side column so a stack of `left` fields lines up.
+
+::: tip The notch is a background patch
+The notch hides the border with `--background`. On a card or any other surface, set `--mono-select-label-notch-bg` to that surface (e.g. `var(--card)`).
+:::
+
+<DemoSingle name="select" id="label-position" />
+
+## Validation position
+
+`validation-position` decides where the validation message (`invalid` / `warning` / `valid` + `validation-message`) shows. The coloured border is the same in every mode.
+
+| value | look |
+|---|---|
+| `bottom` | the row under the box (default) — the message replaces the helper text there |
+| `icon` | a state icon inside the box; hover or tap it (or keyboard-focus the field) for the message in a state-coloured bubble |
+| `float` | nothing until the field is hovered or focused; then the message floats under the box, and disappears again when you leave |
+
+In `icon` and `float` the row under the box keeps the **helper text**, and the message stays there for screen readers only. The bubbles need no dependency (no floating-ui). Knobs: `--mono-validation-invalid-bg` / `-color` (and `warning` / `valid`), `--mono-validation-icon-size`.
+
+<DemoSingle name="select" id="validation-position" />
+
 ## Validation
 
 `valid`, `invalid` and `warning` states with messages. `invalid` is Basecoat's `aria-invalid` treatment — a permanent `--destructive` border and /20 ring, the label turns `--destructive`, the message carries `role="alert"`; the other two are the same pattern in `--success` / `--warning`.
@@ -345,6 +389,8 @@ Themed through `--mono-select-*` custom properties (they inherit and pierce the 
 | `--mono-select-trigger-gap` / `--mono-select-icon-size` | 1.5 × spacing / 4 × spacing | Gap between value and actions; chevron / clear glyph size |
 | `--mono-select-gap` | 3 × `--mono-spacing` | Label ↔ trigger ↔ message spacing |
 | `--mono-select-label-font-size` / `-font-weight` / `-line-height` / `-text-transform` / `-letter-spacing` / `-gap` | `--mono-text-sm` / `--mono-label-font-weight` / 1 / none / normal / 2 × spacing | Label |
+| `--mono-select-label-width` / `-label-side-gap` | auto / 3 × spacing | `label-position` left / right column |
+| `--mono-select-label-notch-font-size` / `-label-notch-bg` | `--mono-text-xs` / `--background` | `label-position="notched"` |
 | `--mono-select-message-font-size` / `-line-height` | `--mono-text-sm` / `--mono-leading-normal` | Message |
 | `--mono-select-clear-radius` | `calc(var(--radius) - 5px)` | Chevron / clear button corner |
 | `--mono-select-disabled-bg` / `--mono-select-readonly-bg` | trigger bg / `--muted` | State surfaces |

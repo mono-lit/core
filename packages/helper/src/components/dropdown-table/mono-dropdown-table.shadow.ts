@@ -7,6 +7,9 @@ import { MonoDropdownTableCore } from './dropdown-table-core.js'
 import { toShadowCss, withShadowUtilityStyles } from '../../composables/shadow-css'
 
 import dropdownTableCss from './dropdown-table.css?raw'
+import labelPositionCss from '../form/label-position.css?raw'
+import fieldTooltipCss from '../form/field-tooltip.css?raw'
+import fieldValidationCss from '../form/field-validation.css?raw'
 import { flushSsrHydration } from '../../composables/hydration-flush'
 
 /**
@@ -30,7 +33,7 @@ export class MonoDropdownTableShadow extends withShadowUtilityStyles(
   // (no chip.css in here any more); the slotted table is painted by the PAGE's
   // table sheet, which also carries this sheet's `mono-shadow-dropdown-table
   // [mono-table]` row rules — a shadow sheet cannot reach a slotted descendant.
-  static override styles = [unsafeCSS(toShadowCss(dropdownTableCss, { host: 'mono-dropdown-table' }))]
+  static override styles = [unsafeCSS(toShadowCss(dropdownTableCss + labelPositionCss + fieldTooltipCss + fieldValidationCss, { host: 'mono-dropdown-table' }))]
 
   override connectedCallback(): void {
     super.connectedCallback()

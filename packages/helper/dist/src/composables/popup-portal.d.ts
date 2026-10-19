@@ -189,6 +189,18 @@ export declare class PopupPortalController implements ReactiveController, PopupL
    */
   containsInPath(path: EventTarget[]): boolean;
   /**
+   * PopupLayer hook — this popup's OWN containment: its portaled panel or a popup
+   * opened from inside it. Never the layers above (that is `inLayerAbove`), so
+   * `pathInLayerAbove` walking the stack does not recurse.
+   */
+  containsEventPath(path: EventTarget[]): boolean;
+  /**
+   * True when the path lands in a layer opened ABOVE this popup while it is open
+   * — a modal opened from a figure in this panel, say. That layer is on top of the
+   * panel, not outside it, so its clicks, focus and Escape are not a dismiss.
+   */
+  inLayerAbove(path: EventTarget[]): boolean;
+  /**
    * True when the path passes through a popup opened from INSIDE this one
    * (at any depth) — not this popup's own panel.
    *

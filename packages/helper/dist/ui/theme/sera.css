@@ -453,6 +453,35 @@
   /* switch */
   --mono-switch-thumb-shadow: initial;
 
+  /* input type="range" */
+  --mono-input-range-gap: initial;
+  --mono-input-range-height: initial;
+  --mono-input-range-track-height: initial;
+  --mono-input-range-track-bg: initial;
+  --mono-input-range-fill: initial;
+  --mono-input-range-thumb-size: initial;
+  --mono-input-range-thumb-bg: initial;
+  --mono-input-range-thumb-border-width: initial;
+  --mono-input-range-thumb-border-color: initial;
+  --mono-input-range-thumb-ring-width: initial;
+  --mono-input-range-thumb-ring-color: initial;
+  --mono-input-range-thumb-shadow: initial;
+  --mono-input-range-ring-width: initial;
+  --mono-input-range-hover-ring-width: initial;
+  --mono-input-range-label-color: initial;
+  --mono-input-range-label-font-size: initial;
+  --mono-input-range-label-line-height: initial;
+  --mono-input-range-label-font-weight: initial;
+  --mono-input-range-value-color: initial;
+  --mono-input-range-value-font-family: initial;
+  --mono-input-range-value-font-weight: initial;
+
+  /* slider */
+  --mono-slider-fill: initial;
+  --mono-slider-tooltip-bg: initial;
+  --mono-slider-tooltip-color: initial;
+  --mono-slider-tooltip-font-family: initial;
+
   /* textarea */
   --mono-textarea-rows-lg: initial;
   --mono-textarea-rows-md: initial;
@@ -837,6 +866,18 @@
   --mono-breadcrumb-badge-height: auto;
   --mono-breadcrumb-badge-font: 0.625rem;
   --mono-breadcrumb-badge-weight: var(--mono-font-weight-semibold);
+
+  /* input type="range" — basecoat@1.0.2 styles/sera.css .field > input[type='range'], .input[type='range'] —
+     h-5, track h-0.5 bg-input/50 (square); thumb size-3 border-none bg-primary hover:ring-2. `currentColor` is the accent (the `color` prop). */
+  --mono-input-range-track-height: 0.125rem;
+  --mono-input-range-track-bg: color-mix(in oklab, var(--input) 50%, transparent);
+  --mono-input-range-track-radius: 0px;
+  --mono-input-range-thumb-size: 0.75rem;
+  --mono-input-range-thumb-radius: 0px;
+  --mono-input-range-thumb-border-width: 0px;
+  --mono-input-range-thumb-bg: currentColor;
+  --mono-input-range-thumb-shadow: 0 0 #0000;
+  --mono-input-range-ring-width: 2px;
 }
 
 :is(html, body, .mono-theme).dark .theme-sera,

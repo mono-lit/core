@@ -1,0 +1,111 @@
+/* =========================================
+   validation-position — `icon` and `float` (composables/field-validation.ts)
+   on input, select, tag-input, date, textarea and dropdown-table.
+
+   The bubbles share the [mono-field-bubble] look (field-tooltip.css); this
+   sheet paints them in the state colour, and draws the state icon inside the
+   box. Knobs:
+     --mono-validation-invalid-bg / -color   (default --destructive / -foreground)
+     --mono-validation-warning-bg / -color   (default --warning / -foreground)
+     --mono-validation-valid-bg / -color     (default --success / -foreground)
+     --mono-validation-icon-size             (default 1rem)
+
+   Light: imported once by entries/index.css. Shadow: appended to each
+   control's shadow sheet.
+   ========================================= */
+
+/* ── state-coloured bubbles ── */
+[mono-field-bubble][mono-state="invalid"] {
+  --_mono-field-tip-bg: var(--mono-validation-invalid-bg, var(--destructive));
+  color: var(--mono-validation-invalid-color, var(--destructive-foreground, #fff));
+}
+[mono-field-bubble][mono-state="warning"] {
+  --_mono-field-tip-bg: var(--mono-validation-warning-bg, var(--warning));
+  color: var(--mono-validation-warning-color, var(--warning-foreground, #fff));
+}
+[mono-field-bubble][mono-state="valid"] {
+  --_mono-field-tip-bg: var(--mono-validation-valid-bg, var(--success));
+  color: var(--mono-validation-valid-color, var(--success-foreground, #fff));
+}
+
+/* ── float: a compact message under the box ── */
+[mono-field-bubble][mono-validation-float] {
+  max-width: min(var(--mono-validation-float-max-width, 24rem), calc(100vw - 16px));
+  padding: var(--mono-validation-float-padding-y, var(--mono-spacing)) var(--mono-validation-float-padding-x, calc(var(--mono-spacing) * 2));
+  font-size: var(--mono-validation-float-font-size, var(--mono-text-xs));
+  /* hover-transparent: it must not steal the pointer from the field it describes */
+  pointer-events: none;
+}
+[mono-field-bubble][mono-validation-float]::before {
+  display: none;
+}
+
+/* ── icon: the state glyph inside the box ── */
+[mono-validation-icon] {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  margin-inline: var(--mono-validation-icon-gap, var(--mono-spacing));
+  font-size: var(--mono-validation-icon-size, 1rem);
+  line-height: 1;
+  cursor: help;
+  /* a disabled field turns events off — the reason is exactly what to show */
+  pointer-events: auto;
+}
+[mono-validation-icon] > [mono-icon] {
+  width: 1em;
+  height: 1em;
+}
+[mono-validation-icon][mono-state="invalid"] {
+  color: var(--mono-validation-invalid-bg, var(--destructive));
+}
+[mono-validation-icon][mono-state="warning"] {
+  color: var(--mono-validation-warning-bg, var(--warning));
+}
+[mono-validation-icon][mono-state="valid"] {
+  color: var(--mono-validation-valid-bg, var(--success));
+}
+
+/* textarea: the box can't hold children, so a zero-height anchor sits on the
+   textarea's top edge (its negative margin cancels the flex gap it adds) and
+   the icon pins to the top-right corner, over reserved inline padding. */
+[mono-textarea] > [mono-validation-anchor] {
+  position: relative;
+  z-index: 1;
+  display: block;
+  height: 0;
+  margin-bottom: calc(-1 * var(--mono-textarea-gap, calc(var(--mono-spacing) * 3)));
+}
+[mono-textarea] > [mono-validation-anchor] > [mono-validation-icon] {
+  position: absolute;
+  top: calc(var(--mono-border-width) + var(--_mono-textarea-padding-y, var(--mono-spacing)));
+  inset-inline-end: calc(var(--mono-border-width) + var(--_mono-textarea-padding-x, calc(var(--mono-spacing) * 2.5)));
+  margin: 0;
+}
+[mono-textarea]:has(> [mono-validation-anchor]) > textarea[mono-native] {
+  padding-inline-end: calc(var(--_mono-textarea-padding-x, calc(var(--mono-spacing) * 2.5)) + var(--mono-validation-icon-size, 1rem) + var(--mono-spacing));
+}
+/* side labels: the anchor shares the textarea's grid row */
+[mono-textarea]:is([mono-label-position="left"], [mono-label-position="right"]) > :is([mono-validation-anchor], textarea[mono-native]) {
+  grid-row: 1;
+  align-self: start;
+}
+[mono-textarea]:is([mono-label-position="left"], [mono-label-position="right"]) > [mono-validation-anchor] {
+  margin-bottom: 0;
+}
+
+/* ── the moved message stays for assistive tech only ── */
+[mono-sr-only] {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}

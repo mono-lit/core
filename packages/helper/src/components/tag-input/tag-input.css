@@ -329,6 +329,39 @@ mono-tag-input {
   color: var(--_mono-tag-input-danger);
 }
 
+/* `tooltip` prop — the info icon at the end of the label row (the label's
+   flex gap spaces it). `pointer-events` is restored because a disabled field
+   switches its label's off, and a disabled field is exactly where the reason
+   is worth a hover. Knobs: --mono-tag-input-label-tooltip-size / -color / -opacity. */
+:where([mono-tag-input]) > [mono-label] > [mono-label-tooltip] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--mono-tag-input-label-tooltip-size, 1.1em);
+  color: var(--mono-tag-input-label-tooltip-color, currentColor);
+  opacity: var(--mono-tag-input-label-tooltip-opacity, 0.6);
+  border-radius: 9999px;
+  cursor: help;
+  pointer-events: auto;
+  outline: none;
+  transition: opacity 150ms ease;
+}
+
+:where([mono-tag-input]) > [mono-label] > [mono-label-tooltip]:is(:hover, :focus-visible) {
+  opacity: 1;
+}
+
+:where([mono-tag-input]) > [mono-label] > [mono-label-tooltip]:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+:where([mono-tag-input]) > [mono-label] > [mono-label-tooltip] > [mono-icon] {
+  width: 1em;
+  height: 1em;
+}
+
 /* =========================================
    The field — the chip box
    ========================================= */
@@ -1195,4 +1228,22 @@ mono-tag-input {
   [mono-tag-input] [mono-ds-spinner] > svg {
     animation-duration: 2.4s;
   }
+}
+
+/* =========================================
+   label-position — the slots form/label-position.css reads
+   (top / notched / left / right; public knobs: --mono-tag-input-label-width,
+   -label-side-gap, -label-notch-font-size, -label-notch-bg)
+   ========================================= */
+
+[mono-tag-input][mono-label-position] {
+  --_mono-lp-width: var(--mono-tag-input-label-width, auto);
+  --_mono-lp-gap: var(--mono-tag-input-label-side-gap, calc(var(--mono-spacing) * 3));
+  --_mono-lp-height: var(--_mono-tag-input-height);
+  --_mono-lp-box-min: var(--_mono-tag-input-height);
+  --_mono-lp-padding-x: var(--_mono-tag-input-padding-x);
+  --_mono-lp-padding-y: var(--_mono-tag-input-padding-y);
+  --_mono-lp-font: var(--mono-tag-input-label-notch-font-size, var(--mono-text-xs));
+  --_mono-lp-notch-bg: var(--mono-tag-input-label-notch-bg, var(--background));
+  --_mono-lp-field-bg: var(--_mono-tag-input-bg);
 }

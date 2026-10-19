@@ -1,5 +1,5 @@
 import { Constructor } from "../../composables/hybird-prop.js";
-import { MonoInputCoreInterface } from "./input-core.js";
+import { InputIconName, MonoInputCoreInterface } from "./input-core.js";
 import { LitElement, TemplateResult } from "lit";
 //#region src/components/input/mono-input.d.ts
 declare const MonoInput_base: Constructor<MonoInputCoreInterface> & typeof LitElement;
@@ -36,9 +36,10 @@ export declare class MonoInput extends MonoInput_base {
   disconnectedCallback(): void;
   protected updated(changed: Map<string, unknown>): void;
   private _placeSlot;
-  protected renderIcon(_name: 'close'): TemplateResult;
+  protected renderIcon(name: InputIconName): TemplateResult;
   private _renderLabel;
   private _renderHelper;
+  private _renderHelperText;
   protected render(): TemplateResult;
 }
 declare global {

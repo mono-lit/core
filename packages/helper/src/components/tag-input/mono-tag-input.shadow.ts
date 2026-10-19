@@ -7,6 +7,9 @@ import { MonoTagInputCore, type TagInputSlotName } from './tag-input-core.js'
 import { toShadowCss, withShadowUtilityStyles } from '../../composables/shadow-css'
 
 import tagInputCss from './tag-input.css?raw'
+import labelPositionCss from '../form/label-position.css?raw'
+import fieldTooltipCss from '../form/field-tooltip.css?raw'
+import fieldValidationCss from '../form/field-validation.css?raw'
 // The tag chips reuse `.mono-chip` classes and the `checkable` rows reuse
 // `.mono-checkbox` classes — both live in OTHER components' stylesheets, which
 // the light build gets from the global `ui/index.css`. CSS doesn't cross the
@@ -55,7 +58,7 @@ export class MonoTagInputShadow extends withShadowUtilityStyles(MonoTagInputCore
   }
 
   static override styles = [
-    unsafeCSS(toShadowCss(tagInputCss, { host: 'mono-tag-input', append: SHADOW_EXTRA_CSS })),
+    unsafeCSS(toShadowCss(tagInputCss + labelPositionCss + fieldTooltipCss + fieldValidationCss, { host: 'mono-tag-input', append: SHADOW_EXTRA_CSS })),
     unsafeCSS(chipCss),
     unsafeCSS(checkboxCss),
   ]

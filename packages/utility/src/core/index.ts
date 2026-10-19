@@ -11,6 +11,8 @@ export type {
     ValidateErrorSingle as MonoValidateErrorSingle,
     ValidateErrorComplex as MonoValidateError,
     SchemaObject as MonoSchemaObject,
+    ValidationSchemaLike as MonoValidationSchema,
+    StandardSchemaV1 as MonoStandardSchema,
     NormalFetchOptions as MonoNormalFetchTypes,
     DataGrid as MonoDataGridTypes,
     OdataMapTypes as MonoOdataMapTypes,

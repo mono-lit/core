@@ -31,6 +31,8 @@ import type {
   DropdownTableSize,
   DropdownTableColor,
   DropdownTableVariant,
+  DropdownTableLabelPosition,
+  DropdownTableValidationPosition,
   DropdownTableValidationState,
   DropdownPanelOptions,
   DropdownTableCssClass,
@@ -43,6 +45,8 @@ import type {
   ChipVariant,
 } from '../chip/chip-types.js'
 import { MonoFormControlCore } from '../form/form-control-core.js'
+import { FieldTooltipController, type FieldTooltipValue } from '../../composables/field-tooltip'
+import { FieldValidationController } from '../../composables/field-validation'
 import { ChipStripController } from '../../composables/chip-strip'
 import { caretIcon, chevronIcon, closeIcon } from '../../composables/field-icons'
 import { applyProps, detachEventHandlers } from '../../composables/element-props'
@@ -59,6 +63,8 @@ export declare class MonoDropdownTableCoreInterface {
   label: string
   placeholder: string
   helperText: string
+  tooltip: FieldTooltipValue
+  protected readonly _tooltip: FieldTooltipController
   validationState: DropdownTableValidationState
   validationMessage: string
   errorMessage: string
@@ -126,6 +132,8 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
     constructor(...args: any[]) {
       super(...args)
       defineHybridPropAliases(this, [
+        'labelPosition',
+        'validationPosition',
         'dataDropdown',
         'modelValue',
         'cssClass',
@@ -246,6 +254,14 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
     @property({ type: String })
     variant: DropdownTableVariant = 'outlined'
 
+    /** Where the label sits — see form/label-position.css. */
+    @property({ type: String, attribute: 'label-position' })
+    labelPosition: DropdownTableLabelPosition = 'top'
+
+    /** Where the validation message shows — see composables/field-validation.ts. */
+    @property({ type: String, attribute: 'validation-position' })
+    validationPosition: DropdownTableValidationPosition = 'bottom'
+
     @property({ type: String })
     label = ''
 
@@ -254,6 +270,36 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
 
     @property({ type: String, attribute: 'helper-text' })
     helperText = ''
+
+    /**
+     * Extra explanation behind an info icon at the end of the label: plain text
+     * (`tooltip="…"`) or full `mono-tooltip` options (`.tooltip=${{ content, placement }}`).
+     * Needs the optional `@floating-ui/dom` + `@floating-ui/core` peers — without
+     * them no icon renders. Shown only beside a label.
+     */
+    @property()
+    tooltip: FieldTooltipValue = null
+
+    protected readonly _tooltip = new FieldTooltipController(this, () => this.tooltip)
+
+    /** `validation-position="icon" | "float"` — the icon in the box and the floating message. */
+    protected readonly _validation = new FieldValidationController(
+      this,
+      () => ({
+        position: this.validationPosition,
+        ...(this._validationNotice ?? { state: undefined, text: undefined }),
+        suppressed: this._isOpen || this._moreOpen,
+      }),
+      () => (this.renderRoot as ParentNode | undefined)?.querySelector?.('[mono-dropdown-table] > [mono-dd-control] > [mono-dd-trigger]'),
+    )
+
+    /** The validation message and its state — the same precedence the message row uses. */
+    protected get _validationNotice(): { state: string; text: string } | null {
+      if (this.validationMessage) return { state: this._validationState, text: this.validationMessage }
+      if (this.errorMessage) return { state: 'invalid', text: this.errorMessage }
+      if (this.successMessage) return { state: 'valid', text: this.successMessage }
+      return null
+    }
 
     @property({ type: String, attribute: 'validation-state' })
     validationState: DropdownTableValidationState = 'default'
@@ -786,7 +832,9 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
     private _onDocKey = (e: KeyboardEvent): void => {
       if (e.key !== 'Escape') return
       if (!this._isOpen && !this._moreOpen) return
-      if (this._popup.ownsNestedInPath(e.composedPath())) return
+      // …and so does one inside a layer opened ABOVE this panel (a modal opened from it).
+      const path = e.composedPath()
+      if (this._popup.ownsNestedInPath(path) || this._popup.inLayerAbove(path)) return
       this.close()
     }
 
@@ -1541,12 +1589,23 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
       return html`<label class=${this._cls('mono-dropdown-table-label', 'label')} mono-dd-label
         >${this.label}${this.required
           ? html`<span class=${this._cls('mono-dropdown-table-required', 'required')} mono-dd-required-mark>*</span>`
-          : nothing}</label
+          : nothing}${this._tooltip.render()}</label
       >`
     }
 
     private _renderMessage(): TemplateResult | typeof nothing {
       const base = this._cls('mono-dropdown-table-message', 'message')
+      // validation-position icon / float: the row keeps the helper; the message moved
+      // and stays for assistive tech only.
+      if (this._validation.moved) {
+        const notice = this._validationNotice!
+        return html`${this.helperText ? html`<div class="${base} helper" mono-dd-message="helper">${this.helperText}</div>` : nothing}<div
+          class="${base} ${notice.state}"
+          mono-dd-message=${notice.state}
+          mono-sr-only
+          role=${notice.state === 'invalid' ? 'alert' : nothing}
+        >${notice.text}</div>`
+      }
       if (this.validationMessage) {
         const state = this._validationState
         return html`<div class="${base} ${state}" mono-dd-message=${state} role=${state === 'invalid' ? 'alert' : nothing}>
@@ -1605,6 +1664,7 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
                 ? html`<span>${dd?.displayText()}</span>`
                 : this.placeholder}
           </span>
+          ${this._validation.renderIcon()}
           <span class=${this._cls('mono-dropdown-table-actions', 'actions')} mono-dd-actions>
             ${
               // BOTH buttons render together, or neither — never one. They share
@@ -1725,6 +1785,8 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
           mono-size=${this.size === 'md' ? nothing : this.size}
           mono-color=${this.color === 'primary' ? nothing : this.color}
           mono-variant=${this.variant === 'outlined' ? nothing : this.variant}
+          mono-label-position=${this.labelPosition === 'top' ? nothing : this.labelPosition}
+          mono-validation-position=${this.validationPosition === 'bottom' ? nothing : this.validationPosition}
           mono-validation-state=${state === 'default' ? nothing : state}
           mono-side=${this._resolvedSide}
           ?mono-open=${this._isOpen}
@@ -1745,6 +1807,7 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
             ${this._renderTrigger(items)} ${this._renderMore(items)}
           </div>
           ${this._renderMessage()}
+          ${this._validation.renderFloat()}
           <div
             class="mono-dropdown-table-panel ${this._isOpen ? 'open' : ''}"
             mono-dd-panel

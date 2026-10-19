@@ -203,4 +203,10 @@
   --mono-table-panel-radius: var(--mono-radius-2xl);
   --mono-table-panel-shadow: var(--mono-shadow-2xl);
   --mono-table-panel-ring: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent);
+
+  /* input type="range" — basecoat@1.0.2 styles/maia.css .field > input[type='range'], .input[type='range'] —
+     h-5, track h-3 bg-muted rounded-4xl; thumb border-primary size-4 rounded-4xl border bg-white shadow-sm hover:ring-4. `currentColor` is the accent (the `color` prop). */
+  --mono-input-range-track-height: 0.75rem;
+  --mono-input-range-track-radius: var(--mono-radius-4xl);
+  --mono-input-range-thumb-radius: var(--mono-radius-4xl);
 }

@@ -89,6 +89,8 @@ export function getInputIcon(type: InputType): string {
     month: 'M7 3v3M17 3v3M5 5h14v14H5zM8 11h8',
     week: 'M7 3v3M17 3v3M5 5h14v16H5zM9 11h6M9 15h4',
     search: 'M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15a7.5 7.5 0 0 1 0 15z',
+    file: 'M12 16V8M8.5 11.5L12 8l3.5 3.5M7 18h10',
+    range: 'M4 12h16M9 9a3 3 0 1 0 0 6a3 3 0 0 0 0-6z',
   }
 
   return iconMap[type] ?? iconMap.text

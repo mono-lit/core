@@ -1,4 +1,5 @@
 import { VisibilityProps } from "../../composables/visibility.js";
+import { MonoTooltipOptions } from "../tooltip/tooltip-types.js";
 import { Options } from "flatpickr/dist/types/options";
 //#region src/components/date/date-types.d.ts
 /** Picker mode — drives flatpickr's calendar/time configuration. */
@@ -6,7 +7,15 @@ export type DateType = 'date' | 'datetime' | 'time';
 export type DateSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 export type DateColor = 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'info' | 'teal' | 'purple' | 'neutral' | 'dark';
 export type DateVariant = 'outlined' | 'filled' | 'underlined';
-export type DateValidationState = 'default' | 'error' | 'success';
+/** Where the label sits: above the box (default), notched into its top border (inset for filled / underlined), or beside it. */
+export type DateLabelPosition = 'top' | 'notched' | 'left' | 'right';
+/** Where the validation message shows: under the box (default), behind a state icon inside it, or floating under it on hover / focus. */
+export type DateValidationPosition = 'bottom' | 'icon' | 'float';
+/**
+ * `error` / `success` are the date's own names; `invalid` / `valid` are accepted as
+ * aliases — the names every other control (and `controlMonoForm`) uses.
+ */
+export type DateValidationState = 'default' | 'error' | 'success' | 'invalid' | 'valid';
 /** flatpickr selection mode. */
 export type DateMode = 'single' | 'multiple' | 'range';
 export interface DateCssClass {
@@ -64,11 +73,37 @@ export interface DateProps extends VisibilityProps {
   size?: DateSize;
   color?: DateColor;
   variant?: DateVariant;
+  /**
+   * Where the label sits: `top` (above the box, default), `notched` (on the top
+   * border for outlined; inset inside the box for filled / underlined), or
+   * `left` / `right` of the box. Knobs: `--mono-date-label-width`, `-label-side-gap`,
+   * `-label-notch-font-size`, `-label-notch-bg`.
+   */
+  labelPosition?: DateLabelPosition;
+  'label-position'?: DateLabelPosition;
+  labelposition?: DateLabelPosition;
+  /**
+   * Where the validation message shows. `bottom` (default): the row under the box.
+   * `icon`: a state icon inside the box; hover / tap / keyboard focus shows the message in
+   * a state-coloured bubble. `float`: the message floats under the box only while the field
+   * is hovered or focused. In `icon` / `float` the row under the box keeps the helper text.
+   */
+  validationPosition?: DateValidationPosition;
+  'validation-position'?: DateValidationPosition;
+  validationposition?: DateValidationPosition;
   /** Field label + helper / validation messaging. */
   label?: string;
   placeholder?: string;
   helperText?: string;
   'helper-text'?: string;
+  /**
+   * Info icon at the end of the label; hovering, focusing or tapping it shows this text.
+   * Plain text → a small built-in bubble (no dependency). Full tooltip options
+   * (`:tooltip.prop="{ content, placement, color }"`) → a `mono-tooltip`, which needs the
+   * optional `@floating-ui/dom` + `@floating-ui/core` peers (without them that form renders
+   * no icon). Shown only beside a label.
+   */
+  tooltip?: string | MonoTooltipOptions;
   validationState?: DateValidationState;
   'validation-state'?: DateValidationState;
   validationMessage?: string;

@@ -34,6 +34,8 @@
 @import '../components/select/select.css';
 @import '../components/sidebar/sidebar.css';
 @import '../components/switch/switch.css';
+@import '../components/slider/slider.css';
+@import '../components/otp/otp.css';
 @import '../components/tabs/tabs.css';
 @import '../components/tag-input/tag-input.css';
 @import '../components/textarea/textarea.css';
@@ -41,6 +43,12 @@
 @import '../components/table/table.css';
 @import '../components/dropdown-table/dropdown-table.css';
 @import '../components/filter/filter.css';
+/* label-position for every field control — after their sheets */
+@import '../components/form/label-position.css';
+/* the built-in bubble of a plain-text field `tooltip` */
+@import '../components/form/field-tooltip.css';
+/* validation-position icon / float */
+@import '../components/form/field-validation.css';
 /* tooltip addon — the floating element is body-level, so this one sheet serves
    the light and the shadow build */
 @import '../components/tooltip/tooltip.css';

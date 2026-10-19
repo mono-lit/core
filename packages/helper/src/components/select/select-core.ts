@@ -9,6 +9,8 @@ import type {
   SelectSize,
   SelectColor,
   SelectVariant,
+  SelectLabelPosition,
+  SelectValidationPosition,
   SelectValidationState,
   SelectValue,
   SelectItem,
@@ -37,6 +39,8 @@ import { buildSizeStyle, toCssSize, type CssSizeValue } from '../../composables/
 import { PopupPortalController } from '../../composables/popup-portal'
 import { LateSlotWatcher } from '../../composables/light-slots'
 import { MonoFormControlCore } from '../form/form-control-core.js'
+import { FieldTooltipController, type FieldTooltipValue } from '../../composables/field-tooltip'
+import { FieldValidationController } from '../../composables/field-validation'
 import type { MonoFormListEntry } from '../form/form-types.js'
 import { unwrapReactive } from '../../composables/reactive'
 import {
@@ -67,6 +71,8 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
     super(...args)
 
     defineHybridPropAliases(this, [
+      'labelPosition',
+      'validationPosition',
       'modelValue',
       'loadingText',
       'loadingError',
@@ -290,6 +296,14 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
   @property({ type: String })
   variant: SelectVariant = 'outlined'
 
+  /** Where the label sits — see form/label-position.css. */
+  @property({ type: String, attribute: 'label-position' })
+  labelPosition: SelectLabelPosition = 'top'
+
+  /** Where the validation message shows — see composables/field-validation.ts. */
+  @property({ type: String, attribute: 'validation-position' })
+  validationPosition: SelectValidationPosition = 'bottom'
+
   // Not reflected: reflecting an arbitrary value would stringify objects/numbers
   // to text, and the next Vue attribute patch (`:model-value="9"` → `'9'`) would
   // re-enter as a string, corrupting comparisons against the real item value.
@@ -311,6 +325,47 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
 
   @property({ type: String, attribute: 'helper-text' })
   helperText = ''
+
+  /**
+   * Extra explanation behind an info icon at the end of the label: plain text
+   * (`tooltip="…"`) or full `mono-tooltip` options (`.tooltip=${{ content, placement }}`).
+   * Needs the optional `@floating-ui/dom` + `@floating-ui/core` peers — without
+   * them no icon renders. Shown only beside a label.
+   */
+  @property()
+  tooltip: FieldTooltipValue = null
+
+  protected readonly _tooltip = new FieldTooltipController(this, () => this.tooltip)
+
+  /** `validation-position="icon" | "float"` — the icon in the box and the floating message. */
+  protected readonly _validation = new FieldValidationController(
+    this,
+    () => ({
+      position: this.validationPosition,
+      ...(this._validationNotice ?? { state: undefined, text: undefined }),
+      suppressed: this._open,
+    }),
+    () => (this.renderRoot as ParentNode | undefined)?.querySelector?.('[mono-select] > [mono-trigger]'),
+  )
+
+  /** The validation message and its state — the same precedence the message row uses. */
+  protected get _validationNotice(): { state: string; text: string } | null {
+    if (this.validationMessage) return { state: this._resolvedValidationState, text: this.validationMessage }
+    if (this.errorMessage) return { state: 'invalid', text: this.errorMessage }
+    if (this.successMessage) return { state: 'valid', text: this.successMessage }
+    return null
+  }
+
+  /** The message that moved to the icon / float bubble, kept for assistive tech only. */
+  private _renderMovedMessage(): TemplateResult {
+    const notice = this._validationNotice!
+    return html`<div
+      class=${`${this._cls('mono-select-message', 'message')} ${notice.state}`}
+      mono-message=${notice.state}
+      mono-sr-only
+      role=${notice.state === 'invalid' ? 'alert' : nothing}
+    >${notice.text}</div>`
+  }
 
   @property({ type: String, attribute: 'validation-state' })
   validationState: SelectValidationState = 'default'
@@ -1959,6 +2014,9 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
     if (!this._open) return
 
     if (event.key === 'Escape') {
+      // An Escape inside a layer opened above this panel is that layer's; the
+      // stack closes it and this panel stays.
+      if (this._popup.inLayerAbove(event.composedPath())) return
       event.preventDefault()
       this._close()
       this._triggerEl?.focus()
@@ -2137,6 +2195,7 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
               </span>
             `
         : nothing}
+        ${this._tooltip.render()}
       </label>
     `
   }
@@ -2584,6 +2643,8 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
 
   private _renderHelper(): TemplateResult | typeof nothing {
     const base = this._cls('mono-select-message', 'message')
+    // validation-position icon / float: the row keeps the helper; the message moved.
+    if (this._validation.moved) return html`${this._renderHelperText()}${this._renderMovedMessage()}`
     if (this.validationMessage) {
       const state = this._resolvedValidationState
       return html`
@@ -2609,6 +2670,11 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
       `
     }
 
+    return this._renderHelperText()
+  }
+
+  private _renderHelperText(): TemplateResult | typeof nothing {
+    const base = this._cls('mono-select-message', 'message')
     if (this.helperText || this._hasHelperSlot || this._slotsAlwaysRender) {
       return html`
         <div
@@ -2731,6 +2797,7 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
         @keydown=${this._handleTriggerKeydown}
       >
         ${this._renderValue()}
+        ${this._validation.renderIcon()}
         ${this._renderActions()}
       </button>
     `
@@ -2763,6 +2830,7 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
           @focus=${this._handleSearchFocus}
           @keydown=${this._handleSearchKeydown}
         />
+        ${this._validation.renderIcon()}
         ${this._renderActions()}
       </div>
     `
@@ -2842,6 +2910,8 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
         mono-size=${this.size === 'md' ? nothing : this.size}
         mono-color=${this.color === 'primary' ? nothing : this.color}
         mono-variant=${this.variant === 'outlined' ? nothing : this.variant}
+        mono-label-position=${this.labelPosition === 'top' ? nothing : this.labelPosition}
+        mono-validation-position=${this.validationPosition === 'bottom' ? nothing : this.validationPosition}
         mono-validation-state=${state === 'default' ? nothing : state}
         ?mono-open=${this._open}
         ?mono-disabled=${this.disabled}
@@ -2880,6 +2950,8 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
         <div id=${this._messageId} class=${this.cssClass?.messageWrap ?? ''} mono-message-wrap>
           ${this._renderHelper()}
         </div>
+
+        ${this._validation.renderFloat()}
       </div>
     `
   }
@@ -2989,6 +3061,8 @@ export declare class MonoSelectCoreInterface {
   label: string
   placeholder: string
   helperText: string
+  tooltip: FieldTooltipValue
+  protected readonly _tooltip: FieldTooltipController
   validationState: SelectValidationState
   validationMessage: string
   errorMessage: string

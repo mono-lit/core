@@ -1,6 +1,7 @@
 import { Constructor } from "../../composables/hybird-prop.js";
 import { CssSizeValue } from "../../composables/css-size.js";
 import { MonoSearchValue } from "../../search/data-search.js";
+import { FieldTooltipController, FieldTooltipValue } from "../../composables/field-tooltip.js";
 import { TagInputChipProps, TagInputColor, TagInputCssClass, TagInputDataSource, TagInputDisplayGroup, TagInputDisplayValue, TagInputDropdownOptions, TagInputItem, TagInputLoadMore, TagInputSize, TagInputValidationState, TagInputValue, TagInputVariant } from "./tag-input-types.js";
 import { LateSlotWatcher } from "../../composables/light-slots.js";
 import { LitElement, TemplateResult } from "lit";
@@ -43,6 +44,8 @@ export declare class MonoTagInputCoreInterface {
   label: string;
   placeholder: string;
   helperText: string;
+  tooltip: FieldTooltipValue;
+  protected readonly _tooltip: FieldTooltipController;
   validationState: TagInputValidationState;
   validationMessage: string;
   errorMessage: string;

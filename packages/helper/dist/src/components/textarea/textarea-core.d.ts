@@ -1,5 +1,6 @@
 import { Constructor } from "../../composables/hybird-prop.js";
 import { CssSizeValue } from "../../composables/css-size.js";
+import { FieldTooltipController, FieldTooltipValue } from "../../composables/field-tooltip.js";
 import { TextareaColor, TextareaCssClass, TextareaSize, TextareaValidationState, TextareaVariant } from "./textarea-types.js";
 import { LitElement, TemplateResult } from "lit";
 //#region src/components/textarea/textarea-core.d.ts
@@ -25,6 +26,8 @@ export declare class MonoTextareaCoreInterface {
   placeholder: string;
   label: string;
   helperText: string;
+  tooltip: FieldTooltipValue;
+  protected readonly _tooltip: FieldTooltipController;
   validationState: TextareaValidationState;
   validationMessage: string;
   errorMessage: string;

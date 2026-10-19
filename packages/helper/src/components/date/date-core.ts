@@ -10,6 +10,8 @@ import type {
   DateSize,
   DateColor,
   DateVariant,
+  DateLabelPosition,
+  DateValidationPosition,
   DateValidationState,
   DateMode,
   DateCssClass,
@@ -26,6 +28,8 @@ import {
 import { dispatchMonoEvent } from '../../composables/mono-event'
 import { buildSizeStyle, type CssSizeValue } from '../../composables/css-size'
 import { MonoFormControlCore } from '../form/form-control-core.js'
+import { FieldTooltipController, type FieldTooltipValue } from '../../composables/field-tooltip'
+import { FieldValidationController } from '../../composables/field-validation'
 
 const numberStringConverter = {
   fromAttribute(value: string | null): number | undefined {
@@ -60,6 +64,8 @@ class MonoDateCoreClass extends MonoFormControlCore(superClass) {
     super(...args)
 
     defineHybridPropAliases(this, [
+      'labelPosition',
+      'validationPosition',
       'modelValue',
       'helperText',
       'validationState',
@@ -145,6 +151,14 @@ class MonoDateCoreClass extends MonoFormControlCore(superClass) {
   @property({ type: String })
   variant: DateVariant = 'outlined'
 
+  /** Where the label sits — see form/label-position.css. */
+  @property({ type: String, attribute: 'label-position' })
+  labelPosition: DateLabelPosition = 'top'
+
+  /** Where the validation message shows — see composables/field-validation.ts. */
+  @property({ type: String, attribute: 'validation-position' })
+  validationPosition: DateValidationPosition = 'bottom'
+
   @property({ type: String })
   label?: string
 
@@ -153,6 +167,28 @@ class MonoDateCoreClass extends MonoFormControlCore(superClass) {
 
   @property({ type: String, attribute: 'helper-text' })
   helperText?: string
+
+  /**
+   * Extra explanation behind an info icon at the end of the label: plain text
+   * (`tooltip="…"`) or full `mono-tooltip` options (`.tooltip=${{ content, placement }}`).
+   * Needs the optional `@floating-ui/dom` + `@floating-ui/core` peers — without
+   * them no icon renders. Shown only beside a label.
+   */
+  @property()
+  tooltip: FieldTooltipValue = null
+
+  protected readonly _tooltip = new FieldTooltipController(this, () => this.tooltip)
+
+  /** `validation-position="icon" | "float"` — the icon in the box and the floating message. */
+  protected readonly _validation = new FieldValidationController(
+    this,
+    () => ({
+      position: this.validationPosition,
+      ...(this._validationNotice ?? { state: undefined, text: undefined }),
+      suppressed: !!this._fp?.isOpen,
+    }),
+    () => (this.renderRoot as ParentNode | undefined)?.querySelector?.('[mono-date] > [mono-field]'),
+  )
 
   @property({ type: String, attribute: 'validation-state' })
   validationState?: DateValidationState
@@ -447,8 +483,8 @@ class MonoDateCoreClass extends MonoFormControlCore(superClass) {
       ...named,
       onReady: [(_d, _s, instance) => this._onReady(instance)],
       onChange: [(dates, dateStr, instance) => this._onChange(dates, dateStr, instance)],
-      onOpen: [(dates, _s, instance) => this._emitOpenClose('open', dates, instance)],
-      onClose: [(dates, _s, instance) => this._emitOpenClose('close', dates, instance)],
+      onOpen: [(dates, _s, instance) => { this._emitOpenClose('open', dates, instance); this._validation.refresh() }],
+      onClose: [(dates, _s, instance) => { this._emitOpenClose('close', dates, instance); this._validation.refresh() }],
     } as FlatpickrOptions
 
     // modelValue is the source of truth for the initial selection.
@@ -649,10 +685,14 @@ class MonoDateCoreClass extends MonoFormControlCore(superClass) {
     return extra ? `${base} ${extra}` : base
   }
 
-  private get _resolvedState(): DateValidationState {
+  private get _resolvedState(): 'default' | 'error' | 'success' {
     if (this.error) return 'error'
     if (this.success) return 'success'
-    return this.validationState ?? 'default'
+    // `invalid` / `valid` are aliases — what controlMonoForm (and every other control) writes.
+    const state = this.validationState
+    if (state === 'invalid') return 'error'
+    if (state === 'valid') return 'success'
+    return state ?? 'default'
   }
 
   private get _message(): string | undefined {
@@ -720,7 +760,35 @@ class MonoDateCoreClass extends MonoFormControlCore(superClass) {
    * date's block exactly one row-gap shorter than its siblings' — visible as soon
    * as a labelled date sits beside a labelled input in the same row.
    */
+  /** The validation message and its state — the same precedence `_message` uses. */
+  protected get _validationNotice(): { state: string; text: string } | null {
+    const state = this._resolvedState
+    const text =
+      state === 'error' ? this.errorMessage || this.validationMessage
+      : state === 'success' ? this.successMessage || this.validationMessage
+      : ''
+    return text ? { state, text } : null
+  }
+
   private _renderMessage(): TemplateResult {
+    // validation-position icon / float: the row keeps the helper; the message moved
+    // and stays for assistive tech only.
+    if (this._validation.moved) {
+      const notice = this._validationNotice!
+      return html`
+        <div class=${this._cls('mono-date-message-wrap', 'messageWrap')} mono-message-wrap>
+          ${this.helperText
+            ? html`<div class=${`${this._cls('mono-date-message', 'message')} default`} mono-message="helper">${this.helperText}</div>`
+            : nothing}
+          <div
+            class=${`${this._cls('mono-date-message', 'message')} ${notice.state}`}
+            mono-message=${notice.state}
+            mono-sr-only
+            role=${notice.state === 'error' ? 'alert' : nothing}
+          >${notice.text}</div>
+        </div>
+      `
+    }
     const msg = this._message
     return html`
       <div class=${this._cls('mono-date-message-wrap', 'messageWrap')} mono-message-wrap>
@@ -748,6 +816,8 @@ class MonoDateCoreClass extends MonoFormControlCore(superClass) {
         mono-size=${this.size === 'md' ? nothing : this.size}
         mono-color=${this.color === 'primary' ? nothing : this.color}
         mono-variant=${this.variant === 'outlined' ? nothing : this.variant}
+        mono-label-position=${this.labelPosition === 'top' ? nothing : this.labelPosition}
+        mono-validation-position=${this.validationPosition === 'bottom' ? nothing : this.validationPosition}
         mono-validation-state=${state === 'default' ? nothing : state}
         ?mono-disabled=${this.disabled}
         ?mono-readonly=${this.readonly}
@@ -758,7 +828,7 @@ class MonoDateCoreClass extends MonoFormControlCore(superClass) {
           ? html`<label class=${this._cls('mono-date-label', 'label')} mono-label for=${this._id}>
               ${this.label}${this.required
                 ? html`<span class=${this._cls('mono-date-required', 'required')} mono-required-mark>*</span>`
-                : nothing}
+                : nothing}${this._tooltip.render()}
             </label>`
           : nothing}
 
@@ -775,6 +845,7 @@ class MonoDateCoreClass extends MonoFormControlCore(superClass) {
             aria-label=${ifDefined(this.ariaLabelText || this.label || undefined)}
             @input=${this._onTyping}
           />
+          ${this._validation.renderIcon()}
           ${this.clearable && this._hasValue && !this.disabled && !this.readonly
             ? html`<button
                 type="button"
@@ -789,6 +860,7 @@ class MonoDateCoreClass extends MonoFormControlCore(superClass) {
         </div>
 
         ${this._renderMessage()}
+        ${this._validation.renderFloat()}
       </div>
     `
   }
@@ -807,6 +879,8 @@ export declare class MonoDateCoreInterface {
   label?: string
   placeholder?: string
   helperText?: string
+  tooltip: FieldTooltipValue
+  protected readonly _tooltip: FieldTooltipController
   validationState?: DateValidationState
   validationMessage?: string
   error: boolean

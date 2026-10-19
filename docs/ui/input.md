@@ -90,6 +90,50 @@ Disabled, readonly and required.
 
 <DemoSingle name="input" id="states" />
 
+## Tooltip
+
+When the extra explanation is too long for `helper-text`, put it behind an info icon at the end of the label. `tooltip="…"` takes plain text; `:tooltip.prop="{ content, placement, color, … }"` takes any [tooltip](../addons/tooltip) option. The icon is keyboard-focusable and also works on a disabled field — a good place to say *why* it is disabled.
+
+::: tip Plain text needs nothing extra
+`tooltip="…"` (plain text) shows a small built-in bubble — no dependency. It sits above the icon (below when there's no room), stays on screen, and isn't clipped by an `overflow: hidden` parent. It reads the tooltip addon's `--mono-tooltip-bg` / `-color` / `-radius` / `-max-width` / `-font-size` / `-padding-x` / `-padding-y` knobs.
+
+The **object** form is the [tooltip addon](../addons/tooltip) (`mono-tooltip`: placement, color, delay…), which needs the optional peers `pnpm add @floating-ui/dom @floating-ui/core`. Without them an object-form tooltip renders **no icon** (and nothing is logged). Either way the icon only appears beside a label.
+:::
+
+<DemoSingle name="input" id="tooltip" />
+
+## Label position
+
+`label-position` moves the label without touching its type or colours:
+
+| value | look |
+|---|---|
+| `top` | above the box (default) |
+| `notched` | outlined: on the top border, `──Label──`. filled / underlined: inset inside the top of the box, which grows by the label's line |
+| `left` / `right` | beside the box, centred on its first row; helper / validation messages stay under the box |
+
+Set it for every field at once with `createMonoUI({ 'mono-input': { labelPosition: 'notched' } })`. `--mono-input-label-width` fixes the side column so a stack of `left` fields lines up.
+
+::: tip The notch is a background patch
+The notch hides the border with `--background`. On a card or any other surface, set `--mono-input-label-notch-bg` to that surface (e.g. `var(--card)`).
+:::
+
+<DemoSingle name="input" id="label-position" />
+
+## Validation position
+
+`validation-position` decides where the validation message (`invalid` / `warning` / `valid` + `validation-message`) shows. The coloured border is the same in every mode.
+
+| value | look |
+|---|---|
+| `bottom` | the row under the box (default) — the message replaces the helper text there |
+| `icon` | a state icon inside the box; hover or tap it (or keyboard-focus the field) for the message in a state-coloured bubble |
+| `float` | nothing until the field is hovered or focused; then the message floats under the box, and disappears again when you leave |
+
+In `icon` and `float` the row under the box keeps the **helper text**, and the message stays there for screen readers only. The bubbles need no dependency (no floating-ui). Knobs: `--mono-validation-invalid-bg` / `-color` (and `warning` / `valid`), `--mono-validation-icon-size`.
+
+<DemoSingle name="input" id="validation-position" />
+
 ## Validation
 
 `valid`, `invalid` and `warning` states with messages. `invalid` is Basecoat's `aria-invalid` treatment — a permanent `--destructive` border and /20 ring, the label turns `--destructive` too, and the message carries `role="alert"`; the other two are the same pattern in `--success` / `--warning`.
@@ -107,6 +151,32 @@ Icon or text on either side of the native input.
 Clear button shown when the value is non-empty.
 
 <DemoSingle name="input" id="clearable" />
+
+## File
+
+`type="file"` gives a classic one-line file picker. It behaves like `mono-file-upload` but has no dropzone and no file list. The field shows the picked name(s) read-only and has an upload icon (`i-mdi-cloud-upload-outline`) at the end. A click on the field or the icon, or <kbd>Enter</kbd> / <kbd>Space</kbd> while it is focused, opens the native dialog.
+
+- **Value**: `modelValue` is the picked `File` (`null` when empty). With `multiple` it is `File[]` and the names are comma-joined. A file object cannot cross an attribute, so bind it with `:model-value.prop`. A bound `controlMonoForm` receives the `File` as is, ready for `FormData`.
+- **`accept`**: passed to the native picker, e.g. `accept=".pdf,image/*"`.
+- **`max-file-size`**: a size limit in bytes. Each oversized file is dropped and reported through `error` (`{ message, reason: 'max-file-size', file, maxFileSize }`, the same shape `mono-file-upload` uses). When every picked file is rejected, the previous value stays.
+- **`clearable`**: the × resets the value to `null` (or `[]` with `multiple`) and emits `input`, `change` and `clear`.
+- **Events**: `input` and `change` both fire on a pick. `detail.files` always holds the files as an array.
+
+<DemoSingle name="input" id="file" />
+
+## Range
+
+`type="range"` is Basecoat's slider (`.field > input[type='range']`). It has no bordered box: the track fills with the `color` prop's accent, and the thumb sits on it. Each Basecoat style draws its own track and thumb, from vega's white dot on a 6px track to luma's pill or sera's square.
+
+Under **ONE** (the default) it follows the EJI guide's `.eji-range` instead. The track is a 4px line with no fill. The thumb is a 16px navy dot with a white rim. The label row is 12px and ends in the value, shown in bold navy mono figures.
+
+- **Value**: `modelValue` is the number as a string (`"5"`), with the native `min` (default 0), `max` (default 100) and `step` (default 1). `input` fires while dragging, `change` on release. An empty value is shown at the midpoint, as the native slider does, and the model is not rewritten.
+- **Readout**: on by default, because the guide never shows a slider without its number. With a label, the value sits at the end of the label row. Without one, it follows the slider. `show-value="false"` hides it.
+- **`format-display`** shapes only the readout (and `aria-valuetext`). The native value stays a bare number. Use `format-display="{}%"`, a number pattern such as `'"Rp "#,##0'` with `format-locale="id-ID"`, or a function: `:format-display.prop="({ value }) => …"`.
+- `disabled` fades the slider. `readonly` keeps it focusable but puts the thumb back on any move. `clearable` has no effect.
+- Restyle through `--mono-input-range-*`: `track-height`, `track-bg`, `fill`, `thumb-size`, `thumb-bg`, `thumb-border-*`, `thumb-ring-*`, `ring-width`, `value-color`, and more (see the CSS variables table). `size` scales the thumb and track.
+
+<DemoSingle name="input" id="range" />
 
 ## Field alignment
 
@@ -154,6 +224,8 @@ Every input is themed through `--mono-input-*` custom properties. Setting one on
 | `--mono-input-font-<size>` / `--mono-input-line-height` (`-<size>`) | `--mono-text-sm` / its line height | Field text |
 | `--mono-input-gap` | 3 × `--mono-spacing` | Label ↔ field ↔ message spacing |
 | `--mono-input-label-font-size` / `-font-weight` / `-line-height` / `-text-transform` / `-letter-spacing` / `-gap` | `--mono-text-sm` / `--mono-label-font-weight` / 1 / none / normal / 2 × spacing | Label |
+| `--mono-input-label-width` / `-label-side-gap` | auto / 3 × spacing | `label-position` left / right column |
+| `--mono-input-label-notch-font-size` / `-label-notch-bg` | `--mono-text-xs` / `--background` | `label-position="notched"` |
 | `--mono-input-message-font-size` / `-line-height` | `--mono-text-sm` / `--mono-leading-normal` | Message |
 | `--mono-input-affix-padding` / `-gap` / `-font-size` / `-icon-size` | 2 × spacing / 1.5 × spacing / field text / 4 × spacing | Prefix / suffix inset, their gap to the text, text and glyph size |
 | `--mono-input-clear-radius` | `calc(var(--radius) - 5px)` | Clear button corner |
@@ -163,6 +235,14 @@ Every input is themed through `--mono-input-*` custom properties. Setting one on
 | `--mono-input-color`, `--mono-input-placeholder`, `--mono-input-muted` | `--foreground`, `--muted-foreground`, `--muted-foreground` | Text, placeholder, affix / message ink |
 | `--mono-input-valid` / `--mono-input-invalid` / `--mono-input-warning` | `--success` / `--destructive` / `--warning` | Validation colours |
 | `--mono-input-primary` … `--mono-input-info` | the role tokens | The `color` presets |
+| `--mono-input-accent` | `--primary` (set by `color` / a validation state) | `type="range"`: the fill and thumb colour |
+| `--mono-input-range-track-height` / `-track-radius` / `-track-bg` / `-fill` | 0.375rem / full / `--muted` / the accent | `type="range"`: the track, and its filled part |
+| `--mono-input-range-thumb-size` / `-thumb-width` / `-thumb-radius` / `-thumb-bg` | 1rem / = size / full / white | `type="range"`: the thumb (border-box) |
+| `--mono-input-range-thumb-border-width` / `-border-color` / `-ring-width` / `-ring-color` / `-shadow` | 1px / the accent / 0 / – / `--mono-shadow-sm` | `type="range"`: the thumb's rim, resting ring and shadow |
+| `--mono-input-range-ring-width` / `-hover-ring-width` | 4px / = ring width | `type="range"`: the focus / hover halo (colour = the ring at `--mono-ring-alpha`) |
+| `--mono-input-range-height` / `-gap` | 1.25rem / `--mono-input-gap` | `type="range"`: the slider's box, and label ↔ slider spacing |
+| `--mono-input-range-label-color` / `-font-size` / `-line-height` / `-font-weight` | the label's | `type="range"`: the label row |
+| `--mono-input-range-value-color` / `-font-family` / `-font-size` / `-font-weight` / `-min-width` | `--muted-foreground` / inherit / the label's / medium / 3ch | `type="range"`: the value readout |
 
 Deprecated and honoured as no-ops until 2.0: `--mono-input-focus-rgb` (alpha now comes from `--mono-input-ring-alpha`), `--mono-input-underline-glow` (the underline no longer glows — it is sera's line), the per-colour `filled` tints (a flat `--input`/50 for every colour).
 

@@ -1,264 +1,17 @@
 import { a as __decorate, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration } from "../../hydration-flush-DHrl4_KK.js";
 import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
 import { n as cssPart } from "../../css-class-B6Tc_MAx.js";
+import { a as parseFormat, c as stripFormat, i as normaliseValue, n as caretAfterFormat, o as resolveFormat, r as localeSeparators, s as significantFor, t as applyFormat } from "../../input-format-GrRCJBqV.js";
 import { t as buildSizeStyle } from "../../css-size-DWAPgQdT.js";
 import { t as MonoFormControlCore } from "../../form-control-core-CIdMLXMo.js";
-import { t as input_css_raw_default } from "../../input.css_raw-CGESifay.js";
+import { n as FieldTooltipController, t as field_tooltip_css_raw_default } from "../../field-tooltip.css_raw-DEctHXKm.js";
+import { n as label_position_css_raw_default, r as FieldValidationController, t as field_validation_css_raw_default } from "../../field-validation.css_raw-B3Iu33rS.js";
+import { t as input_css_raw_default } from "../../input.css_raw-CQu2fAsU.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { property, query, state } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
 import { styleMap } from "lit/directives/style-map.js";
 
-//#region src/components/input/input-format.ts
-const SEPARATOR_CACHE = /* @__PURE__ */ new Map();
-/**
-* Ask `Intl` which characters this locale uses, rather than assuming `,` and `.`.
-*
-* Several locales use neither — `fr-FR` groups with a narrow no-break space, `de-CH` with an
-* apostrophe — and a hardcoded pair would silently mangle them.
-*/
-function localeSeparators(locale) {
-	const key = locale ?? "";
-	const cached = SEPARATOR_CACHE.get(key);
-	if (cached) return cached;
-	let separators = {
-		group: ",",
-		decimal: "."
-	};
-	try {
-		const parts = new Intl.NumberFormat(locale || void 0, {
-			useGrouping: true,
-			minimumFractionDigits: 1
-		}).formatToParts(12345.6);
-		separators = {
-			group: parts.find((p) => p.type === "group")?.value ?? ",",
-			decimal: parts.find((p) => p.type === "decimal")?.value ?? "."
-		};
-	} catch {}
-	SEPARATOR_CACHE.set(key, separators);
-	return separators;
-}
-/**
-* Parse a pattern string into a descriptor, or `null` when it is not a pattern we understand.
-*
-* `null` is deliberately not an error: an unparseable pattern leaves the field an ordinary
-* unformatted input rather than blanking it or throwing mid-keystroke.
-*/
-function parseFormat(pattern) {
-	const raw = String(pattern ?? "");
-	if (!raw) return null;
-	const hole = raw.indexOf("{}");
-	if (hole !== -1) return {
-		kind: "template",
-		before: raw.slice(0, hole),
-		after: raw.slice(hole + 2)
-	};
-	let body = raw;
-	let prefix = "";
-	let suffix = "";
-	const leading = body.match(/^"([^"]*)"/);
-	if (leading) {
-		prefix = leading[1] ?? "";
-		body = body.slice(leading[0].length);
-	}
-	const trailing = body.match(/"([^"]*)"$/);
-	if (trailing) {
-		suffix = trailing[1] ?? "";
-		body = body.slice(0, body.length - trailing[0].length);
-	}
-	if (!body || !/^[#0,]*(?:\.[#0]*)?$/.test(body)) return null;
-	if (!/[#0]/.test(body)) return null;
-	const [intPart = "", fracPart] = body.split(".");
-	return {
-		kind: "number",
-		grouping: intPart.includes(","),
-		minFraction: fracPart ? (fracPart.match(/0/g) ?? []).length : 0,
-		maxFraction: fracPart ? fracPart.length : 0,
-		prefix,
-		suffix
-	};
-}
-/**
-* Strip a formatted string back to its raw value.
-*
-* For numbers the result is always canonical — digits, an optional leading `-`, and `.` as the
-* decimal point — whatever the locale draws with, so it is safe to hand to `Number()`.
-*/
-/**
-* Decide whether a GROUP character in the text is really the decimal point the user typed.
-*
-* It exists because the two roles collide: in `id-ID` the grouping character is `.`, so typing
-* `0.9` produced `09` — the strip deleted the point before anything could read it as one. Yet
-* `1.000` typed in the same field must keep meaning a thousand, and that is not a matter of
-* guessing intent: the field re-strips its OWN formatted text on every keystroke, and
-* `addGrouping` only ever emits runs of exactly three digits.
-*
-* So a group character is the decimal point when
-*   · the pattern has a fraction at all,
-*   · the locale's real decimal character is nowhere in the text (an explicit `1.000,5` wins), and
-*   · the digits after the LAST group character number at most `maxFraction` and are not exactly 3.
-*
-* A run of length ZERO qualifies deliberately: a trailing `0.` must survive, or the point is
-* deleted the instant it is typed and `0.9` can never be reached left to right — `applyFormat`
-* carries the matching rule that keeps a lone trailing point on screen.
-*
-* The consequence, and it is documented rather than worked around: under a dot-grouping locale a
-* THREE-digit fraction (`0.123`) is unreachable by dot and has to be typed `0,123`.
-*
-* Returns the split, or `null` when every group character is grouping. Works for either locale
-* shape — under `en-US` the roles are simply swapped and a typed `,` is promoted the same way.
-*/
-function decimalGroupSplit(text, descriptor, group, decimal) {
-	if (descriptor.maxFraction <= 0) return null;
-	if (!group || group === decimal) return null;
-	if (text.includes(decimal)) return null;
-	const at = text.lastIndexOf(group);
-	if (at === -1) return null;
-	const tail = text.slice(at + group.length);
-	if (tail.length > descriptor.maxFraction || tail.length === 3) return null;
-	if (tail && !/^\d+$/.test(tail)) return null;
-	return {
-		head: text.slice(0, at),
-		tail
-	};
-}
-function stripFormat(text, descriptor, locale) {
-	const value = String(text ?? "");
-	if (!descriptor) return value;
-	if (descriptor.kind === "template") {
-		let out = value;
-		if (descriptor.before && out.startsWith(descriptor.before)) out = out.slice(descriptor.before.length);
-		if (descriptor.after && out.endsWith(descriptor.after)) out = out.slice(0, out.length - descriptor.after.length);
-		return out;
-	}
-	const { group, decimal } = localeSeparators(locale);
-	let out = value;
-	if (descriptor.prefix) out = out.split(descriptor.prefix).join("");
-	if (descriptor.suffix) out = out.split(descriptor.suffix).join("");
-	const promoted = decimalGroupSplit(out, descriptor, group, decimal);
-	if (promoted) out = `${promoted.head.split(group).join("")}.${promoted.tail}`;
-	else {
-		out = out.split(group).join("");
-		if (decimal !== ".") out = out.split(decimal).join(".");
-	}
-	const negative = out.trimStart().startsWith("-");
-	out = out.replace(/[^\d.]/g, "");
-	const first = out.indexOf(".");
-	if (first !== -1) out = out.slice(0, first + 1) + out.slice(first + 1).replace(/\./g, "");
-	if (descriptor.maxFraction === 0) out = out.split(".")[0] ?? "";
-	return negative && out ? `-${out}` : out;
-}
-/**
-* Render a raw value for DISPLAY.
-*
-* The number branch deliberately does NOT hand the whole string to `Intl`: a value being typed is
-* usually not yet a finished number, and `Intl` would tidy away exactly the characters the user is
-* in the middle of writing — a trailing decimal point (`10000.`) and trailing fraction zeros
-* (`10.50`) both vanish, which makes the field fight the person using it. Only the INTEGER part is
-* grouped; the fraction is carried through verbatim, clamped to the pattern's ceiling.
-*/
-function applyFormat(raw, descriptor, locale, opts = {}) {
-	const value = String(raw ?? "");
-	if (!descriptor) return value;
-	if (descriptor.kind === "template") {
-		if (!value) return "";
-		return `${descriptor.before}${value}${descriptor.after}`;
-	}
-	if (!value || value === "-") return value;
-	const negative = value.startsWith("-");
-	const unsigned = negative ? value.slice(1) : value;
-	const [intRaw = "", fracRaw] = unsigned.split(".");
-	const hasPoint = unsigned.includes(".");
-	const { group, decimal } = localeSeparators(locale);
-	const digits = intRaw.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
-	const grouped = descriptor.grouping ? addGrouping(digits, group) : digits;
-	let fraction = (fracRaw ?? "").replace(/\D/g, "").slice(0, descriptor.maxFraction);
-	if (opts.pad && descriptor.minFraction > 0) fraction = fraction.padEnd(descriptor.minFraction, "0");
-	let out = grouped || (hasPoint ? "0" : "");
-	if (fraction) out += decimal + fraction;
-	else if (hasPoint && descriptor.maxFraction > 0 && !opts.pad) out += decimal;
-	if (!out) return "";
-	return `${descriptor.prefix}${negative ? "-" : ""}${out}${descriptor.suffix}`;
-}
-/** Group a digit string from the right. */
-function addGrouping(digits, separator) {
-	if (digits.length < 4) return digits;
-	let out = "";
-	for (let i = 0; i < digits.length; i++) {
-		if (i > 0 && (digits.length - i) % 3 === 0) out += separator;
-		out += digits[i];
-	}
-	return out;
-}
-/**
-* Normalise a raw value for the VALUE side.
-*
-* A number pattern yields a canonical numeric string (`"10000000.25"`) rather than the formatted
-* text, so `Number(v)` works and a store that does arithmetic on it does not have to know a format
-* was ever involved. A template yields the assembled string, because there the decoration IS the
-* value — an email is not an email without its domain.
-*/
-function normaliseValue(raw, descriptor) {
-	const value = String(raw ?? "");
-	if (!descriptor) return value;
-	if (descriptor.kind === "template") return value ? `${descriptor.before}${value}${descriptor.after}` : "";
-	if (!value || value === "-") return "";
-	const negative = value.startsWith("-");
-	const [intRaw = "", fracRaw] = (negative ? value.slice(1) : value).split(".");
-	const digits = intRaw.replace(/\D/g, "");
-	const fraction = (fracRaw ?? "").replace(/\D/g, "").slice(0, descriptor.maxFraction);
-	let out = digits.replace(/^0+(?=\d)/, "");
-	if (!out) out = digits ? "0" : "";
-	if (!out && !fraction) return "";
-	if (fraction) out = `${out || "0"}.${fraction}`;
-	return negative && out ? `-${out}` : out;
-}
-/**
-* Where the caret belongs after the text was reformatted.
-*
-* Reformatting rewrites the whole field, and the browser then parks the caret at the end — so
-* inserting a digit in the middle of a number would throw you to the end on every keystroke. The
-* fix is to count in SIGNIFICANT characters (the ones the user actually typed) rather than in
-* string offsets: count how many sit left of the caret before, then walk the new text until the
-* same number have gone by.
-*/
-function caretAfterFormat(next, caretInPrev, prev, isSignificant) {
-	let typed = 0;
-	for (let i = 0; i < Math.min(caretInPrev, prev.length); i++) if (isSignificant(prev[i])) typed++;
-	if (typed === 0) {
-		let i = 0;
-		while (i < next.length && !isSignificant(next[i])) i++;
-		return i;
-	}
-	let seen = 0;
-	for (let i = 0; i < next.length; i++) if (isSignificant(next[i])) {
-		seen++;
-		if (seen === typed) return i + 1;
-	}
-	return next.length;
-}
-/**
-* Which characters count as "typed" for caret purposes — everything the format did NOT insert.
-*/
-function significantFor(descriptor, locale) {
-	if (!descriptor || descriptor.kind === "template") return () => true;
-	const { decimal } = localeSeparators(locale);
-	return (ch) => /\d/.test(ch) || ch === decimal || ch === "-";
-}
-/** Resolve either form of a format prop to its finished text. */
-function resolveFormat(format, raw, ctx, mode) {
-	if (format == null || format === "") return null;
-	if (typeof format === "function") return String(format({
-		value: raw,
-		type: ctx.type,
-		locale: ctx.locale
-	}) ?? "");
-	const descriptor = parseFormat(format);
-	if (!descriptor) return null;
-	return mode === "display" ? applyFormat(raw, descriptor, ctx.locale) : normaliseValue(raw, descriptor);
-}
-
-//#endregion
 //#region src/components/input/input-core.ts
 const numberStringConverter = {
 	fromAttribute(value) {
@@ -269,6 +22,18 @@ const numberStringConverter = {
 	toAttribute(value) {
 		if (value === void 0 || value === null) return null;
 		return String(value);
+	}
+};
+/**
+* `modelValue` reflects to `model-value`, but only while it is TEXT — a `type="file"` value is a
+* `File` / `File[]`, which would otherwise land in the DOM as `"[object File]"`.
+*/
+const modelValueConverter = {
+	fromAttribute(value) {
+		return value ?? "";
+	},
+	toAttribute(value) {
+		return typeof value === "string" ? value : null;
 	}
 };
 /**
@@ -294,13 +59,27 @@ const MonoInputCore = (superClass) => {
 			this.size = "md";
 			this.color = "primary";
 			this.variant = "outlined";
+			this.labelPosition = "top";
+			this.validationPosition = "bottom";
 			this.modelValue = "";
 			this.value = "";
+			this.accept = "";
+			this.multiple = false;
+			this.showValue = true;
 			this.formatOn = "input";
 			this.name = "";
 			this.placeholder = "";
 			this.label = "";
 			this.helperText = "";
+			this.tooltip = null;
+			this._tooltip = new FieldTooltipController(this, () => this.tooltip);
+			this._validation = new FieldValidationController(this, () => ({
+				position: this.validationPosition,
+				...this._validationNotice ?? {
+					state: void 0,
+					text: void 0
+				}
+			}), () => this.renderRoot?.querySelector?.("[mono-input] > [mono-field]"));
 			this.validationState = "default";
 			this.validationMessage = "";
 			this.error = false;
@@ -325,6 +104,8 @@ const MonoInputCore = (superClass) => {
 			this._inputId = `mono-input-${Math.random().toString(36).slice(2)}`;
 			this._messageId = `${this._inputId}-message`;
 			defineHybridPropAliases(this, [
+				"labelPosition",
+				"validationPosition",
 				"modelValue",
 				"formatDisplay",
 				"formatValue",
@@ -338,6 +119,8 @@ const MonoInputCore = (superClass) => {
 				"ariaLabelText",
 				"minLength",
 				"maxLength",
+				"maxFileSize",
+				"showValue",
 				"cssClass",
 				"minWidth",
 				"maxWidth",
@@ -386,6 +169,8 @@ const MonoInputCore = (superClass) => {
 				"arialabel",
 				"minlength",
 				"maxlength",
+				"maxfilesize",
+				"showvalue",
 				"css-class",
 				"cssclass",
 				"formatdisplay",
@@ -446,10 +231,53 @@ const MonoInputCore = (superClass) => {
 				case "maxlength":
 					this.maxLength = this._toOptionalNumber(newValue);
 					return;
+				case "maxfilesize":
+					this.maxFileSize = this._toOptionalNumber(newValue);
+					return;
+				case "showvalue":
+					this.showValue = newValue === null ? true : booleanStringConverter.fromAttribute(newValue);
+					return;
 			}
 		}
+		/** The validation message and its state — the same precedence the message row uses. */
+		get _validationNotice() {
+			if (this.validationMessage) return {
+				state: this._resolvedValidationState,
+				text: this.validationMessage
+			};
+			if (this.errorMessage) return {
+				state: "invalid",
+				text: this.errorMessage
+			};
+			if (this.successMessage) return {
+				state: "valid",
+				text: this.successMessage
+			};
+			return null;
+		}
+		/** The message that moved to the icon / float bubble, kept for assistive tech only. */
+		_renderMovedMessage() {
+			const notice = this._validationNotice;
+			return html`<div
+        class=${`${this._cls("mono-input-message", "message")} ${notice.state}`}
+        mono-message=${notice.state}
+        mono-sr-only
+        role=${notice.state === "invalid" ? "alert" : nothing}
+      >${notice.text}</div>`;
+		}
 		willUpdate(changed) {
-			if (changed.has("modelValue") && this.value !== this.modelValue) this.value = this.modelValue ?? "";
+			if (this._isFile) {
+				if (changed.has("modelValue") || changed.has("type")) {
+					const files = this._fileList();
+					const names = this._fileNames(files);
+					this.value = names;
+					this._display = names;
+					if (!files.length && this._fileEl) this._fileEl.value = "";
+				}
+				this._internalWrite = false;
+				return;
+			}
+			if (changed.has("modelValue") && this.value !== this.modelValue) this.value = typeof this.modelValue === "string" ? this.modelValue : "";
 			if (changed.has("value") && this.modelValue !== this.value) this.modelValue = String(this.value ?? "");
 			if (!this._internalWrite && !this._focused && (changed.has("value") || changed.has("modelValue") || changed.has("formatDisplay"))) this._syncDisplayFromValue();
 			this._internalWrite = false;
@@ -496,7 +324,7 @@ const MonoInputCore = (superClass) => {
 				this.readonly ? "readonly" : "",
 				this._resolvedValidationState !== "default" ? `is-${this._resolvedValidationState}` : "",
 				this._hasPrefixSlot ? "has-prefix" : "",
-				this._hasSuffixSlot || this.clearable ? "has-suffix" : "",
+				this._hasSuffixSlot || this.clearable || this._isFile ? "has-suffix" : "",
 				this.value ? "has-value" : "",
 				this.cssClassName,
 				this.cssClass?.root
@@ -512,12 +340,127 @@ const MonoInputCore = (superClass) => {
 				this.readonly ? "readonly" : "",
 				this._resolvedValidationState !== "default" ? `is-${this._resolvedValidationState}` : "",
 				this._hasPrefixSlot ? "has-prefix" : "",
-				this._hasSuffixSlot || this.clearable ? "has-suffix" : "",
+				this._hasSuffixSlot || this.clearable || this._isFile ? "has-suffix" : "",
 				this.value ? "has-value" : ""
 			].filter(Boolean).join(" ");
 		}
+		get _isFile() {
+			return this.type === "file";
+		}
+		get _isRange() {
+			return this.type === "range";
+		}
+		/** `min` / `max` / `step` as the native range resolves them (0 / 100 / 1 when unset). */
+		_rangeBounds() {
+			const min = this._toOptionalNumber(this.min) ?? 0;
+			const rawMax = this._toOptionalNumber(this.max) ?? 100;
+			const max = rawMax < min ? min : rawMax;
+			const step = this._toOptionalNumber(this.step);
+			return {
+				min,
+				max,
+				step: step && step > 0 ? step : 1
+			};
+		}
+		/**
+		* The value the slider is actually AT, as a string. An empty value is not a position — the
+		* native range parks itself at the midpoint — so the readout and the fill follow the native
+		* rule rather than reading `''` as 0. The model is not rewritten: nothing was chosen yet.
+		*/
+		get _rangeValue() {
+			const { min, max, step } = this._rangeBounds();
+			const target = this._toOptionalNumber(this.value) ?? min + (max - min) / 2;
+			const snapped = min + Math.round((target - min) / step) * step;
+			return String(Number(Math.min(max, Math.max(min, snapped)).toFixed(10)));
+		}
+		/** How far along the track the value sits, 0–100 — drives the fill. */
+		get _rangeProgress() {
+			const { min, max } = this._rangeBounds();
+			if (max === min) return 0;
+			return (Number(this._rangeValue) - min) / (max - min) * 100;
+		}
+		/** The readout text: the value drawn through `format-display`. */
+		get _rangeText() {
+			return this._formatDisplay(this._rangeValue, { pad: true });
+		}
+		/**
+		* A native range ignores `readonly`, so a readonly slider would still move. Put the thumb
+		* back where the value says and report that the event was handled.
+		*/
+		_revertReadonlyRange(event) {
+			if (!this._isRange || !this.readonly || this.disabled) return false;
+			event.currentTarget.value = this._rangeValue;
+			event.stopPropagation();
+			return true;
+		}
+		/** `modelValue` as an array of files, whatever shape it arrived in (File, File[], null, ''). */
+		_fileList() {
+			const isFile = (v) => !!v && typeof v === "object" && typeof v.name === "string";
+			const v = this.modelValue;
+			if (Array.isArray(v)) return v.filter(isFile);
+			return isFile(v) ? [v] : [];
+		}
+		_fileNames(files) {
+			return files.map((f) => f.name).join(", ");
+		}
+		_openFilePicker() {
+			if (this.disabled || this.readonly) return;
+			this._fileEl?.click();
+		}
+		_handleFileKeydown(event) {
+			if (event.key !== "Enter" && event.key !== " ") return;
+			event.preventDefault();
+			this._openFilePicker();
+		}
+		/** Files above `maxFileSize` are dropped, each one reported through `error`. */
+		_acceptFiles(files, sourceEvent) {
+			const limit = this.maxFileSize;
+			if (!limit || limit <= 0) return files;
+			return files.filter((file) => {
+				if (file.size <= limit) return true;
+				const detail = {
+					message: `File "${file.name}" exceeds the maximum size limit.`,
+					reason: "max-file-size",
+					file,
+					maxFileSize: limit,
+					sourceEvent
+				};
+				dispatchMonoEvent(this, "error", detail);
+				return false;
+			});
+		}
+		/**
+		* The picker's native `input` fires BEFORE its `change`, i.e. before the value below is
+		* written — left to bubble, a host `@input` (and a bound form) would read the OLD value. Our
+		* own `input` is emitted from the change handler instead.
+		*/
+		_swallowNativeInput(event) {
+			event.stopPropagation();
+		}
+		_handleFileChange(event) {
+			if (this.disabled || this.readonly) return;
+			const input = event.currentTarget;
+			const files = this._acceptFiles(Array.from(input.files ?? []), event);
+			if (!files.length) {
+				input.value = "";
+				return;
+			}
+			this._internalWrite = true;
+			const oldValue = this.modelValue;
+			const nextValue = this.multiple ? files : files[0];
+			this.modelValue = nextValue;
+			this.value = this._display = this._fileNames(files);
+			const detail = this._createModelDetail({
+				modelValue: nextValue,
+				oldValue,
+				sourceEvent: event
+			});
+			this._emitInput(detail);
+			this._emitChange(detail);
+		}
 		_createModelDetail(args) {
 			return {
+				...this._isFile ? { files: this._fileList() } : {},
 				modelValue: args.modelValue,
 				currentValue: args.modelValue,
 				oldValue: args.oldValue,
@@ -667,11 +610,12 @@ const MonoInputCore = (superClass) => {
 			} catch {}
 		}
 		_handleInput(event) {
+			if (this._revertReadonlyRange(event)) return;
 			if (this.disabled || this.readonly) return;
 			this._internalWrite = true;
 			const input = event.currentTarget;
 			const oldValue = this.modelValue;
-			if (!this._hasFormat) {
+			if (!this._hasFormat || this._isRange) {
 				const nextValue = input.value;
 				this.value = nextValue;
 				this.modelValue = nextValue;
@@ -697,11 +641,12 @@ const MonoInputCore = (superClass) => {
 			}));
 		}
 		_handleChange(event) {
+			if (this._revertReadonlyRange(event)) return;
 			if (this.disabled || this.readonly) return;
 			this._internalWrite = true;
 			const input = event.currentTarget;
 			const oldValue = this.modelValue;
-			if (!this._hasFormat) {
+			if (!this._hasFormat || this._isRange) {
 				const nextValue = input.value;
 				this.value = nextValue;
 				this.modelValue = nextValue;
@@ -735,6 +680,21 @@ const MonoInputCore = (superClass) => {
 			if (this.disabled || this.readonly) return;
 			this._internalWrite = true;
 			const oldValue = this.modelValue;
+			if (this._isFile) {
+				const empty = this.multiple ? [] : null;
+				this.modelValue = empty;
+				this.value = this._display = "";
+				if (this._fileEl) this._fileEl.value = "";
+				this._inputEl?.focus();
+				const detail = this._createModelDetail({
+					modelValue: empty,
+					oldValue
+				});
+				this._emitInput(detail);
+				this._emitChange(detail);
+				this._emitClear(detail);
+				return;
+			}
 			const nextValue = "";
 			this.value = nextValue;
 			this.modelValue = nextValue;
@@ -769,7 +729,10 @@ const MonoInputCore = (superClass) => {
         mono-size=${this.size === "md" ? nothing : this.size}
         mono-color=${this.color === "primary" ? nothing : this.color}
         mono-variant=${this.variant === "outlined" ? nothing : this.variant}
+        mono-label-position=${this.labelPosition === "top" ? nothing : this.labelPosition}
+        mono-validation-position=${this.validationPosition === "bottom" ? nothing : this.validationPosition}
         mono-validation-state=${state === "default" ? nothing : state}
+        mono-type=${this._isFile || this._isRange ? this.type : nothing}
         ?mono-disabled=${this.disabled}
         ?mono-readonly=${this.readonly}
         ?mono-required=${this.required}
@@ -784,8 +747,111 @@ const MonoInputCore = (superClass) => {
 		get _describedBy() {
 			return this.validationMessage || this.errorMessage || this.successMessage || this.helperText || this._hasHelperSlot ? this._messageId : void 0;
 		}
+		/**
+		* `type="file"`: a hidden native picker, and in front of it a read-only text input showing
+		* the picked name(s). The text input keeps `mono-native` + `.mono-input-native`, so focus,
+		* the label's `for`, sizing and the focus ring all behave exactly as on a text field.
+		*/
+		_renderFileNative() {
+			return html`
+        <input
+          type="file"
+          mono-file-input
+          hidden
+          tabindex="-1"
+          accept=${ifDefined(this.accept || void 0)}
+          ?multiple=${this.multiple}
+          name=${ifDefined(this.name || void 0)}
+          ?disabled=${this.disabled}
+          @input=${this._swallowNativeInput}
+          @change=${this._handleFileChange}
+        />
+        <input
+          id=${this._inputId}
+          class=${`${this._cls("mono-input-native", "native")} ${this.size}`}
+          mono-native
+          mono-file
+          type="text"
+          readonly
+          .value=${this._display}
+          placeholder=${ifDefined(this.placeholder || void 0)}
+          ?disabled=${this.disabled}
+          ?required=${this.required}
+          aria-label=${ifDefined(this._ariaLabel)}
+          aria-invalid=${this._resolvedValidationState === "invalid" ? "true" : "false"}
+          aria-describedby=${ifDefined(this._describedBy)}
+          aria-haspopup="dialog"
+          @focus=${this._handleFocus}
+          @blur=${this._handleBlur}
+          @click=${this._openFilePicker}
+          @keydown=${this._handleFileKeydown}
+        />
+      `;
+		}
+		/** `type="file"` — the upload glyph at the end of the field; clicking it opens the picker too. */
+		_renderFileIcon() {
+			if (!this._isFile) return nothing;
+			return html`
+        <span
+          class=${this._cls("mono-input-suffix", "fileIcon")}
+          mono-suffix
+          mono-file-icon
+          aria-hidden="true"
+          @click=${this._openFilePicker}
+        >${this.renderIcon("upload")}</span>
+      `;
+		}
+		/**
+		* `type="range"`: Basecoat's slider. The fill is a gradient stop on the track, so the element
+		* writes the position as `--mono-input-range-value` (Basecoat's `--slider-value`) — hand-written
+		* markup sets the same property itself.
+		*/
+		_renderRangeNative() {
+			const { min, max, step } = this._rangeBounds();
+			const text = this._rangeText;
+			return html`
+        <input
+          id=${this._inputId}
+          class=${`${this._cls("mono-input-native", "native")} ${this.size}`}
+          mono-native
+          mono-range
+          type="range"
+          min=${min}
+          max=${max}
+          step=${ifDefined(this.step == null ? void 0 : step)}
+          .value=${this._rangeValue}
+          name=${ifDefined(this.name || void 0)}
+          style=${`--mono-input-range-value: ${this._rangeProgress}%`}
+          ?disabled=${this.disabled}
+          ?required=${this.required}
+          aria-label=${ifDefined(this._ariaLabel)}
+          aria-valuetext=${ifDefined(text !== this._rangeValue ? text : void 0)}
+          aria-readonly=${ifDefined(this.readonly ? "true" : void 0)}
+          aria-invalid=${this._resolvedValidationState === "invalid" ? "true" : "false"}
+          aria-describedby=${ifDefined(this._describedBy)}
+          @focus=${this._handleFocus}
+          @blur=${this._handleBlur}
+          @input=${this._handleInput}
+          @change=${this._handleChange}
+        />
+      `;
+		}
+		/**
+		* `type="range"` — the value readout. It sits at the end of the LABEL row when there is a
+		* label (the EJI ONE layout), and after the slider when there is not; each build calls this
+		* from both places and exactly one of them renders. `aria-hidden`: the slider already
+		* announces its value (`aria-valuetext` carries the formatted text).
+		*/
+		_renderRangeValue(where) {
+			if (!this._isRange || !this.showValue) return nothing;
+			const inLabel = !!(this.label || this._hasLabelSlot);
+			if (where === "label" !== inLabel) return nothing;
+			return html`<span class=${this._cls("mono-input-range-value", "rangeValue")} mono-range-value aria-hidden="true">${this._rangeText}</span>`;
+		}
 		/** The native <input>, shared by both builds' render(). */
 		_renderNative() {
+			if (this._isFile) return this._renderFileNative();
+			if (this._isRange) return this._renderRangeNative();
 			return html`
         <input
           id=${this._inputId}
@@ -818,7 +884,7 @@ const MonoInputCore = (superClass) => {
 		}
 		/** The clear button (uses the build-specific icon). */
 		_renderClear() {
-			if (!(this.clearable && this.value && !this.disabled && !this.readonly)) return nothing;
+			if (this._isRange || !(this.clearable && this.value && !this.disabled && !this.readonly)) return nothing;
 			return html`
         <button
           type="button"
@@ -859,10 +925,31 @@ const MonoInputCore = (superClass) => {
 	__decorate([property({ type: String })], MonoInputCoreClass.prototype, "variant", void 0);
 	__decorate([property({
 		type: String,
+		attribute: "label-position"
+	})], MonoInputCoreClass.prototype, "labelPosition", void 0);
+	__decorate([property({
+		type: String,
+		attribute: "validation-position"
+	})], MonoInputCoreClass.prototype, "validationPosition", void 0);
+	__decorate([property({
 		attribute: "model-value",
-		reflect: true
+		reflect: true,
+		converter: modelValueConverter
 	})], MonoInputCoreClass.prototype, "modelValue", void 0);
 	__decorate([property({ type: String })], MonoInputCoreClass.prototype, "value", void 0);
+	__decorate([property({ type: String })], MonoInputCoreClass.prototype, "accept", void 0);
+	__decorate([property({
+		reflect: true,
+		converter: booleanStringConverter
+	})], MonoInputCoreClass.prototype, "multiple", void 0);
+	__decorate([property({
+		attribute: "max-file-size",
+		converter: numberStringConverter
+	})], MonoInputCoreClass.prototype, "maxFileSize", void 0);
+	__decorate([property({
+		attribute: "show-value",
+		converter: { fromAttribute: (v) => v === null ? true : booleanStringConverter.fromAttribute(v) }
+	})], MonoInputCoreClass.prototype, "showValue", void 0);
 	__decorate([property({ attribute: false })], MonoInputCoreClass.prototype, "formatDisplay", void 0);
 	__decorate([property({ attribute: false })], MonoInputCoreClass.prototype, "formatValue", void 0);
 	__decorate([property({ attribute: "format-on" })], MonoInputCoreClass.prototype, "formatOn", void 0);
@@ -874,6 +961,7 @@ const MonoInputCore = (superClass) => {
 		type: String,
 		attribute: "helper-text"
 	})], MonoInputCoreClass.prototype, "helperText", void 0);
+	__decorate([property()], MonoInputCoreClass.prototype, "tooltip", void 0);
 	__decorate([property({
 		type: String,
 		attribute: "validation-state"
@@ -955,6 +1043,7 @@ const MonoInputCore = (superClass) => {
 		attribute: "max-height"
 	})], MonoInputCoreClass.prototype, "maxHeight", void 0);
 	__decorate([query(".mono-input-native")], MonoInputCoreClass.prototype, "_inputEl", void 0);
+	__decorate([query("[mono-file-input]")], MonoInputCoreClass.prototype, "_fileEl", void 0);
 	__decorate([state()], MonoInputCoreClass.prototype, "_display", void 0);
 	__decorate([state()], MonoInputCoreClass.prototype, "_focused", void 0);
 	__decorate([state()], MonoInputCoreClass.prototype, "_hasPrefixSlotState", void 0);
@@ -972,7 +1061,7 @@ let MonoInputShadow = class MonoInputShadow extends withShadowUtilityStyles(Mono
 		this.disableWarning?.("change-in-update");
 	}
 	static {
-		this.styles = [unsafeCSS(toShadowCss(input_css_raw_default, {
+		this.styles = [unsafeCSS(toShadowCss(input_css_raw_default + label_position_css_raw_default + field_tooltip_css_raw_default + field_validation_css_raw_default, {
 			host: "mono-input",
 			append: SHADOW_EXTRA_CSS
 		}))];
@@ -1001,7 +1090,12 @@ let MonoInputShadow = class MonoInputShadow extends withShadowUtilityStyles(Mono
 	_onSlotChange(name, event) {
 		this._setSlotState(name, this._slotHasContent(event.target));
 	}
-	renderIcon(_name) {
+	renderIcon(name) {
+		if (name === "upload") return html`
+        <svg viewBox="0 0 24 24" mono-icon fill="currentColor" aria-hidden="true">
+          <path d="M6.5 20q-2.28 0-3.89-1.57Q1 16.85 1 14.58q0-1.95 1.17-3.48q1.18-1.53 3.08-1.95q.63-2.3 2.5-3.72Q9.63 4 12 4q2.93 0 4.96 2.04Q19 8.07 19 11q1.73.2 2.86 1.5q1.14 1.28 1.14 3q0 1.88-1.31 3.19T18.5 20H13q-.82 0-1.41-.59Q11 18.83 11 18v-5.15L9.4 14.4L8 13l4-4l4 4l-1.4 1.4l-1.6-1.55V18h5.5q1.05 0 1.77-.73q.73-.72.73-1.77t-.73-1.77Q19.55 13 18.5 13H17v-2q0-2.07-1.46-3.54Q14.08 6 12 6Q9.93 6 8.46 7.46Q7 8.93 7 11h-.5q-1.45 0-2.47 1.03Q3 13.05 3 14.5T4.03 17q1.02 1 2.47 1H9v2m3-7" />
+        </svg>
+      `;
 		return html`
       <svg viewBox="0 0 24 24" mono-icon fill="currentColor" aria-hidden="true">
         <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
@@ -1018,17 +1112,23 @@ let MonoInputShadow = class MonoInputShadow extends withShadowUtilityStyles(Mono
       >
         <slot name="label" @slotchange=${(e) => this._onSlotChange("label", e)}>${this.label}</slot>
         ${this.required ? html`<span class=${this._cls("mono-input-required", "required")} mono-required-mark>*</span>` : nothing}
+        ${this._tooltip.render()}
+        ${this._renderRangeValue("label")}
       </label>
     `;
 	}
 	_renderHelper() {
 		const base = this._cls("mono-input-message", "message");
+		if (this._validation.moved) return html`${this._renderHelperText(base)}${this._renderMovedMessage()}`;
 		if (this.validationMessage) {
 			const state = this._resolvedValidationState;
 			return html`<div class=${`${base} ${state}`} mono-message=${state} role=${state === "invalid" ? "alert" : nothing}>${this.validationMessage}</div>`;
 		}
 		if (this.errorMessage) return html`<div class=${`${base} invalid`} mono-message="invalid" role="alert">${this.errorMessage}</div>`;
 		if (this.successMessage) return html`<div class=${`${base} valid`} mono-message="valid">${this.successMessage}</div>`;
+		return this._renderHelperText(base);
+	}
+	_renderHelperText(base) {
 		return html`
       <div
         class=${`${base} helper`}
@@ -1047,7 +1147,10 @@ let MonoInputShadow = class MonoInputShadow extends withShadowUtilityStyles(Mono
             <slot name="prefix" @slotchange=${(e) => this._onSlotChange("prefix", e)}></slot>
           </span>
           ${this._renderNative()}
+          ${this._renderRangeValue("field")}
+          ${this._validation.renderIcon()}
           ${this._renderClear()}
+          ${this._renderFileIcon()}
           <span class=${this._cls("mono-input-suffix", "suffix")} mono-suffix ?mono-empty=${!this._hasSuffixSlot}>
             <slot name="suffix" @slotchange=${(e) => this._onSlotChange("suffix", e)}></slot>
           </span>
@@ -1055,6 +1158,7 @@ let MonoInputShadow = class MonoInputShadow extends withShadowUtilityStyles(Mono
         <div id=${this._messageId} class=${this.cssClass?.messageWrap ?? ""} mono-message-wrap>
           ${this._renderHelper()}
         </div>
+        ${this._validation.renderFloat()}
     `);
 	}
 	connectedCallback() {
@@ -1147,7 +1251,9 @@ function getInputIcon(type) {
 		time: "M12 7v5l3 3M12 22a10 10 0 1 0 0-20a10 10 0 0 0 0 20z",
 		month: "M7 3v3M17 3v3M5 5h14v14H5zM8 11h8",
 		week: "M7 3v3M17 3v3M5 5h14v16H5zM9 11h6M9 15h4",
-		search: "M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15a7.5 7.5 0 0 1 0 15z"
+		search: "M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15a7.5 7.5 0 0 1 0 15z",
+		file: "M12 16V8M8.5 11.5L12 8l3.5 3.5M7 18h10",
+		range: "M4 12h16M9 9a3 3 0 1 0 0 6a3 3 0 0 0 0-6z"
 	};
 	return iconMap[type] ?? iconMap.text;
 }

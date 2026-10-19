@@ -1,8 +1,8 @@
 import { C as MonoSyncTransport, _ as MonoMergeableKey, c as MonoConfig, n as JWTCompleteTokenTypes, o as MonoAppType, t as DefaultJWTTokenTypes, w as MonoTemplate } from "./create-config-B8IhX4ht.js";
 import { a as MonoFetchCookieOptions, i as LocalStorageParams, n as CookieTokenParams, o as NormalFetchOptions$1, r as JWTPayload, s as NormalFetchResult$1, t as CookieParams } from "./types-B6FdB7LJ.js";
 import { a as monoToken, i as monoStorage, n as monoCookie, o as setMonoEventResolver, r as monoJwt, s as CookieApi, t as MonoRequestEvent } from "./universal-BR0O7Qwk.js";
-import { A as ValidateErrorItem, B as NormalFetchOptions, C as Format, D as SchemaType, E as SchemaObject, F as LoopTemplate, G as NotifProps, H as OdataFetchTypes, I as PathValue, J as MonoNotifButton, K as MonoNotifActionProps, L as FetchLoading, M as ValidateSchema, N as Col, O as ValidateError, P as GroupTemplate, R as FetchOData, S as FilterExpression, T as Schema, U as TanstackFetchOptions, V as NormalFetchResult, W as useHelper, X as createStaticDatasource, Y as UseOdataStaticOpts, _ as getPrefetchBridge, a as TryCatchDatasourceParams, b as CustomSummary, c as extractErrorMessage, d as promiseWrapper, f as tryCatchDatasource, g as MonoPrefetchRequest, h as MonoPrefetchBridge, i as OdataFetchUniqueTypes, j as ValidateErrorSingle, k as ValidateErrorComplex, l as loadChuckStore, m as useNormalFetch, n as FetchOverrides, o as createFetcher, p as useFetchOData, q as MonoNotifActionTypes, r as LoadChunkStoreArgs, s as createUniqueFetcher, t as _default, u as parseDxError, v as setPrefetchBridge, w as HeaderFilter, x as DataGrid, y as OdataMapTypes, z as FetchParam } from "./index-DYlzhHq7.js";
-import { InjectionKey, Plugin, Ref as Ref$1 } from "vue";
+import { $ as createStaticDatasource, A as ValidateError, B as FetchLoading, C as Format, D as SchemaType, E as SchemaObject, F as ValidationSchemaLike, G as OdataFetchTypes, H as FetchParam, I as Col, J as NotifProps, K as TanstackFetchOptions, L as GroupTemplate, M as ValidateErrorItem, N as ValidateErrorSingle, O as StandardSchemaV1, P as ValidateSchema, Q as UseOdataStaticOpts, R as LoopTemplate, S as FilterExpression, T as Schema, U as NormalFetchOptions, V as FetchOData, W as NormalFetchResult, X as MonoNotifActionTypes, Y as MonoNotifActionProps, Z as MonoNotifButton, _ as getPrefetchBridge, a as TryCatchDatasourceParams, b as CustomSummary, c as extractErrorMessage, d as promiseWrapper, f as tryCatchDatasource, g as MonoPrefetchRequest, h as MonoPrefetchBridge, i as OdataFetchUniqueTypes, j as ValidateErrorComplex, k as StandardSchemaV1Result, l as loadChuckStore, m as useNormalFetch, n as FetchOverrides, o as createFetcher, p as useFetchOData, q as useHelper, r as LoadChunkStoreArgs, s as createUniqueFetcher, t as _default, u as parseDxError, v as setPrefetchBridge, w as HeaderFilter, x as DataGrid, y as OdataMapTypes, z as PathValue } from "./index-CLXtqgEx.js";
+import { InjectionKey, Plugin, Ref } from "vue";
 import { RouteRecordRaw } from "vue-router";
 //#region src/token/client.d.ts
 /** Client cookie util — `document.cookie` backed (unchanged public shape). */
@@ -2397,8 +2397,8 @@ export declare function createMono(option: MonoConfig): Plugin;
  * the existing ref untouched, even if their `init` differs. Returning a ref from
  * `init` adopts that ref rather than nesting it.
  */
-export declare function useState<T = any>(init?: (() => T | Ref$1<T>) | T): Ref$1<T>;
-export declare function useState<T = any>(key: string, init?: (() => T | Ref$1<T>) | T): Ref$1<T>;
+export declare function useState<T = any>(init?: (() => T | Ref<T>) | T): Ref<T>;
+export declare function useState<T = any>(key: string, init?: (() => T | Ref<T>) | T): Ref<T>;
 /** Explicit alias — for hosts that don't want the bare Nuxt name in scope. */
 export declare const monoUseState: typeof useState;
 /**
@@ -2440,22 +2440,22 @@ export declare let defineLayout: ({ menu, routes }: {
 }) => RouteRecordRaw[];
 //#endregion
 //#region src/composables/host-provider.d.ts
-type HostKey<T> = string | symbol | InjectionKey<Ref$1<T>>;
+type HostKey<T> = string | symbol | InjectionKey<Ref<T>>;
 type InjectHostOptions<T> = {
   key: HostKey<T>;
   defaultValue: T;
 };
 type HostProviderOptions<T> = {
   key: HostKey<T>;
-  syncRef: Ref$1<T>;
+  syncRef: Ref<T>;
   immediate?: boolean;
   deep?: boolean;
   resetOnUnmount?: boolean;
   resetValue?: T;
   deleteOnUnmount?: boolean;
 };
-export declare function monoInject<T>(options: InjectHostOptions<T>): Ref$1<T>;
-export declare function monoProvide<T>(options: HostProviderOptions<T>): Ref$1<T>;
+export declare function monoInject<T>(options: InjectHostOptions<T>): Ref<T>;
+export declare function monoProvide<T>(options: HostProviderOptions<T>): Ref<T>;
 //#endregion
 //#region src/composables/use-mono-utility.d.ts
 /**
@@ -2498,11 +2498,11 @@ export declare const useMonoUtility: () => {
     };
   }) => void;
   filterOrIn: (field: string, values: any[], combine?: boolean) => any;
-  validateAllSchema: <T extends object = any>({ schema, input, error }: ValidateSchema<T>, callback?: () => void) => Promise<boolean>;
-  validateSchema: <T = any>({ schema, field, input, error }: ValidateSchema<T>, callback?: Function) => Promise<boolean>;
-  validateAllSchemaCheck: (error: ValidateError<any>) => boolean;
+  validateAllSchema: <T extends object = any>({ schema, input, error }: ValidateSchema<T>, callback?: () => unknown) => Promise<boolean>;
+  validateSchema: <T = any>({ schema, field, input, error }: ValidateSchema<T>, callback?: () => unknown) => Promise<boolean>;
+  validateAllSchemaCheck: (error: ValidateError<any> | any) => boolean;
   clearSchemaValidation: ({ error }: {
-    error: Ref<any>;
+    error: any;
   }) => void;
   notif: (options: NotifProps) => Promise<import("notivue").NotificationClearMethods | undefined>;
   dxFilterToString: ({ filter, encode }: {
@@ -2515,4 +2515,4 @@ export declare const useMonoUtility: () => {
 declare const __VLS_export: import("vue").DefineComponent<{}, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<{}> & Readonly<{}>, {}, {}, {}, {}, string, import("vue").ComponentProvideOptions, true, {}, any>;
 declare const _default$1: typeof __VLS_export;
 //#endregion
-export { type Col, type Col as MonoDataGridCol, type CustomSummary, type DataGrid, type DataGrid as MonoDataGridTypes, type FetchLoading, type FetchOData, type FetchParam, type FilterExpression, type Format, type GroupTemplate, type HeaderFilter, type LoopTemplate, type createStaticDatasource as MonoCreateStaticDatasource, type FetchOverrides as MonoFetchOverrides, type NormalFetchOptions as MonoNormalFetchTypes, type NormalFetchOptions, _default as MonoNotifAction, type MonoNotifActionProps as MonoNotifActionPropsTypes, type MonoNotifActionTypes, type MonoNotifButton as MonoNotifButtonTypes, type NotifProps as MonoNotifPropsTypes, type NotifProps, _default$1 as MonoNotivue, type OdataFetchTypes as MonoOdataFetchTypes, type OdataFetchTypes, type OdataFetchUniqueTypes as MonoOdataFetchUniqueTypes, type OdataMapTypes as MonoOdataMapTypes, type OdataMapTypes, type MonoPrefetchBridge, type MonoPrefetchRequest, type MonoRequestEvent, type SchemaObject as MonoSchemaObject, type SchemaObject, type LoadChunkStoreArgs as MonoStoreChunkTypes, type TanstackFetchOptions as MonoTanstackFetchTypes, type TanstackFetchOptions, type TryCatchDatasourceParams as MonoTryCatchDatasourceTypes, type UseOdataStaticOpts as MonoUseOdataStaticTypes, type ValidateErrorComplex as MonoValidateError, type ValidateErrorComplex, type ValidateErrorSingle as MonoValidateErrorSingle, type ValidateErrorSingle, type NormalFetchResult, type PathValue, type Schema, type SchemaType, type ValidateError, type ValidateErrorItem, type ValidateSchema, type createFetcher, type createUniqueFetcher, type extractErrorMessage, type useNormalFetch as fetchNormal, type useFetchOData as fetchOData, type getPrefetchBridge, type loadChuckStore, monoConfig, monoCookie, monoEnv, monoJwt, monoStorage, monoToken, type parseDxError, type promiseWrapper, setMonoEventResolver, type setPrefetchBridge, type tryCatchDatasource, useMonoUtility as useMonoUtils, useHelper as useUtils };
+export { type Col, type Col as MonoDataGridCol, type CustomSummary, type DataGrid, type DataGrid as MonoDataGridTypes, type FetchLoading, type FetchOData, type FetchParam, type FilterExpression, type Format, type GroupTemplate, type HeaderFilter, type LoopTemplate, type createStaticDatasource as MonoCreateStaticDatasource, type FetchOverrides as MonoFetchOverrides, type NormalFetchOptions as MonoNormalFetchTypes, type NormalFetchOptions, _default as MonoNotifAction, type MonoNotifActionProps as MonoNotifActionPropsTypes, type MonoNotifActionTypes, type MonoNotifButton as MonoNotifButtonTypes, type NotifProps as MonoNotifPropsTypes, type NotifProps, _default$1 as MonoNotivue, type OdataFetchTypes as MonoOdataFetchTypes, type OdataFetchTypes, type OdataFetchUniqueTypes as MonoOdataFetchUniqueTypes, type OdataMapTypes as MonoOdataMapTypes, type OdataMapTypes, type MonoPrefetchBridge, type MonoPrefetchRequest, type MonoRequestEvent, type SchemaObject as MonoSchemaObject, type SchemaObject, type StandardSchemaV1 as MonoStandardSchema, type StandardSchemaV1, type LoadChunkStoreArgs as MonoStoreChunkTypes, type TanstackFetchOptions as MonoTanstackFetchTypes, type TanstackFetchOptions, type TryCatchDatasourceParams as MonoTryCatchDatasourceTypes, type UseOdataStaticOpts as MonoUseOdataStaticTypes, type ValidateErrorComplex as MonoValidateError, type ValidateErrorComplex, type ValidateErrorSingle as MonoValidateErrorSingle, type ValidateErrorSingle, type ValidationSchemaLike as MonoValidationSchema, type ValidationSchemaLike, type NormalFetchResult, type PathValue, type Schema, type SchemaType, type StandardSchemaV1Result, type ValidateError, type ValidateErrorItem, type ValidateSchema, type createFetcher, type createUniqueFetcher, type extractErrorMessage, type useNormalFetch as fetchNormal, type useFetchOData as fetchOData, type getPrefetchBridge, type loadChuckStore, monoConfig, monoCookie, monoEnv, monoJwt, monoStorage, monoToken, type parseDxError, type promiseWrapper, setMonoEventResolver, type setPrefetchBridge, type tryCatchDatasource, useMonoUtility as useMonoUtils, useHelper as useUtils };

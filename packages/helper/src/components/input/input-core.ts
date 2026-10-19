@@ -10,8 +10,12 @@ import type {
   InputSize,
   InputColor,
   InputVariant,
+  InputLabelPosition,
+  InputValidationPosition,
   InputValidationState,
   InputModelEventDetail,
+  InputModelValue,
+  InputFileErrorEventDetail,
   InputCssClass,
 } from './input-types.js'
 import {
@@ -34,6 +38,8 @@ import { cssPart } from '../../composables/css-class'
 import { dispatchMonoEvent } from '../../composables/mono-event'
 import { buildSizeStyle, type CssSizeValue } from '../../composables/css-size'
 import { MonoFormControlCore } from '../form/form-control-core.js'
+import { FieldTooltipController, type FieldTooltipValue } from '../../composables/field-tooltip'
+import { FieldValidationController } from '../../composables/field-validation'
 
 export const numberStringConverter = {
   fromAttribute(value: string | null): number | undefined {
@@ -47,7 +53,23 @@ export const numberStringConverter = {
   },
 }
 
+/**
+ * `modelValue` reflects to `model-value`, but only while it is TEXT — a `type="file"` value is a
+ * `File` / `File[]`, which would otherwise land in the DOM as `"[object File]"`.
+ */
+const modelValueConverter = {
+  fromAttribute(value: string | null): string {
+    return value ?? ''
+  },
+  toAttribute(value: InputModelValue): string | null {
+    return typeof value === 'string' ? value : null
+  },
+}
+
 export type InputSlotName = 'prefix' | 'suffix' | 'label' | 'helper'
+
+/** Glyphs the builds draw: the clear `×`, and the `type="file"` upload cloud. */
+export type InputIconName = 'close' | 'upload'
 
 /** Public surface added by the core mixin (for typing the wrappers + tag map). */
 export declare class MonoInputCoreInterface {
@@ -57,7 +79,11 @@ export declare class MonoInputCoreInterface {
   size: InputSize
   color: InputColor
   variant: InputVariant
-  modelValue: string
+  modelValue: InputModelValue
+  accept: string
+  multiple: boolean
+  maxFileSize?: number
+  showValue: boolean
   formatDisplay?: InputFormat
   formatValue?: InputFormat
   formatOn: InputFormatOn
@@ -67,6 +93,11 @@ export declare class MonoInputCoreInterface {
   placeholder: string
   label: string
   helperText: string
+  tooltip: FieldTooltipValue
+  protected readonly _tooltip: FieldTooltipController
+  protected readonly _validation: FieldValidationController
+  protected get _validationNotice(): { state: string; text: string } | null
+  protected _renderMovedMessage(): TemplateResult
   validationState: InputValidationState
   validationMessage: string
   error: boolean
@@ -111,12 +142,16 @@ export declare class MonoInputCoreInterface {
   protected readonly _resolvedValidationState: InputValidationState
   protected readonly _wrapperClasses: string
   protected readonly _fieldClasses: string
+  protected readonly _isFile: boolean
+  protected readonly _isRange: boolean
   protected _cls(base: string, key: keyof InputCssClass): string
   protected _sizeStyle(): ReturnType<typeof buildSizeStyle>
   protected _renderWrapper(inner: TemplateResult): TemplateResult
   protected _renderNative(): TemplateResult
   protected _renderClear(): TemplateResult | typeof nothing
-  protected renderIcon(name: 'close'): TemplateResult
+  protected _renderFileIcon(): TemplateResult | typeof nothing
+  protected _renderRangeValue(where: 'label' | 'field'): TemplateResult | typeof nothing
+  protected renderIcon(name: InputIconName): TemplateResult
 }
 
 /**
@@ -137,6 +172,8 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
     constructor(...args: any[]) {
       super(...args)
       defineHybridPropAliases(this, [
+        'labelPosition',
+        'validationPosition',
         'modelValue',
         'formatDisplay',
         'formatValue',
@@ -150,6 +187,8 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
         'ariaLabelText',
         'minLength',
         'maxLength',
+        'maxFileSize',
+        'showValue',
         'cssClass',
         'minWidth',
         'maxWidth',
@@ -205,6 +244,8 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
         'arialabel',
         'minlength',
         'maxlength',
+        'maxfilesize',
+        'showvalue',
         'css-class',
         'cssclass',
         'formatdisplay',
@@ -271,6 +312,12 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
         case 'maxlength':
           this.maxLength = this._toOptionalNumber(newValue)
           return
+        case 'maxfilesize':
+          this.maxFileSize = this._toOptionalNumber(newValue)
+          return
+        case 'showvalue':
+          this.showValue = newValue === null ? true : booleanStringConverter.fromAttribute(newValue)
+          return
       }
     }
 
@@ -292,11 +339,46 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
     @property({ type: String })
     variant: InputVariant = 'outlined'
 
-    @property({ type: String, attribute: 'model-value', reflect: true })
-    modelValue = ''
+    /** Where the label sits — see form/label-position.css. */
+    @property({ type: String, attribute: 'label-position' })
+    labelPosition: InputLabelPosition = 'top'
 
+    /** Where the validation message shows — see composables/field-validation.ts. */
+    @property({ type: String, attribute: 'validation-position' })
+    validationPosition: InputValidationPosition = 'bottom'
+
+    /** The text — or, for `type="file"`, the picked `File` / `File[]` (see {@link InputModelValue}). */
+    @property({ attribute: 'model-value', reflect: true, converter: modelValueConverter })
+    modelValue: InputModelValue = ''
+
+    /** What the field shows. For `type="file"` it is the picked file name(s), never the files. */
     @property({ type: String })
     value = ''
+
+    /** `type="file"` — the native `accept` filter, e.g. `"image/*,.pdf"`. */
+    @property({ type: String })
+    accept = ''
+
+    /** `type="file"` — pick several files; `modelValue` becomes `File[]`. */
+    @property({ reflect: true, converter: booleanStringConverter })
+    multiple = false
+
+    /** `type="file"` — files above this many bytes are rejected with an `error` event. */
+    @property({ attribute: 'max-file-size', converter: numberStringConverter })
+    maxFileSize?: number
+
+    /**
+     * `type="range"` — show the value beside the slider. On by default: the EJI ONE guide never
+     * shows a slider without its number. Drawn through `format-display`.
+     */
+    @property({
+      attribute: 'show-value',
+      converter: {
+        // An ABSENT attribute is the default (on); only an explicit `"false"` turns it off.
+        fromAttribute: (v: string | null) => (v === null ? true : booleanStringConverter.fromAttribute(v)),
+      },
+    })
+    showValue = true
 
     /**
      * How the field is DISPLAYED — a pattern string, or a function returning the finished text.
@@ -359,6 +441,43 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
 
     @property({ type: String, attribute: 'helper-text' })
     helperText = ''
+
+    /**
+     * Extra explanation behind an info icon at the end of the label: plain text
+     * (`tooltip="…"`) or full `mono-tooltip` options (`.tooltip=${{ content, placement }}`).
+     * Needs the optional `@floating-ui/dom` + `@floating-ui/core` peers — without
+     * them no icon renders. Shown only beside a label.
+     */
+    @property()
+    tooltip: FieldTooltipValue = null
+
+    protected readonly _tooltip = new FieldTooltipController(this, () => this.tooltip)
+
+    /** `validation-position="icon" | "float"` — the icon in the box and the floating message. */
+    protected readonly _validation = new FieldValidationController(
+      this,
+      () => ({ position: this.validationPosition, ...(this._validationNotice ?? { state: undefined, text: undefined }) }),
+      () => (this.renderRoot as ParentNode | undefined)?.querySelector?.('[mono-input] > [mono-field]'),
+    )
+
+    /** The validation message and its state — the same precedence the message row uses. */
+    protected get _validationNotice(): { state: string; text: string } | null {
+      if (this.validationMessage) return { state: this._resolvedValidationState, text: this.validationMessage }
+      if (this.errorMessage) return { state: 'invalid', text: this.errorMessage }
+      if (this.successMessage) return { state: 'valid', text: this.successMessage }
+      return null
+    }
+
+    /** The message that moved to the icon / float bubble, kept for assistive tech only. */
+    protected _renderMovedMessage(): TemplateResult {
+      const notice = this._validationNotice!
+      return html`<div
+        class=${`${this._cls('mono-input-message', 'message')} ${notice.state}`}
+        mono-message=${notice.state}
+        mono-sr-only
+        role=${notice.state === 'invalid' ? 'alert' : nothing}
+      >${notice.text}</div>`
+    }
 
     @property({ type: String, attribute: 'validation-state' })
     validationState: InputValidationState = 'default'
@@ -441,6 +560,10 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
     @query('.mono-input-native')
     protected _inputEl!: HTMLInputElement
 
+    /** `type="file"` — the hidden native picker behind the read-only name field. */
+    @query('[mono-file-input]')
+    protected _fileEl?: HTMLInputElement
+
     /**
      * What the native input SHOWS. Kept separate from `value` / `modelValue`, which carry the
      * VALUE — that separation is what lets the existing `willUpdate` mirror keep those two in
@@ -479,8 +602,24 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
     protected readonly _messageId = `${this._inputId}-message`
 
     override willUpdate(changed: Map<string, unknown>): void {
+      // `type="file"`: the value is File(s), the field shows their names. One direction only —
+      // `value` is display text there, so writing it never produces a file.
+      if (this._isFile) {
+        if (changed.has('modelValue') || changed.has('type')) {
+          const files = this._fileList()
+          const names = this._fileNames(files)
+          this.value = names
+          this._display = names
+          // Emptied from outside (a form reset, a v-model cleared): drop the native selection
+          // too, or re-picking the same file would fire no `change`.
+          if (!files.length && this._fileEl) this._fileEl.value = ''
+        }
+        this._internalWrite = false
+        return
+      }
+
       if (changed.has('modelValue') && this.value !== this.modelValue) {
-        this.value = this.modelValue ?? ''
+        this.value = typeof this.modelValue === 'string' ? this.modelValue : ''
       }
       if (changed.has('value') && this.modelValue !== this.value) {
         this.modelValue = String(this.value ?? '')
@@ -548,7 +687,7 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
         this.readonly ? 'readonly' : '',
         this._resolvedValidationState !== 'default' ? `is-${this._resolvedValidationState}` : '',
         this._hasPrefixSlot ? 'has-prefix' : '',
-        this._hasSuffixSlot || this.clearable ? 'has-suffix' : '',
+        this._hasSuffixSlot || this.clearable || this._isFile ? 'has-suffix' : '',
         this.value ? 'has-value' : '',
         this.cssClassName,
         this.cssClass?.root,
@@ -567,19 +706,150 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
         this.readonly ? 'readonly' : '',
         this._resolvedValidationState !== 'default' ? `is-${this._resolvedValidationState}` : '',
         this._hasPrefixSlot ? 'has-prefix' : '',
-        this._hasSuffixSlot || this.clearable ? 'has-suffix' : '',
+        this._hasSuffixSlot || this.clearable || this._isFile ? 'has-suffix' : '',
         this.value ? 'has-value' : '',
       ]
         .filter(Boolean)
         .join(' ')
     }
 
+    protected get _isFile(): boolean {
+      return this.type === 'file'
+    }
+
+    protected get _isRange(): boolean {
+      return this.type === 'range'
+    }
+
+    /** `min` / `max` / `step` as the native range resolves them (0 / 100 / 1 when unset). */
+    protected _rangeBounds(): { min: number; max: number; step: number } {
+      const min = this._toOptionalNumber(this.min) ?? 0
+      const rawMax = this._toOptionalNumber(this.max) ?? 100
+      const max = rawMax < min ? min : rawMax
+      const step = this._toOptionalNumber(this.step)
+      return { min, max, step: step && step > 0 ? step : 1 }
+    }
+
+    /**
+     * The value the slider is actually AT, as a string. An empty value is not a position — the
+     * native range parks itself at the midpoint — so the readout and the fill follow the native
+     * rule rather than reading `''` as 0. The model is not rewritten: nothing was chosen yet.
+     */
+    protected get _rangeValue(): string {
+      const { min, max, step } = this._rangeBounds()
+      const typed = this._toOptionalNumber(this.value)
+      const target = typed ?? min + (max - min) / 2
+      const snapped = min + Math.round((target - min) / step) * step
+      const clamped = Math.min(max, Math.max(min, snapped))
+      // Strip float noise (0.1 + 0.2) without losing a fractional step.
+      return String(Number(clamped.toFixed(10)))
+    }
+
+    /** How far along the track the value sits, 0–100 — drives the fill. */
+    protected get _rangeProgress(): number {
+      const { min, max } = this._rangeBounds()
+      if (max === min) return 0
+      return ((Number(this._rangeValue) - min) / (max - min)) * 100
+    }
+
+    /** The readout text: the value drawn through `format-display`. */
+    protected get _rangeText(): string {
+      return this._formatDisplay(this._rangeValue, { pad: true })
+    }
+
+    /**
+     * A native range ignores `readonly`, so a readonly slider would still move. Put the thumb
+     * back where the value says and report that the event was handled.
+     */
+    protected _revertReadonlyRange(event: Event): boolean {
+      if (!this._isRange || !this.readonly || this.disabled) return false
+      ;(event.currentTarget as HTMLInputElement).value = this._rangeValue
+      // The native event would still bubble to the host with a value that never happened.
+      event.stopPropagation()
+      return true
+    }
+
+    /** `modelValue` as an array of files, whatever shape it arrived in (File, File[], null, ''). */
+    protected _fileList(): File[] {
+      const isFile = (v: unknown): v is File =>
+        !!v && typeof v === 'object' && typeof (v as File).name === 'string'
+      const v = this.modelValue
+      if (Array.isArray(v)) return v.filter(isFile)
+      return isFile(v) ? [v] : []
+    }
+
+    protected _fileNames(files: File[]): string {
+      return files.map((f) => f.name).join(', ')
+    }
+
+    protected _openFilePicker(): void {
+      if (this.disabled || this.readonly) return
+      this._fileEl?.click()
+    }
+
+    protected _handleFileKeydown(event: KeyboardEvent): void {
+      if (event.key !== 'Enter' && event.key !== ' ') return
+      event.preventDefault()
+      this._openFilePicker()
+    }
+
+    /** Files above `maxFileSize` are dropped, each one reported through `error`. */
+    protected _acceptFiles(files: File[], sourceEvent: Event): File[] {
+      const limit = this.maxFileSize
+      if (!limit || limit <= 0) return files
+      return files.filter((file) => {
+        if (file.size <= limit) return true
+        const detail: InputFileErrorEventDetail = {
+          message: `File "${file.name}" exceeds the maximum size limit.`,
+          reason: 'max-file-size',
+          file,
+          maxFileSize: limit,
+          sourceEvent,
+        }
+        // Plain `error` goes out non-bubbling (mono-event's rule), like mono-file-upload's.
+        dispatchMonoEvent(this, 'error', detail)
+        return false
+      })
+    }
+
+    /**
+     * The picker's native `input` fires BEFORE its `change`, i.e. before the value below is
+     * written — left to bubble, a host `@input` (and a bound form) would read the OLD value. Our
+     * own `input` is emitted from the change handler instead.
+     */
+    protected _swallowNativeInput(event: Event): void {
+      event.stopPropagation()
+    }
+
+    protected _handleFileChange(event: Event): void {
+      // The native `change` is left to bubble: `dispatchMonoEvent` decorates it with the detail.
+      if (this.disabled || this.readonly) return
+      const input = event.currentTarget as HTMLInputElement
+      const files = this._acceptFiles(Array.from(input.files ?? []), event)
+      if (!files.length) {
+        // Everything was rejected: keep the previous pick, and let the same file be re-picked.
+        input.value = ''
+        return
+      }
+
+      this._internalWrite = true
+      const oldValue = this.modelValue
+      const nextValue: InputModelValue = this.multiple ? files : files[0]
+      this.modelValue = nextValue
+      this.value = this._display = this._fileNames(files)
+
+      const detail = this._createModelDetail({ modelValue: nextValue, oldValue, sourceEvent: event })
+      this._emitInput(detail)
+      this._emitChange(detail)
+    }
+
     protected _createModelDetail(args: {
-      modelValue: string
-      oldValue: string
+      modelValue: InputModelValue
+      oldValue: InputModelValue
       sourceEvent?: Event
     }): InputModelEventDetail {
       return {
+        ...(this._isFile ? { files: this._fileList() } : {}),
         modelValue: args.modelValue,
         currentValue: args.modelValue,
         oldValue: args.oldValue,
@@ -758,12 +1028,14 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
     }
 
     protected _handleInput(event: Event): void {
+      if (this._revertReadonlyRange(event)) return
       if (this.disabled || this.readonly) return
       this._internalWrite = true
       const input = event.currentTarget as HTMLInputElement
       const oldValue = this.modelValue
 
-      if (!this._hasFormat) {
+      // A range's native value is always a bare number — `format-display` only shapes its readout.
+      if (!this._hasFormat || this._isRange) {
         const nextValue = input.value
         this.value = nextValue
         this.modelValue = nextValue
@@ -792,12 +1064,13 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
     }
 
     protected _handleChange(event: Event): void {
+      if (this._revertReadonlyRange(event)) return
       if (this.disabled || this.readonly) return
       this._internalWrite = true
       const input = event.currentTarget as HTMLInputElement
       const oldValue = this.modelValue
 
-      if (!this._hasFormat) {
+      if (!this._hasFormat || this._isRange) {
         const nextValue = input.value
         this.value = nextValue
         this.modelValue = nextValue
@@ -830,6 +1103,20 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
       if (this.disabled || this.readonly) return
       this._internalWrite = true
       const oldValue = this.modelValue
+
+      if (this._isFile) {
+        const empty: InputModelValue = this.multiple ? [] : null
+        this.modelValue = empty
+        this.value = this._display = ''
+        if (this._fileEl) this._fileEl.value = ''
+        this._inputEl?.focus()
+        const detail = this._createModelDetail({ modelValue: empty, oldValue })
+        this._emitInput(detail)
+        this._emitChange(detail)
+        this._emitClear(detail)
+        return
+      }
+
       const nextValue = ''
       this.value = nextValue
       this.modelValue = nextValue
@@ -863,7 +1150,10 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
         mono-size=${this.size === 'md' ? nothing : this.size}
         mono-color=${this.color === 'primary' ? nothing : this.color}
         mono-variant=${this.variant === 'outlined' ? nothing : this.variant}
+        mono-label-position=${this.labelPosition === 'top' ? nothing : this.labelPosition}
+        mono-validation-position=${this.validationPosition === 'bottom' ? nothing : this.validationPosition}
         mono-validation-state=${state === 'default' ? nothing : state}
+        mono-type=${this._isFile || this._isRange ? this.type : nothing}
         ?mono-disabled=${this.disabled}
         ?mono-readonly=${this.readonly}
         ?mono-required=${this.required}
@@ -887,8 +1177,115 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
         : undefined
     }
 
+    /**
+     * `type="file"`: a hidden native picker, and in front of it a read-only text input showing
+     * the picked name(s). The text input keeps `mono-native` + `.mono-input-native`, so focus,
+     * the label's `for`, sizing and the focus ring all behave exactly as on a text field.
+     */
+    protected _renderFileNative(): TemplateResult {
+      return html`
+        <input
+          type="file"
+          mono-file-input
+          hidden
+          tabindex="-1"
+          accept=${ifDefined(this.accept || undefined)}
+          ?multiple=${this.multiple}
+          name=${ifDefined(this.name || undefined)}
+          ?disabled=${this.disabled}
+          @input=${this._swallowNativeInput}
+          @change=${this._handleFileChange}
+        />
+        <input
+          id=${this._inputId}
+          class=${`${this._cls('mono-input-native', 'native')} ${this.size}`}
+          mono-native
+          mono-file
+          type="text"
+          readonly
+          .value=${this._display}
+          placeholder=${ifDefined(this.placeholder || undefined)}
+          ?disabled=${this.disabled}
+          ?required=${this.required}
+          aria-label=${ifDefined(this._ariaLabel)}
+          aria-invalid=${this._resolvedValidationState === 'invalid' ? 'true' : 'false'}
+          aria-describedby=${ifDefined(this._describedBy)}
+          aria-haspopup="dialog"
+          @focus=${this._handleFocus}
+          @blur=${this._handleBlur}
+          @click=${this._openFilePicker}
+          @keydown=${this._handleFileKeydown}
+        />
+      `
+    }
+
+    /** `type="file"` — the upload glyph at the end of the field; clicking it opens the picker too. */
+    protected _renderFileIcon(): TemplateResult | typeof nothing {
+      if (!this._isFile) return nothing
+      return html`
+        <span
+          class=${this._cls('mono-input-suffix', 'fileIcon')}
+          mono-suffix
+          mono-file-icon
+          aria-hidden="true"
+          @click=${this._openFilePicker}
+        >${this.renderIcon('upload')}</span>
+      `
+    }
+
+    /**
+     * `type="range"`: Basecoat's slider. The fill is a gradient stop on the track, so the element
+     * writes the position as `--mono-input-range-value` (Basecoat's `--slider-value`) — hand-written
+     * markup sets the same property itself.
+     */
+    protected _renderRangeNative(): TemplateResult {
+      const { min, max, step } = this._rangeBounds()
+      const text = this._rangeText
+      return html`
+        <input
+          id=${this._inputId}
+          class=${`${this._cls('mono-input-native', 'native')} ${this.size}`}
+          mono-native
+          mono-range
+          type="range"
+          min=${min}
+          max=${max}
+          step=${ifDefined(this.step == null ? undefined : step)}
+          .value=${this._rangeValue}
+          name=${ifDefined(this.name || undefined)}
+          style=${`--mono-input-range-value: ${this._rangeProgress}%`}
+          ?disabled=${this.disabled}
+          ?required=${this.required}
+          aria-label=${ifDefined(this._ariaLabel)}
+          aria-valuetext=${ifDefined(text !== this._rangeValue ? text : undefined)}
+          aria-readonly=${ifDefined(this.readonly ? 'true' : undefined)}
+          aria-invalid=${this._resolvedValidationState === 'invalid' ? 'true' : 'false'}
+          aria-describedby=${ifDefined(this._describedBy)}
+          @focus=${this._handleFocus}
+          @blur=${this._handleBlur}
+          @input=${this._handleInput}
+          @change=${this._handleChange}
+        />
+      `
+    }
+
+    /**
+     * `type="range"` — the value readout. It sits at the end of the LABEL row when there is a
+     * label (the EJI ONE layout), and after the slider when there is not; each build calls this
+     * from both places and exactly one of them renders. `aria-hidden`: the slider already
+     * announces its value (`aria-valuetext` carries the formatted text).
+     */
+    protected _renderRangeValue(where: 'label' | 'field'): TemplateResult | typeof nothing {
+      if (!this._isRange || !this.showValue) return nothing
+      const inLabel = !!(this.label || this._hasLabelSlot)
+      if ((where === 'label') !== inLabel) return nothing
+      return html`<span class=${this._cls('mono-input-range-value', 'rangeValue')} mono-range-value aria-hidden="true">${this._rangeText}</span>`
+    }
+
     /** The native <input>, shared by both builds' render(). */
     protected _renderNative(): TemplateResult {
+      if (this._isFile) return this._renderFileNative()
+      if (this._isRange) return this._renderRangeNative()
       return html`
         <input
           id=${this._inputId}
@@ -922,7 +1319,8 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
 
     /** The clear button (uses the build-specific icon). */
     protected _renderClear(): TemplateResult | typeof nothing {
-      if (!(this.clearable && this.value && !this.disabled && !this.readonly)) {
+      // A slider always has a position, so there is nothing to clear.
+      if (this._isRange || !(this.clearable && this.value && !this.disabled && !this.readonly)) {
         return nothing
       }
       return html`
@@ -942,7 +1340,7 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
      * Icon hook — overridden per build. Light: global `.mono-icon`/`i-mdi-*`
      * UnoCSS icon. Shadow: inline SVG (global icon CSS can't reach a shadow root).
      */
-    protected renderIcon(_name: 'close'): TemplateResult {
+    protected renderIcon(_name: InputIconName): TemplateResult {
       return html``
     }
 

@@ -4,7 +4,7 @@ import { a as defineHybridPropAliases, o as numberStringConverter, r as booleanS
 import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
 import { a as rateLimitHasChanged } from "../rate-limit-e9Jlpl5l.js";
 import { n as button_css_raw_default } from "../mono-button-CeDB9khW.js";
-import { t as PopupPortalController } from "../popup-portal-HWhkd7oy.js";
+import { t as PopupPortalController } from "../popup-portal-C8ttHDRX.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { ref } from "lit/directives/ref.js";
 import { property, state } from "lit/decorators.js";

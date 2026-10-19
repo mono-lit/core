@@ -2,7 +2,7 @@
 
 import { LitElement, html, nothing, isServer, unsafeCSS, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
-import { MonoInputCore } from './input-core.js'
+import { MonoInputCore, type InputIconName } from './input-core.js'
 
 import inputCss from './input.css?raw'
 import { placeSlotNode } from '../../composables/light-slots'
@@ -130,7 +130,10 @@ export class MonoInput extends MonoInputCore(LitElement) {
     }
   }
 
-  protected override renderIcon(_name: 'close'): TemplateResult {
+  protected override renderIcon(name: InputIconName): TemplateResult {
+    if (name === 'upload') {
+      return html`<span class="mono-icon i-mdi-cloud-upload-outline" mono-icon aria-hidden="true"></span>`
+    }
     return html`<span class="mono-icon i-mdi-close" mono-icon aria-hidden="true"></span>`
   }
 
@@ -142,12 +145,16 @@ export class MonoInput extends MonoInputCore(LitElement) {
         ${this.required
           ? html`<span class=${this._cls('mono-input-required', 'required')} mono-required-mark>*</span>`
           : nothing}
+        ${this._tooltip.render()}
+        ${this._renderRangeValue('label')}
       </label>
     `
   }
 
   private _renderHelper(): TemplateResult | typeof nothing {
     const base = this._cls('mono-input-message', 'message')
+    // validation-position icon / float: the row keeps the helper; the message moved.
+    if (this._validation.moved) return html`${this._renderHelperText(base)}${this._renderMovedMessage()}`
     if (this.validationMessage) {
       const state = this._resolvedValidationState
       return html`<div class=${`${base} ${state}`} mono-message=${state} role=${state === 'invalid' ? 'alert' : nothing}>${this.validationMessage}</div>`
@@ -158,6 +165,10 @@ export class MonoInput extends MonoInputCore(LitElement) {
     if (this.successMessage) {
       return html`<div class=${`${base} valid`} mono-message="valid">${this.successMessage}</div>`
     }
+    return this._renderHelperText(base)
+  }
+
+  private _renderHelperText(base: string): TemplateResult | typeof nothing {
     if (this.helperText || this._hasHelperSlot) {
       return html`<div class=${`${base} helper`} mono-message="helper">${this._hasHelperSlot ? html`<span data-mono-slot="helper"></span>` : this.helperText}</div>`
     }
@@ -172,7 +183,10 @@ export class MonoInput extends MonoInputCore(LitElement) {
             ? html`<span class=${this._cls('mono-input-prefix', 'prefix')} mono-prefix><span data-mono-slot="prefix"></span></span>`
             : nothing}
           ${this._renderNative()}
+          ${this._renderRangeValue('field')}
+          ${this._validation.renderIcon()}
           ${this._renderClear()}
+          ${this._renderFileIcon()}
           ${this._hasSuffixSlot
             ? html`<span class=${this._cls('mono-input-suffix', 'suffix')} mono-suffix><span data-mono-slot="suffix"></span></span>`
             : nothing}
@@ -180,6 +194,7 @@ export class MonoInput extends MonoInputCore(LitElement) {
         <div id=${this._messageId} class=${this.cssClass?.messageWrap ?? ''} mono-message-wrap>
           ${this._renderHelper()}
         </div>
+        ${this._validation.renderFloat()}
     `)
   }
 }

@@ -23,6 +23,10 @@ export type SelectColor =
   | 'dark'
 
 export type SelectVariant = 'outlined' | 'filled' | 'underlined'
+/** Where the label sits: above the box (default), notched into its top border (inset for filled / underlined), or beside it. */
+export type SelectLabelPosition = 'top' | 'notched' | 'left' | 'right'
+/** Where the validation message shows: under the box (default), behind a state icon inside it, or floating under it on hover / focus. */
+export type SelectValidationPosition = 'bottom' | 'icon' | 'float'
 
 export type SelectValidationState =
   | 'default'
@@ -60,6 +64,7 @@ import type {
   MonoDataSource,
   LoadMoreMode,
 } from '../../composables/data-source-controller'
+import type { MonoTooltipOptions } from '../tooltip/tooltip-types'
 import type { VisibilityProps } from '../../composables/visibility'
 import type { MonoSearchValue } from '../../search/data-search'
 
@@ -253,6 +258,24 @@ export interface SelectProps extends VisibilityProps {
   color?: SelectColor
   /** Visual style variant of the select. */
   variant?: SelectVariant
+  /**
+   * Where the label sits: `top` (above the box, default), `notched` (on the top
+   * border for outlined; inset inside the box for filled / underlined), or
+   * `left` / `right` of the box. Knobs: `--mono-select-label-width`, `-label-side-gap`,
+   * `-label-notch-font-size`, `-label-notch-bg`.
+   */
+  labelPosition?: SelectLabelPosition
+  'label-position'?: SelectLabelPosition
+  labelposition?: SelectLabelPosition
+  /**
+   * Where the validation message shows. `bottom` (default): the row under the box.
+   * `icon`: a state icon inside the box; hover / tap / keyboard focus shows the message in
+   * a state-coloured bubble. `float`: the message floats under the box only while the field
+   * is hovered or focused. In `icon` / `float` the row under the box keeps the helper text.
+   */
+  validationPosition?: SelectValidationPosition
+  'validation-position'?: SelectValidationPosition
+  validationposition?: SelectValidationPosition
 
   /** Text label shown above the select. */
   label?: string
@@ -262,6 +285,14 @@ export interface SelectProps extends VisibilityProps {
   helperText?: string
   'helper-text'?: string
   helpertext?: string
+  /**
+   * Info icon at the end of the label; hovering, focusing or tapping it shows this text.
+   * Plain text → a small built-in bubble (no dependency). Full tooltip options
+   * (`:tooltip.prop="{ content, placement, color }"`) → a `mono-tooltip`, which needs the
+   * optional `@floating-ui/dom` + `@floating-ui/core` peers (without them that form renders
+   * no icon). Shown only beside a label.
+   */
+  tooltip?: string | MonoTooltipOptions
 
   /** Validation state controlling the select's appearance. */
   validationState?: SelectValidationState

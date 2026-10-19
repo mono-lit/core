@@ -1,5 +1,5 @@
 import { Constructor } from "../../composables/hybird-prop.js";
-import { MonoInputCoreInterface } from "./input-core.js";
+import { InputIconName, MonoInputCoreInterface } from "./input-core.js";
 import { LitElement, TemplateResult } from "lit";
 //#region src/components/input/mono-input.shadow.d.ts
 declare const MonoInputShadow_base: Constructor<MonoInputCoreInterface> & typeof LitElement;
@@ -28,9 +28,10 @@ export declare class MonoInputShadow extends MonoInputShadow_base {
   private _slotHasContent;
   private _setSlotState;
   private _onSlotChange;
-  protected renderIcon(_name: 'close'): TemplateResult;
+  protected renderIcon(name: InputIconName): TemplateResult;
   private _renderLabel;
   private _renderHelper;
+  private _renderHelperText;
   protected render(): TemplateResult;
   connectedCallback(): void;
 }

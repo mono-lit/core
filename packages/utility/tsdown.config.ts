@@ -8,7 +8,7 @@ dotenv.config()
 // is consumed as a symlinked git dep, so Vite serves it raw from node_modules and
 // never crawls/optimizes it — any bare `import "<cjs-pkg>"` it emits reaches the
 // browser unoptimized and throws "doesn't provide an export named ..." for CJS
-// packages (yup→tiny-case, @odata2ts/http-client-fetch). Bundling them at build
+// packages (@odata2ts/http-client-fetch). Bundling them at build
 // makes the dist self-contained ESM (rolldown converts the CJS to ESM), so no
 // runtime interop is needed. tsdown's `deps.alwaysBundle` is checked before the
 // package.json production-deps externalization, so listed peers get bundled.
@@ -16,10 +16,6 @@ dotenv.config()
 // glob matcher (picomatch) mishandles scoped names like `@odata2ts/...`, so we
 // match explicitly (exact, subpath, or RegExp).
 const ALWAYS_BUNDLE: (string | RegExp)[] = [
-  // yup + its CJS transitive `tiny-case`. The app keeps its OWN yup for authoring
-  // schemas (app-source import → Vite optimizes it normally); same version →
-  // schemas interop across the two instances.
-  'yup',
   // @odata2ts/http-client-fetch (CJS) + its only dep @odata2ts/http-client-base —
   // stateless HTTP-client wrappers used by @mono-lit/utility's fetching helpers. NOT the
   // app's `@odata2ts/odata-service` / `odata-query-objects` (those stay external,
@@ -66,7 +62,7 @@ export default defineConfig({
   // `platform: "neutral"` resolves only `module`/`browser` entry fields, so a
   // CJS-only package with just a `main` (e.g. @odata2ts/http-client-fetch) fails to
   // resolve and gets externalized — defeating `deps.alwaysBundle`. Append `main`
-  // (last, so ESM `module` still wins for dual packages like yup) so CJS-only deps
+  // (last, so ESM `module` still wins for dual packages) so CJS-only deps
   // we alwaysBundle actually inline.
   inputOptions(options) {
     options.resolve = {
@@ -78,7 +74,7 @@ export default defineConfig({
   deps: {
     // Function form: tsdown's default matcher (picomatch) mishandles scoped names,
     // so match our patterns explicitly. Checked BEFORE package.json prod-deps are
-    // externalized, so listed peers (yup, @odata2ts/http-client-*) get inlined.
+    // externalized, so listed peers (@odata2ts/http-client-*) get inlined.
     alwaysBundle: (id: string) =>
       ALWAYS_BUNDLE.some((p) => (p instanceof RegExp ? p.test(id) : id === p || id.startsWith(p + '/'))),
     neverBundle: [
@@ -103,7 +99,11 @@ export default defineConfig({
 
       // app-supplied runtime deps re-exposed via @mono-lit/utility/runtime
       "notivue",
-      // (yup is now alwaysBundle'd — see ALWAYS_BUNDLE — so it's NOT external.)
+      // Schema libraries (yup, valibot, …) are never imported at runtime: the
+      // validation helpers drive the app's own schema objects (see
+      // src/core/composables/schema-validate.ts). Listed so a stray import stays external.
+      "yup",
+      "valibot",
 
       // The core fetch layer's (src/core) heavy runtime deps — keep them
       // external (apps already install these for OData/grid fetching). Regexes cover

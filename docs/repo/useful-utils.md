@@ -37,10 +37,10 @@ App runtime: config, state, cookies, JWT, and the helper bundles.
 | Helper | Signature | What it does |
 | --- | --- | --- |
 | `notif` | `notif(options): Promise<void>` | Success / info / warning / error / promise toast, optional routing + redirect. |
-| `validateAllSchema` | `({ schema, input, error }, cb?): Promise<boolean>` | Validate a whole form object against a Yup schema. |
-| `validateSchema` | `({ schema, field, input, error }, cb?): Promise<boolean>` | Validate a single field. |
+| `validateAllSchema` | `({ schema, input, error }, cb?): Promise<boolean>` | Validate a whole form against a Yup or Valibot (any Standard Schema) schema. `true` = valid; `cb` runs only then. |
+| `validateSchema` | `({ schema, field, input, error }, cb?): Promise<boolean>` | Validate a single field (`'address.city'` / `'items[0].name'` allowed). `true` = valid. |
 | `validateAllSchemaCheck` | `(error): boolean` | `true` if any field is currently invalid. |
-| `clearSchemaValidation` | `({ error })` | Recursively reset all errors. |
+| `clearSchemaValidation` | `({ error })` | Recursively reset all errors (Ref or plain object). |
 | `replacerData` | `({ fn, type, item, key, items })` | Add / update / remove a row in an array or a DevExtreme DataSource. |
 | `filterOrIn` | `(field, values, combine?)` | Build an OData `in` / chained `or` filter. |
 | `dxFilterToString` | `({ filter, encode? })` | DevExtreme filter object → OData v4 `$filter` string. |
@@ -81,7 +81,7 @@ public Northwind endpoint answers
 `Microsoft.OData.Core.ODataException: Syntax error at position 10` — while
 TripPin accepts it.
 
-Yup is an optional peer — see the [Yup](../addons/yup) and [Notivue](../addons/notivue) addons.
+Yup and Valibot are optional peers — see the [Yup](../addons/yup), [Valibot](../addons/valibot) and [Notivue](../addons/notivue) addons.
 
 ## `@mono-lit/utility/fetching`
 

@@ -38,6 +38,12 @@ export interface PopupLayer {
    * underneath the very dialog it belongs to.
    */
   readonly pinnedZ?: number;
+  /**
+   * True when an event's composed path lands inside THIS layer — its own
+   * surface and any popup opened from within it, never the layers above it.
+   * What `pathInLayerAbove` asks each layer stacked over another one.
+   */
+  containsEventPath?(path: EventTarget[]): boolean;
 }
 /** Add a layer to the top of the stack (call on open). */
 export declare function registerPopupLayer(layer: PopupLayer): void;
@@ -69,4 +75,19 @@ export declare function setExternalScrollLock(owner: object, wanted: boolean): v
  * own type — filter the returned list by `instanceof`.
  */
 export declare function getOpenPopupLayers(): readonly PopupLayer[];
+/**
+ * True when an event's composed path lands inside a layer opened AFTER `layer`
+ * — one stacked above it.
+ *
+ * The other half of the "topmost only" rule modal and drawer apply to their own
+ * outside click. A dropdown open under a dialog that was opened from its panel
+ * (a figure in a tag-input option opening a breakdown modal) must not read a
+ * click or focus in that dialog as "outside": the dialog is not behind the
+ * panel, it is on top of it. Ownership (`pathOwnedBy`) cannot tell, because the
+ * dialog's element usually lives elsewhere on the page, not inside the panel.
+ *
+ * A layer opened BEFORE `layer` (the modal a dropdown sits in) is below it and
+ * does not count, so a click in that modal's body still closes the dropdown.
+ */
+export declare function pathInLayerAbove(layer: PopupLayer, path: EventTarget[]): boolean;
 //#endregion

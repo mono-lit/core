@@ -1,9 +1,40 @@
-import type { ObjectSchema, Schema } from "yup";
+import type * as yup from "yup";
+
+/**
+ * Minimal Standard Schema v1 shape (https://standardschema.dev) — what Valibot,
+ * Zod, ArkType, … expose as `schema["~standard"]`. Inlined so no schema library
+ * is a type dependency.
+ */
+export interface StandardSchemaV1<Input = unknown, Output = Input> {
+    readonly "~standard": {
+        readonly version: 1;
+        readonly vendor: string;
+        readonly validate: (value: unknown) =>
+            | StandardSchemaV1Result<Output>
+            | Promise<StandardSchemaV1Result<Output>>;
+        readonly types?: { readonly input: Input; readonly output: Output } | undefined;
+    };
+}
+
+export type StandardSchemaV1Result<Output> =
+    | { readonly value: Output; readonly issues?: undefined }
+    | {
+        readonly issues: ReadonlyArray<{
+            readonly message: string;
+            readonly path?: ReadonlyArray<PropertyKey | { readonly key: PropertyKey }> | undefined;
+        }>;
+    };
+
+/** A yup schema or any Standard Schema (Valibot, Zod, …). */
+export type ValidationSchemaLike = yup.AnySchema | yup.AnyObjectSchema | StandardSchemaV1<any, any>;
 
 export interface ValidateSchema<T = any> {
-    schema: any;
-    field?: keyof T;
+    /** yup schema or any Standard Schema (Valibot, Zod, …) */
+    schema: ValidationSchemaLike | any;
+    /** field to validate; dotted / indexed paths allowed (`"address.city"`, `"items[0].name"`) */
+    field?: keyof T | (string & {});
     input: T;
+    /** `{ valid, message }` slots mirroring `input` (object or Ref) */
     error: any;
 }
 
@@ -20,7 +51,7 @@ type WithUndefined<T> = {
 
 export interface SchemaType<T> extends WithUndefined<T> { }
 
-export interface Schema<T> extends ObjectSchema<SchemaType<T>> { }
+export interface Schema<T> extends yup.ObjectSchema<SchemaType<T>> { }
 
 type AnyObject = yup.AnyObject;
 

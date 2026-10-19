@@ -1,17 +1,29 @@
 import { VisibilityProps } from "../../composables/visibility.js";
+import { MonoTooltipOptions } from "../tooltip/tooltip-types.js";
 import { InputFormat, InputFormatCtx, InputFormatOn } from "./input-format.js";
 //#region src/components/input/input-types.d.ts
-export type InputType = 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'date' | 'time' | 'month' | 'week' | 'search';
+export type InputType = 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'date' | 'time' | 'month' | 'week' | 'search' | 'file' | 'range';
 export type InputSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 export type InputVariant = 'outlined' | 'filled' | 'underlined';
+/** Where the label sits: above the box (default), notched into its top border (inset for filled / underlined), or beside it. */
+export type InputLabelPosition = 'top' | 'notched' | 'left' | 'right';
+/** Where the validation message shows: under the box (default), behind a state icon inside it, or floating under it on hover / focus. */
+export type InputValidationPosition = 'bottom' | 'icon' | 'float';
 export type InputColor = 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'info' | 'teal' | 'purple' | 'neutral' | 'dark';
 export type InputValidationState = 'default' | 'valid' | 'invalid' | 'warning';
+/**
+ * What `modelValue` holds: the text for every text-like type; for `type="file"` the picked
+ * `File` (`null` when empty), or `File[]` with `multiple`.
+ */
+export type InputModelValue = string | File | File[] | null;
 export type InputModelEventDetail = {
-  modelValue: string;
-  currentValue: string;
-  oldValue: string;
-  value: string;
+  modelValue: InputModelValue;
+  currentValue: InputModelValue;
+  oldValue: InputModelValue;
+  value: InputModelValue;
   name?: string;
+  /** `type="file"` only — the picked files, always as an array. */
+  files?: File[];
   sourceEvent?: Event;
   /** What the field is SHOWING — differs from `value` once a `format-display` is set. */
   displayValue?: string;
@@ -25,10 +37,23 @@ export interface InputCssClass {
   native?: string;
   clear?: string;
   suffix?: string;
+  /** `type="file"` — the upload icon at the end of the field. */
+  fileIcon?: string;
+  /** `type="range"` — the value readout (end of the label row, or after the slider). */
+  rangeValue?: string;
   messageWrap?: string;
   message?: string;
 }
 export type InputModelEvent = CustomEvent<InputModelEventDetail>;
+/** `type="file"` — a picked file was rejected (same shape as `mono-file-upload`'s `error`). */
+export type InputFileErrorEventDetail = {
+  message: string;
+  reason: 'max-file-size';
+  file?: File;
+  maxFileSize?: number;
+  sourceEvent?: Event;
+};
+export type InputFileErrorEvent = CustomEvent<InputFileErrorEventDetail>;
 export interface InputProps extends VisibilityProps {
   /** Native input type controlling the field's behavior and keyboard. */
   type?: InputType;
@@ -38,16 +63,54 @@ export interface InputProps extends VisibilityProps {
   color?: InputColor;
   /** Visual style of the field (outlined, filled, or underlined). */
   variant?: InputVariant;
+  /**
+   * Where the label sits: `top` (above the box, default), `notched` (on the top
+   * border for outlined; inset inside the box for filled / underlined), or
+   * `left` / `right` of the box. Knobs: `--mono-input-label-width`, `-label-side-gap`,
+   * `-label-notch-font-size`, `-label-notch-bg`.
+   */
+  labelPosition?: InputLabelPosition;
+  'label-position'?: InputLabelPosition;
+  labelposition?: InputLabelPosition;
+  /**
+   * Where the validation message shows. `bottom` (default): the row under the box.
+   * `icon`: a state icon inside the box; hover / tap / keyboard focus shows the message in
+   * a state-coloured bubble. `float`: the message floats under the box only while the field
+   * is hovered or focused. In `icon` / `float` the row under the box keeps the helper text.
+   */
+  validationPosition?: InputValidationPosition;
+  'validation-position'?: InputValidationPosition;
+  validationposition?: InputValidationPosition;
   /** Placeholder text shown when the field is empty. */
   placeholder?: string;
   /** Current input value. */
   value?: string | number;
   /** Form field name submitted with the input. */
   name?: string;
-  /** Two-way bound value for v-model-style usage. */
-  modelValue?: string;
-  'model-value'?: string;
-  modelvalue?: string;
+  /**
+   * Two-way bound value for v-model-style usage. For `type="file"` it is the picked `File`
+   * (`null` when empty), or `File[]` with `multiple`.
+   */
+  modelValue?: InputModelValue;
+  'model-value'?: InputModelValue;
+  modelvalue?: InputModelValue;
+  /** `type="file"` — the native `accept` filter (`"image/*,.pdf"`). */
+  accept?: string;
+  /** `type="file"` — allow picking several files; `modelValue` becomes `File[]`. */
+  multiple?: boolean;
+  /** `type="file"` — reject files larger than this many bytes (emits `error`). */
+  maxFileSize?: number;
+  'max-file-size'?: number;
+  maxfilesize?: number;
+  /**
+   * `type="range"` — show the current value beside the slider (default `true`): at the end of
+   * the label row, or after the slider when there is no label. It is drawn through
+   * `format-display`, so `format-display="Rp {}"` or a function shapes it. `show-value="false"`
+   * hides it.
+   */
+  showValue?: boolean;
+  'show-value'?: boolean;
+  showvalue?: boolean;
   /**
    * How the field is DISPLAYED — a pattern (`#,##0.##`, `{}@gmail.com`) or a function.
    * Never changes the value. A numeric pattern requires `type="text"`.
@@ -86,6 +149,14 @@ export interface InputProps extends VisibilityProps {
   helperText?: string;
   'helper-text'?: string;
   helpertext?: string;
+  /**
+   * Info icon at the end of the label; hovering, focusing or tapping it shows this text.
+   * Plain text → a small built-in bubble (no dependency). Full tooltip options
+   * (`:tooltip.prop="{ content, placement, color }"`) → a `mono-tooltip`, which needs the
+   * optional `@floating-ui/dom` + `@floating-ui/core` peers (without them that form renders
+   * no icon). Shown only beside a label.
+   */
+  tooltip?: string | MonoTooltipOptions;
   /** Explicit validation state for styling and messaging. */
   validationState?: InputValidationState;
   'validation-state'?: InputValidationState;
@@ -170,12 +241,16 @@ export interface InputEvents {
   input: InputModelEvent;
   change: InputModelEvent;
   clear: InputModelEvent;
+  /** `type="file"` — a picked file was rejected. */
+  error: InputFileErrorEvent;
   'mno-input': InputModelEvent;
   mnoInput: InputModelEvent;
   'mno-change': InputModelEvent;
   mnoChange: InputModelEvent;
   'mno-clear': InputModelEvent;
   mnoClear: InputModelEvent;
+  'mno-error': InputFileErrorEvent;
+  mnoError: InputFileErrorEvent;
 }
 //#endregion
 export type { InputFormat, InputFormatCtx, InputFormatOn };

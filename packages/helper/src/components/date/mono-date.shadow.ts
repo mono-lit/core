@@ -7,6 +7,9 @@ import { MonoDateCore } from './date-core.js'
 import { toShadowCss } from '../../composables/shadow-css'
 
 import dateCss from './date.css?raw'
+import labelPositionCss from '../form/label-position.css?raw'
+import fieldTooltipCss from '../form/field-tooltip.css?raw'
+import fieldValidationCss from '../form/field-validation.css?raw'
 import { flushSsrHydration } from '../../composables/hydration-flush'
 
 // flatpickr's base + `.mono-flatpickr` calendar rules aren't needed in the shadow
@@ -39,7 +42,7 @@ export class MonoDateShadow extends MonoDateCore(LitElement) {
     ;(this as typeof LitElement).disableWarning?.('change-in-update')
   }
 
-  static override styles = [unsafeCSS(toShadowCss(SHADOW_DATE_CSS, { host: 'mono-date' }))]
+  static override styles = [unsafeCSS(toShadowCss(SHADOW_DATE_CSS + labelPositionCss + fieldTooltipCss + fieldValidationCss, { host: 'mono-date' }))]
 
   override connectedCallback(): void {
     super.connectedCallback()

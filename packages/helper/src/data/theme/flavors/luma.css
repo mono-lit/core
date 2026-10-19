@@ -260,6 +260,16 @@
   --mono-table-panel-radius: var(--mono-radius-3xl);
   --mono-table-panel-shadow: var(--mono-shadow-lg);
   --mono-table-panel-ring: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent);
+
+  /* input type="range" — basecoat@1.0.2 styles/luma.css .field > input[type='range'], .input[type='range'] —
+     h-5, track h-2 bg-input/90 rounded-full; thumb ring-black/10 ring-1 h-4 w-6 rounded-full bg-white shadow-md hover:ring-4. `currentColor` is the accent (the `color` prop). */
+  --mono-input-range-track-height: 0.5rem;
+  --mono-input-range-track-bg: color-mix(in oklab, var(--input) 90%, transparent);
+  --mono-input-range-thumb-width: 1.5rem;
+  --mono-input-range-thumb-border-width: 0px;
+  --mono-input-range-thumb-ring-width: 1px;
+  --mono-input-range-thumb-ring-color: rgb(0 0 0 / 0.1);
+  --mono-input-range-thumb-shadow: var(--mono-shadow-md);
 }
 
 :is(html, body, .mono-theme).dark .theme-luma,

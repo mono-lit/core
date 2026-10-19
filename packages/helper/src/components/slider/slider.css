@@ -1,0 +1,552 @@
+/* =========================================================================
+   mono-slider — a multi-thumb slider drawn in the look of Basecoat's range
+   (basecoat-css@1.0.2 components/range.css + each style's `input[type='range']`),
+   the same look `<mono-input type="range">` has.
+
+   Styled by ATTRIBUTE, like mono-input:
+
+     <div mono-slider mono-size mono-color mono-type="vertical"
+          mono-validation-state mono-value-tooltip="always|never"
+          mono-track-gap mono-marks-labelled mono-disabled mono-readonly mono-dragging>
+       <div mono-label-row><label mono-label>…</label><span mono-slider-value>20 – 80</span></div>
+       <div mono-slider-field>
+         <div mono-slider-control>                 the pointer target
+           <div mono-slider-track>                 the rail; it holds the pieces
+             <span mono-slider-piece mono-filled? mono-cut-start? mono-cut-end? style="--a;--b">
+           <div mono-slider-marks><span mono-slider-mark mono-active? style="--p">
+             <span mono-slider-mark-label>
+           <div mono-slider-thumb role="slider" mono-active? mono-dragging? style="--p">
+             <span mono-slider-tooltip>
+       <div mono-message-wrap><div mono-message="helper|valid|invalid|warning">
+
+   GEOMETRY. `--p` / `--a` / `--b` are 0–1 positions (unitless). A thumb's CENTRE travels
+   from half a thumb in to half a thumb short of the end — exactly where a native range
+   thumb sits — so the slider lines up with `<mono-input type="range">` under every flavor.
+   The track is cut into pieces at every thumb: that is what lets a piece be filled or not
+   (`fill`), and what lets `track-gap` cut the track back around each thumb (M3 style).
+
+   KNOBS. Every look value resolves `--mono-slider-x` → `--mono-input-range-x` → vega,
+   so the eight Basecoat styles and ONE (which write the input-range knobs in
+   flavors/*.css) restyle the slider with no slider entries of their own — the
+   "flavor via public knobs" pattern (filter.css). Slider-only knobs: --mono-slider-
+   {length, track-gap, accent, mark-size, mark-color, mark-active-color, mark-label-*,
+   tooltip-bg, tooltip-color, tooltip-radius, tooltip-font-*}.
+
+   The track/thumb rules cite Basecoat; marks, tooltips, track gaps, multiple
+   thumbs and the vertical type are EXTENSIONs.
+   ========================================================================= */
+
+mono-slider {
+  display: block;
+}
+
+[mono-slider] {
+  /* ── palette ─────────────────────────────────────────────────────────── */
+  --_mono-slider-text: var(--mono-slider-color, var(--foreground));
+  --_mono-slider-muted: var(--mono-slider-muted, var(--muted-foreground));
+  /* the fill + thumb colour: the `color` prop, a validation state outranks it */
+  --_mono-slider-accent: var(--mono-slider-accent, var(--_mono-slider-accent-preset, var(--primary)));
+  /* the hover / focus halo: Basecoat's ring-ring/50 (the role colour for a non-primary `color`) */
+  --_mono-slider-ring-color: var(--mono-slider-ring-color, var(--_mono-slider-ring-preset, var(--ring)));
+  --_mono-slider-ring-c: color-mix(in oklab, var(--_mono-slider-ring-color) var(--mono-slider-ring-alpha, var(--mono-ring-alpha, 50%)), transparent);
+
+  /* ── geometry: md here, `size` multiplies ────────────────────────────── */
+  --_mono-slider-scale: 1;
+  --_mono-slider-track-h: round(nearest, calc(var(--mono-slider-track-height, var(--mono-input-range-track-height, 0.375rem)) * var(--_mono-slider-scale)), 1px);
+  /* along = the thumb's size in the direction of travel, across = the other one */
+  --_mono-slider-across: round(nearest, calc(var(--mono-slider-thumb-size, var(--mono-input-range-thumb-size, 1rem)) * var(--_mono-slider-scale)), 1px);
+  --_mono-slider-along: round(nearest, calc(var(--mono-slider-thumb-width, var(--mono-input-range-thumb-width, var(--mono-slider-thumb-size, var(--mono-input-range-thumb-size, 1rem)))) * var(--_mono-slider-scale)), 1px);
+  --_mono-slider-box: max(round(nearest, calc(var(--mono-slider-height, var(--mono-input-range-height, 1.25rem)) * var(--_mono-slider-scale)), 1px), var(--_mono-slider-across));
+  --_mono-slider-track-radius: var(--mono-slider-track-radius, var(--mono-input-range-track-radius, 9999px));
+  --_mono-slider-track-bg: var(--mono-slider-track-bg, var(--mono-input-range-track-bg, var(--muted)));
+  --_mono-slider-fill: var(--mono-slider-fill, var(--mono-input-range-fill, currentColor));
+  --_mono-slider-cut: calc(var(--_mono-slider-track-gap, 0px) + var(--_mono-slider-along) / 2);
+
+  /* basecoat@1.0.2 styles/vega.css .field — flex w-full flex-col gap-3 (the input range's gap) */
+  display: flex;
+  flex-direction: column;
+  gap: var(--mono-slider-gap, var(--mono-input-range-gap, var(--mono-input-gap, calc(var(--mono-spacing) * 3))));
+  width: 100%;
+  font-family: inherit;
+  color: var(--_mono-slider-text);
+}
+
+[mono-slider],
+:where([mono-slider]) *,
+:where([mono-slider]) *::before,
+:where([mono-slider]) *::after {
+  box-sizing: border-box;
+}
+
+/* the shadow build renders every region and marks an empty one */
+[mono-slider] [mono-empty] {
+  display: none;
+}
+
+[mono-slider][mono-size="xs"] { --_mono-slider-scale: 0.75; }
+[mono-slider][mono-size="sm"] { --_mono-slider-scale: 0.875; }
+[mono-slider][mono-size="lg"] { --_mono-slider-scale: 1.125; }
+[mono-slider][mono-size="xl"] { --_mono-slider-scale: 1.25; }
+[mono-slider][mono-size="xxl"] { --_mono-slider-scale: 1.375; }
+
+/* ── colours: the accent + halo per role (primary is Basecoat's --primary / --ring) ── */
+[mono-slider][mono-color="secondary"] { --_mono-slider-accent-preset: var(--muted-foreground); --_mono-slider-ring-preset: var(--muted-foreground); }
+[mono-slider][mono-color="success"] { --_mono-slider-accent-preset: var(--success); --_mono-slider-ring-preset: var(--success); }
+[mono-slider][mono-color="danger"] { --_mono-slider-accent-preset: var(--destructive); --_mono-slider-ring-preset: var(--destructive); }
+[mono-slider][mono-color="warning"] { --_mono-slider-accent-preset: var(--warning); --_mono-slider-ring-preset: var(--warning); }
+[mono-slider][mono-color="info"] { --_mono-slider-accent-preset: var(--info); --_mono-slider-ring-preset: var(--info); }
+[mono-slider][mono-color="teal"] { --_mono-slider-accent-preset: var(--teal); --_mono-slider-ring-preset: var(--teal); }
+[mono-slider][mono-color="purple"] { --_mono-slider-accent-preset: var(--purple); --_mono-slider-ring-preset: var(--purple); }
+[mono-slider][mono-color="neutral"] { --_mono-slider-accent-preset: var(--neutral); --_mono-slider-ring-preset: var(--neutral); }
+[mono-slider][mono-color="dark"] { --_mono-slider-accent-preset: var(--dark); --_mono-slider-ring-preset: var(--dark); }
+
+/* a validation state recolours the fill + thumb (after the colours, so it wins) */
+[mono-slider][mono-validation-state="invalid"] { --_mono-slider-accent-preset: var(--destructive); --_mono-slider-ring-preset: var(--destructive); }
+[mono-slider][mono-validation-state="valid"] { --_mono-slider-accent-preset: var(--success); --_mono-slider-ring-preset: var(--success); }
+[mono-slider][mono-validation-state="warning"] { --_mono-slider-accent-preset: var(--warning); --_mono-slider-ring-preset: var(--warning); }
+
+/* =========================================
+   Label row — the label, and the value at its end (EJI ONE `.eji-range__row`)
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css .field > label, .label — flex items-center gap-2 text-sm
+   leading-none font-medium select-none; the row spans so the value can end it */
+:where([mono-slider]) > [mono-label-row] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--mono-spacing) * 4);
+  min-width: 0;
+}
+
+:where([mono-slider]) [mono-label] {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: var(--mono-input-label-gap, calc(var(--mono-spacing) * 2));
+  font-size: var(--mono-slider-label-font-size, var(--mono-input-range-label-font-size, var(--mono-input-label-font-size, var(--mono-text-sm))));
+  line-height: var(--mono-slider-label-line-height, var(--mono-input-range-label-line-height, var(--mono-input-label-line-height, 1)));
+  font-weight: var(--mono-slider-label-font-weight, var(--mono-input-range-label-font-weight, var(--mono-input-label-font-weight, var(--mono-label-font-weight, var(--mono-font-weight-medium)))));
+  color: var(--mono-slider-label-color, var(--mono-input-range-label-color, var(--_mono-slider-text)));
+  user-select: none;
+}
+
+:where([mono-slider]) [mono-required-mark] {
+  color: var(--destructive);
+}
+
+/* the label ⓘ (`tooltip` prop) — same as mono-input's */
+:where([mono-slider]) [mono-label] > [mono-label-tooltip] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--mono-input-label-tooltip-size, 1.1em);
+  color: var(--mono-input-label-tooltip-color, currentColor);
+  opacity: var(--mono-input-label-tooltip-opacity, 0.6);
+  border-radius: 9999px;
+  cursor: help;
+  pointer-events: auto;
+  outline: none;
+  transition: opacity 150ms ease;
+
+  &:is(:hover, :focus-visible) {
+    opacity: 1;
+  }
+  &:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+  & > [mono-icon] {
+    width: 1em;
+    height: 1em;
+  }
+}
+
+/* EXTENSION — the value readout (EJI ONE `.eji-range__val`); tabular so it does not shimmer */
+:where([mono-slider]) [mono-slider-value] {
+  flex: none;
+  font-family: var(--mono-slider-value-font-family, var(--mono-input-range-value-font-family, inherit));
+  font-size: var(--mono-slider-value-font-size, var(--mono-input-range-value-font-size, var(--mono-slider-label-font-size, var(--mono-input-range-label-font-size, var(--mono-input-label-font-size, var(--mono-text-sm))))));
+  font-weight: var(--mono-slider-value-font-weight, var(--mono-input-range-value-font-weight, var(--mono-font-weight-medium)));
+  line-height: var(--mono-slider-label-line-height, var(--mono-input-range-label-line-height, var(--mono-input-label-line-height, 1)));
+  font-variant-numeric: tabular-nums;
+  color: var(--mono-slider-value-color, var(--mono-input-range-value-color, var(--_mono-slider-muted)));
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* no label: the readout follows the control, in reserved room */
+:where([mono-slider]) > [mono-slider-field] > [mono-slider-value] {
+  min-width: var(--mono-slider-value-min-width, var(--mono-input-range-value-min-width, 3ch));
+  text-align: end;
+}
+
+/* =========================================
+   Field + control
+   ========================================= */
+
+:where([mono-slider]) > [mono-slider-field] {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--mono-spacing) * 3);
+  min-width: 0;
+}
+
+/* basecoat@1.0.2 components/range.css .field > input[type='range'], .input[type='range'] — flex appearance-none
+   items-center p-0 outline-none disabled:pointer-events-none disabled:opacity-50 */
+/* basecoat@1.0.2 styles/vega.css .field > input[type='range'], .input[type='range'] — h-5 (the box), --slider-track-height,
+   --slider-thumb-size; mono: the box also grows to fit a taller thumb */
+:where([mono-slider]) [mono-slider-control] {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--_mono-slider-box);
+  color: var(--_mono-slider-accent);
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* room for mark labels under the track */
+[mono-slider][mono-marks-labelled] [mono-slider-control] {
+  margin-block-end: calc(var(--mono-slider-mark-label-gap, calc(var(--mono-spacing) * 1.5)) + var(--mono-slider-mark-label-line-height, 1rem));
+}
+
+/* =========================================
+   Track — the rail, cut into pieces at every thumb
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css :is(.field > input[type='range'], .input[type='range'])::-webkit-slider-runnable-track — bg-muted h-1.5
+   rounded-full (+ components/range.css: the --primary / --muted gradient stop, here one piece each) */
+:where([mono-slider]) [mono-slider-track] {
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: var(--_mono-slider-track-h);
+  margin-top: calc(var(--_mono-slider-track-h) / -2);
+}
+
+:where([mono-slider]) [mono-slider-piece] {
+  /* piece ends: a thumb centre, or the very end of the rail */
+  --_x0: calc(var(--_mono-slider-along) / 2 + (100% - var(--_mono-slider-along)) * var(--a));
+  --_x1: calc(var(--_mono-slider-along) / 2 + (100% - var(--_mono-slider-along)) * var(--b));
+  --_cs: 0px;
+  --_ce: 0px;
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--_x0) + var(--_cs));
+  inline-size: max(0px, calc(var(--_x1) - var(--_x0) - var(--_cs) - var(--_ce)));
+  border-radius: var(--_mono-slider-track-radius);
+  background: var(--_mono-slider-track-bg);
+}
+:where([mono-slider]) [mono-slider-piece]:not([mono-cut-start]) { --_x0: 0%; }
+:where([mono-slider]) [mono-slider-piece]:not([mono-cut-end]) { --_x1: 100%; }
+:where([mono-slider]) [mono-slider-piece][mono-filled] {
+  background: var(--_mono-slider-fill);
+}
+
+/* joins at a thumb are square unless `track-gap` opens them (then each piece is a
+   whole rounded bar, Material 3's look) */
+[mono-slider]:not([mono-track-gap]) [mono-slider-piece][mono-cut-start] {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+[mono-slider]:not([mono-track-gap]) [mono-slider-piece][mono-cut-end] {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+[mono-slider][mono-track-gap] [mono-slider-piece][mono-cut-start] { --_cs: var(--_mono-slider-cut); }
+[mono-slider][mono-track-gap] [mono-slider-piece][mono-cut-end] { --_ce: var(--_mono-slider-cut); }
+
+/* =========================================
+   Thumb
+   ========================================= */
+
+/* basecoat@1.0.2 styles/vega.css :is(.field > input[type='range'], .input[type='range'])::-webkit-slider-thumb — border-primary ring-ring/50
+   size-4 rounded-full border bg-white shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4;
+   mono: the three box-shadow slots of mono-input's range — a resting ring, the halo, the shadow */
+:where([mono-slider]) [mono-slider-thumb] {
+  --_halo: 0 0 #0000;
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  inset-inline-start: calc(var(--_mono-slider-along) / 2 + (100% - var(--_mono-slider-along)) * var(--p));
+  width: var(--_mono-slider-along);
+  height: var(--_mono-slider-across);
+  margin-top: calc(var(--_mono-slider-across) / -2);
+  margin-inline-start: calc(var(--_mono-slider-along) / -2);
+  border: var(--mono-slider-thumb-border-width, var(--mono-input-range-thumb-border-width, 1px)) solid
+    var(--mono-slider-thumb-border-color, var(--mono-input-range-thumb-border-color, currentColor));
+  border-radius: var(--mono-slider-thumb-radius, var(--mono-input-range-thumb-radius, 9999px));
+  background: var(--mono-slider-thumb-bg, var(--mono-input-range-thumb-bg, #fff));
+  box-shadow:
+    0 0 0 var(--mono-slider-thumb-ring-width, var(--mono-input-range-thumb-ring-width, 0px))
+      var(--mono-slider-thumb-ring-color, var(--mono-input-range-thumb-ring-color, transparent)),
+    var(--_halo),
+    var(--mono-slider-thumb-shadow, var(--mono-input-range-thumb-shadow, var(--mono-shadow-sm)));
+  outline: none;
+  transition-property: color, box-shadow, background-color, border-color;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+}
+
+/* the last-touched thumb rides on top, so a stack lifts the one being moved */
+:where([mono-slider]) [mono-slider-thumb][mono-active] {
+  z-index: 2;
+}
+
+/* focus-visible:ring-4 focus-visible:outline-hidden; a drag keeps the halo on */
+:where([mono-slider]) [mono-slider-thumb]:is(:focus-visible, [mono-dragging]) {
+  --_halo: 0 0 0 var(--mono-slider-ring-width, var(--mono-input-range-ring-width, 4px)) var(--_mono-slider-ring-c);
+}
+
+/* hover:ring-4 */
+@media (hover: hover) {
+  [mono-slider]:not([mono-disabled], [mono-readonly]) [mono-slider-thumb]:hover:not(:focus-visible, [mono-dragging]) {
+    --_halo: 0 0 0 var(--mono-slider-hover-ring-width, var(--mono-input-range-hover-ring-width, var(--mono-slider-ring-width, var(--mono-input-range-ring-width, 4px)))) var(--_mono-slider-ring-c);
+  }
+}
+
+/* =========================================
+   EXTENSION — marks
+   ========================================= */
+
+:where([mono-slider]) [mono-slider-marks] {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+:where([mono-slider]) [mono-slider-mark] {
+  --_size: var(--mono-slider-mark-size, max(4px, calc(var(--_mono-slider-track-h) * 0.5)));
+  position: absolute;
+  top: 50%;
+  inset-inline-start: calc(var(--_mono-slider-along) / 2 + (100% - var(--_mono-slider-along)) * var(--p));
+  width: var(--_size);
+  height: var(--_size);
+  margin-top: calc(var(--_size) / -2);
+  margin-inline-start: calc(var(--_size) / -2);
+  border-radius: 9999px;
+  background: var(--mono-slider-mark-color, color-mix(in oklab, var(--_mono-slider-muted) 55%, transparent));
+}
+
+:where([mono-slider]) [mono-slider-mark][mono-active] {
+  background: var(--mono-slider-mark-active-color, color-mix(in oklab, var(--primary-foreground) 85%, transparent));
+}
+
+:where([mono-slider]) [mono-slider-mark-label] {
+  position: absolute;
+  top: calc(var(--_mono-slider-box) / 2 + var(--mono-slider-mark-label-gap, calc(var(--mono-spacing) * 1.5)));
+  left: 50%;
+  translate: -50% 0;
+  font-size: var(--mono-slider-mark-label-font-size, var(--mono-text-xs));
+  line-height: var(--mono-slider-mark-label-line-height, 1rem);
+  font-weight: var(--mono-slider-mark-label-font-weight, var(--mono-font-weight-normal));
+  color: var(--mono-slider-mark-label-color, var(--_mono-slider-muted));
+  white-space: nowrap;
+}
+
+/* =========================================
+   EXTENSION — the value bubble on each thumb (shadcn's tooltip: bg-foreground text-background)
+   ========================================= */
+
+:where([mono-slider]) [mono-slider-tooltip] {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + var(--mono-slider-tooltip-offset, calc(var(--mono-spacing) * 2)));
+  translate: -50% 0;
+  padding: calc(var(--mono-spacing) * 0.5) calc(var(--mono-spacing) * 2);
+  border-radius: var(--mono-slider-tooltip-radius, var(--mono-radius-md));
+  background: var(--mono-slider-tooltip-bg, var(--foreground));
+  color: var(--mono-slider-tooltip-color, var(--background));
+  font-family: var(--mono-slider-tooltip-font-family, inherit);
+  font-size: var(--mono-slider-tooltip-font-size, var(--mono-text-xs));
+  line-height: var(--mono-slider-tooltip-line-height, 1rem);
+  font-weight: var(--mono-slider-tooltip-font-weight, var(--mono-font-weight-medium));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--mono-duration) var(--mono-ease), visibility var(--mono-duration);
+
+  /* the arrow */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    width: 0.5rem;
+    height: 0.25rem;
+    translate: -50% 0;
+    background: inherit;
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+  }
+}
+
+/* `value-tooltip="always"`: the bubbles are permanent, so the label row must not sit under them */
+[mono-slider][mono-value-tooltip="always"]:not([mono-type="vertical"]) [mono-slider-control] {
+  margin-block-start: max(0px, calc(var(--mono-slider-tooltip-line-height, 1rem) + var(--mono-spacing) * 3 + var(--mono-slider-tooltip-offset, calc(var(--mono-spacing) * 2)) - (var(--_mono-slider-box) - var(--_mono-slider-across)) / 2));
+}
+
+/* `value-tooltip="auto"`: on focus, while dragging, and on hover */
+:where([mono-slider]) [mono-slider-thumb]:is(:focus-visible, [mono-dragging]) > [mono-slider-tooltip],
+[mono-slider][mono-value-tooltip="always"] [mono-slider-tooltip] {
+  opacity: 1;
+  visibility: visible;
+}
+@media (hover: hover) {
+  [mono-slider]:not([mono-disabled]) [mono-slider-thumb]:hover > [mono-slider-tooltip] {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* =========================================
+   EXTENSION — type="vertical": the same parts with the axes swapped, min at the bottom
+   ========================================= */
+
+[mono-slider][mono-type="vertical"] {
+  width: auto;
+}
+
+[mono-slider][mono-type="vertical"] > [mono-slider-field] {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+[mono-slider][mono-type="vertical"] [mono-slider-control] {
+  flex: none;
+  width: var(--_mono-slider-box);
+  height: var(--_mono-slider-length, var(--mono-slider-length, 200px));
+}
+
+[mono-slider][mono-type="vertical"][mono-marks-labelled] [mono-slider-control] {
+  margin-block-end: 0;
+}
+
+[mono-slider][mono-type="vertical"] [mono-slider-track] {
+  inset-inline: auto;
+  inset-block: 0;
+  left: 50%;
+  top: 0;
+  width: var(--_mono-slider-track-h);
+  height: auto;
+  margin-top: 0;
+  margin-left: calc(var(--_mono-slider-track-h) / -2);
+}
+
+[mono-slider][mono-type="vertical"] [mono-slider-piece] {
+  --_x0: calc(var(--_mono-slider-along) / 2 + (100% - var(--_mono-slider-along)) * var(--a));
+  --_x1: calc(var(--_mono-slider-along) / 2 + (100% - var(--_mono-slider-along)) * var(--b));
+  inset-block: auto;
+  inset-inline: 0;
+  bottom: calc(var(--_x0) + var(--_cs));
+  inline-size: auto;
+  block-size: max(0px, calc(var(--_x1) - var(--_x0) - var(--_cs) - var(--_ce)));
+}
+[mono-slider][mono-type="vertical"] [mono-slider-piece]:not([mono-cut-start]) { --_x0: 0%; }
+[mono-slider][mono-type="vertical"] [mono-slider-piece]:not([mono-cut-end]) { --_x1: 100%; }
+/* vertical joins: the piece's START is its bottom, its END its top */
+[mono-slider][mono-type="vertical"]:not([mono-track-gap]) [mono-slider-piece][mono-cut-start] {
+  border-radius: var(--_mono-slider-track-radius);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+[mono-slider][mono-type="vertical"]:not([mono-track-gap]) [mono-slider-piece][mono-cut-end] {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+[mono-slider][mono-type="vertical"]:not([mono-track-gap]) [mono-slider-piece][mono-cut-start][mono-cut-end] {
+  border-radius: 0;
+}
+
+[mono-slider][mono-type="vertical"] [mono-slider-thumb],
+[mono-slider][mono-type="vertical"] [mono-slider-mark] {
+  /* the logical reset goes FIRST: written after `left` it would reset it too */
+  inset-inline-start: auto;
+  top: auto;
+  left: 50%;
+  bottom: calc(var(--_mono-slider-along) / 2 + (100% - var(--_mono-slider-along)) * var(--p));
+  margin: 0;
+}
+[mono-slider][mono-type="vertical"] [mono-slider-thumb] {
+  width: var(--_mono-slider-across);
+  height: var(--_mono-slider-along);
+  margin-left: calc(var(--_mono-slider-across) / -2);
+  margin-bottom: calc(var(--_mono-slider-along) / -2);
+}
+[mono-slider][mono-type="vertical"] [mono-slider-mark] {
+  margin-left: calc(var(--_size) / -2);
+  margin-bottom: calc(var(--_size) / -2);
+}
+[mono-slider][mono-type="vertical"] [mono-slider-mark-label] {
+  top: 50%;
+  left: calc(var(--_mono-slider-box) / 2 + var(--mono-slider-mark-label-gap, calc(var(--mono-spacing) * 2)));
+  translate: 0 -50%;
+}
+[mono-slider][mono-type="vertical"] [mono-slider-tooltip] {
+  left: auto;
+  right: calc(100% + var(--mono-slider-tooltip-offset, calc(var(--mono-spacing) * 2)));
+  bottom: 50%;
+  translate: 0 50%;
+
+  &::after {
+    top: 50%;
+    left: 100%;
+    width: 0.25rem;
+    height: 0.5rem;
+    translate: 0 -50%;
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+  }
+}
+
+/* =========================================
+   States
+   ========================================= */
+
+/* in-data-[disabled=true]:opacity-50 */
+[mono-slider][mono-disabled] > :is([mono-label-row], [mono-slider-field]) {
+  opacity: 0.5;
+}
+[mono-slider][mono-disabled] [mono-slider-control] {
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+[mono-slider][mono-readonly] [mono-slider-control] {
+  cursor: default;
+}
+
+[mono-slider][mono-dragging] [mono-slider-control] {
+  cursor: grabbing;
+}
+
+/* =========================================
+   Message — helper / validation text (mono-input's)
+   ========================================= */
+
+:where([mono-slider]) > [mono-message-wrap]:not(:has([mono-message]:not([mono-empty]))) {
+  display: none;
+}
+
+:where([mono-slider]) [mono-message] {
+  font-size: var(--mono-input-message-font-size, var(--mono-text-sm));
+  line-height: var(--mono-input-message-line-height, var(--mono-leading-normal));
+  color: var(--_mono-slider-muted);
+}
+:where([mono-slider]) [mono-message="invalid"] { color: var(--destructive); }
+:where([mono-slider]) [mono-message="valid"] { color: var(--success); }
+:where([mono-slider]) [mono-message="warning"] { color: var(--warning); }
+
+[mono-slider][mono-validation-state="invalid"] [mono-label] {
+  color: var(--destructive);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([mono-slider]) :is([mono-slider-thumb], [mono-slider-tooltip]) {
+    transition: none;
+  }
+}

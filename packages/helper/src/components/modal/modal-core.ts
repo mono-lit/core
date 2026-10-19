@@ -794,6 +794,16 @@ class MonoModalCoreClass extends superClass implements PopupLayer {
     this.hide('overlay', event)
   }
 
+  /**
+   * PopupLayer hook — the path lands in this dialog: the host, its render root,
+   * or a popup opened from within. The same test `_onOutsideClick` uses; the stack
+   * asks it so a dropdown open BELOW this dialog leaves its clicks alone.
+   */
+  public containsEventPath(path: EventTarget[]): boolean {
+    const root = this.renderRoot instanceof Element ? this.renderRoot : null
+    return pathOwnedBy(path, root ? [this, root] : [this])
+  }
+
   /** Body-scroll lock is wanted while this modal is open and `lockScroll` is set. */
   public get lockBodyScroll(): boolean {
     return this.lockScroll
@@ -1264,6 +1274,7 @@ export declare class MonoModalCoreInterface implements PopupLayer {
   get hasBackdrop(): boolean
   get pinnedZ(): number | undefined
   onStackEscape(event: KeyboardEvent): void
+  containsEventPath(path: EventTarget[]): boolean
   setStackZ(z: number, isTopBackdrop: boolean): void
 
   // Shared-protected surface used / overridden by the light + shadow wrappers.

@@ -1,0 +1,6 @@
+/// <reference path="../../../vue.d.ts" />
+import { OtpColor, OtpCssClass, OtpEvents, OtpGroups, OtpLabelPosition, OtpModelEvent, OtpModelEventDetail, OtpProps, OtpSize, OtpType, OtpValidationPosition, OtpValidationState, OtpVariant } from "./otp-types.js";
+import { MonoOtpCore, OtpSlotName } from "./otp-core.js";
+import { OTP_DEFAULT_LENGTH, OtpEdit, backspaceOtp, clampCaret, normaliseOtpValue, parseOtpGroups, removeOtpChar, resolveOtpLength, sanitizeOtpChar, sanitizeOtpText, spliceOtpValue } from "./otp-utils.js";
+import { MonoOtpShadow } from "./mono-otp.shadow.js";
+export { MonoOtpCore, MonoOtpShadow, OTP_DEFAULT_LENGTH, type OtpColor, type OtpCssClass, type OtpEdit, type OtpEvents, type OtpGroups, type OtpLabelPosition, type OtpModelEvent, type OtpModelEventDetail, type OtpProps, type OtpSize, type OtpSlotName, type OtpType, type OtpValidationPosition, type OtpValidationState, type OtpVariant, backspaceOtp, clampCaret, normaliseOtpValue, parseOtpGroups, removeOtpChar, resolveOtpLength, sanitizeOtpChar, sanitizeOtpText, spliceOtpValue };

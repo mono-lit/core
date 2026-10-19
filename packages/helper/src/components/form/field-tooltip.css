@@ -1,0 +1,106 @@
+/* =========================================
+   Field tooltip — the BUILT-IN bubble behind a plain-text `tooltip="…"` on
+   every field control (input, select, tag-input, date, textarea,
+   dropdown-table, slider). No floating-ui: composables/field-tooltip.ts
+   shows it in the top layer (Popover API) and writes its fixed `top` /
+   `left`, `mono-side` (top|bottom) and the arrow's x. The object form
+   (`.tooltip=${{…}}`) is the tooltip addon instead and never reaches here.
+
+   Looks like the addon's default `mono-tooltip`, and reads its public knobs:
+   --mono-tooltip-bg / -color / -radius / -max-width / -font-size /
+   -line-height / -padding-x / -padding-y.
+
+   Light: imported once by entries/index.css. Shadow: appended to each
+   control's shadow sheet.
+   ========================================= */
+
+[mono-field-bubble] {
+  --_mono-field-tip-bg: var(--mono-tooltip-bg, var(--foreground));
+  --_mono-field-tip-arrow: calc(var(--mono-spacing) * 2);
+
+  /* undo the [popover] UA box (inset:0; margin:auto; border; Canvas …) */
+  position: fixed;
+  inset: auto;
+  top: 0;
+  left: 0;
+  z-index: var(--mono-popup-z, 1000);
+  display: none;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(var(--mono-tooltip-max-width, 20rem), calc(100vw - 16px));
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  padding: var(--mono-tooltip-padding-y, calc(var(--mono-spacing) * 1.5)) var(--mono-tooltip-padding-x, calc(var(--mono-spacing) * 3));
+  border: 0;
+  border-radius: var(--mono-tooltip-radius, var(--mono-radius-md));
+  background: var(--_mono-field-tip-bg);
+  color: var(--mono-tooltip-color, var(--background));
+  box-shadow: var(--mono-tooltip-shadow, 0 0 0 0 transparent);
+
+  /* it sits inside the label — drop everything the label row set */
+  font-family: inherit;
+  font-size: var(--mono-tooltip-font-size, var(--mono-text-xs));
+  font-weight: var(--mono-font-weight-normal, 400);
+  font-style: normal;
+  line-height: var(--mono-tooltip-line-height, var(--mono-text-xs--lh));
+  letter-spacing: normal;
+  text-transform: none;
+  text-align: start;
+  white-space: normal;
+  overflow-wrap: break-word;
+  cursor: default;
+  user-select: text;
+  pointer-events: auto;
+}
+
+[mono-field-bubble][mono-open] {
+  display: block;
+  animation: mono-field-tip-in var(--mono-duration, 150ms) var(--mono-ease, ease) both;
+}
+
+/* The arrow, plus (::before) an invisible bridge over the gap so the pointer
+   can travel from the icon onto the bubble without it closing. */
+[mono-field-bubble]::after {
+  content: '';
+  position: absolute;
+  left: var(--_mono-field-tip-arrow-x, 50%);
+  width: var(--_mono-field-tip-arrow);
+  height: var(--_mono-field-tip-arrow);
+  background: inherit;
+  border-radius: 2px;
+  translate: -50% 0;
+  rotate: 45deg;
+}
+
+[mono-field-bubble]::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  height: 8px;
+}
+
+[mono-field-bubble]:not([mono-side="bottom"])::after {
+  bottom: calc(var(--_mono-field-tip-arrow) / -2 + 1px);
+}
+[mono-field-bubble]:not([mono-side="bottom"])::before {
+  top: 100%;
+}
+[mono-field-bubble][mono-side="bottom"]::after {
+  top: calc(var(--_mono-field-tip-arrow) / -2 + 1px);
+}
+[mono-field-bubble][mono-side="bottom"]::before {
+  bottom: 100%;
+}
+
+@keyframes mono-field-tip-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [mono-field-bubble][mono-open] {
+    animation: none;
+  }
+}

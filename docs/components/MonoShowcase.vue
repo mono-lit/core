@@ -51,7 +51,7 @@ const tagItems = [
 ]
 
 /*
- * `@mono-lit/helper` publishes 27 `./ui/*` component subpaths. The count in the CTA
+ * `@mono-lit/helper` publishes 29 `./ui/*` component subpaths. The count in the CTA
  * is what is NOT shown here, so it has to be derived from the list of what is —
  * a hand-kept number said "seven" while nine were on display, and the card
  * advertised 20+ when the honest figure was 18+.
@@ -59,7 +59,7 @@ const tagItems = [
  * Add a component to the section, add its name here. TOTAL_COMPONENTS is still
  * manual: bump it when a new `./ui/*` subpath ships in package.json.
  */
-const TOTAL_COMPONENTS = 27
+const TOTAL_COMPONENTS = 29
 const ON_DISPLAY = [
   'card', 'button', 'tabs', 'checkbox', 'radio',
   'dropdown', 'switch', 'input', 'tag-input',

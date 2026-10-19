@@ -9,6 +9,8 @@ import type {
   TagInputSize,
   TagInputColor,
   TagInputVariant,
+  TagInputLabelPosition,
+  TagInputValidationPosition,
   TagInputChipProps,
   TagInputDropdownOptions,
   TagInputValidationState,
@@ -39,6 +41,8 @@ import { buildSizeStyle, toCssSize, type CssSizeValue } from '../../composables/
 import { PopupPortalController } from '../../composables/popup-portal'
 import { LateSlotWatcher } from '../../composables/light-slots'
 import { MonoFormControlCore } from '../form/form-control-core.js'
+import { FieldTooltipController, type FieldTooltipValue } from '../../composables/field-tooltip'
+import { FieldValidationController } from '../../composables/field-validation'
 import { unwrapReactive, unwrapReactiveDeep } from '../../composables/reactive'
 import {
   MonoSourceSearch,
@@ -84,6 +88,8 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
     super(...args)
 
     defineHybridPropAliases(this, [
+      'labelPosition',
+      'validationPosition',
       'modelValue',
       'loadingText',
       'loadingError',
@@ -334,6 +340,14 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
   @property({ type: String })
   variant: TagInputVariant = 'outlined'
 
+  /** Where the label sits — see form/label-position.css. */
+  @property({ type: String, attribute: 'label-position' })
+  labelPosition: TagInputLabelPosition = 'top'
+
+  /** Where the validation message shows — see composables/field-validation.ts. */
+  @property({ type: String, attribute: 'validation-position' })
+  validationPosition: TagInputValidationPosition = 'bottom'
+
   /**
    * `mono-chip` props applied to every tag chip — `{ size, color, variant,
    * shape, dot, closeLabel, cssClass }`. Unset keys follow the control (see
@@ -388,6 +402,47 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
 
   @property({ type: String, attribute: 'helper-text' })
   helperText = ''
+
+  /**
+   * Extra explanation behind an info icon at the end of the label: plain text
+   * (`tooltip="…"`) or full `mono-tooltip` options (`.tooltip=${{ content, placement }}`).
+   * Needs the optional `@floating-ui/dom` + `@floating-ui/core` peers — without
+   * them no icon renders. Shown only beside a label.
+   */
+  @property()
+  tooltip: FieldTooltipValue = null
+
+  protected readonly _tooltip = new FieldTooltipController(this, () => this.tooltip)
+
+  /** `validation-position="icon" | "float"` — the icon in the box and the floating message. */
+  protected readonly _validation = new FieldValidationController(
+    this,
+    () => ({
+      position: this.validationPosition,
+      ...(this._validationNotice ?? { state: undefined, text: undefined }),
+      suppressed: this._open || this._moreOpen,
+    }),
+    () => (this.renderRoot as ParentNode | undefined)?.querySelector?.('[mono-tag-input] > [mono-field]'),
+  )
+
+  /** The validation message and its state — the same precedence the message row uses. */
+  protected get _validationNotice(): { state: string; text: string } | null {
+    if (this.validationMessage) return { state: this._resolvedValidationState, text: this.validationMessage }
+    if (this.errorMessage) return { state: 'invalid', text: this.errorMessage }
+    if (this.successMessage) return { state: 'valid', text: this.successMessage }
+    return null
+  }
+
+  /** The message that moved to the icon / float bubble, kept for assistive tech only. */
+  private _renderMovedMessage(): TemplateResult {
+    const notice = this._validationNotice!
+    return html`<div
+      class=${`${this._cls('mono-tag-input-message', 'message')} ${notice.state}`}
+      mono-message=${notice.state}
+      mono-sr-only
+      role=${notice.state === 'invalid' ? 'alert' : nothing}
+    >${notice.text}</div>`
+  }
 
   @property({ type: String, attribute: 'validation-state' })
   validationState: TagInputValidationState = 'default'
@@ -2633,6 +2688,10 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
     if (!this._open && !this._moreOpen) return
 
     if (event.key === 'Escape') {
+      // An Escape inside a layer opened above this panel (a modal opened from an
+      // option) is that layer's; the stack closes it and this panel stays.
+      const path = event.composedPath()
+      if (this._popup.inLayerAbove(path) || this._morePopup.inLayerAbove(path)) return
       event.preventDefault()
       this._close()
       this._moreOpen = false
@@ -2659,6 +2718,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
               </span>
             `
         : nothing}
+        ${this._tooltip.render()}
       </label>
     `
   }
@@ -3809,6 +3869,8 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
 
   private _renderHelper(): TemplateResult | typeof nothing {
     const base = this._cls('mono-tag-input-message', 'message')
+    // validation-position icon / float: the row keeps the helper; the message moved.
+    if (this._validation.moved) return html`${this._renderHelperText()}${this._renderMovedMessage()}`
     if (this.validationMessage) {
       const state = this._resolvedValidationState
       return html`
@@ -3834,6 +3896,11 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
       `
     }
 
+    return this._renderHelperText()
+  }
+
+  private _renderHelperText(): TemplateResult | typeof nothing {
+    const base = this._cls('mono-tag-input-message', 'message')
     if (this.helperText || this._hasHelperSlot || this._slotsAlwaysRender) {
       return html`
         <div
@@ -3906,6 +3973,8 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
         mono-size=${this.size === 'md' ? nothing : this.size}
         mono-color=${this.color === 'primary' ? nothing : this.color}
         mono-variant=${this.variant === 'outlined' ? nothing : this.variant}
+        mono-label-position=${this.labelPosition === 'top' ? nothing : this.labelPosition}
+        mono-validation-position=${this.validationPosition === 'bottom' ? nothing : this.validationPosition}
         mono-validation-state=${state === 'default' ? nothing : state}
         ?mono-open=${this._open}
         ?mono-more-open=${this._moreOpen}
@@ -3955,6 +4024,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
             @keydown=${this._handleKeydown}
           />
 
+          ${this._validation.renderIcon()}
           ${this._renderActions()}
         </div>
 
@@ -3975,6 +4045,8 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
         <div id=${this._messageId} class=${this.cssClass?.messageWrap ?? ''} mono-message-wrap>
           ${this._renderHelper()}
         </div>
+
+        ${this._validation.renderFloat()}
       </div>
     `
   }
@@ -4104,6 +4176,8 @@ export declare class MonoTagInputCoreInterface {
   label: string
   placeholder: string
   helperText: string
+  tooltip: FieldTooltipValue
+  protected readonly _tooltip: FieldTooltipController
   validationState: TagInputValidationState
   validationMessage: string
   errorMessage: string

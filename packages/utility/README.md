@@ -6,7 +6,7 @@ A comprehensive utility library for Vue.js applications built around DevExtreme 
 
 - 🔧 **OData Integration** - Sophisticated OData client with batch operations, caching, and error handling
 - 🎛️ **DevExtreme Helpers** - Utilities for data grids, lookups, and form components
-- ✅ **Schema Validation** - Yup-based validation system with nested object support
+- ✅ **Schema Validation** - Yup or Valibot (any Standard Schema) validation with nested object support
 - 📊 **Excel Export** - Advanced Excel export capabilities with custom formatting and formulas
 - 🔔 **Notification System** - Notivue-based notification management
 - 🚨 **Error Handling** - Comprehensive HTTP and OData error handling
@@ -36,7 +36,7 @@ See the [repository README](https://github.com/mono-lit/core#install-in-your-pro
 These are the essential dependencies required for core functionality:
 
 ```bash
-npm install notivue yup exceljs file-saver-es @odata2ts/http-client-fetch json-server change-case chokidar
+npm install notivue valibot exceljs file-saver-es @odata2ts/http-client-fetch json-server change-case chokidar
 ```
 
 **Note:** The additional dependencies (`json-server`, `change-case`, `chokidar`) are recommended for development and should be installed as devDependencies:
@@ -121,7 +121,7 @@ await advanceExportExcel({
 
 - **[Data Fetching](./docs/data-fetching.md)** - OData integration, HTTP client, data manipulation
 - **[Excel Export](./docs/excel-export.md)** - Advanced Excel export with formatting and formulas
-- **[Validation](./docs/validation.md)** - Schema validation with Yup
+- **[Validation](./docs/validation.md)** - Schema validation with Yup or Valibot
 - **[Notifications](./docs/notifications.md)** - Notivue-based notification system
 - **[DevExtreme Integration](./docs/devextreme-integration.md)** - DevExtreme UI helpers and components
 
@@ -133,8 +133,8 @@ The main `useUtils()` function returns an object with the following utilities:
 
 #### Core Utilities
 - `notif` - Notification system
-- `validateAllSchema` - Validate entire form with Yup
-- `validateSchema` - Validate single field with Yup
+- `validateAllSchema` - Validate entire form (Yup or Valibot)
+- `validateSchema` - Validate single field (Yup or Valibot)
 - `validateAllSchemaCheck` - Check if any validation errors exist
 - `clearSchemaValidation` - Clear all validation errors
 

@@ -453,6 +453,35 @@
   /* switch */
   --mono-switch-thumb-shadow: initial;
 
+  /* input type="range" */
+  --mono-input-range-gap: initial;
+  --mono-input-range-height: initial;
+  --mono-input-range-track-height: initial;
+  --mono-input-range-track-bg: initial;
+  --mono-input-range-fill: initial;
+  --mono-input-range-thumb-size: initial;
+  --mono-input-range-thumb-bg: initial;
+  --mono-input-range-thumb-border-width: initial;
+  --mono-input-range-thumb-border-color: initial;
+  --mono-input-range-thumb-ring-width: initial;
+  --mono-input-range-thumb-ring-color: initial;
+  --mono-input-range-thumb-shadow: initial;
+  --mono-input-range-ring-width: initial;
+  --mono-input-range-hover-ring-width: initial;
+  --mono-input-range-label-color: initial;
+  --mono-input-range-label-font-size: initial;
+  --mono-input-range-label-line-height: initial;
+  --mono-input-range-label-font-weight: initial;
+  --mono-input-range-value-color: initial;
+  --mono-input-range-value-font-family: initial;
+  --mono-input-range-value-font-weight: initial;
+
+  /* slider */
+  --mono-slider-fill: initial;
+  --mono-slider-tooltip-bg: initial;
+  --mono-slider-tooltip-color: initial;
+  --mono-slider-tooltip-font-family: initial;
+
   /* textarea */
   --mono-textarea-rows-lg: initial;
   --mono-textarea-rows-md: initial;
@@ -652,6 +681,14 @@
   --mono-table-radius: 0;
   /* [data-popover] — the portaled filter / menu / suggestion panels */
   --mono-table-panel-radius: var(--mono-radius-lg);
+
+  /* input type="range" — basecoat@1.0.2 styles/nova.css .field > input[type='range'], .input[type='range'] —
+     h-5, track h-1 bg-muted rounded-full; thumb border-ring size-3 rounded-full border bg-white hover:ring-3. `currentColor` is the accent (the `color` prop). */
+  --mono-input-range-track-height: 0.25rem;
+  --mono-input-range-thumb-size: 0.75rem;
+  --mono-input-range-thumb-border-color: var(--ring);
+  --mono-input-range-thumb-shadow: 0 0 #0000;
+  --mono-input-range-ring-width: 3px;
 }
 
 /* dark: the same knobs, Basecoat's dark: twins */

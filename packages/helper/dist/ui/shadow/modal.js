@@ -2,8 +2,8 @@ import { a as __decorate, c as defineHybridPropAlias, d as optionalNumberConvert
 import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
 import { n as detachEventHandlers, t as applyProps } from "../../element-props-xvw0EB7H.js";
 import { n as isBelowBreakpoint, r as resolveAutoFullscreen, t as autoFullscreenConverter } from "../../breakpoints-DllybT82.js";
-import { a as unregisterPopupLayer, n as refreshPopupStack, r as registerPopupLayer, t as getOpenPopupLayers } from "../../popup-stack-De05Y-mJ.js";
-import { i as pathOwnedBy } from "../../popup-portal-HWhkd7oy.js";
+import { i as registerPopupLayer, o as unregisterPopupLayer, r as refreshPopupStack, t as getOpenPopupLayers } from "../../popup-stack-C64WCuXq.js";
+import { i as pathOwnedBy } from "../../popup-portal-C8ttHDRX.js";
 import "../../mono-button.shadow-D9NdMsmH.js";
 import { t as createNotifier } from "../../notifier-BIrqUzRh.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
@@ -442,6 +442,15 @@ const MonoModalCore = (superClass) => {
 				document.removeEventListener("click", this._onOutsideClick);
 				this._outsideBound = false;
 			}
+		}
+		/**
+		* PopupLayer hook — the path lands in this dialog: the host, its render root,
+		* or a popup opened from within. The same test `_onOutsideClick` uses; the stack
+		* asks it so a dropdown open BELOW this dialog leaves its clicks alone.
+		*/
+		containsEventPath(path) {
+			const root = this.renderRoot instanceof Element ? this.renderRoot : null;
+			return pathOwnedBy(path, root ? [this, root] : [this]);
 		}
 		/** Body-scroll lock is wanted while this modal is open and `lockScroll` is set. */
 		get lockBodyScroll() {

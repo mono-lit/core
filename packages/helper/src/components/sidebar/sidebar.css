@@ -324,7 +324,7 @@ mono-sidebar {
 }
 
 /* Location anchor */
-[mono-sidebar][mono-location="left"] [mono-panel] {
+[mono-sidebar]:is(:not([mono-location]), [mono-location="left"]) [mono-panel] {
   left: 0;
 }
 
@@ -333,11 +333,11 @@ mono-sidebar {
 }
 
 /* ─────── VARIANT ─────── */
-[mono-sidebar][mono-variant="elevated"][mono-location="left"] [mono-panel] {
+[mono-sidebar]:is(:not([mono-variant]), [mono-variant="elevated"]):is(:not([mono-location]), [mono-location="left"]) [mono-panel] {
   box-shadow: var(--_mono-sidebar-shadow);
 }
 
-[mono-sidebar][mono-variant="elevated"][mono-location="right"] [mono-panel] {
+[mono-sidebar]:is(:not([mono-variant]), [mono-variant="elevated"])[mono-location="right"] [mono-panel] {
   box-shadow: -4px 0 24px color-mix(in oklab, var(--_mono-sidebar-accent) 8%, transparent);
 }
 
@@ -345,7 +345,7 @@ mono-sidebar {
   box-shadow: none;
 }
 
-[mono-sidebar][mono-variant="outlined"][mono-location="left"] [mono-panel] {
+[mono-sidebar][mono-variant="outlined"]:is(:not([mono-location]), [mono-location="left"]) [mono-panel] {
   box-shadow: none;
   border-right: 1px solid var(--_mono-sidebar-border);
 }
@@ -398,7 +398,7 @@ mono-sidebar {
   visibility: hidden;
 }
 
-[mono-sidebar][mono-effective="temporary"][mono-location="left"] [mono-panel] {
+[mono-sidebar][mono-effective="temporary"]:is(:not([mono-location]), [mono-location="left"]) [mono-panel] {
   transform: translateX(-100%);
 }
 
@@ -620,7 +620,7 @@ mono-sidebar {
   border-color: color-mix(in oklab, var(--_mono-sidebar-on-accent) 38%, transparent);
 }
 
-:where([mono-sidebar]) [mono-rail-toggle] > .mono-icon {
+:where([mono-sidebar]) [mono-rail-toggle] > :is(.mono-icon, svg) {
   display: block;
   width: var(--mono-icon-md);
   height: var(--mono-icon-md);
@@ -637,27 +637,27 @@ mono-sidebar {
    AND the hover-expanded state (`[mono-expand-on-hover]:hover`). */
 
 /* Default for location-right: mirror the icon so the chevron faces the panel. */
-[mono-sidebar][mono-location="right"] [mono-rail-toggle] > .mono-icon {
+[mono-sidebar][mono-location="right"] [mono-rail-toggle] > :is(.mono-icon, svg) {
   transform: scaleX(-1);
 }
 
 /* Toggled open (after click): rotate to point inward. Active in any mode. */
-[mono-sidebar][mono-location="left"][mono-open] [mono-rail-toggle] > .mono-icon {
+[mono-sidebar]:is(:not([mono-location]), [mono-location="left"])[mono-open] [mono-rail-toggle] > :is(.mono-icon, svg) {
   transform: rotate(180deg);
 }
 
-[mono-sidebar][mono-location="right"][mono-open] [mono-rail-toggle] > .mono-icon {
+[mono-sidebar][mono-location="right"][mono-open] [mono-rail-toggle] > :is(.mono-icon, svg) {
   transform: scaleX(-1) rotate(180deg);
 }
 
 /* Hover-expanded via expand-on-hover (panel widens on hover, no click yet).
    Higher specificity than the [mono-open] rule, so when both apply (cursor still
    over the panel after a click) the result is identical. */
-[mono-sidebar][mono-effective="rail"][mono-expand-on-hover][mono-location="left"]:hover [mono-rail-toggle] > .mono-icon {
+[mono-sidebar][mono-effective="rail"][mono-expand-on-hover]:is(:not([mono-location]), [mono-location="left"]):hover [mono-rail-toggle] > :is(.mono-icon, svg) {
   transform: rotate(180deg);
 }
 
-[mono-sidebar][mono-effective="rail"][mono-expand-on-hover][mono-location="right"]:hover [mono-rail-toggle] > .mono-icon {
+[mono-sidebar][mono-effective="rail"][mono-expand-on-hover][mono-location="right"]:hover [mono-rail-toggle] > :is(.mono-icon, svg) {
   transform: scaleX(-1) rotate(180deg);
 }
 

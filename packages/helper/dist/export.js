@@ -1,4 +1,4 @@
-import { c as escapeCellText, d as __toESM, l as stripDirectives, o as parseMarkdown, s as encodeDirective, t as DEFAULT_STYLES, u as __commonJSMin } from "./styles-D-ergrfR.js";
+import { c as escapeCellText, f as __toESM, l as stripDirectives, o as parseMarkdown, s as encodeDirective, t as DEFAULT_STYLES, u as __commonJSMin } from "./styles-BODNpZV1.js";
 import { n as isReadableSource, r as readAllRows } from "./data-source-read-FxqzQkk2.js";
 import { n as unwrapReactive } from "./reactive-Dtd-esHO.js";
 
@@ -2341,7 +2341,7 @@ async function exportTable(options) {
 	}
 	let workbookPromise = null;
 	const workbook = () => {
-		workbookPromise ??= import("./excel-DtRpxmxs.js").then(({ renderExcel }) => renderExcel(parseMarkdown(rendered), {
+		workbookPromise ??= import("./excel-BPdDt06G.js").then(({ renderExcel }) => renderExcel(parseMarkdown(rendered), {
 			...options,
 			back: options.detail?.back,
 			sheets: detailSheets.map((s) => ({

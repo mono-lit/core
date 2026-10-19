@@ -4,6 +4,7 @@ import { isServer } from 'lit'
 import type { ReactiveController, ReactiveControllerHost } from 'lit'
 
 import {
+  pathInLayerAbove,
   registerPopupLayer,
   unregisterPopupLayer,
   type PopupLayer,
@@ -684,8 +685,26 @@ export class PopupPortalController implements ReactiveController, PopupLayer {
    * in the library asks this method.
    */
   containsInPath(path: EventTarget[]): boolean {
+    return this.containsEventPath(path) || this.inLayerAbove(path)
+  }
+
+  /**
+   * PopupLayer hook — this popup's OWN containment: its portaled panel or a popup
+   * opened from inside it. Never the layers above (that is `inLayerAbove`), so
+   * `pathInLayerAbove` walking the stack does not recurse.
+   */
+  containsEventPath(path: EventTarget[]): boolean {
     if (this._portal && path.includes(this._portal)) return true
     return this.ownsNestedInPath(path)
+  }
+
+  /**
+   * True when the path lands in a layer opened ABOVE this popup while it is open
+   * — a modal opened from a figure in this panel, say. That layer is on top of the
+   * panel, not outside it, so its clicks, focus and Escape are not a dismiss.
+   */
+  inLayerAbove(path: EventTarget[]): boolean {
+    return this._registered && pathInLayerAbove(this, path)
   }
 
   /**

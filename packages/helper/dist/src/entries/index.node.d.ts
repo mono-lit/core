@@ -14,6 +14,7 @@ import { MonoChartAgg, MonoChartAggregateCtx, MonoChartController, MonoChartData
 import { arrayToODataString, arrayToTree, odataStringToArray, treeToArray } from "../components/filter/filter-odata.js";
 import { MonoChartOdataRequest, buildChartApply, buildChartOdataRequest, composeApply } from "../components/chart/chart-odata.js";
 import { controlMonoChart as monoChart } from "../components/chart/mono-data-chart.js";
+import { MonoTooltipColor, MonoTooltipContent, MonoTooltipController, MonoTooltipGlobal, MonoTooltipGlobalOptions, MonoTooltipOptions, MonoTooltipPlacement, MonoTooltipSize, MonoTooltipTarget, MonoTooltipTrigger, MonoTooltipVariant } from "../components/tooltip/tooltip-types.js";
 import { MonoDataDropdownOptions, MonoDropdownController, MonoDropdownItem, controlMonoDataDropdown as monoDataDropdown } from "../components/dropdown-table/mono-data-dropdown.js";
 import { controlMonoFilterBuilder as monoFilterBuilder } from "../components/filter/filter-builder.js";
 import { DEFAULT_TEXTS, OPERATOR_ARITY, operatorsFor } from "../components/filter/filter-operators.js";
@@ -24,7 +25,6 @@ import { controlMonoModal as monoModal } from "../components/modal/mono-modal-co
 import { MonoArraySourceOptions, monoArraySource } from "../components/table/array-source.js";
 import { FieldSegment, ODataClause, ParsedFieldPath, getFieldValue, isPath, mergePatch, parseFieldPath, setFieldValue, toODataClause, toODataSelector } from "../search/field-path.js";
 import { TableCheckboxProps, TableDetailProps, TableInfoProps, TableLoadingProps, TablePageSizeProps, TablePagingProps, TableSearchProps, TableSortProps, TableSummaryProps, TableThProps, TableThSort } from "../components/table/table-types.js";
-import { MonoTooltipColor, MonoTooltipContent, MonoTooltipController, MonoTooltipGlobal, MonoTooltipGlobalOptions, MonoTooltipOptions, MonoTooltipPlacement, MonoTooltipSize, MonoTooltipTarget, MonoTooltipTrigger, MonoTooltipVariant } from "../components/tooltip/tooltip-types.js";
 import { controlMonoTooltip, monoTooltip } from "../components/tooltip/control-tooltip.js";
 import { createMonoTooltip, destroyAllMonoTooltips, resetMonoTooltip } from "../components/tooltip/tooltip-declarative.js";
 import { getMonoTooltipGlobal } from "../components/tooltip/tooltip-config.js";

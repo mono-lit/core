@@ -1,13 +1,13 @@
 import { l as monoHostChildNodes } from "../mono-ui-BwUc0L6B.js";
 import { n as detachEventHandlers, t as applyProps } from "../element-props-xvw0EB7H.js";
 import { t as monoModal } from "../mono-modal-controller-ClObbHUs.js";
-import { a as unregisterPopupLayer, n as refreshPopupStack, r as registerPopupLayer, t as getOpenPopupLayers } from "../popup-stack-De05Y-mJ.js";
+import { i as registerPopupLayer, o as unregisterPopupLayer, r as refreshPopupStack, t as getOpenPopupLayers } from "../popup-stack-C64WCuXq.js";
 import { t as customElement } from "../mono-element-C7vCschg.js";
 import { a as defineHybridPropAliases, i as defineHybridPropAlias, r as booleanStringConverter, s as optionalNumberConverter, t as __decorate } from "../decorate-DbYFpi8R.js";
 import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
 import { a as parkDetachedNodes, i as guardHostTextContent, s as placeSlotNode } from "../light-slots-DdDdZ6zs.js";
 import "../mono-button-CeDB9khW.js";
-import { i as pathOwnedBy } from "../popup-portal-HWhkd7oy.js";
+import { i as pathOwnedBy } from "../popup-portal-C8ttHDRX.js";
 import { n as isBelowBreakpoint, r as resolveAutoFullscreen, t as autoFullscreenConverter } from "../breakpoints-DllybT82.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { property, query, state } from "lit/decorators.js";
@@ -443,6 +443,15 @@ const MonoModalCore = (superClass) => {
 				document.removeEventListener("click", this._onOutsideClick);
 				this._outsideBound = false;
 			}
+		}
+		/**
+		* PopupLayer hook — the path lands in this dialog: the host, its render root,
+		* or a popup opened from within. The same test `_onOutsideClick` uses; the stack
+		* asks it so a dropdown open BELOW this dialog leaves its clicks alone.
+		*/
+		containsEventPath(path) {
+			const root = this.renderRoot instanceof Element ? this.renderRoot : null;
+			return pathOwnedBy(path, root ? [this, root] : [this]);
 		}
 		/** Body-scroll lock is wanted while this modal is open and `lockScroll` is set. */
 		get lockBodyScroll() {

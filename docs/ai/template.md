@@ -1135,7 +1135,7 @@ otherwise rediscover.
 
 These helpers cover, broadly:
 
-- **Validation** (Yup) — validate a whole form or a single field, and clear errors.
+- **Validation** (Yup or Valibot) — validate a whole form or a single field, and clear errors.
 - **Notifications** — one unified `notif()` for success / info / warning / error / promise
   (render them with `MonoNotivue` in the app shell).
 - **Data manipulation & filtering** — upsert/remove rows in arrays or DataSources, build

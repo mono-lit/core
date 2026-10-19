@@ -1,8 +1,13 @@
 import { VisibilityProps } from "../../composables/visibility.js";
+import { MonoTooltipOptions } from "../tooltip/tooltip-types.js";
 //#region src/components/textarea/textarea-types.d.ts
 export type TextareaSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 export type TextareaColor = 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'info' | 'teal' | 'purple' | 'neutral' | 'dark';
 export type TextareaVariant = 'outlined' | 'filled' | 'underlined';
+/** Where the label sits: above the box (default), notched into its top border (inset for filled / underlined), or beside it. */
+export type TextareaLabelPosition = 'top' | 'notched' | 'left' | 'right';
+/** Where the validation message shows: under the box (default), behind a state icon inside it, or floating under it on hover / focus. */
+export type TextareaValidationPosition = 'bottom' | 'icon' | 'float';
 export type TextareaValidationState = 'default' | 'valid' | 'invalid' | 'warning';
 export interface TextareaCssClass {
   root?: string;
@@ -40,6 +45,14 @@ export interface TextareaProps extends VisibilityProps {
   helperText?: string;
   'helper-text'?: string;
   helpertext?: string;
+  /**
+   * Info icon at the end of the label; hovering, focusing or tapping it shows this text.
+   * Plain text → a small built-in bubble (no dependency). Full tooltip options
+   * (`:tooltip.prop="{ content, placement, color }"`) → a `mono-tooltip`, which needs the
+   * optional `@floating-ui/dom` + `@floating-ui/core` peers (without them that form renders
+   * no icon). Shown only beside a label.
+   */
+  tooltip?: string | MonoTooltipOptions;
   /** Validation state controlling field styling. */
   validationState?: TextareaValidationState;
   'validation-state'?: TextareaValidationState;
@@ -62,6 +75,24 @@ export interface TextareaProps extends VisibilityProps {
   color?: TextareaColor;
   /** Visual style of the textarea. */
   variant?: TextareaVariant;
+  /**
+   * Where the label sits: `top` (above the box, default), `notched` (on the top
+   * border for outlined; inset inside the box for filled / underlined), or
+   * `left` / `right` of the box. Knobs: `--mono-textarea-label-width`, `-label-side-gap`,
+   * `-label-notch-font-size`, `-label-notch-bg`.
+   */
+  labelPosition?: TextareaLabelPosition;
+  'label-position'?: TextareaLabelPosition;
+  labelposition?: TextareaLabelPosition;
+  /**
+   * Where the validation message shows. `bottom` (default): the row under the box.
+   * `icon`: a state icon inside the box; hover / tap / keyboard focus shows the message in
+   * a state-coloured bubble. `float`: the message floats under the box only while the field
+   * is hovered or focused. In `icon` / `float` the row under the box keeps the helper text.
+   */
+  validationPosition?: TextareaValidationPosition;
+  'validation-position'?: TextareaValidationPosition;
+  validationposition?: TextareaValidationPosition;
   /** Disables interaction with the textarea. */
   disabled?: boolean;
   /** Makes the textarea read-only. */

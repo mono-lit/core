@@ -525,7 +525,9 @@ export const MonoDropdownCore = <T extends Constructor<LitElement>>(superClass: 
       if (!this.modelValue || !this.closeOnEscape || event.key !== 'Escape') return
       // An Escape inside a popup opened from THIS panel (a select's list, a
       // header filter) is that popup's to handle; the panel it came from stays.
-      if (this._popup.ownsNestedInPath(event.composedPath())) return
+      // So is one inside a layer opened ABOVE this panel (a modal opened from it).
+      const path = event.composedPath()
+      if (this._popup.ownsNestedInPath(path) || this._popup.inLayerAbove(path)) return
       event.preventDefault()
       this._setOpen(false, 'escape', event)
     }

@@ -1,7 +1,9 @@
 import { Constructor } from "../../composables/hybird-prop.js";
 import { CssSizeValue, buildSizeStyle } from "../../composables/css-size.js";
+import { FieldTooltipController, FieldTooltipValue } from "../../composables/field-tooltip.js";
 import { InputFormat, InputFormatOn } from "./input-format.js";
-import { InputColor, InputCssClass, InputSize, InputType, InputValidationState, InputVariant } from "./input-types.js";
+import { InputColor, InputCssClass, InputModelValue, InputSize, InputType, InputValidationState, InputVariant } from "./input-types.js";
+import { FieldValidationController } from "../../composables/field-validation.js";
 import { LitElement, TemplateResult, nothing } from "lit";
 //#region src/components/input/input-core.d.ts
 export declare const numberStringConverter: {
@@ -9,6 +11,8 @@ export declare const numberStringConverter: {
   toAttribute(value: number | undefined): string | null;
 };
 export type InputSlotName = 'prefix' | 'suffix' | 'label' | 'helper';
+/** Glyphs the builds draw: the clear `×`, and the `type="file"` upload cloud. */
+export type InputIconName = 'close' | 'upload';
 /** Public surface added by the core mixin (for typing the wrappers + tag map). */
 export declare class MonoInputCoreInterface {
   cssClass: InputCssClass;
@@ -17,7 +21,11 @@ export declare class MonoInputCoreInterface {
   size: InputSize;
   color: InputColor;
   variant: InputVariant;
-  modelValue: string;
+  modelValue: InputModelValue;
+  accept: string;
+  multiple: boolean;
+  maxFileSize?: number;
+  showValue: boolean;
   formatDisplay?: InputFormat;
   formatValue?: InputFormat;
   formatOn: InputFormatOn;
@@ -27,6 +35,14 @@ export declare class MonoInputCoreInterface {
   placeholder: string;
   label: string;
   helperText: string;
+  tooltip: FieldTooltipValue;
+  protected readonly _tooltip: FieldTooltipController;
+  protected readonly _validation: FieldValidationController;
+  protected get _validationNotice(): {
+    state: string;
+    text: string;
+  } | null;
+  protected _renderMovedMessage(): TemplateResult;
   validationState: InputValidationState;
   validationMessage: string;
   error: boolean;
@@ -69,12 +85,16 @@ export declare class MonoInputCoreInterface {
   protected readonly _resolvedValidationState: InputValidationState;
   protected readonly _wrapperClasses: string;
   protected readonly _fieldClasses: string;
+  protected readonly _isFile: boolean;
+  protected readonly _isRange: boolean;
   protected _cls(base: string, key: keyof InputCssClass): string;
   protected _sizeStyle(): ReturnType<typeof buildSizeStyle>;
   protected _renderWrapper(inner: TemplateResult): TemplateResult;
   protected _renderNative(): TemplateResult;
   protected _renderClear(): TemplateResult | typeof nothing;
-  protected renderIcon(name: 'close'): TemplateResult;
+  protected _renderFileIcon(): TemplateResult | typeof nothing;
+  protected _renderRangeValue(where: 'label' | 'field'): TemplateResult | typeof nothing;
+  protected renderIcon(name: InputIconName): TemplateResult;
 }
 /**
  * `MonoInputCore` — all render-mode-agnostic logic for `mono-input`: reactive

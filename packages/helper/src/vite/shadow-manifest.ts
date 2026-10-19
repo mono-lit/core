@@ -40,6 +40,8 @@ export const SHADOW_ENTRY_TO_TAGS: Record<string, readonly string[]> = {
   select: ['mono-shadow-select'],
   sidebar: ['mono-shadow-sidebar'],
   switch: ['mono-shadow-switch'],
+  slider: ['mono-shadow-slider'],
+  otp: ['mono-shadow-otp'],
   'tag-input': ['mono-shadow-tag-input'],
   tabs: ['mono-shadow-tabs'],
   textarea: ['mono-shadow-textarea'],

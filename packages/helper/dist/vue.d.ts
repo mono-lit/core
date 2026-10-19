@@ -27,10 +27,12 @@ import type { ModalProps } from './src/components/modal/modal-types.js'
 import type { MonoChipProps } from './src/components/chip/chip-types.js'
 import type { MonoFilterBuilderProps } from './src/components/filter/filter-types.js'
 import type { NavProps } from './src/components/nav/nav-types.js'
+import type { OtpProps } from './src/components/otp/otp-types.js'
 import type { RadioProps } from './src/components/radio/radio-types.js'
 import type { RichTextEditorProps } from './src/components/rich-text-editor/rich-text-editor-types.js'
 import type { SelectProps } from './src/components/select/select-types.js'
 import type { SidebarProps } from './src/components/sidebar/sidebar-types.js'
+import type { SliderProps } from './src/components/slider/slider-types.js'
 import type { SwitchProps } from './src/components/switch/switch-types.js'
 import type { TableCheckboxProps } from './src/components/table/table-types.js'
 import type { TableDetailProps } from './src/components/table/table-types.js'
@@ -65,10 +67,12 @@ import type { InputEvents } from './src/components/input/input-types.js'
 import type { MenuEvents } from './src/components/menu/menu-types.js'
 import type { ModalEvents } from './src/components/modal/modal-types.js'
 import type { NavEvents } from './src/components/nav/nav-types.js'
+import type { OtpEvents } from './src/components/otp/otp-types.js'
 import type { RadioEvents } from './src/components/radio/radio-types.js'
 import type { RichTextEditorEvents } from './src/components/rich-text-editor/rich-text-editor-types.js'
 import type { SelectEvents } from './src/components/select/select-types.js'
 import type { SidebarEvents } from './src/components/sidebar/sidebar-types.js'
+import type { SliderEvents } from './src/components/slider/slider-types.js'
 import type { SwitchEvents } from './src/components/switch/switch-types.js'
 import type { TableCheckboxEvents } from './src/components/table/mono-table-checkbox-core.js'
 import type { TableDetailEvents } from './src/components/table/mono-table-detail-core.js'
@@ -154,6 +158,7 @@ declare module 'vue' {
     'mono-menu-list': MonoElement<MenuListProps>
     'mono-modal': MonoElement<ModalProps, ModalEvents>
     'mono-nav': MonoElement<NavProps, NavEvents>
+    'mono-otp': MonoElement<OtpProps, OtpEvents>
     'mono-radio': MonoElement<RadioProps, RadioEvents>
     'mono-rich-text-editor': MonoElement<RichTextEditorProps, RichTextEditorEvents>
     'mono-select': MonoElement<SelectProps, SelectEvents>
@@ -181,10 +186,12 @@ declare module 'vue' {
     'mono-shadow-menu': MonoElement<MenuProps, MenuEvents>
     'mono-shadow-modal': MonoElement<ModalProps, ModalEvents>
     'mono-shadow-nav': MonoElement<NavProps, NavEvents>
+    'mono-shadow-otp': MonoElement<OtpProps, OtpEvents>
     'mono-shadow-radio': MonoElement<RadioProps, RadioEvents>
     'mono-shadow-rich-text-editor': MonoElement<RichTextEditorProps, RichTextEditorEvents>
     'mono-shadow-select': MonoElement<SelectProps, SelectEvents>
     'mono-shadow-sidebar': MonoElement<SidebarProps, SidebarEvents>
+    'mono-shadow-slider': MonoElement<SliderProps, SliderEvents>
     'mono-shadow-switch': MonoElement<SwitchProps, SwitchEvents>
     'mono-shadow-table-checkbox': MonoElement<TableCheckboxProps, TableCheckboxEvents>
     'mono-shadow-table-detail': MonoElement<TableDetailProps, TableDetailEvents>
@@ -203,6 +210,7 @@ declare module 'vue' {
     'mono-shadow-tag-input': MonoElement<TagInputProps, TagInputEvents>
     'mono-shadow-textarea': MonoElement<TextareaProps, TextareaEvents>
     'mono-sidebar': MonoElement<SidebarProps, SidebarEvents>
+    'mono-slider': MonoElement<SliderProps, SliderEvents>
     'mono-switch': MonoElement<SwitchProps, SwitchEvents>
     'mono-table-checkbox': MonoElement<TableCheckboxProps, TableCheckboxEvents>
     'mono-table-detail': MonoElement<TableDetailProps, TableDetailEvents>
@@ -255,10 +263,12 @@ declare module './src/composables/mono-ui.js' {
     'mono-menu-list': StripIndex<MenuListProps> & MonoCommonProps
     'mono-modal': StripIndex<ModalProps> & MonoCommonProps
     'mono-nav': StripIndex<NavProps> & MonoCommonProps
+    'mono-otp': StripIndex<OtpProps> & MonoCommonProps
     'mono-radio': StripIndex<RadioProps> & MonoCommonProps
     'mono-rich-text-editor': StripIndex<RichTextEditorProps> & MonoCommonProps
     'mono-select': StripIndex<SelectProps> & MonoCommonProps
     'mono-sidebar': StripIndex<SidebarProps> & MonoCommonProps
+    'mono-slider': StripIndex<SliderProps> & MonoCommonProps
     'mono-switch': StripIndex<SwitchProps> & MonoCommonProps
     'mono-table-checkbox': StripIndex<TableCheckboxProps> & MonoCommonProps
     'mono-table-detail': StripIndex<TableDetailProps> & MonoCommonProps

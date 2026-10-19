@@ -277,6 +277,16 @@
   --mono-table-line-height: var(--mono-text-xs--lh);
   /* [data-popover] — the portaled filter / menu / suggestion panels */
   --mono-table-panel-radius: 0;
+
+  /* input type="range" — basecoat@1.0.2 styles/lyra.css .field > input[type='range'], .input[type='range'] —
+     h-5, track h-1 bg-muted rounded-none; thumb border-ring size-3 rounded-none border bg-white hover:ring-1. `currentColor` is the accent (the `color` prop). */
+  --mono-input-range-track-height: 0.25rem;
+  --mono-input-range-track-radius: 0px;
+  --mono-input-range-thumb-size: 0.75rem;
+  --mono-input-range-thumb-radius: 0px;
+  --mono-input-range-thumb-border-color: var(--ring);
+  --mono-input-range-thumb-shadow: 0 0 #0000;
+  --mono-input-range-ring-width: 1px;
 }
 
 /* dark: the same knobs, Basecoat's dark: twins */

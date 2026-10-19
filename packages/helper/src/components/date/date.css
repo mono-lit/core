@@ -310,6 +310,39 @@ mono-date {
   color: var(--_mono-date-danger);
 }
 
+/* `tooltip` prop — the info icon at the end of the label row (the label's
+   flex gap spaces it). `pointer-events` is restored because a disabled field
+   switches its label's off, and a disabled field is exactly where the reason
+   is worth a hover. Knobs: --mono-date-label-tooltip-size / -color / -opacity. */
+:where([mono-date]) > [mono-label] > [mono-label-tooltip] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--mono-date-label-tooltip-size, 1.1em);
+  color: var(--mono-date-label-tooltip-color, currentColor);
+  opacity: var(--mono-date-label-tooltip-opacity, 0.6);
+  border-radius: 9999px;
+  cursor: help;
+  pointer-events: auto;
+  outline: none;
+  transition: opacity 150ms ease;
+}
+
+:where([mono-date]) > [mono-label] > [mono-label-tooltip]:is(:hover, :focus-visible) {
+  opacity: 1;
+}
+
+:where([mono-date]) > [mono-label] > [mono-label-tooltip]:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+:where([mono-date]) > [mono-label] > [mono-label-tooltip] > [mono-icon] {
+  width: 1em;
+  height: 1em;
+}
+
 /* =========================================
    The field — the bordered box
    ========================================= */
@@ -774,4 +807,22 @@ mono-date {
 /* the inline calendar (`inline`) sits in the page flow, on the field's own surface */
 .flatpickr-calendar.mono-flatpickr.inline {
   box-shadow: var(--mono-date-calendar-ring, 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent));
+}
+
+/* =========================================
+   label-position — the slots form/label-position.css reads
+   (top / notched / left / right; public knobs: --mono-date-label-width,
+   -label-side-gap, -label-notch-font-size, -label-notch-bg)
+   ========================================= */
+
+[mono-date][mono-label-position] {
+  --_mono-lp-width: var(--mono-date-label-width, auto);
+  --_mono-lp-gap: var(--mono-date-label-side-gap, calc(var(--mono-spacing) * 3));
+  --_mono-lp-height: var(--_mono-date-height);
+  --_mono-lp-box-min: var(--_mono-date-height);
+  --_mono-lp-padding-x: var(--_mono-date-padding-x);
+  --_mono-lp-padding-y: 0px;
+  --_mono-lp-font: var(--mono-date-label-notch-font-size, var(--mono-text-xs));
+  --_mono-lp-notch-bg: var(--mono-date-label-notch-bg, var(--background));
+  --_mono-lp-field-bg: var(--_mono-date-bg);
 }

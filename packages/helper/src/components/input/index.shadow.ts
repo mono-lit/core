@@ -13,6 +13,9 @@ export type {
   InputColor,
   InputProps,
   InputEvents,
+  InputModelValue,
+  InputModelEventDetail,
+  InputFileErrorEventDetail,
 } from './input-types.js'
 
 export {

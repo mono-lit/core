@@ -121,9 +121,12 @@ export class MonoAccordion extends MonoAccordionCore(LitElement) {
     // global `[data-mono-slot='icon']` rules and lose its own sizing). The
     // placeholder is sized by accordion CSS; the svg fills it (chip's global
     // `[data-mono-slot='icon'] > svg { width: 100% }`).
+    // With no `slot="icon"`, the `icon` prop's glyph renders in its place.
     return html`
       <span class=${this._cls('mono-accordion-icon', 'icon')} mono-glyph aria-hidden="true">
-        <span data-mono-slot="icon"></span>
+        ${this._hasIconSlotState
+          ? html`<span data-mono-slot="icon"></span>`
+          : this._renderIconGlyph()}
       </span>
     `
   }

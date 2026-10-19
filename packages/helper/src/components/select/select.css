@@ -315,6 +315,39 @@ mono-select {
   color: var(--_mono-select-danger);
 }
 
+/* `tooltip` prop — the info icon at the end of the label row (the label's
+   flex gap spaces it). `pointer-events` is restored because a disabled field
+   switches its label's off, and a disabled field is exactly where the reason
+   is worth a hover. Knobs: --mono-select-label-tooltip-size / -color / -opacity. */
+:where([mono-select]) > [mono-label] > [mono-label-tooltip] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--mono-select-label-tooltip-size, 1.1em);
+  color: var(--mono-select-label-tooltip-color, currentColor);
+  opacity: var(--mono-select-label-tooltip-opacity, 0.6);
+  border-radius: 9999px;
+  cursor: help;
+  pointer-events: auto;
+  outline: none;
+  transition: opacity 150ms ease;
+}
+
+:where([mono-select]) > [mono-label] > [mono-label-tooltip]:is(:hover, :focus-visible) {
+  opacity: 1;
+}
+
+:where([mono-select]) > [mono-label] > [mono-label-tooltip]:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+:where([mono-select]) > [mono-label] > [mono-label-tooltip] > [mono-icon] {
+  width: 1em;
+  height: 1em;
+}
+
 /* =========================================
    The trigger — the bordered box (a <button>, or a <div> holding the combobox input)
    ========================================= */
@@ -915,4 +948,22 @@ mono-select {
   [mono-select] [mono-item] {
     transition: none;
   }
+}
+
+/* =========================================
+   label-position — the slots form/label-position.css reads
+   (top / notched / left / right; public knobs: --mono-select-label-width,
+   -label-side-gap, -label-notch-font-size, -label-notch-bg)
+   ========================================= */
+
+[mono-select][mono-label-position] {
+  --_mono-lp-width: var(--mono-select-label-width, auto);
+  --_mono-lp-gap: var(--mono-select-label-side-gap, calc(var(--mono-spacing) * 3));
+  --_mono-lp-height: var(--_mono-select-height);
+  --_mono-lp-box-min: var(--_mono-select-height);
+  --_mono-lp-padding-x: var(--_mono-select-padding-start);
+  --_mono-lp-padding-y: var(--mono-select-padding-y, 0px);
+  --_mono-lp-font: var(--mono-select-label-notch-font-size, var(--mono-text-xs));
+  --_mono-lp-notch-bg: var(--mono-select-label-notch-bg, var(--background));
+  --_mono-lp-field-bg: var(--_mono-select-bg);
 }

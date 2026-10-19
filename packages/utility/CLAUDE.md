@@ -18,7 +18,7 @@ This is the `@mono-lit/utility` package. Its core fetch/helper layer (`src/core/
 
 **`use-helper.ts`** - Main utility composable providing:
 - Notification system using Notivue
-- Schema validation with Yup integration
+- Schema validation for yup or any Standard Schema (Valibot) — `schema-validate.ts`, imports no schema library
 - Data manipulation utilities (replacerData, filterOrIn)
 - Excel export functionality
 
@@ -43,7 +43,7 @@ Located in `src/core/types/`:
 - **DevExtreme**: Core UI framework integration
 - **@odata2ts/http-client-fetch**: OData client library
 - **notivue**: Notification system
-- **yup**: Schema validation
+- **yup / valibot** (optional peers, never imported at runtime): Schema validation
 - **exceljs**: Excel file generation
 - **file-saver-es**: File download utilities
 

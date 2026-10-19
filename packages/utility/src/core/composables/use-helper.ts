@@ -1,5 +1,5 @@
 import type { ValidateSchema, ValidateError, } from '../types'
-import * as yup from 'yup';
+import { validateAll, validateField, clearAll, everyValid, unwrapError } from './schema-validate'
 import { push } from 'notivue'
 import type DataSource from 'devextreme/data/data_source';
 import { NotifProps } from '../types/notif';
@@ -51,166 +51,53 @@ export const useHelper = () => {
 
 
     /**
-     * fungsi mengecek semua inputan validasi, jika satu inputan masih salah maka akan mereturn true
-     * @param error adalah list data error
+     * `true` when ANY `{ valid, message }` slot in the error object (nested
+     * objects/arrays included) is invalid.
+     * @param error the error object (or a Ref of it)
      */
-    let validateAllSchemaCheck = (error: ValidateError<any>): boolean => !Object.values(error).every((e: any) => e.valid as boolean)
+    let validateAllSchemaCheck = (error: ValidateError<any> | any): boolean => !everyValid(unwrapError(error))
 
     /**
-
-    * ShortHand Validasi batch schema yup
-    * @param schema adalah list data schema yang ingin divalidasi
-    * @param input adalah list data input yang ingin divalidasi, harus dicocokkan
-    * @param error adalah list data error yang akan ditampilkan
-    */
-
-    /** ───────────────── helpers ───────────────── */
+     * Validate the whole form against a yup schema or any Standard Schema
+     * (Valibot, Zod, …). Keys absent from `input` are skipped. Every slot is
+     * reset first, so a field that now passes is cleared.
+     * @param schema yup object schema or Standard Schema
+     * @param input the form values
+     * @param error `{ valid, message }` slots mirroring `input` (object or Ref)
+     * @param callback awaited only when everything is valid
+     * @returns `true` when the form is valid
+     */
     async function validateAllSchema<T extends object = any>(
         { schema, input, error }: ValidateSchema<T>,
-        callback?: () => void
+        callback?: () => unknown
     ): Promise<boolean> {
-
-
-        function buildPartialSchema(
-            inputObj: any,
-            schemaObj: yup.AnyObjectSchema
-        ): yup.AnyObjectSchema {
-            // if the schema has no nested fields, return it unchanged
-            if (!('fields' in schemaObj)) return schemaObj;
-
-            const picked: Record<string, yup.AnySchema> = {};
-            const shape = (schemaObj as any).fields as Record<string, yup.AnySchema>;
-
-            for (const key of Object.keys(shape)) {
-                if (key in (inputObj ?? {})) {
-                    const fieldSchema = shape[key];
-                    const value = inputObj?.[key];
-
-                    // walk down again if the field is an object and the input is an object
-                    const isNested =
-                        fieldSchema.type === 'object' &&
-                        value !== null &&
-                        typeof value === 'object' &&
-                        !Array.isArray(value);
-
-                    picked[key] = isNested
-                        ? buildPartialSchema(value, fieldSchema as yup.AnyObjectSchema)
-                        : fieldSchema;
-                }
-            }
-
-            return yup.object().shape(picked);
-        }
-        const partialSchema = buildPartialSchema(input, schema);
-
-        // helper to mark errors deep in the error structure
-        function setNestedError(obj: any, path: string, message: string) {
-
-            const keys = path.split('.');
-            const lastKey = keys.pop()!;
-            let cursor = obj;
-
-            for (const k of keys) {
-                cursor[k] = cursor[k] ?? {};
-                cursor = cursor[k];
-            }
-
-            if (cursor[lastKey]) {
-                cursor[lastKey].message = message;
-                cursor[lastKey].valid = false;
-            }
-        }
-
-        try {
-            await partialSchema.validate(input, { abortEarly: false });
-            callback?.();
-            return true;
-        } catch (e: any) {
-            if ('inner' in e) {
-                (e as any).inner.forEach((err: any) =>
-                    setNestedError(error, err.path, err.message)
-                );
-            }
-            // return global validity flag
-            const everyValid = (obj: any): boolean =>
-                Object.values(obj).every((v: any) =>
-                    typeof v === 'object' && 'valid' in v ? v.valid : everyValid(v)
-                );
-
-            return everyValid(error);
-        }
+        const valid = await validateAll(schema, input, error)
+        if (valid) await callback?.()
+        return valid
     }
 
-
     /**
-     * ShortHand single Validasi schema yup
-     * @param schema adalah list data schema yang ingin divalidasi
-     * @param field adalah field data yang ingin divalidasi
-     * @param input adalah data input yang ingin divalidasi, harus dicocokkan
-     * @param error adalah data error yang akan ditampilkan
-     * @param callback
+     * Validate ONE field (dotted / indexed paths allowed: `'address.city'`,
+     * `'items[0].name'`) against a yup schema or any Standard Schema.
+     * Without `field` it validates the whole form.
+     * @param callback awaited only when the field is valid
+     * @returns `true` when the field is valid
      */
     let validateSchema = async <T = any>({
         schema,
         field,
         input,
         error
-    }: ValidateSchema<T>, callback?: Function): Promise<boolean> => {
-
-        if (schema?.fields[field]) {
-            await schema.validateAt(field, input)
-                .then(() => {
-                    error[field].message = ''
-                    error[field].valid = true
-
-                    if (callback) return callback()
-
-                })
-                .catch((err: any) => {
-
-                    if (field && !Array.isArray(input[field])) {
-
-                        if (!input[field]) {
-                            error[err.path].message = err.message
-                            error[err.path].valid = false
-                        }
-
-                    } else {
-                        error[err.path].message = err.message
-                        error[err.path].valid = false
-
-                    }
-
-                })
-        }
-        // else {
-        //   error[field].message = 'Field does not exist in schema'
-        //   error[field].valid = false
-        // }
-
-        return !error[field].valid
+    }: ValidateSchema<T>, callback?: () => unknown): Promise<boolean> => {
+        if (field === undefined || field === null) return validateAllSchema({ schema, input: input as any, error }, callback)
+        const valid = await validateField(schema, field as string, input, error)
+        if (valid) await callback?.()
+        return valid
     }
 
-    function clearSchemaValidation({ error }: { error: Ref<any> }) {
-        const clear = (obj: Ref<any>) => {
-            for (const key in obj.value) {
-                const val = obj.value[key]
-
-                if (
-                    typeof val === 'object' &&
-                    val !== null &&
-                    'valid' in val &&
-                    'message' in val
-                ) {
-                    val.valid = true
-                    val.message = ''
-                } else if (typeof val === 'object' && val !== null) {
-                    clear(val) // recurse deeper
-                }
-            }
-        }
-
-        clear(error)
+    /** Reset every `{ valid, message }` slot. Accepts a Ref or the object itself. */
+    function clearSchemaValidation({ error }: { error: any }) {
+        clearAll(error)
     }
 
 

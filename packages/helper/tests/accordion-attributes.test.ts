@@ -250,6 +250,33 @@ describe('<mono-accordion> title / subtitle', () => {
     expect(el.modelValue).toBe(true)
     host.remove()
   })
+
+  it('the icon prop renders an iconify class or text in the glyph chip', async () => {
+    const { el, host } = await mountHtml(
+      '<mono-accordion title="T" icon="i-tabler-filter-search">Body</mono-accordion>',
+    )
+    const glyph = el.querySelector('[mono-accordion] > [mono-head] > [mono-glyph]')
+    expect(glyph?.querySelector('.mono-accordion-iconify.i-tabler-filter-search')).not.toBeNull()
+
+    el.icon = '★'
+    await tick()
+    expect(glyph?.textContent?.trim()).toBe('★')
+
+    el.icon = ''
+    await tick()
+    expect(el.querySelector('[mono-glyph]')).toBeNull()
+    host.remove()
+  })
+
+  it('slot="icon" outranks the icon prop', async () => {
+    const { el, host } = await mountHtml(
+      '<mono-accordion title="T" icon="i-tabler-filter-search"><svg slot="icon" id="slotted"></svg>Body</mono-accordion>',
+    )
+    const glyph = el.querySelector('[mono-glyph]')
+    expect(glyph?.querySelector('#slotted')).not.toBeNull()
+    expect(glyph?.querySelector('.mono-accordion-iconify')).toBeNull()
+    host.remove()
+  })
 })
 
 describe('<mono-shadow-accordion> title / subtitle', () => {
@@ -289,6 +316,17 @@ describe('<mono-shadow-accordion> title / subtitle', () => {
     await tick()
     expect(el._hasHeaderSlotState).toBe(false)
     expect(root.querySelector('[mono-glyph]')?.hasAttribute('mono-empty')).toBe(false)
+    host.remove()
+  })
+
+  it('the icon prop is the icon slot fallback (bundled mdi glyph as inline svg)', async () => {
+    const { host, root } = await mountHtml(
+      '<mono-shadow-accordion title="T" icon="i-mdi-close">Body</mono-shadow-accordion>',
+    )
+    await tick()
+    const glyph = root.querySelector('[mono-glyph]')!
+    expect(glyph.hasAttribute('mono-empty')).toBe(false)
+    expect(glyph.querySelector('slot[name="icon"] > .mono-accordion-iconify > svg')).not.toBeNull()
     host.remove()
   })
 

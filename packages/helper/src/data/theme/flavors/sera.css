@@ -370,6 +370,18 @@
   --mono-breadcrumb-badge-height: auto;
   --mono-breadcrumb-badge-font: 0.625rem;
   --mono-breadcrumb-badge-weight: var(--mono-font-weight-semibold);
+
+  /* input type="range" — basecoat@1.0.2 styles/sera.css .field > input[type='range'], .input[type='range'] —
+     h-5, track h-0.5 bg-input/50 (square); thumb size-3 border-none bg-primary hover:ring-2. `currentColor` is the accent (the `color` prop). */
+  --mono-input-range-track-height: 0.125rem;
+  --mono-input-range-track-bg: color-mix(in oklab, var(--input) 50%, transparent);
+  --mono-input-range-track-radius: 0px;
+  --mono-input-range-thumb-size: 0.75rem;
+  --mono-input-range-thumb-radius: 0px;
+  --mono-input-range-thumb-border-width: 0px;
+  --mono-input-range-thumb-bg: currentColor;
+  --mono-input-range-thumb-shadow: 0 0 #0000;
+  --mono-input-range-ring-width: 2px;
 }
 
 :is(html, body, .mono-theme).dark .theme-sera,

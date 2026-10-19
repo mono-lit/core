@@ -1,6 +1,6 @@
 import { a as __decorate, c as defineHybridPropAlias, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, n as adoptIconStyles, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration } from "../../hydration-flush-DHrl4_KK.js";
 import { n as mdiGlyph, t as isIconifyClass } from "../../icon-BM9N-jOt.js";
-import { r as closeIcon } from "../../field-icons-FmyBWa0g.js";
+import { a as closeIcon } from "../../field-icons-t8rXRCKs.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { property, state } from "lit/decorators.js";
 

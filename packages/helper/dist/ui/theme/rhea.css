@@ -453,6 +453,35 @@
   /* switch */
   --mono-switch-thumb-shadow: initial;
 
+  /* input type="range" */
+  --mono-input-range-gap: initial;
+  --mono-input-range-height: initial;
+  --mono-input-range-track-height: initial;
+  --mono-input-range-track-bg: initial;
+  --mono-input-range-fill: initial;
+  --mono-input-range-thumb-size: initial;
+  --mono-input-range-thumb-bg: initial;
+  --mono-input-range-thumb-border-width: initial;
+  --mono-input-range-thumb-border-color: initial;
+  --mono-input-range-thumb-ring-width: initial;
+  --mono-input-range-thumb-ring-color: initial;
+  --mono-input-range-thumb-shadow: initial;
+  --mono-input-range-ring-width: initial;
+  --mono-input-range-hover-ring-width: initial;
+  --mono-input-range-label-color: initial;
+  --mono-input-range-label-font-size: initial;
+  --mono-input-range-label-line-height: initial;
+  --mono-input-range-label-font-weight: initial;
+  --mono-input-range-value-color: initial;
+  --mono-input-range-value-font-family: initial;
+  --mono-input-range-value-font-weight: initial;
+
+  /* slider */
+  --mono-slider-fill: initial;
+  --mono-slider-tooltip-bg: initial;
+  --mono-slider-tooltip-color: initial;
+  --mono-slider-tooltip-font-family: initial;
+
   /* textarea */
   --mono-textarea-rows-lg: initial;
   --mono-textarea-rows-md: initial;
@@ -726,6 +755,17 @@
   --mono-table-panel-radius: var(--mono-radius-2xl);
   --mono-table-panel-shadow: var(--mono-shadow-lg);
   --mono-table-panel-ring: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent);
+
+  /* input type="range" — basecoat@1.0.2 styles/rhea.css .field > input[type='range'], .input[type='range'] —
+     h-5, track h-1 bg-input/90 rounded-2xl; thumb ring-black/10 ring-1 size-4 rounded-2xl bg-white shadow-md hover:ring-4. `currentColor` is the accent (the `color` prop). */
+  --mono-input-range-track-height: 0.25rem;
+  --mono-input-range-track-bg: color-mix(in oklab, var(--input) 90%, transparent);
+  --mono-input-range-track-radius: var(--mono-radius-2xl);
+  --mono-input-range-thumb-radius: var(--mono-radius-2xl);
+  --mono-input-range-thumb-border-width: 0px;
+  --mono-input-range-thumb-ring-width: 1px;
+  --mono-input-range-thumb-ring-color: rgb(0 0 0 / 0.1);
+  --mono-input-range-thumb-shadow: var(--mono-shadow-md);
 }
 
 :is(html, body, .mono-theme).dark .theme-rhea,

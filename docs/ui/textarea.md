@@ -30,6 +30,50 @@ Disabled, readonly and required.
 
 <DemoSingle name="textarea" id="states" />
 
+## Tooltip
+
+When the extra explanation is too long for `helper-text`, put it behind an info icon at the end of the label. `tooltip="…"` takes plain text; `:tooltip.prop="{ content, placement, color, … }"` takes any [tooltip](../addons/tooltip) option. The icon is keyboard-focusable and also works on a disabled field — a good place to say *why* it is disabled.
+
+::: tip Plain text needs nothing extra
+`tooltip="…"` (plain text) shows a small built-in bubble — no dependency. It sits above the icon (below when there's no room), stays on screen, and isn't clipped by an `overflow: hidden` parent. It reads the tooltip addon's `--mono-tooltip-bg` / `-color` / `-radius` / `-max-width` / `-font-size` / `-padding-x` / `-padding-y` knobs.
+
+The **object** form is the [tooltip addon](../addons/tooltip) (`mono-tooltip`: placement, color, delay…), which needs the optional peers `pnpm add @floating-ui/dom @floating-ui/core`. Without them an object-form tooltip renders **no icon** (and nothing is logged). Either way the icon only appears beside a label.
+:::
+
+<DemoSingle name="textarea" id="tooltip" />
+
+## Label position
+
+`label-position` moves the label without touching its type or colours:
+
+| value | look |
+|---|---|
+| `top` | above the box (default) |
+| `notched` | outlined: on the top border, `──Label──`. filled / underlined: inset inside the top of the box, which grows by the label's line |
+| `left` / `right` | beside the box, centred on its first row; helper / validation messages stay under the box |
+
+Set it for every field at once with `createMonoUI({ 'mono-textarea': { labelPosition: 'notched' } })`. `--mono-textarea-label-width` fixes the side column so a stack of `left` fields lines up.
+
+::: tip The notch is a background patch
+The notch hides the border with `--background`. On a card or any other surface, set `--mono-textarea-label-notch-bg` to that surface (e.g. `var(--card)`).
+:::
+
+<DemoSingle name="textarea" id="label-position" />
+
+## Validation position
+
+`validation-position` decides where the validation message (`invalid` / `warning` / `valid` + `validation-message`) shows. The coloured border is the same in every mode.
+
+| value | look |
+|---|---|
+| `bottom` | the row under the box (default) — the message replaces the helper text there |
+| `icon` | a state icon inside the box; hover or tap it (or keyboard-focus the field) for the message in a state-coloured bubble |
+| `float` | nothing until the field is hovered or focused; then the message floats under the box, and disappears again when you leave |
+
+In `icon` and `float` the row under the box keeps the **helper text**, and the message stays there for screen readers only. The bubbles need no dependency (no floating-ui). Knobs: `--mono-validation-invalid-bg` / `-color` (and `warning` / `valid`), `--mono-validation-icon-size`.
+
+<DemoSingle name="textarea" id="validation-position" />
+
 ## Validation
 
 `valid`, `invalid` and `warning` states with messages.

@@ -23,6 +23,7 @@ import { run as dialogZIndex } from './dialog-z-index.spec.mjs'
 import { run as dialogOutsideClick } from './dialog-outside-click.spec.mjs'
 import { run as dialogOverlayStack } from './dialog-overlay-stack.spec.mjs'
 import { run as tooltipArrow } from './tooltip-arrow.spec.mjs'
+import { run as fieldTooltip } from './field-tooltip.spec.mjs'
 import { run as sizeDefaults } from './size-defaults.spec.mjs'
 import { run as breadcrumbIcons } from './breadcrumb-icons.spec.mjs'
 import { run as modalSlots } from './modal-slots.spec.mjs'
@@ -94,6 +95,7 @@ const SPECS = [
   ['modal / drawer outside click without an overlay', dialogOutsideClick],
   ['modal / drawer stacked overlays', dialogOverlayStack],
   ['tooltip arrow on rounded bubbles', tooltipArrow],
+  ['form-control tooltip prop (info icon beside the label)', fieldTooltip],
   ['size defaults (md)', sizeDefaults],
   ['breadcrumb icons', breadcrumbIcons],
   ['modal header/footer aliases', modalSlots],
@@ -153,6 +155,7 @@ const { server, port } = await serve({
     css + ['vega', 'luma', 'lyra', 'maia', 'mira', 'nova', 'rhea', 'sera', 'one'].map((f) => flavorCss(f)).join('\n'),
     await bundleFixture('tooltip-arrow'),
   ),
+  'field-tooltip': pageHtml(css, await bundleFixture('field-tooltip')),
   'size-defaults': pageHtml(css, await bundleFixture('size-defaults')),
   'breadcrumb-icons': pageHtml(css, await bundleFixture('breadcrumb-icons')),
   'modal-slots': pageHtml(css, await bundleFixture('modal-slots')),

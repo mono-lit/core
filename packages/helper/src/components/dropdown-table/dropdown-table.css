@@ -333,6 +333,39 @@ mono-dropdown-table *,
   color: var(--_mono-dropdown-table-danger);
 }
 
+/* `tooltip` prop — the info icon at the end of the label row (the label's
+   flex gap spaces it). `pointer-events` is restored because a disabled field
+   switches its label's off, and a disabled field is exactly where the reason
+   is worth a hover. Knobs: --mono-dropdown-table-label-tooltip-size / -color / -opacity. */
+:where(:is([mono-dropdown-table],.mono-dropdown-table)) > :is([mono-dd-label],.mono-dropdown-table-label) > [mono-label-tooltip] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--mono-dropdown-table-label-tooltip-size, 1.1em);
+  color: var(--mono-dropdown-table-label-tooltip-color, currentColor);
+  opacity: var(--mono-dropdown-table-label-tooltip-opacity, 0.6);
+  border-radius: 9999px;
+  cursor: help;
+  pointer-events: auto;
+  outline: none;
+  transition: opacity 150ms ease;
+}
+
+:where(:is([mono-dropdown-table],.mono-dropdown-table)) > :is([mono-dd-label],.mono-dropdown-table-label) > [mono-label-tooltip]:is(:hover, :focus-visible) {
+  opacity: 1;
+}
+
+:where(:is([mono-dropdown-table],.mono-dropdown-table)) > :is([mono-dd-label],.mono-dropdown-table-label) > [mono-label-tooltip]:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+:where(:is([mono-dropdown-table],.mono-dropdown-table)) > :is([mono-dd-label],.mono-dropdown-table-label) > [mono-label-tooltip] > [mono-icon] {
+  width: 1em;
+  height: 1em;
+}
+
 /* =========================================
    The field — the chip box (role="combobox"; the search box lives in the panel)
    ========================================= */
@@ -919,4 +952,23 @@ mono-shadow-dropdown-table :is([mono-table],.mono-table) tbody tr:is([mono-selec
   :is([mono-dropdown-table],.mono-dropdown-table) [mono-dd-chip-close] {
     transition: none;
   }
+}
+
+/* =========================================
+   label-position — the slots form/label-position.css reads
+   (top / notched / left / right; public knobs: --mono-dropdown-table-label-width,
+   -label-side-gap, -label-notch-font-size, -label-notch-bg)
+   ========================================= */
+
+[mono-dropdown-table][mono-label-position] {
+  --_mono-lp-width: var(--mono-dropdown-table-label-width, auto);
+  --_mono-lp-gap: var(--mono-dropdown-table-label-side-gap, calc(var(--mono-spacing) * 3));
+  --_mono-lp-height: var(--_mono-dropdown-table-height);
+  --_mono-lp-box-min: var(--_mono-dropdown-table-height);
+  /* + the single-value text inset (multi chips start at the padding) */
+  --_mono-lp-padding-x: calc(var(--_mono-dropdown-table-padding-x) + var(--mono-dropdown-table-text-inset, calc(var(--mono-spacing) * 1.5)));
+  --_mono-lp-padding-y: var(--_mono-dropdown-table-padding-y);
+  --_mono-lp-font: var(--mono-dropdown-table-label-notch-font-size, var(--mono-text-xs));
+  --_mono-lp-notch-bg: var(--mono-dropdown-table-label-notch-bg, var(--background));
+  --_mono-lp-field-bg: var(--_mono-dropdown-table-bg);
 }

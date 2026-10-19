@@ -108,3 +108,272 @@ describe('<mono-input> styling attributes', () => {
     el.remove()
   })
 })
+
+describe('<mono-input type="file">', () => {
+  beforeAll(async () => {
+    await import('../dist/ui/input.js')
+  })
+
+  const tick = (ms = 40) => new Promise((r) => setTimeout(r, ms))
+
+  async function mount(props: Record<string, unknown> = {}): Promise<any> {
+    const el = document.createElement('mono-input') as any
+    el.type = 'file'
+    document.body.appendChild(el)
+    for (const [k, v] of Object.entries(props)) el[k] = v
+    await tick()
+    return el
+  }
+
+  const picker = (el: any) => el.querySelector('[mono-file-input]') as HTMLInputElement
+  const text = (el: any) => el.querySelector('[mono-native][mono-file]') as HTMLInputElement
+
+  /** jsdom has no DataTransfer: plant `files` on the picker and fire its change. */
+  function pick(el: any, files: File[]): void {
+    const input = picker(el)
+    Object.defineProperty(input, 'files', { value: files, configurable: true })
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+  }
+
+  const file = (name: string, size = 3) => new File(['x'.repeat(size)], name, { type: 'text/plain' })
+
+  it('renders a hidden native picker, a read-only name field and the upload icon', async () => {
+    const el = await mount({ accept: '.pdf', multiple: true, name: 'doc' })
+    const r = el.querySelector('[mono-input]') as HTMLElement
+    expect(r.getAttribute('mono-type')).toBe('file')
+    const p = picker(el)
+    expect(p.type).toBe('file')
+    expect(p.hidden).toBe(true)
+    expect(p.accept).toBe('.pdf')
+    expect(p.multiple).toBe(true)
+    expect(p.name).toBe('doc')
+    expect(text(el).readOnly).toBe(true)
+    expect(text(el).type).toBe('text')
+    const icon = r.querySelector('[mono-field] > [mono-file-icon]') as HTMLElement
+    expect(icon.querySelector('.i-mdi-cloud-upload-outline')).not.toBeNull()
+    el.remove()
+  })
+
+  it('a pick sets modelValue to the File and shows its name', async () => {
+    const el = await mount()
+    const changes: any[] = []
+    const inputs: any[] = []
+    el.addEventListener('change', (e: any) => changes.push(e.detail))
+    el.addEventListener('input', (e: any) => inputs.push(e.detail))
+    const f = file('report.pdf')
+    pick(el, [f])
+    await tick()
+    expect(el.modelValue).toBe(f)
+    expect(text(el).value).toBe('report.pdf')
+    expect(changes).toHaveLength(1)
+    expect(changes[0].modelValue).toBe(f)
+    expect(changes[0].files).toEqual([f])
+    // the picker's native `input` (no detail, fired before the value lands) never reaches the host
+    expect(inputs).toHaveLength(1)
+    expect(inputs[0].modelValue).toBe(f)
+    el.remove()
+  })
+
+  it('multiple: modelValue is File[] and the names are joined', async () => {
+    const el = await mount({ multiple: true })
+    const a = file('a.png')
+    const b = file('b.png')
+    pick(el, [a, b])
+    await tick()
+    expect(el.modelValue).toEqual([a, b])
+    expect(text(el).value).toBe('a.png, b.png')
+    el.remove()
+  })
+
+  it('max-file-size drops oversized files and emits error', async () => {
+    const el = await mount({ maxFileSize: 5 })
+    const errors: any[] = []
+    el.addEventListener('error', (e: any) => errors.push(e.detail))
+    const prev = file('ok.txt', 2)
+    pick(el, [prev])
+    await tick()
+    pick(el, [file('big.txt', 10)])
+    await tick()
+    expect(errors).toHaveLength(1)
+    expect(errors[0].reason).toBe('max-file-size')
+    expect(errors[0].file.name).toBe('big.txt')
+    // the previous pick survives a fully rejected one
+    expect(el.modelValue).toBe(prev)
+    el.remove()
+  })
+
+  it('the max-file-size attribute is read', async () => {
+    const el = document.createElement('mono-input') as any
+    el.setAttribute('type', 'file')
+    el.setAttribute('max-file-size', '1024')
+    document.body.appendChild(el)
+    await tick()
+    expect(el.maxFileSize).toBe(1024)
+    el.remove()
+  })
+
+  it('clear resets to null (or [] with multiple)', async () => {
+    const el = await mount({ clearable: true })
+    pick(el, [file('a.txt')])
+    await tick()
+    const clears: any[] = []
+    el.addEventListener('clear', (e: any) => clears.push(e.detail))
+    ;(el.querySelector('[mono-clear]') as HTMLElement).click()
+    await tick()
+    expect(el.modelValue).toBeNull()
+    expect(text(el).value).toBe('')
+    expect(clears).toHaveLength(1)
+
+    el.multiple = true
+    pick(el, [file('b.txt')])
+    await tick()
+    ;(el.querySelector('[mono-clear]') as HTMLElement).click()
+    await tick()
+    expect(el.modelValue).toEqual([])
+    el.remove()
+  })
+
+  it('an outside modelValue write updates the shown name; File never reflects as an attribute', async () => {
+    const el = await mount()
+    el.modelValue = file('given.csv')
+    await tick()
+    expect(text(el).value).toBe('given.csv')
+    expect(el.hasAttribute('model-value')).toBe(false)
+    el.modelValue = null
+    await tick()
+    expect(text(el).value).toBe('')
+    el.remove()
+  })
+
+  it('clicking the field or the icon opens the picker, unless disabled', async () => {
+    const el = await mount()
+    let opened = 0
+    picker(el).click = () => { opened++ }
+    text(el).click()
+    ;(el.querySelector('[mono-file-icon]') as HTMLElement).click()
+    text(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    expect(opened).toBe(3)
+    el.disabled = true
+    await tick()
+    picker(el).click = () => { opened++ }
+    ;(el.querySelector('[mono-file-icon]') as HTMLElement).click()
+    expect(opened).toBe(3)
+    el.remove()
+  })
+})
+
+describe('<mono-input type="range">', () => {
+  beforeAll(async () => {
+    await import('../dist/ui/input.js')
+  })
+
+  const tick = (ms = 40) => new Promise((r) => setTimeout(r, ms))
+
+  async function mount(props: Record<string, unknown> = {}): Promise<any> {
+    const el = document.createElement('mono-input') as any
+    el.type = 'range'
+    for (const [k, v] of Object.entries(props)) el[k] = v
+    document.body.appendChild(el)
+    await tick()
+    return el
+  }
+
+  const native = (el: any) => el.querySelector('[mono-native][mono-range]') as HTMLInputElement
+  const readout = (el: any) => el.querySelector('[mono-range-value]') as HTMLElement | null
+
+  it('renders a native range with mono-type, bounds and the fill position', async () => {
+    const el = await mount({ min: 0, max: 20, step: 0.5, modelValue: '5', label: 'Limit' })
+    expect(el.querySelector('[mono-input]').getAttribute('mono-type')).toBe('range')
+    const n = native(el)
+    expect(n.type).toBe('range')
+    expect(n.min).toBe('0')
+    expect(n.max).toBe('20')
+    expect(n.step).toBe('0.5')
+    expect(n.value).toBe('5')
+    expect(n.style.getPropertyValue('--mono-input-range-value').trim()).toBe('25%')
+    // no clear button, ever
+    el.clearable = true
+    await tick()
+    expect(el.querySelector('[mono-clear]')).toBeNull()
+    el.remove()
+  })
+
+  it('a value above 100 survives the first render (bounds are bound before the value)', async () => {
+    const el = await mount({ max: 1000, modelValue: '750' })
+    expect(native(el).value).toBe('750')
+    el.remove()
+  })
+
+  it('the readout sits in the label row, or after the slider without a label', async () => {
+    const el = await mount({ label: 'Volume', modelValue: '30' })
+    expect(el.querySelector('[mono-label] > [mono-range-value]')?.textContent?.trim()).toBe('30')
+    expect(el.querySelector('[mono-field] > [mono-range-value]')).toBeNull()
+    el.label = ''
+    await tick()
+    expect(el.querySelector('[mono-field] > [mono-range-value]')?.textContent?.trim()).toBe('30')
+    el.showValue = false
+    await tick()
+    expect(readout(el)).toBeNull()
+    el.remove()
+  })
+
+  it('show-value="false" from markup hides the readout; absent keeps it', async () => {
+    const el = document.createElement('mono-input') as any
+    el.setAttribute('type', 'range')
+    el.setAttribute('label', 'x')
+    document.body.appendChild(el)
+    await tick()
+    expect(readout(el)).not.toBeNull()
+    el.setAttribute('show-value', 'false')
+    await tick()
+    expect(readout(el)).toBeNull()
+    el.remove()
+  })
+
+  it('format-display shapes the readout and aria-valuetext, never the native value', async () => {
+    const el = await mount({ label: 'Pencapaian', modelValue: '80', formatDisplay: '{}%' })
+    expect(readout(el)?.textContent?.trim()).toBe('80%')
+    expect(native(el).value).toBe('80')
+    expect(native(el).getAttribute('aria-valuetext')).toBe('80%')
+    el.remove()
+  })
+
+  it('dragging emits input/change with the bare number and moves fill + readout', async () => {
+    const el = await mount({ label: 'v', modelValue: '10', formatDisplay: '{} pts' })
+    const seen: string[] = []
+    el.addEventListener('input', (e: any) => seen.push('input:' + e.detail.modelValue))
+    el.addEventListener('change', (e: any) => seen.push('change:' + e.detail.modelValue))
+    const n = native(el)
+    n.value = '60'
+    n.dispatchEvent(new Event('input', { bubbles: true }))
+    n.dispatchEvent(new Event('change', { bubbles: true }))
+    await tick()
+    expect(seen).toEqual(['input:60', 'change:60'])
+    expect(el.modelValue).toBe('60')
+    expect(readout(el)?.textContent?.trim()).toBe('60 pts')
+    expect(n.style.getPropertyValue('--mono-input-range-value').trim()).toBe('60%')
+    el.remove()
+  })
+
+  it('an empty value reads as the native midpoint, without rewriting the model', async () => {
+    const el = await mount({ label: 'v', min: 0, max: 10 })
+    expect(readout(el)?.textContent?.trim()).toBe('5')
+    expect(el.modelValue).toBe('')
+    el.remove()
+  })
+
+  it('readonly puts the thumb back and emits nothing', async () => {
+    const el = await mount({ modelValue: '40', readonly: true })
+    let events = 0
+    el.addEventListener('input', () => events++)
+    const n = native(el)
+    n.value = '90'
+    n.dispatchEvent(new Event('input', { bubbles: true }))
+    await tick()
+    expect(n.value).toBe('40')
+    expect(el.modelValue).toBe('40')
+    expect(events).toBe(0)
+    el.remove()
+  })
+})

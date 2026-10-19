@@ -20,6 +20,45 @@ Values, rules and the live `items()` readout. Rules run `live` (every keystroke,
 <DemoSingle name="form" id="basic" />
 </ClientOnly>
 
+## Schema rules
+
+Any rule in `validates` can carry a **`schema`** instead of a built-in `type`. [Valibot](../addons/valibot), [Yup](../addons/yup) and any other [Standard Schema](https://standardschema.dev) library (Zod, ArkType, …) work, and `@mono-lit/helper` imports none of them. It recognises the schema by shape.
+
+```ts
+import * as v from 'valibot'
+
+const form = controlMonoForm({
+  inputs: {
+    Password: {
+      component: 'mono-input',
+      value: '',
+      validates: [
+        { type: 'required', message: 'Password is required' },   // built-in
+        { schema: v.pipe(v.string(), v.minLength(8, 'Min 8 characters')) },
+        { schema: v.pipe(v.string(), v.regex(/d/, 'Needs a digit')), timing: 'live' },
+      ],
+    },
+  },
+})
+```
+
+The same rule with yup is `{ schema: yup.string().min(8, 'Min 8 characters') }`.
+
+How a schema rule behaves:
+
+- **It validates the field's value only.** The schema gets `currentValue`, not the form object, so write a field schema (`v.string()…`, `yup.string()…`), never a `v.object({...})` for the whole form. For a whole-form object schema, use [`validateAllSchema`](../addons/valibot) from `@mono-lit/utility` instead.
+- **The schema's own message is shown.** That is Valibot's first issue `message`, or yup's `errors[0]`. The rule's `message` is ignored.
+- **`schema` wins over `type`.** A rule with both runs only the schema, so a built-in rule can later be swapped for a schema without moving it.
+- **Timing and order work as for any rule.** `timing: 'live' | 'change'` applies, rules run in order, and the first failure is the one reported. `form.validate()` runs them all.
+- **Async schemas are awaited** (`v.pipeAsync` + `v.checkAsync`, yup `.test` returning a promise). Give a server check `timing: 'change'` so it doesn't fire on every keystroke.
+- **Cross-field checks don't belong in a schema**, since it never sees other fields. Use a `custom` rule, whose `validate({ value, values })` gets every value, or a [watcher](#cross-field-watchers).
+
+A schema that is neither yup-shaped nor a Standard Schema is ignored (it passes), with one console warning.
+
+<ClientOnly>
+<DemoSingle name="form" id="schema" />
+</ClientOnly>
+
 ## Cross-field watchers
 
 A field's `watcher` runs for **every** change in the form: its own (`peerKey === selfKey`) and every other field's (`peerKey` = the field that changed). That fan-out is what lets one field react to another with no separate peer registry. `event` and `peerEvent` carry the originating DOM `CustomEvent`, and are `undefined` after a programmatic `setValue`.
@@ -87,9 +126,17 @@ Under SSR, a `mono-shadow-*` control that is server-rendered with `visible: fals
 <DemoSingle name="form" id="visibility" />
 </ClientOnly>
 
+## Complete form
+
+Every control that supports `controlMonoForm` in one form: `mono-input` (text, email, password, number), `mono-textarea`, `mono-select`, `mono-tag-input`, `mono-date`, `mono-dropdown-table`, `mono-slider`, `mono-otp`, `mono-rich-text-editor`, `mono-file-upload`, `mono-radio`, `mono-switch` and `mono-checkbox`. Submit runs `form.validate()` and shows `form.values()`; Reset runs `form.reset()`. The picker switches every field-like control's `validation-position`. Checkbox and radio render their message from `state` (see below).
+
+<ClientOnly>
+<DemoSingle name="form" id="complete" />
+</ClientOnly>
+
 ## Supported controls
 
-`mono-input`, `mono-textarea`, `mono-select`, `mono-tag-input`, `mono-date`, `mono-file-upload` and `mono-dropdown-table` support the full set — value, props **and** the rendered validation message.
+`mono-input`, `mono-textarea`, `mono-select`, `mono-tag-input`, `mono-date`, `mono-file-upload`, `mono-dropdown-table`, `mono-slider` and `mono-otp` support the full set — value, props **and** the rendered validation message.
 
 `mono-checkbox`, `mono-radio` and `mono-switch` are wired for **value and props only**: they have no `validation-state` / `validation-message` props today, so `setValidation` on those keys updates `form.items()` but has nothing to render on the control. Read it from `items()` and render your own message until those props exist.
 

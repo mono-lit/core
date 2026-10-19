@@ -1,6 +1,7 @@
 import { Constructor } from "../../composables/hybird-prop.js";
 import { CssSizeValue } from "../../composables/css-size.js";
 import { DateColor, DateCssClass, DateMode, DateSize, DateType, DateValidationState, DateVariant } from "./date-types.js";
+import { FieldTooltipController, FieldTooltipValue } from "../../composables/field-tooltip.js";
 import { LitElement, TemplateResult } from "lit";
 import { Options } from "flatpickr/dist/types/options";
 //#region src/components/date/date-core.d.ts
@@ -29,6 +30,8 @@ export declare class MonoDateCoreInterface {
   label?: string;
   placeholder?: string;
   helperText?: string;
+  tooltip: FieldTooltipValue;
+  protected readonly _tooltip: FieldTooltipController;
   validationState?: DateValidationState;
   validationMessage?: string;
   error: boolean;

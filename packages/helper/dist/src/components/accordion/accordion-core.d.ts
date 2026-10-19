@@ -1,6 +1,6 @@
 import { AccordionColor, AccordionCssClass, AccordionSize } from "./accordion-types.js";
 import { Constructor } from "../../composables/hybird-prop.js";
-import { LitElement } from "lit";
+import { LitElement, TemplateResult, nothing } from "lit";
 //#region src/components/accordion/accordion-core.d.ts
 /**
  * Slot regions the accordion lays out. `default` is the unnamed body region.
@@ -21,6 +21,8 @@ export declare class MonoAccordionCoreInterface {
   label: string;
   /** @deprecated alias of `subtitle` */
   description: string;
+  /** Leading icon — an iconify class or plain text. `slot="icon"` wins over it. */
+  icon: string;
   modelValue: boolean;
   disabled: boolean;
   cssClass: AccordionCssClass;
@@ -46,6 +48,7 @@ export declare class MonoAccordionCoreInterface {
   protected get _hasTitleContent(): boolean;
   protected get _hasSubtitleContent(): boolean;
   protected get _hasIconContent(): boolean;
+  protected _renderIconGlyph(): TemplateResult | typeof nothing;
   protected _setCssClass(value: unknown): void;
   protected _handleClick(event: Event): void;
 }

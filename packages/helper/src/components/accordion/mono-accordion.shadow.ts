@@ -5,7 +5,8 @@ import { customElement } from '../../composables/mono-element'
 import { ref } from 'lit/directives/ref.js'
 
 import { MonoAccordionCore, type AccordionSlotName } from './accordion-core.js'
-import { toShadowCss, withShadowUtilityStyles } from '../../composables/shadow-css'
+import { adoptIconStyles, toShadowCss, withShadowUtilityStyles } from '../../composables/shadow-css'
+import { isIconifyClass, mdiGlyph } from '../../composables/icon'
 
 import accordionCss from './accordion.css?raw'
 import { flushSsrHydration } from '../../composables/hydration-flush'
@@ -72,6 +73,25 @@ export class MonoAccordionShadow extends withShadowUtilityStyles(MonoAccordionCo
       this._setSlotState(name, this._regionHasContent(name))
     }
     this._setSlotState('default', this._bodyHasContent())
+  }
+
+  protected override updated(changed: Map<string, unknown>): void {
+    super.updated(changed)
+    // An iconify class that is not bundled as inline SVG is painted by the page's
+    // icon CSS, adopted into this root.
+    if (changed.has('icon') && isIconifyClass(this.icon) && !mdiGlyph(this.icon)) {
+      adoptIconStyles(this.shadowRoot)
+    }
+  }
+
+  /** Iconify classes are drawn as inline SVG — page utility CSS cannot reach here. */
+  protected override _renderIconGlyph(): TemplateResult | typeof nothing {
+    if (!this.icon) return nothing
+    if (!isIconifyClass(this.icon)) return html`${this.icon}`
+    const glyph = mdiGlyph(this.icon)
+    if (glyph) return html`<span class="mono-accordion-iconify">${glyph}</span>`
+    // not bundled: the page's icon rule, adopted in `updated()`
+    return html`<span class=${`mono-accordion-iconify ${this.icon}`}></span>`
   }
 
   /**
@@ -147,7 +167,9 @@ export class MonoAccordionShadow extends withShadowUtilityStyles(MonoAccordionCo
         aria-hidden="true"
         ?mono-empty=${!this._hasIconContent || this._hasHeaderSlotState}
       >
-        <slot name="icon" @slotchange=${(e: Event) => this._onSlotChange('icon', e)}></slot>
+        <slot name="icon" @slotchange=${(e: Event) => this._onSlotChange('icon', e)}
+          >${this._renderIconGlyph()}</slot
+        >
       </span>
     `
   }

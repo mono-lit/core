@@ -250,6 +250,39 @@ mono-textarea {
   color: var(--mono-textarea-required-color, var(--destructive));
 }
 
+/* `tooltip` prop — the info icon at the end of the label row (the label's
+   flex gap spaces it). `pointer-events` is restored because a disabled field
+   switches its label's off, and a disabled field is exactly where the reason
+   is worth a hover. Knobs: --mono-textarea-label-tooltip-size / -color / -opacity. */
+:where([mono-textarea]) > [mono-label] > [mono-label-tooltip] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--mono-textarea-label-tooltip-size, 1.1em);
+  color: var(--mono-textarea-label-tooltip-color, currentColor);
+  opacity: var(--mono-textarea-label-tooltip-opacity, 0.6);
+  border-radius: 9999px;
+  cursor: help;
+  pointer-events: auto;
+  outline: none;
+  transition: opacity 150ms ease;
+}
+
+:where([mono-textarea]) > [mono-label] > [mono-label-tooltip]:is(:hover, :focus-visible) {
+  opacity: 1;
+}
+
+:where([mono-textarea]) > [mono-label] > [mono-label-tooltip]:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+:where([mono-textarea]) > [mono-label] > [mono-label-tooltip] > [mono-icon] {
+  width: 1em;
+  height: 1em;
+}
+
 /* =========================================
    The field
    ========================================= */
@@ -449,4 +482,22 @@ mono-textarea {
   :where([mono-textarea]) [mono-native] {
     transition: none;
   }
+}
+
+/* =========================================
+   label-position — the slots form/label-position.css reads
+   (top / notched / left / right; public knobs: --mono-textarea-label-width,
+   -label-side-gap, -label-notch-font-size, -label-notch-bg)
+   ========================================= */
+
+[mono-textarea][mono-label-position] {
+  --_mono-lp-width: var(--mono-textarea-label-width, auto);
+  --_mono-lp-gap: var(--mono-textarea-label-side-gap, calc(var(--mono-spacing) * 3));
+  --_mono-lp-height: var(--_mono-textarea-height);
+  --_mono-lp-box-min: var(--_mono-textarea-min-height);
+  --_mono-lp-padding-x: var(--_mono-textarea-padding-x);
+  --_mono-lp-padding-y: var(--_mono-textarea-padding-y);
+  --_mono-lp-font: var(--mono-textarea-label-notch-font-size, var(--mono-text-xs));
+  --_mono-lp-notch-bg: var(--mono-textarea-label-notch-bg, var(--background));
+  --_mono-lp-field-bg: var(--_mono-textarea-bg);
 }

@@ -14,4 +14,14 @@ export declare function chevronIcon(dir: -1 | 1): TemplateResult;
 export declare function spinnerIcon(): TemplateResult;
 /** ↻ — the retry affordance a field shows after its data source failed. */
 export declare function refreshIcon(): TemplateResult;
+/**
+ * ⓘ — the label's "more information" affordance (`tooltip` prop). The
+ * `mdi:information-outline` path, so the shadow builds draw exactly what the
+ * light build's `i-mdi-information-outline` mask paints.
+ */
+export declare function infoIcon(): TemplateResult;
+/** `validation-position="icon"` — mdi alert-circle-outline (invalid / warning). */
+export declare function alertCircleIcon(): TemplateResult;
+/** `validation-position="icon"` — mdi check-circle-outline (valid). */
+export declare function checkCircleIcon(): TemplateResult;
 //#endregion

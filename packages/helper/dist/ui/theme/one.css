@@ -208,6 +208,49 @@
      no-op until 2.0. */
   --mono-switch-thumb-shadow: var(--theme-elev-1);
 
+  /* Range (`<mono-input type="range">`) — the EJI guide's `.eji-range`, not
+     Basecoat's: a 4px hairline track in the border colour with NO fill, a
+     16px navy dot with a 2px surface rim and a 1px navy ring (Chrome sizes a
+     thumb border-box, so the guide's 16px includes the rim), no hover halo, the
+     guide's 3px primary-100 focus halo (--mono-ring-alpha above), and the value
+     always on screen at the end of the label row: bold navy mono figures over a
+     12px medium ink-600 label on the guide's 22px body line (the row inherits --eji-lh-base). The track centre sits 43px under the row top, as
+     rendered in the guide (22px row + 7px margin + the 12px its INLINE <input>
+     sits down its own 22px line + 2px); the native box is the thumb (16px,
+     centred on the track), so the row gap is 43 - 22 - 8 = 13px.
+     `currentColor` is the accent, i.e. the `color` prop. */
+  --mono-input-range-gap: 13px;
+  --mono-input-range-height: 1rem;
+  --mono-input-range-track-height: 4px;
+  --mono-input-range-track-bg: var(--border);
+  --mono-input-range-fill: var(--border);
+  --mono-input-range-thumb-size: 16px;
+  --mono-input-range-thumb-bg: currentColor;
+  --mono-input-range-thumb-border-width: 2px;
+  --mono-input-range-thumb-border-color: var(--card);
+  --mono-input-range-thumb-ring-width: 1px;
+  --mono-input-range-thumb-ring-color: currentColor;
+  --mono-input-range-thumb-shadow: 0 0 #0000;
+  --mono-input-range-ring-width: 3px;
+  --mono-input-range-hover-ring-width: 0px;
+  /* ink-600 (#475569): ONE has no such step, so it is the ink at 80% */
+  --mono-input-range-label-color: color-mix(in oklab, var(--foreground) 80%, transparent);
+  --mono-input-range-label-font-size: var(--mono-text-xs);
+  --mono-input-range-label-line-height: 1.375rem;
+  --mono-input-range-label-font-weight: var(--mono-font-weight-medium);
+  --mono-input-range-value-color: var(--primary);
+  --mono-input-range-value-font-family: "JetBrains Mono", var(--font-mono);
+  --mono-input-range-value-font-weight: var(--mono-font-weight-bold);
+
+  /* Slider (`<mono-slider>`) reads every knob above, so it IS the `.eji-range` look,
+     with two additions the guide has no spec for. The guide's single slider is unfilled,
+     but a RANGE needs its span on screen, so the slider fills with the accent. The
+     value bubble is a navy chip in the readout's mono figures. */
+  --mono-slider-fill: currentColor;
+  --mono-slider-tooltip-bg: var(--primary);
+  --mono-slider-tooltip-color: var(--primary-foreground);
+  --mono-slider-tooltip-font-family: "JetBrains Mono", var(--font-mono);
+
   /* Chip — the EJI status badge: a full pill at 11px / semibold. The guide is
      emphatic that status is a labelled badge, never coloured text. */
   /* Chip — EJI's badge, not Basecoat's. One step taller than vega at every

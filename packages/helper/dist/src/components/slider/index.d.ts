@@ -1,0 +1,5 @@
+/// <reference path="../../../vue.d.ts" />
+import { SliderColor, SliderCssClass, SliderEvents, SliderFill, SliderMark, SliderModelEvent, SliderModelEventDetail, SliderProps, SliderSize, SliderType, SliderValidationState, SliderValue, SliderValueTooltip } from "./slider-types.js";
+import { MonoSlider } from "./mono-slider.js";
+import { SliderMarkPoint, SliderPiece, SliderScale, coerceNumbers, fromRatio, markPoints, moveRun, moveThumb, nearestThumb, normalise, resolveScale, snap, stepFrom, thumbBounds, toPercent, trackPieces } from "./slider-math.js";
+export { MonoSlider, type SliderColor, type SliderCssClass, type SliderEvents, type SliderFill, type SliderMark, type SliderMarkPoint, type SliderModelEvent, type SliderModelEventDetail, type SliderPiece, type SliderProps, type SliderScale, type SliderSize, type SliderType, type SliderValidationState, type SliderValue, type SliderValueTooltip, coerceNumbers, fromRatio, markPoints, moveRun, moveThumb, nearestThumb, normalise, resolveScale, snap, stepFrom, thumbBounds, toPercent, trackPieces };

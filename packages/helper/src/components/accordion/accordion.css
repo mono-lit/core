@@ -508,19 +508,27 @@ mono-accordion {
 }
 
 /* The glyph itself fills the chip at 62% — light: the `[data-mono-slot]`
-   placeholder the svg is moved into; shadow: the projected svg. */
+   placeholder the icon is moved into; shadow: the projected icon. "Icon" is an
+   svg OR an element painted by a class (a UnoCSS/Iconify mask span such as
+   `<span slot="icon" class="i-tabler-filter-search">`), so the shadow rule takes
+   any slotted element, not just svg. */
 [mono-accordion] > [mono-head] > [mono-glyph] > [data-mono-slot="icon"],
 [mono-accordion] > [mono-head] > [mono-glyph] > svg,
-[mono-accordion] > [mono-head] > [mono-glyph] slot[name="icon"]::slotted(svg) {
+[mono-accordion] > [mono-head] > [mono-glyph] slot[name="icon"]::slotted(*),
+[mono-accordion] > [mono-head] > [mono-glyph] .mono-accordion-iconify {
   display: block;
   width: 62%;
   height: 62%;
 }
 
-/* …and the light build's svg fills that placeholder. It used to lean on a global
+/* …and the light build's icon fills that placeholder (chip.css's
+   `[data-mono-slot="icon"] > *`). It used to lean on a global
    `[data-mono-slot='icon'] > svg` rule in chip.css; since the Basecoat port that
-   rule is scoped to chips, and an unsized inline svg falls back to 300×150. */
-[mono-accordion] > [mono-head] > [mono-glyph] > [data-mono-slot="icon"] > svg {
+   rule is scoped to chips, and an unsized inline svg falls back to 300×150. Only
+   svg was sized here, so a mask span stayed `display: inline` — its icon-class
+   `width/height: 1em` did not apply and it rendered 0×0. */
+[mono-accordion] > [mono-head] > [mono-glyph] > [data-mono-slot="icon"] > *,
+[mono-accordion] > [mono-head] > [mono-glyph] .mono-accordion-iconify > svg {
   display: block;
   width: 100%;
   height: 100%;

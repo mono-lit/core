@@ -9,6 +9,8 @@ import type {
   TextareaSize,
   TextareaColor,
   TextareaVariant,
+  TextareaLabelPosition,
+  TextareaValidationPosition,
   TextareaValidationState,
   TextareaCssClass,
   TextareaModelEventDetail,
@@ -22,6 +24,8 @@ import {
 import { dispatchMonoEvent } from '../../composables/mono-event'
 import { buildSizeStyle, type CssSizeValue } from '../../composables/css-size'
 import { MonoFormControlCore } from '../form/form-control-core.js'
+import { FieldTooltipController, type FieldTooltipValue } from '../../composables/field-tooltip'
+import { FieldValidationController } from '../../composables/field-validation'
 
 /** Named slots projected by `mono-textarea` (light: captured; shadow: native). */
 export type TextareaSlotName = 'label' | 'helper'
@@ -56,6 +60,8 @@ class MonoTextareaCoreClass extends MonoFormControlCore(superClass) {
     super(...args)
 
     defineHybridPropAliases(this, [
+      'labelPosition',
+      'validationPosition',
       'modelValue',
       'helperText',
       'validationState',
@@ -259,6 +265,14 @@ class MonoTextareaCoreClass extends MonoFormControlCore(superClass) {
   @property({ type: String })
   variant: TextareaVariant = 'outlined'
 
+  /** Where the label sits — see form/label-position.css. */
+  @property({ type: String, attribute: 'label-position' })
+  labelPosition: TextareaLabelPosition = 'top'
+
+  /** Where the validation message shows — see composables/field-validation.ts. */
+  @property({ type: String, attribute: 'validation-position' })
+  validationPosition: TextareaValidationPosition = 'bottom'
+
   @property({ type: String, attribute: 'model-value', reflect: true })
   modelValue = ''
 
@@ -276,6 +290,47 @@ class MonoTextareaCoreClass extends MonoFormControlCore(superClass) {
 
   @property({ type: String, attribute: 'helper-text' })
   helperText = ''
+
+  /**
+   * Extra explanation behind an info icon at the end of the label: plain text
+   * (`tooltip="…"`) or full `mono-tooltip` options (`.tooltip=${{ content, placement }}`).
+   * Needs the optional `@floating-ui/dom` + `@floating-ui/core` peers — without
+   * them no icon renders. Shown only beside a label.
+   */
+  @property()
+  tooltip: FieldTooltipValue = null
+
+  protected readonly _tooltip = new FieldTooltipController(this, () => this.tooltip)
+
+  /** `validation-position="icon" | "float"` — the icon in the box and the floating message. */
+  protected readonly _validation = new FieldValidationController(
+    this,
+    () => ({
+      position: this.validationPosition,
+      ...(this._validationNotice ?? { state: undefined, text: undefined }),
+      suppressed: false,
+    }),
+    () => (this.renderRoot as ParentNode | undefined)?.querySelector?.('[mono-textarea] > textarea[mono-native]'),
+  )
+
+  /** The validation message and its state — the same precedence the message row uses. */
+  protected get _validationNotice(): { state: string; text: string } | null {
+    if (this.validationMessage) return { state: this._resolvedValidationState, text: this.validationMessage }
+    if (this.errorMessage) return { state: 'invalid', text: this.errorMessage }
+    if (this.successMessage) return { state: 'valid', text: this.successMessage }
+    return null
+  }
+
+  /** The message that moved to the icon / float bubble, kept for assistive tech only. */
+  private _renderMovedMessage(): TemplateResult {
+    const notice = this._validationNotice!
+    return html`<div
+      class=${`${this._cls('mono-textarea-message', 'message')} ${notice.state}`}
+      mono-message=${notice.state}
+      mono-sr-only
+      role=${notice.state === 'invalid' ? 'alert' : nothing}
+    >${notice.text}</div>`
+  }
 
   @property({ type: String, attribute: 'validation-state' })
   validationState: TextareaValidationState = 'default'
@@ -752,11 +807,14 @@ class MonoTextareaCoreClass extends MonoFormControlCore(superClass) {
               </span>
             `
           : nothing}
+        ${this._tooltip.render()}
       </label>
     `
   }
 
   private _renderMessage(): TemplateResult | typeof nothing {
+    // validation-position icon / float: the row keeps the helper; the message moved.
+    if (this._validation.moved) return html`${this._renderHelperText()}${this._renderMovedMessage()}`
     if (this.validationMessage) {
       return html`
         <div
@@ -785,6 +843,10 @@ class MonoTextareaCoreClass extends MonoFormControlCore(superClass) {
       `
     }
 
+    return this._renderHelperText()
+  }
+
+  private _renderHelperText(): TemplateResult | typeof nothing {
     if (this.helperText || this._hasHelperSlot || this._slotsAlwaysRender) {
       return html`
         <div
@@ -880,6 +942,8 @@ class MonoTextareaCoreClass extends MonoFormControlCore(superClass) {
         mono-size=${this.size === 'md' ? nothing : this.size}
         mono-color=${this.color === 'primary' ? nothing : this.color}
         mono-variant=${this.variant === 'outlined' ? nothing : this.variant}
+        mono-label-position=${this.labelPosition === 'top' ? nothing : this.labelPosition}
+        mono-validation-position=${this.validationPosition === 'bottom' ? nothing : this.validationPosition}
         mono-validation-state=${this._resolvedValidationState === 'default' ? nothing : this._resolvedValidationState}
         ?mono-disabled=${this.disabled}
         ?mono-readonly=${this.readonly}
@@ -888,6 +952,7 @@ class MonoTextareaCoreClass extends MonoFormControlCore(superClass) {
       >
         ${this._renderLabel()}
 
+        ${this._validation.renderIcon({ anchored: true })}
         <textarea
           id=${this._textareaId}
           class=${this._fieldClasses}
@@ -913,6 +978,8 @@ class MonoTextareaCoreClass extends MonoFormControlCore(superClass) {
         <div id=${this._messageId} mono-message-outlet>
           ${this._renderFooter()}
         </div>
+
+        ${this._validation.renderFloat()}
       </div>
     `
   }
@@ -977,6 +1044,8 @@ export declare class MonoTextareaCoreInterface {
   placeholder: string
   label: string
   helperText: string
+  tooltip: FieldTooltipValue
+  protected readonly _tooltip: FieldTooltipController
   validationState: TextareaValidationState
   validationMessage: string
   errorMessage: string

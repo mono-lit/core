@@ -185,6 +185,14 @@
   --mono-table-radius: 0;
   /* [data-popover] — the portaled filter / menu / suggestion panels */
   --mono-table-panel-radius: var(--mono-radius-lg);
+
+  /* input type="range" — basecoat@1.0.2 styles/nova.css .field > input[type='range'], .input[type='range'] —
+     h-5, track h-1 bg-muted rounded-full; thumb border-ring size-3 rounded-full border bg-white hover:ring-3. `currentColor` is the accent (the `color` prop). */
+  --mono-input-range-track-height: 0.25rem;
+  --mono-input-range-thumb-size: 0.75rem;
+  --mono-input-range-thumb-border-color: var(--ring);
+  --mono-input-range-thumb-shadow: 0 0 #0000;
+  --mono-input-range-ring-width: 3px;
 }
 
 /* dark: the same knobs, Basecoat's dark: twins */

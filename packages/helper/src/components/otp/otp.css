@@ -1,0 +1,482 @@
+/* =========================================================================
+   mono-otp — a one-time-code field: N single-character boxes that act as one
+   input. Same look as mono-input (Basecoat `.input-group`, vega) applied to
+   EACH box, and the same attribute contract:
+
+     <mono-otp length="6" groups="3" size="sm" color="success" label="Code">
+     <div mono-otp mono-size="sm" mono-color="success">
+       <label mono-label>Code</label>
+       <div mono-field>
+         <div mono-otp-group><input mono-otp-cell>…</div>
+         <span mono-otp-separator>-</span>
+         <div mono-otp-group><input mono-otp-cell>…</div>
+       </div>
+       <div mono-message-wrap><div mono-message="helper">…</div></div>
+     </div>
+
+   An absent attribute is the prop's default (md / primary / outlined /
+   default state). Parts:
+     [mono-field]            the ROW (no border — every box is its own field)
+     [mono-otp-group]        one run of boxes
+     [mono-otp-cell]         a box (a native <input>); [mono-filled] holds a char,
+                             [mono-active] has focus (the element sets both;
+                             hand-written markup gets :focus / :placeholder-shown)
+     [mono-otp-separator]    the text between groups
+     [mono-otp-affix]        prefix / suffix (="prefix" | "suffix")
+     [mono-clear]            the clear button
+
+   Knobs — every one falls back to the matching mono-input knob, so a theme
+   flavor that restyles the input restyles the code field too:
+     --mono-otp-cell-size-<size> / --mono-otp-cell-width   box height / width
+     --mono-otp-font-<size>, --mono-otp-font-weight        character type
+     --mono-otp-gap, --mono-otp-group-gap                  spacing
+     --mono-otp-radius, --mono-otp-bg, --mono-otp-border-color, --mono-otp-shadow
+     --mono-otp-ring-color, --mono-otp-ring-width, --mono-otp-ring-alpha
+     --mono-otp-filled-bg, --mono-otp-separator-color, --mono-otp-placeholder
+     --mono-otp-<color> (primary … dark, valid, invalid)
+     --mono-otp-label-width / -label-side-gap              label-position left/right
+
+   Specificity contract as input.css: a part's resting rule is
+   `:where([mono-otp]) [mono-part]` (0,1,0) so `cssClass` utilities win;
+   state rules stay heavier.
+   ========================================================================= */
+
+mono-otp {
+  display: block;
+}
+
+[mono-otp] {
+  /* ── palette ── */
+  --_mono-otp-text: var(--mono-otp-color, var(--mono-input-color, var(--mono-input-text, var(--foreground))));
+  --_mono-otp-placeholder: var(--mono-otp-placeholder, var(--mono-input-placeholder, var(--muted-foreground)));
+  --_mono-otp-muted: var(--mono-otp-muted, var(--mono-input-muted, var(--muted-foreground)));
+  --_mono-otp-primary: var(--mono-otp-primary, var(--mono-input-primary, var(--ring)));
+  --_mono-otp-secondary: var(--mono-otp-secondary, var(--mono-input-secondary, var(--muted-foreground)));
+  --_mono-otp-success: var(--mono-otp-success, var(--mono-input-success, var(--success)));
+  --_mono-otp-danger: var(--mono-otp-danger, var(--mono-input-danger, var(--destructive)));
+  --_mono-otp-warning: var(--mono-otp-warning, var(--mono-input-warning, var(--warning)));
+  --_mono-otp-info: var(--mono-otp-info, var(--mono-input-info, var(--info)));
+  --_mono-otp-teal: var(--mono-otp-teal, var(--mono-input-teal, var(--teal)));
+  --_mono-otp-purple: var(--mono-otp-purple, var(--mono-input-purple, var(--purple)));
+  --_mono-otp-neutral: var(--mono-otp-neutral, var(--mono-input-neutral, var(--neutral)));
+  --_mono-otp-dark: var(--mono-otp-dark, var(--mono-input-dark, var(--dark)));
+  --_mono-otp-valid: var(--mono-otp-valid, var(--mono-input-valid, var(--success)));
+  --_mono-otp-invalid: var(--mono-otp-invalid, var(--mono-input-invalid, var(--destructive)));
+
+  /* ── the painted box — public knob → variant preset → input knob → token ── */
+  --_mono-otp-ring-color: var(--mono-otp-ring-color, var(--mono-otp-focus-color, var(--_mono-otp-ring-color-preset, var(--_mono-otp-primary))));
+  --_mono-otp-ring-width: var(--mono-otp-ring-width, var(--_mono-otp-ring-width-preset, var(--mono-input-ring-width, var(--mono-ring-width))));
+  --_mono-otp-ring-alpha: var(--mono-otp-ring-alpha, var(--mono-input-ring-alpha, var(--mono-ring-alpha)));
+  --_mono-otp-border-color: var(--mono-otp-border-color, var(--_mono-otp-border-color-preset, var(--mono-input-rest-border, var(--mono-input-border-color, var(--input)))));
+  --_mono-otp-bg: var(--mono-otp-bg, var(--_mono-otp-bg-preset, var(--mono-input-bg, var(--mono-input-surface, var(--mono-mode-surface)))));
+  --_mono-otp-shadow: var(--mono-otp-shadow, var(--_mono-otp-shadow-preset, 0 0 #0000));
+  --_mono-otp-radius: var(--mono-otp-radius, var(--_mono-otp-radius-preset, var(--mono-input-radius, var(--mono-radius-md))));
+
+  /* ── md metrics on the unqualified root (hand-written markup = md) ── */
+  --_mono-otp-size: var(--mono-otp-cell-size-md, var(--mono-input-height-md, var(--mono-control-height-md)));
+  --_mono-otp-font-size: var(--mono-otp-font-md, var(--mono-text-base));
+  --_mono-otp-clear: calc(var(--mono-spacing) * 6);
+  --_mono-otp-clear-glyph: calc(var(--mono-spacing) * 3.5);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--mono-otp-label-gap, var(--mono-input-gap, calc(var(--mono-spacing) * 3)));
+  width: 100%;
+  font-family: inherit;
+  color: var(--_mono-otp-text);
+}
+
+[mono-otp],
+:where([mono-otp]) *,
+:where([mono-otp]) *::before,
+:where([mono-otp]) *::after {
+  box-sizing: border-box;
+}
+
+/* shadow build: unassigned slot wrappers carry `mono-empty` */
+:where([mono-otp]) :is([mono-label], [mono-otp-affix], [mono-message])[mono-empty] {
+  display: none;
+}
+
+/* =========================================
+   Sizes — box height IS the control token
+   ========================================= */
+
+[mono-otp][mono-size="xs"] {
+  --_mono-otp-size: var(--mono-otp-cell-size-xs, var(--mono-input-height-xs, var(--mono-control-height-xs)));
+  --_mono-otp-font-size: var(--mono-otp-font-xs, var(--mono-text-xs));
+  --_mono-otp-clear: calc(var(--mono-spacing) * 4);
+  --_mono-otp-clear-glyph: calc(var(--mono-spacing) * 3);
+}
+[mono-otp][mono-size="sm"] {
+  --_mono-otp-size: var(--mono-otp-cell-size-sm, var(--mono-input-height-sm, var(--mono-control-height-sm)));
+  --_mono-otp-font-size: var(--mono-otp-font-sm, var(--mono-text-sm));
+  --_mono-otp-clear: calc(var(--mono-spacing) * 5);
+}
+[mono-otp][mono-size="lg"] {
+  --_mono-otp-size: var(--mono-otp-cell-size-lg, var(--mono-input-height-lg, var(--mono-control-height-lg)));
+  --_mono-otp-font-size: var(--mono-otp-font-lg, var(--mono-text-lg));
+}
+[mono-otp][mono-size="xl"] {
+  --_mono-otp-size: var(--mono-otp-cell-size-xl, var(--mono-input-height-xl, var(--mono-control-height-xl)));
+  --_mono-otp-font-size: var(--mono-otp-font-xl, var(--mono-text-xl));
+  --_mono-otp-clear: calc(var(--mono-spacing) * 7);
+  --_mono-otp-clear-glyph: calc(var(--mono-spacing) * 4);
+}
+[mono-otp][mono-size="xxl"] {
+  --_mono-otp-size: var(--mono-otp-cell-size-xxl, var(--mono-input-height-xxl, var(--mono-control-height-xxl)));
+  --_mono-otp-font-size: var(--mono-otp-font-xxl, calc(var(--mono-text-xl) * 1.25));
+  --_mono-otp-clear: calc(var(--mono-spacing) * 8);
+  --_mono-otp-clear-glyph: calc(var(--mono-spacing) * 4);
+}
+
+/* =========================================
+   Variants — write `*-preset` slots only (same as input.css)
+   ========================================= */
+
+[mono-otp]:is(:not([mono-variant]), [mono-variant="outlined"]) {
+  --_mono-otp-bg-preset: var(--mono-input-outline-bg);
+  --_mono-otp-border-color-preset: var(--mono-input-outline-border-color);
+  --_mono-otp-side-border-color-preset: var(--mono-input-outline-side-border-color);
+  --_mono-otp-shadow-preset: var(--mono-input-outline-shadow, var(--mono-shadow-xs));
+  --_mono-otp-ring-width-preset: var(--mono-input-outline-ring-width);
+  --_mono-otp-radius-preset: var(--mono-input-outline-radius);
+}
+
+[mono-otp][mono-variant="filled"] {
+  --_mono-otp-bg-preset: var(--mono-otp-filled-bg, var(--mono-input-filled-bg, color-mix(in oklab, var(--input) 50%, transparent)));
+  --_mono-otp-border-color-preset: transparent;
+  --_mono-otp-shadow-preset: 0 0 #0000;
+}
+
+[mono-otp][mono-variant="underlined"] {
+  --_mono-otp-bg-preset: transparent;
+  --_mono-otp-side-border-color-preset: transparent;
+  --_mono-otp-shadow-preset: 0 0 #0000;
+  --_mono-otp-ring-width-preset: 0px;
+  --_mono-otp-radius-preset: 0;
+}
+
+/* =========================================
+   Colours — the focus colour
+   ========================================= */
+
+[mono-otp]:is(:not([mono-color]), [mono-color="primary"]) { --_mono-otp-ring-color-preset: var(--_mono-otp-primary); }
+[mono-otp][mono-color="secondary"] { --_mono-otp-ring-color-preset: var(--_mono-otp-secondary); }
+[mono-otp][mono-color="success"] { --_mono-otp-ring-color-preset: var(--_mono-otp-success); }
+[mono-otp][mono-color="danger"] { --_mono-otp-ring-color-preset: var(--_mono-otp-danger); }
+[mono-otp][mono-color="warning"] { --_mono-otp-ring-color-preset: var(--_mono-otp-warning); }
+[mono-otp][mono-color="info"] { --_mono-otp-ring-color-preset: var(--_mono-otp-info); }
+[mono-otp][mono-color="teal"] { --_mono-otp-ring-color-preset: var(--_mono-otp-teal); }
+[mono-otp][mono-color="purple"] { --_mono-otp-ring-color-preset: var(--_mono-otp-purple); }
+[mono-otp][mono-color="neutral"] { --_mono-otp-ring-color-preset: var(--_mono-otp-neutral); }
+[mono-otp][mono-color="dark"] { --_mono-otp-ring-color-preset: var(--_mono-otp-dark); }
+
+/* =========================================
+   Label (same rules as input's)
+   ========================================= */
+
+:where([mono-otp]) > [mono-label] {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  gap: var(--mono-otp-label-gap, var(--mono-input-label-gap, calc(var(--mono-spacing) * 2)));
+  font-size: var(--mono-otp-label-font-size, var(--mono-input-label-font-size, var(--mono-text-sm)));
+  line-height: var(--mono-otp-label-line-height, var(--mono-input-label-line-height, 1));
+  font-weight: var(--mono-otp-label-font-weight, var(--mono-input-label-font-weight, var(--mono-label-font-weight, var(--mono-font-weight-medium))));
+  text-transform: var(--mono-otp-label-text-transform, var(--mono-input-label-text-transform, none));
+  letter-spacing: var(--mono-otp-label-letter-spacing, var(--mono-input-label-letter-spacing, normal));
+  color: var(--_mono-otp-text);
+  user-select: none;
+}
+
+[mono-otp][mono-disabled] > [mono-label] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+[mono-otp][mono-validation-state="invalid"] > [mono-label] {
+  color: var(--_mono-otp-invalid);
+}
+
+:where([mono-otp]) [mono-required-mark] {
+  color: var(--_mono-otp-danger);
+}
+
+:where([mono-otp]) > [mono-label] > [mono-label-tooltip] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--mono-otp-label-tooltip-size, var(--mono-input-label-tooltip-size, 1.1em));
+  color: var(--mono-otp-label-tooltip-color, var(--mono-input-label-tooltip-color, currentColor));
+  opacity: var(--mono-otp-label-tooltip-opacity, var(--mono-input-label-tooltip-opacity, 0.6));
+  border-radius: 9999px;
+  cursor: help;
+  pointer-events: auto;
+  outline: none;
+  transition: opacity 150ms ease;
+}
+:where([mono-otp]) > [mono-label] > [mono-label-tooltip]:is(:hover, :focus-visible) {
+  opacity: 1;
+}
+:where([mono-otp]) > [mono-label] > [mono-label-tooltip]:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+:where([mono-otp]) > [mono-label] > [mono-label-tooltip] > [mono-icon] {
+  width: 1em;
+  height: 1em;
+}
+
+/* =========================================
+   The row, groups and separators
+   ========================================= */
+
+:where([mono-otp]) > [mono-field] {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mono-otp-group-gap, calc(var(--mono-spacing) * 2));
+  min-width: 0;
+}
+
+:where([mono-otp]) [mono-otp-group] {
+  display: flex;
+  align-items: center;
+  gap: var(--mono-otp-gap, calc(var(--mono-spacing) * 2));
+}
+
+:where([mono-otp]) [mono-otp-separator] {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--_mono-otp-font-size);
+  line-height: 1;
+  color: var(--mono-otp-separator-color, var(--_mono-otp-muted));
+  user-select: none;
+}
+
+/* =========================================
+   The box — input.css's [mono-field], per character
+   ========================================= */
+
+:where([mono-otp]) [mono-otp-cell] {
+  --_mono-otp-bc: var(--_mono-otp-border-color);
+  --_mono-otp-side-bc: var(--mono-otp-side-border-color, var(--_mono-otp-side-border-color-preset, var(--_mono-otp-bc)));
+  --_mono-otp-ring: 0 0 #0000;
+
+  display: block;
+  flex: none;
+  width: var(--mono-otp-cell-width, var(--_mono-otp-size));
+  height: var(--_mono-otp-size);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  outline: none;
+  border: var(--mono-border-width) solid var(--_mono-otp-bc);
+  border-top-color: var(--_mono-otp-side-bc);
+  border-inline-color: var(--_mono-otp-side-bc);
+  border-radius: var(--_mono-otp-radius);
+  background: var(--_mono-otp-bg);
+  box-shadow: var(--_mono-otp-ring), var(--_mono-otp-shadow);
+  color: var(--_mono-otp-text);
+  caret-color: var(--_mono-otp-ring-color);
+  font-family: inherit;
+  font-size: var(--_mono-otp-font-size);
+  font-weight: var(--mono-otp-font-weight, var(--mono-font-weight-semibold));
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: center;
+  transition-property: color, box-shadow, border-color, background-color;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+
+  &::placeholder {
+    color: var(--_mono-otp-placeholder);
+    font-weight: var(--mono-font-weight-normal);
+  }
+
+  /* The box is selected on focus so a keystroke replaces it; the ring already
+     marks the active box, so the selection highlight would only be noise. */
+  &::selection {
+    background: transparent;
+    color: inherit;
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: none !important;
+  }
+
+  /* focus:border-ring focus:ring-3 focus:ring-ring/50 — the box with the caret */
+  &:focus,
+  &[mono-active] {
+    --_mono-otp-bc: var(--_mono-otp-ring-color);
+    --_mono-otp-side-bc: var(--mono-otp-side-border-color, var(--_mono-otp-side-border-color-preset, var(--_mono-otp-ring-color)));
+    --_mono-otp-ring: 0 0 0 var(--_mono-otp-ring-width) color-mix(in oklab, var(--_mono-otp-ring-color) var(--_mono-otp-ring-alpha), transparent);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+
+  &:read-only {
+    cursor: default;
+  }
+}
+
+/* ── validation states (same tokens as input's box) ── */
+[mono-otp][mono-validation-state="invalid"] [mono-otp-cell],
+:where([mono-otp]) [mono-otp-cell][aria-invalid="true"] {
+  --_mono-otp-bc: var(--mono-mode-invalid-border);
+  --_mono-otp-ring: 0 0 0 var(--_mono-otp-ring-width) var(--mono-mode-invalid-ring);
+}
+[mono-otp][mono-validation-state="valid"] [mono-otp-cell] {
+  --_mono-otp-bc: color-mix(in oklab, var(--_mono-otp-valid) var(--mono-mode-state-border-alpha), transparent);
+  --_mono-otp-ring: 0 0 0 var(--_mono-otp-ring-width) color-mix(in oklab, var(--_mono-otp-valid) var(--mono-mode-state-ring-alpha), transparent);
+}
+[mono-otp][mono-validation-state="warning"] [mono-otp-cell] {
+  --_mono-otp-bc: color-mix(in oklab, var(--_mono-otp-warning) var(--mono-mode-state-border-alpha), transparent);
+  --_mono-otp-ring: 0 0 0 var(--_mono-otp-ring-width) color-mix(in oklab, var(--_mono-otp-warning) var(--mono-mode-state-ring-alpha), transparent);
+}
+
+/* ── readonly / disabled ── */
+[mono-otp][mono-readonly] [mono-otp-cell] {
+  background: var(--mono-otp-readonly-bg, var(--mono-input-readonly-bg, var(--muted)));
+}
+
+[mono-otp][mono-disabled] > [mono-field],
+:where([mono-otp]) > [mono-field]:has([mono-otp-cell]:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+[mono-otp][mono-disabled] [mono-otp-cell] {
+  background: var(--mono-otp-disabled-bg, var(--mono-input-disabled-bg, var(--_mono-otp-bg)));
+}
+
+/* =========================================
+   Prefix / suffix / clear
+   ========================================= */
+
+:where([mono-otp]) [mono-otp-affix] {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--mono-spacing) * 2);
+  font-size: var(--mono-text-sm);
+  font-weight: var(--mono-font-weight-medium);
+  color: var(--_mono-otp-muted);
+  user-select: none;
+}
+
+:where([mono-otp]) [mono-otp-affix] > [data-mono-slot] {
+  display: inline-flex;
+  align-items: center;
+  gap: inherit;
+}
+
+:where([mono-otp]) [mono-otp-affix] :is(svg, .mono-icon, [mono-icon]),
+:where([mono-otp]) [mono-otp-affix] ::slotted(svg),
+:where([mono-otp]) [mono-otp-affix] ::slotted(.mono-icon),
+:where([mono-otp]) [mono-otp-affix] ::slotted([mono-icon]) {
+  display: block;
+  width: var(--mono-input-affix-icon-size, calc(var(--mono-spacing) * 4));
+  height: var(--mono-input-affix-icon-size, calc(var(--mono-spacing) * 4));
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+:where([mono-otp]) [mono-clear] {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--_mono-otp-clear);
+  height: var(--_mono-otp-clear);
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: var(--mono-otp-clear-radius, var(--mono-input-clear-radius, calc(var(--radius) - 5px)));
+  background: transparent;
+  box-shadow: none;
+  color: var(--_mono-otp-muted);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  outline-style: none;
+  transition-property: color, background-color, box-shadow;
+  transition-timing-function: var(--mono-ease);
+  transition-duration: var(--mono-duration);
+
+  &:focus-visible {
+    box-shadow: 0 0 0 var(--_mono-otp-ring-width) color-mix(in oklab, var(--_mono-otp-ring-color) var(--_mono-otp-ring-alpha), transparent);
+  }
+}
+
+@media (hover: hover) {
+  :where([mono-otp]) [mono-clear]:hover {
+    background: var(--mono-mode-ghost-hover);
+    color: var(--_mono-otp-text);
+  }
+}
+
+:where([mono-otp]) [mono-clear] > :is(svg, .mono-icon, [mono-icon]) {
+  display: block;
+  width: var(--_mono-otp-clear-glyph);
+  height: var(--_mono-otp-clear-glyph);
+  pointer-events: none;
+}
+
+/* =========================================
+   Message
+   ========================================= */
+
+:where([mono-otp]) > [mono-message-wrap] {
+  display: block;
+}
+:where([mono-otp]) > [mono-message-wrap]:not(:has([mono-message]:not([mono-empty]))) {
+  display: none;
+}
+
+:where([mono-otp]) [mono-message] {
+  font-size: var(--mono-otp-message-font-size, var(--mono-input-message-font-size, var(--mono-text-sm)));
+  line-height: var(--mono-otp-message-line-height, var(--mono-input-message-line-height, var(--mono-leading-normal)));
+  font-weight: var(--mono-font-weight-normal);
+  text-align: start;
+  color: var(--_mono-otp-muted);
+}
+:where([mono-otp]) [mono-message="invalid"] { color: var(--_mono-otp-invalid); }
+:where([mono-otp]) [mono-message="valid"] { color: var(--_mono-otp-valid); }
+:where([mono-otp]) [mono-message="warning"] { color: var(--_mono-otp-warning); }
+
+/* hidden form value */
+:where([mono-otp]) [mono-otp-hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([mono-otp]) :is([mono-otp-cell], [mono-clear]) {
+    transition: none;
+  }
+}
+
+/* =========================================
+   label-position — left / right (form/label-position.css).
+   `notched` renders as top: there is no single box to notch.
+   ========================================= */
+
+[mono-otp][mono-label-position] {
+  --_mono-lp-width: var(--mono-otp-label-width, var(--mono-input-label-width, auto));
+  --_mono-lp-gap: var(--mono-otp-label-side-gap, var(--mono-input-label-side-gap, calc(var(--mono-spacing) * 3)));
+  --_mono-lp-height: var(--_mono-otp-size);
+  --_mono-lp-box-min: var(--_mono-otp-size);
+  --_mono-lp-padding-x: 0px;
+  --_mono-lp-padding-y: 0px;
+  --_mono-lp-font: var(--mono-text-xs);
+  --_mono-lp-notch-bg: var(--background);
+  --_mono-lp-field-bg: var(--_mono-otp-bg);
+}

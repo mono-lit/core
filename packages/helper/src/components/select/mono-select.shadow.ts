@@ -7,6 +7,9 @@ import { MonoSelectCore, type SelectSlotName } from './select-core.js'
 import { toShadowCss, withShadowUtilityStyles } from '../../composables/shadow-css'
 
 import selectCss from './select.css?raw'
+import labelPositionCss from '../form/label-position.css?raw'
+import fieldTooltipCss from '../form/field-tooltip.css?raw'
+import fieldValidationCss from '../form/field-validation.css?raw'
 import { flushSsrHydration } from '../../composables/hydration-flush'
 
 // Shadow-only: hide the label / helper regions when they carry no content
@@ -48,7 +51,7 @@ export class MonoSelectShadow extends withShadowUtilityStyles(MonoSelectCore(Lit
   }
 
   static override styles = [
-    unsafeCSS(toShadowCss(selectCss, { host: 'mono-select', append: SHADOW_EXTRA_CSS })),
+    unsafeCSS(toShadowCss(selectCss + labelPositionCss + fieldTooltipCss + fieldValidationCss, { host: 'mono-select', append: SHADOW_EXTRA_CSS })),
   ]
 
   protected override get _slotsAlwaysRender(): boolean {

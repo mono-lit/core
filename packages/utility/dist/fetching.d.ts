@@ -1,5 +1,5 @@
 import { a as monoMockDb, n as MonoMockRequest, o as resetMonoMockDb, r as MonoMockResponse, t as MonoMockDb } from "./index-BAy6tbOG.js";
-import { B as NormalFetchOptions, H as OdataFetchTypes, U as TanstackFetchOptions, Y as UseOdataStaticOpts, _ as getPrefetchBridge, a as TryCatchDatasourceParams, d as promiseWrapper, g as MonoPrefetchRequest, h as MonoPrefetchBridge, i as OdataFetchUniqueTypes, n as FetchOverrides, o as createFetcher, r as LoadChunkStoreArgs } from "./index-DYlzhHq7.js";
+import { G as OdataFetchTypes, K as TanstackFetchOptions, Q as UseOdataStaticOpts, U as NormalFetchOptions, _ as getPrefetchBridge, a as TryCatchDatasourceParams, d as promiseWrapper, g as MonoPrefetchRequest, h as MonoPrefetchBridge, i as OdataFetchUniqueTypes, n as FetchOverrides, o as createFetcher, r as LoadChunkStoreArgs } from "./index-CLXtqgEx.js";
 import DataSource from "devextreme/data/data_source";
 import CustomStore from "devextreme/data/custom_store";
 import ODataStore from "devextreme/data/odata/store";

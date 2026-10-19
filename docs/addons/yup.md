@@ -4,7 +4,8 @@ Schema-based **form validation**, built on [Yup](https://github.com/jquense/yup)
 Yup's `.validate()` yourself — you build a schema, keep an `error` object, and run it through the
 validation helpers from [`useMonoUtility`](../repo/useful-utils) (`validateAllSchema`,
 `validateSchema`, `validateAllSchemaCheck`, `clearSchemaValidation`). Yup is an **optional**
-dependency: skip it if an app has no forms to validate.
+dependency: skip it if an app has no forms to validate. Want a much smaller bundle? The same
+helpers take a [Valibot](./valibot) schema unchanged.
 
 ## The pattern
 
@@ -31,7 +32,7 @@ const error = ref({
 })
 ```
 
-**Validate the whole form** (the callback runs only when everything passes):
+**Validate the whole form** (resolves `true` when valid; the callback runs only then):
 
 ```ts
 await validateAllSchema(
@@ -40,13 +41,15 @@ await validateAllSchema(
 )
 ```
 
-**Validate a single field** (e.g. on blur) — updates just that field's `error` slot:
+**Validate a single field** (e.g. on blur) — updates just that field's `error` slot and resolves
+`true` when it is valid. Every failing rule is flagged (not only empty values), and nested paths
+work: `'address.city'`, `'items[0].name'`.
 
 ```ts
 await validateSchema({ field: 'username', schema, input: input.value, error: error.value })
 ```
 
-**Reset** all messages/flags with `clearSchemaValidation({ error })`, and check current validity
+**Reset** all messages/flags with `clearSchemaValidation({ error })` (Ref or `error.value`), and check current validity
 with `validateAllSchemaCheck(error)` (`true` if any field is invalid). See
 [Useful Utils](../repo/useful-utils#usemonoutility-helpers) for the full signatures.
 
@@ -59,6 +62,10 @@ your input type.
 
 ## Where it plugs in
 
+For per-field rules inside [`controlMonoForm`](../ui/form#schema-rules), pass a field-level yup
+schema as a rule: `validates: [{ schema: yup.string().min(6, 'Min 6') }]`.
+
+
 The validation state (`error[field].valid` / `.message`) drives the form controls — bind it to the
 `validation-state` / `validation-message` props on `<mono-input>`, `<mono-select>`, etc., so a
 failed field shows its message inline.
@@ -70,14 +77,14 @@ app owns the schemas (you write `yup.object().shape(...)`), so Yup lives in the 
 [notivue](./notivue) does. Without it, the validation helpers simply aren't used; everything else
 in `@mono-lit/utility` works unchanged.
 
-::: tip Vite interop (`tiny-case`) — handled for you
-`yup` imports the CommonJS `tiny-case`, which has no named ESM exports, so a Vite dev server would
-normally throw `doesn't provide an export named 'snakeCase'` when it hits `@mono-lit/utility`'s validation
-helpers. **`@mono-lit/utility` bundles its own copy of `yup` (and `tiny-case`) into its dist at build
-time**, so that chain never reaches your app — no `optimizeDeps` / `ssr.noExternal` wiring is needed
-in either a Nuxt or a plain-Vite host.
+::: tip Your yup, not a bundled copy
+`@mono-lit/utility` imports nothing from `yup` at runtime: the helpers drive the schema you pass
+through its own methods (`validate`, `validateAt`, `pick`). So the app's `yup` is the only copy
+in the bundle, and no `tiny-case` / `optimizeDeps` interop is involved.
+:::
 
-The `yup` you install in your app (for authoring schemas) is a **separate, normal dependency** that
-Vite pre-bundles automatically the first time it's imported. Same version as `@mono-lit/utility`'s bundled
-copy, so schemas built with your `yup` validate correctly through the helpers.
+::: warning Changed behaviour
+`validateSchema` used to resolve `true` when the field was **invalid** and only flagged empty
+values. It now resolves `true` when **valid**, matching `validateAllSchema`, and flags every
+failing rule. `validateAllSchema` also clears slots that pass on re-validation.
 :::

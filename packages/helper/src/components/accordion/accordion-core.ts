@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement } from 'lit'
+import { LitElement, html, nothing, type TemplateResult } from 'lit'
 import { property, state, query } from 'lit/decorators.js'
 
 import type {
@@ -17,6 +17,7 @@ import {
   type Constructor,
 } from '../../composables/hybird-prop'
 import { dispatchMonoEvent } from '../../composables/mono-event'
+import { isIconifyClass } from '../../composables/icon'
 
 /**
  * Slot regions the accordion lays out. `default` is the unnamed body region.
@@ -46,6 +47,8 @@ export declare class MonoAccordionCoreInterface {
   label: string
   /** @deprecated alias of `subtitle` */
   description: string
+  /** Leading icon — an iconify class or plain text. `slot="icon"` wins over it. */
+  icon: string
   modelValue: boolean
   disabled: boolean
   cssClass: AccordionCssClass
@@ -73,6 +76,7 @@ export declare class MonoAccordionCoreInterface {
   protected get _hasTitleContent(): boolean
   protected get _hasSubtitleContent(): boolean
   protected get _hasIconContent(): boolean
+  protected _renderIconGlyph(): TemplateResult | typeof nothing
   protected _setCssClass(value: unknown): void
   protected _handleClick(event: Event): void
 }
@@ -103,6 +107,7 @@ export const MonoAccordionCore = <T extends Constructor<LitElement>>(
 
       this.title = ''
       this.subtitle = ''
+      this.icon = ''
 
       /**
        * Vue support:
@@ -205,6 +210,13 @@ export const MonoAccordionCore = <T extends Constructor<LitElement>>(
 
     /** @deprecated alias of `subtitle`. */
     declare description: string
+
+    /**
+     * Leading icon in the header chip — an iconify class (`i-tabler-filter-search`)
+     * or plain text. `slot="icon"` outranks it; `slot="header"` hides both.
+     */
+    @property({ type: String })
+    icon!: string
 
     @property({
       attribute: 'model-value',
@@ -386,7 +398,20 @@ export const MonoAccordionCore = <T extends Constructor<LitElement>>(
     }
 
     protected get _hasIconContent(): boolean {
-      return this._hasIconSlotState
+      return this._hasIconSlotState || Boolean(this.icon)
+    }
+
+    /**
+     * The `icon` prop: an iconify class becomes an empty masked span, anything
+     * else is text. The shadow build overrides this with inline SVG (a page
+     * utility class cannot reach inside a shadow root).
+     */
+    protected _renderIconGlyph(): TemplateResult | typeof nothing {
+      if (!this.icon) return nothing
+      if (isIconifyClass(this.icon)) {
+        return html`<span class=${`mono-accordion-iconify ${this.icon}`}></span>`
+      }
+      return html`${this.icon}`
     }
 
     /**

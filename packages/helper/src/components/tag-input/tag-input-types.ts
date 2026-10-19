@@ -22,6 +22,7 @@ import type {
   ChipVariant,
 } from '../chip/chip-types'
 import type { ChipLimitProps } from '../../composables/chip-limits'
+import type { MonoTooltipOptions } from '../tooltip/tooltip-types'
 
 /** The `max` / `min` / `maxVisible` / `minVisible` keys the `chip` object accepts. */
 export type { ChipLimitProps }
@@ -44,6 +45,10 @@ export type TagInputColor =
   | 'dark'
 
 export type TagInputVariant = 'outlined' | 'filled' | 'underlined'
+/** Where the label sits: above the box (default), notched into its top border (inset for filled / underlined), or beside it. */
+export type TagInputLabelPosition = 'top' | 'notched' | 'left' | 'right'
+/** Where the validation message shows: under the box (default), behind a state icon inside it, or floating under it on hover / focus. */
+export type TagInputValidationPosition = 'bottom' | 'icon' | 'float'
 
 /**
  * Configuration for the tag chips inside the field, passed as one object:
@@ -349,6 +354,24 @@ export interface TagInputProps extends VisibilityProps {
   color?: TagInputColor
   /** Visual style of the tag input. */
   variant?: TagInputVariant
+  /**
+   * Where the label sits: `top` (above the box, default), `notched` (on the top
+   * border for outlined; inset inside the box for filled / underlined), or
+   * `left` / `right` of the box. Knobs: `--mono-tag-input-label-width`, `-label-side-gap`,
+   * `-label-notch-font-size`, `-label-notch-bg`.
+   */
+  labelPosition?: TagInputLabelPosition
+  'label-position'?: TagInputLabelPosition
+  labelposition?: TagInputLabelPosition
+  /**
+   * Where the validation message shows. `bottom` (default): the row under the box.
+   * `icon`: a state icon inside the box; hover / tap / keyboard focus shows the message in
+   * a state-coloured bubble. `float`: the message floats under the box only while the field
+   * is hovered or focused. In `icon` / `float` the row under the box keeps the helper text.
+   */
+  validationPosition?: TagInputValidationPosition
+  'validation-position'?: TagInputValidationPosition
+  validationposition?: TagInputValidationPosition
 
   /**
    * Tag chip configuration — the `mono-chip` props to apply to every tag.
@@ -366,6 +389,14 @@ export interface TagInputProps extends VisibilityProps {
   helperText?: string
   'helper-text'?: string
   helpertext?: string
+  /**
+   * Info icon at the end of the label; hovering, focusing or tapping it shows this text.
+   * Plain text → a small built-in bubble (no dependency). Full tooltip options
+   * (`:tooltip.prop="{ content, placement, color }"`) → a `mono-tooltip`, which needs the
+   * optional `@floating-ui/dom` + `@floating-ui/core` peers (without them that form renders
+   * no icon). Shown only beside a label.
+   */
+  tooltip?: string | MonoTooltipOptions
 
   /** Validation state controlling field styling. */
   validationState?: TagInputValidationState

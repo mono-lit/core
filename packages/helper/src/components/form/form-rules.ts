@@ -22,10 +22,17 @@ function sizeOf(value: unknown): number {
   return String(value).length
 }
 
+let warnedUnknownSchema = false
+
 /**
- * Run one schema-shaped rule. Duck-typed so yup works without @mono-lit/helper
- * depending on it: prefer `validateSync`, fall back to `validate` (which may be
- * a promise). The schema's OWN message wins over the rule's `message`.
+ * Run one schema-shaped rule. Duck-typed so neither yup nor Valibot is a
+ * dependency of @mono-lit/helper. The schema's OWN message wins over the
+ * rule's `message`.
+ *
+ * - yup-shaped (`validateSync` / `validate` that THROW): checked first, because
+ *   yup ≥1.7 also exposes `~standard` and its own path keeps its exact messages.
+ * - Standard Schema (`schema['~standard'].validate`, which RETURNS issues):
+ *   Valibot, Zod, ArkType, … — sync or async.
  */
 async function runSchema(schema: MonoFormSchemaLike, value: unknown): Promise<true | string> {
   try {
@@ -36,6 +43,15 @@ async function runSchema(schema: MonoFormSchemaLike, value: unknown): Promise<tr
     if (typeof schema.validate === 'function') {
       await schema.validate(value)
       return true
+    }
+    const standard = schema['~standard']
+    if (typeof standard?.validate === 'function') {
+      const result = await standard.validate(value)
+      return result.issues?.length ? (result.issues[0]!.message || 'Invalid') : true
+    }
+    if (!warnedUnknownSchema) {
+      warnedUnknownSchema = true
+      console.warn('[mono-form] rule.schema is neither yup-shaped nor a Standard Schema (e.g. Valibot); it is ignored:', schema)
     }
     return true
   } catch (err) {

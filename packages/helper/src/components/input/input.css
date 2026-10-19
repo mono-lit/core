@@ -95,6 +95,9 @@ mono-input {
   --_mono-input-dark: var(--mono-input-dark, var(--dark));
   --_mono-input-valid: var(--mono-input-valid, var(--success));
   --_mono-input-invalid: var(--mono-input-invalid, var(--destructive));
+  /* the FILL colour of a range (Basecoat paints the slider with --primary, not
+     --ring); the `color` prop writes the preset, a validation state outranks it */
+  --_mono-input-accent: var(--mono-input-accent, var(--_mono-input-accent-preset, var(--mono-input-primary, var(--primary))));
 
   /* ── the painted result — three tiers, base = .input-group (vega) ──────── */
   --_mono-input-ring-color: var(--mono-input-ring-color, var(--mono-input-focus-color, var(--_mono-input-ring-color-preset, var(--_mono-input-primary))));
@@ -259,30 +262,39 @@ mono-input {
 }
 [mono-input][mono-color="secondary"] {
   --_mono-input-ring-color-preset: var(--_mono-input-secondary);
+  --_mono-input-accent-preset: var(--_mono-input-secondary);
 }
 [mono-input][mono-color="success"] {
   --_mono-input-ring-color-preset: var(--_mono-input-success);
+  --_mono-input-accent-preset: var(--_mono-input-success);
 }
 [mono-input][mono-color="danger"] {
   --_mono-input-ring-color-preset: var(--_mono-input-danger);
+  --_mono-input-accent-preset: var(--_mono-input-danger);
 }
 [mono-input][mono-color="warning"] {
   --_mono-input-ring-color-preset: var(--_mono-input-warning);
+  --_mono-input-accent-preset: var(--_mono-input-warning);
 }
 [mono-input][mono-color="info"] {
   --_mono-input-ring-color-preset: var(--_mono-input-info);
+  --_mono-input-accent-preset: var(--_mono-input-info);
 }
 [mono-input][mono-color="teal"] {
   --_mono-input-ring-color-preset: var(--_mono-input-teal);
+  --_mono-input-accent-preset: var(--_mono-input-teal);
 }
 [mono-input][mono-color="purple"] {
   --_mono-input-ring-color-preset: var(--_mono-input-purple);
+  --_mono-input-accent-preset: var(--_mono-input-purple);
 }
 [mono-input][mono-color="neutral"] {
   --_mono-input-ring-color-preset: var(--_mono-input-neutral);
+  --_mono-input-accent-preset: var(--_mono-input-neutral);
 }
 [mono-input][mono-color="dark"] {
   --_mono-input-ring-color-preset: var(--_mono-input-dark);
+  --_mono-input-accent-preset: var(--_mono-input-dark);
 }
 
 /* =========================================
@@ -321,6 +333,39 @@ mono-input {
 /* EXTENSION — the required asterisk */
 :where([mono-input]) [mono-required-mark] {
   color: var(--_mono-input-danger);
+}
+
+/* `tooltip` prop — the info icon at the end of the label row (the label's
+   flex gap spaces it). `pointer-events` is restored because a disabled field
+   switches its label's off, and a disabled field is exactly where the reason
+   is worth a hover. Knobs: --mono-input-label-tooltip-size / -color / -opacity. */
+:where([mono-input]) > [mono-label] > [mono-label-tooltip] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--mono-input-label-tooltip-size, 1.1em);
+  color: var(--mono-input-label-tooltip-color, currentColor);
+  opacity: var(--mono-input-label-tooltip-opacity, 0.6);
+  border-radius: 9999px;
+  cursor: help;
+  pointer-events: auto;
+  outline: none;
+  transition: opacity 150ms ease;
+}
+
+:where([mono-input]) > [mono-label] > [mono-label-tooltip]:is(:hover, :focus-visible) {
+  opacity: 1;
+}
+
+:where([mono-input]) > [mono-label] > [mono-label-tooltip]:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+:where([mono-input]) > [mono-label] > [mono-label-tooltip] > [mono-icon] {
+  width: 1em;
+  height: 1em;
 }
 
 /* =========================================
@@ -388,7 +433,7 @@ mono-input {
 
 /* EXTENSION — readonly: focusable, on a muted surface */
 [mono-input][mono-readonly] > [mono-field],
-:where([mono-input]) > [mono-field]:has(> [mono-native]:read-only:not(:disabled)) {
+:where([mono-input]) > [mono-field]:has(> [mono-native]:read-only:not(:disabled):not([mono-file]):not([mono-range])) {
   background: var(--mono-input-readonly-bg, var(--muted));
 }
 
@@ -575,6 +620,253 @@ mono-input {
 }
 
 /* =========================================
+   EXTENSION — type="file": a read-only name field in front of a hidden native
+   picker, with an upload glyph (`[mono-file-icon]`, a `[mono-suffix]`) at the
+   end. The whole field reads as one button. The `mono-file` native is
+   `readonly` only as a means — it stays off the muted read-only surface above
+   unless `readonly` is actually set.
+   ========================================= */
+
+:where([mono-input][mono-type="file"]) > [mono-field],
+:where([mono-input][mono-type="file"]) [mono-native][mono-file],
+:where([mono-input][mono-type="file"]) [mono-file-icon] {
+  cursor: pointer;
+}
+
+:where([mono-input][mono-type="file"]) [mono-native][mono-file] {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+:where([mono-input][mono-type="file"][mono-readonly]) :is([mono-field], [mono-native][mono-file], [mono-file-icon]) {
+  cursor: default;
+}
+
+:where([mono-input][mono-type="file"][mono-disabled]) :is([mono-field], [mono-native][mono-file], [mono-file-icon]) {
+  cursor: not-allowed;
+}
+
+:where([mono-input]) [mono-file-input] {
+  display: none !important;
+}
+
+/* =========================================
+   type="range" — a port of Basecoat's components/range.css (`.field > input[type='range']`)
+
+     [mono-input][mono-type="range"]   the root; `> [mono-field]` loses its box (a Basecoat
+                                       range sits straight in the .field, no .input-group)
+     [mono-native][mono-range]         ≡ .field > input[type='range'] (h-5, the track + thumb)
+     [mono-range-value]                EXTENSION — the value readout: end of the label row, or
+                                       after the slider when there is no label (EJI ONE's
+                                       `.eji-range__row`; Basecoat has no readout)
+
+   The fill is upstream's gradient stop: the element writes the position as
+   `--mono-input-range-value` (upstream `--slider-value`) inline on the native,
+   and raw markup sets it itself. The track/thumb paint in currentColor, and the
+   native's `color` is the ACCENT (`--_mono-input-accent`: the `color` prop, or a
+   validation state), so a flavor that wants the accent writes `currentColor`
+   — a flavor block may never read a `--_mono-*` private.
+
+   Knobs (vega fallbacks below; every Basecoat style + ONE writes its own in
+   flavors/*.css, `node scripts/basecoat-styles.mjs --varying "range"`):
+   --mono-input-range-{height, gap, track-height, track-radius, track-bg, fill,
+   thumb-size, thumb-width, thumb-radius, thumb-bg, thumb-border-width,
+   thumb-border-color, thumb-shadow, thumb-ring-width, thumb-ring-color,
+   ring-width, hover-ring-width, label-color, label-font-size, label-line-height,
+   label-font-weight, value-color,
+   value-font-family, value-font-size, value-font-weight, value-min-width}.
+   A flavor sets the md geometry only: `size` multiplies it (xs .75 … xxl
+   1.375), so every flavor keeps a whole xs→xxl ladder.
+   ========================================= */
+
+[mono-input][mono-type="range"] {
+  --_mono-input-range-scale: 1;
+  gap: var(--mono-input-range-gap, var(--mono-input-gap, calc(var(--mono-spacing) * 3)));
+}
+[mono-input][mono-type="range"][mono-size="xs"] { --_mono-input-range-scale: 0.75; }
+[mono-input][mono-type="range"][mono-size="sm"] { --_mono-input-range-scale: 0.875; }
+[mono-input][mono-type="range"][mono-size="lg"] { --_mono-input-range-scale: 1.125; }
+[mono-input][mono-type="range"][mono-size="xl"] { --_mono-input-range-scale: 1.25; }
+[mono-input][mono-type="range"][mono-size="xxl"] { --_mono-input-range-scale: 1.375; }
+
+/* a validation state recolours the fill + thumb (after the colour rules, so it wins) */
+[mono-input][mono-type="range"][mono-validation-state="invalid"] { --_mono-input-accent-preset: var(--_mono-input-invalid); }
+[mono-input][mono-type="range"][mono-validation-state="valid"] { --_mono-input-accent-preset: var(--_mono-input-valid); }
+[mono-input][mono-type="range"][mono-validation-state="warning"] { --_mono-input-accent-preset: var(--_mono-input-warning); }
+
+/* No .input-group around a Basecoat range: the field keeps only its flex row
+   (prefix / slider / readout / suffix). Placed after the readonly / disabled
+   field rules, which it ties, so the box stays off in every state; the
+   disabled opacity is kept. */
+[mono-input][mono-type="range"] > [mono-field] {
+  gap: calc(var(--mono-spacing) * 3);
+  min-height: 0;
+  border-width: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+[mono-input][mono-type="range"] :is([mono-prefix], [mono-suffix]) {
+  padding-inline: 0;
+}
+
+/* the label spans the row so the readout can sit at its end (EJI ONE) */
+[mono-input][mono-type="range"] > [mono-label] {
+  width: 100%;
+  font-size: var(--mono-input-range-label-font-size, var(--mono-input-label-font-size, var(--mono-text-sm)));
+  line-height: var(--mono-input-range-label-line-height, var(--mono-input-label-line-height, 1));
+  color: var(--mono-input-range-label-color, var(--_mono-input-text));
+  font-weight: var(--mono-input-range-label-font-weight, var(--mono-input-label-font-weight, var(--mono-label-font-weight, var(--mono-font-weight-medium))));
+}
+
+/* basecoat@1.0.2 components/range.css .field > input[type='range'], .input[type='range'] — flex appearance-none items-center
+   p-0 outline-none disabled:pointer-events-none disabled:opacity-50 (the opacity is the field's) */
+/* basecoat@1.0.2 styles/vega.css .field > input[type='range'], .input[type='range'] — h-5, --slider-track-height: 0.375rem, --slider-thumb-size: 1rem */
+[mono-native][mono-range] {
+  --_mono-input-range-track-h: round(nearest, calc(var(--mono-input-range-track-height, 0.375rem) * var(--_mono-input-range-scale, 1)), 1px);
+  --_mono-input-range-thumb-h: round(nearest, calc(var(--mono-input-range-thumb-size, 1rem) * var(--_mono-input-range-scale, 1)), 1px);
+  --_mono-input-range-thumb-w: round(nearest, calc(var(--mono-input-range-thumb-width, var(--mono-input-range-thumb-size, 1rem)) * var(--_mono-input-range-scale, 1)), 1px);
+  --_mono-input-range-fill: var(--mono-input-range-fill, currentColor);
+  --_mono-input-range-track: var(--mono-input-range-track-bg, var(--muted));
+  --_mono-input-range-dir: to right;
+  --_mono-input-range-ring-w: var(--mono-input-range-ring-width, 4px);
+  --_mono-input-range-hover-ring-w: var(--mono-input-range-hover-ring-width, var(--_mono-input-range-ring-w));
+  --_mono-input-range-ring-c: color-mix(in oklab, var(--_mono-input-ring-color) var(--_mono-input-ring-alpha), transparent);
+  /* the hover / focus halo slot — `0 0 #0000` at rest */
+  --_mono-input-range-halo: 0 0 #0000;
+
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  height: max(round(nearest, calc(var(--mono-input-range-height, 1.25rem) * var(--_mono-input-range-scale, 1)), 1px), var(--_mono-input-range-thumb-h));
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  background: transparent;
+  color: var(--_mono-input-accent);
+  cursor: pointer;
+  outline: none;
+
+  &:dir(rtl) {
+    --_mono-input-range-dir: to left;
+  }
+
+  /* basecoat@1.0.2 styles/vega.css :is(.field > input[type='range'], .input[type='range'])::-webkit-slider-runnable-track — bg-muted h-1.5 rounded-full
+     (+ components/range.css: w-full appearance-none, the --primary / --muted gradient stop) */
+  &::-webkit-slider-runnable-track {
+    width: 100%;
+    height: var(--_mono-input-range-track-h);
+    appearance: none;
+    border-radius: var(--mono-input-range-track-radius, 9999px);
+    background: linear-gradient(var(--_mono-input-range-dir), var(--_mono-input-range-fill) var(--mono-input-range-value, 20%), var(--_mono-input-range-track) var(--mono-input-range-value, 20%));
+  }
+
+  &::-moz-range-track {
+    width: 100%;
+    height: var(--_mono-input-range-track-h);
+    appearance: none;
+    border-radius: var(--mono-input-range-track-radius, 9999px);
+    background: linear-gradient(var(--_mono-input-range-dir), var(--_mono-input-range-fill) var(--mono-input-range-value, 20%), var(--_mono-input-range-track) var(--mono-input-range-value, 20%));
+  }
+
+  /* basecoat@1.0.2 styles/vega.css :is(.field > input[type='range'], .input[type='range'])::-webkit-slider-thumb — border-primary ring-ring/50 size-4
+     rounded-full border bg-white shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4
+     -mt-[calc((var(--slider-thumb-size)-var(--slider-track-height))/2)]; mono: border-box, so
+     size-4 is the painted size whatever the border; the ring is three slots — a
+     resting ring (luma / rhea ring-1, ONE's navy rim), the halo, the shadow */
+  &::-webkit-slider-thumb {
+    display: block;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    width: var(--_mono-input-range-thumb-w);
+    height: var(--_mono-input-range-thumb-h);
+    margin-top: calc((var(--_mono-input-range-track-h) - var(--_mono-input-range-thumb-h)) / 2);
+    appearance: none;
+    border: var(--mono-input-range-thumb-border-width, 1px) solid var(--mono-input-range-thumb-border-color, currentColor);
+    border-radius: var(--mono-input-range-thumb-radius, 9999px);
+    background: var(--mono-input-range-thumb-bg, #fff);
+    box-shadow:
+      0 0 0 var(--mono-input-range-thumb-ring-width, 0px) var(--mono-input-range-thumb-ring-color, transparent),
+      var(--_mono-input-range-halo),
+      var(--mono-input-range-thumb-shadow, var(--mono-shadow-sm));
+    transition-property: color, box-shadow, background-color, border-color;
+    transition-timing-function: var(--mono-ease);
+    transition-duration: var(--mono-duration);
+  }
+
+  &::-moz-range-thumb {
+    display: block;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    width: var(--_mono-input-range-thumb-w);
+    height: var(--_mono-input-range-thumb-h);
+    appearance: none;
+    border: var(--mono-input-range-thumb-border-width, 1px) solid var(--mono-input-range-thumb-border-color, currentColor);
+    border-radius: var(--mono-input-range-thumb-radius, 9999px);
+    background: var(--mono-input-range-thumb-bg, #fff);
+    box-shadow:
+      0 0 0 var(--mono-input-range-thumb-ring-width, 0px) var(--mono-input-range-thumb-ring-color, transparent),
+      var(--_mono-input-range-halo),
+      var(--mono-input-range-thumb-shadow, var(--mono-shadow-sm));
+    transition-property: color, box-shadow, background-color, border-color;
+    transition-timing-function: var(--mono-ease);
+    transition-duration: var(--mono-duration);
+  }
+
+  /* focus-visible:ring-4 focus-visible:outline-hidden */
+  &:focus-visible {
+    --_mono-input-range-halo: 0 0 0 var(--_mono-input-range-ring-w) var(--_mono-input-range-ring-c);
+  }
+
+  &:disabled {
+    pointer-events: none;
+  }
+}
+
+/* hover:ring-4 (lyra / mira / nova also active:) */
+@media (hover: hover) {
+  [mono-native][mono-range]:hover:not(:disabled, :focus-visible) {
+    --_mono-input-range-halo: 0 0 0 var(--_mono-input-range-hover-ring-w) var(--_mono-input-range-ring-c);
+  }
+}
+[mono-native][mono-range]:active:not(:disabled, :focus-visible) {
+  --_mono-input-range-halo: 0 0 0 var(--_mono-input-range-hover-ring-w) var(--_mono-input-range-ring-c);
+}
+
+/* readonly: a native range ignores `readonly`, so the element reverts any move;
+   the pointer is switched off so a drag never even starts */
+[mono-input][mono-readonly] [mono-native][mono-range] {
+  pointer-events: none;
+  cursor: default;
+}
+
+/* EXTENSION — the value readout (EJI ONE `.eji-range__val`: the number is always
+   on screen). Tabular figures so the row does not shimmer while dragging. */
+:where([mono-input]) [mono-range-value] {
+  flex: none;
+  margin-inline-start: auto;
+  font-family: var(--mono-input-range-value-font-family, inherit);
+  font-size: var(--mono-input-range-value-font-size, var(--mono-input-range-label-font-size, var(--mono-input-label-font-size, var(--mono-text-sm))));
+  font-weight: var(--mono-input-range-value-font-weight, var(--mono-font-weight-medium));
+  line-height: var(--mono-input-range-label-line-height, var(--mono-input-label-line-height, 1));
+  font-variant-numeric: tabular-nums;
+  color: var(--mono-input-range-value-color, var(--_mono-input-muted));
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* after the slider (no label): a reserved width, so the track does not resize
+   as the number gains a digit */
+:where([mono-input]) > [mono-field] > [mono-range-value] {
+  min-width: var(--mono-input-range-value-min-width, 3ch);
+  text-align: end;
+}
+
+/* =========================================
    Message — helper / validation text under the field
    ========================================= */
 
@@ -616,4 +908,22 @@ mono-input {
   :where([mono-input]) [mono-clear] {
     transition: none;
   }
+}
+
+/* =========================================
+   label-position — the slots form/label-position.css reads
+   (top / notched / left / right; public knobs: --mono-input-label-width,
+   -label-side-gap, -label-notch-font-size, -label-notch-bg)
+   ========================================= */
+
+[mono-input][mono-label-position] {
+  --_mono-lp-width: var(--mono-input-label-width, auto);
+  --_mono-lp-gap: var(--mono-input-label-side-gap, calc(var(--mono-spacing) * 3));
+  --_mono-lp-height: var(--_mono-input-height);
+  --_mono-lp-box-min: var(--_mono-input-height);
+  --_mono-lp-padding-x: var(--_mono-input-padding-x);
+  --_mono-lp-padding-y: 0px;
+  --_mono-lp-font: var(--mono-input-label-notch-font-size, var(--mono-text-xs));
+  --_mono-lp-notch-bg: var(--mono-input-label-notch-bg, var(--background));
+  --_mono-lp-field-bg: var(--_mono-input-bg);
 }

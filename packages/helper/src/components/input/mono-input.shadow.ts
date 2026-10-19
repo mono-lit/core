@@ -3,10 +3,13 @@
 import { isServer, LitElement, html, nothing, unsafeCSS, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
-import { MonoInputCore, type InputSlotName } from './input-core.js'
+import { MonoInputCore, type InputIconName, type InputSlotName } from './input-core.js'
 import { toShadowCss, withShadowUtilityStyles } from '../../composables/shadow-css'
 
 import inputCss from './input.css?raw'
+import labelPositionCss from '../form/label-position.css?raw'
+import fieldTooltipCss from '../form/field-tooltip.css?raw'
+import fieldValidationCss from '../form/field-validation.css?raw'
 import { flushSsrHydration } from '../../composables/hydration-flush'
 
 // Shadow-only: a slot wrapper whose slot has no assigned content carries
@@ -44,7 +47,7 @@ export class MonoInputShadow extends withShadowUtilityStyles(MonoInputCore(LitEl
   }
 
   static override styles = [
-    unsafeCSS(toShadowCss(inputCss, { host: 'mono-input', append: SHADOW_EXTRA_CSS })),
+    unsafeCSS(toShadowCss(inputCss + labelPositionCss + fieldTooltipCss + fieldValidationCss, { host: 'mono-input', append: SHADOW_EXTRA_CSS })),
   ]
 
   override firstUpdated(changed: Map<string, unknown>): void {
@@ -82,8 +85,16 @@ export class MonoInputShadow extends withShadowUtilityStyles(MonoInputCore(LitEl
     this._setSlotState(name, this._slotHasContent(event.target as HTMLSlotElement))
   }
 
-  protected override renderIcon(_name: 'close'): TemplateResult {
-    // Inline SVG — global `.mono-icon`/`i-mdi-close` (UnoCSS) can't reach a shadow root.
+  protected override renderIcon(name: InputIconName): TemplateResult {
+    // Inline SVG — global `.mono-icon`/`i-mdi-*` (UnoCSS) can't reach a shadow root.
+    if (name === 'upload') {
+      // mdi `cloud-upload-outline`
+      return html`
+        <svg viewBox="0 0 24 24" mono-icon fill="currentColor" aria-hidden="true">
+          <path d="M6.5 20q-2.28 0-3.89-1.57Q1 16.85 1 14.58q0-1.95 1.17-3.48q1.18-1.53 3.08-1.95q.63-2.3 2.5-3.72Q9.63 4 12 4q2.93 0 4.96 2.04Q19 8.07 19 11q1.73.2 2.86 1.5q1.14 1.28 1.14 3q0 1.88-1.31 3.19T18.5 20H13q-.82 0-1.41-.59Q11 18.83 11 18v-5.15L9.4 14.4L8 13l4-4l4 4l-1.4 1.4l-1.6-1.55V18h5.5q1.05 0 1.77-.73q.73-.72.73-1.77t-.73-1.77Q19.55 13 18.5 13H17v-2q0-2.07-1.46-3.54Q14.08 6 12 6Q9.93 6 8.46 7.46Q7 8.93 7 11h-.5q-1.45 0-2.47 1.03Q3 13.05 3 14.5T4.03 17q1.02 1 2.47 1H9v2m3-7" />
+        </svg>
+      `
+    }
     return html`
       <svg viewBox="0 0 24 24" mono-icon fill="currentColor" aria-hidden="true">
         <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" />
@@ -103,12 +114,16 @@ export class MonoInputShadow extends withShadowUtilityStyles(MonoInputCore(LitEl
         ${this.required
           ? html`<span class=${this._cls('mono-input-required', 'required')} mono-required-mark>*</span>`
           : nothing}
+        ${this._tooltip.render()}
+        ${this._renderRangeValue('label')}
       </label>
     `
   }
 
   private _renderHelper(): TemplateResult {
     const base = this._cls('mono-input-message', 'message')
+    // validation-position icon / float: the row keeps the helper; the message moved.
+    if (this._validation.moved) return html`${this._renderHelperText(base)}${this._renderMovedMessage()}`
     if (this.validationMessage) {
       const state = this._resolvedValidationState
       return html`<div class=${`${base} ${state}`} mono-message=${state} role=${state === 'invalid' ? 'alert' : nothing}>${this.validationMessage}</div>`
@@ -119,6 +134,10 @@ export class MonoInputShadow extends withShadowUtilityStyles(MonoInputCore(LitEl
     if (this.successMessage) {
       return html`<div class=${`${base} valid`} mono-message="valid">${this.successMessage}</div>`
     }
+    return this._renderHelperText(base)
+  }
+
+  private _renderHelperText(base: string): TemplateResult {
     return html`
       <div
         class=${`${base} helper`}
@@ -138,7 +157,10 @@ export class MonoInputShadow extends withShadowUtilityStyles(MonoInputCore(LitEl
             <slot name="prefix" @slotchange=${(e: Event) => this._onSlotChange('prefix', e)}></slot>
           </span>
           ${this._renderNative()}
+          ${this._renderRangeValue('field')}
+          ${this._validation.renderIcon()}
           ${this._renderClear()}
+          ${this._renderFileIcon()}
           <span class=${this._cls('mono-input-suffix', 'suffix')} mono-suffix ?mono-empty=${!this._hasSuffixSlot}>
             <slot name="suffix" @slotchange=${(e: Event) => this._onSlotChange('suffix', e)}></slot>
           </span>
@@ -146,6 +168,7 @@ export class MonoInputShadow extends withShadowUtilityStyles(MonoInputCore(LitEl
         <div id=${this._messageId} class=${this.cssClass?.messageWrap ?? ''} mono-message-wrap>
           ${this._renderHelper()}
         </div>
+        ${this._validation.renderFloat()}
     `)
   }
 

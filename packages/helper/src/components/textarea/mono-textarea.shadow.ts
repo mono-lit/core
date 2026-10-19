@@ -7,6 +7,9 @@ import { MonoTextareaCore, type TextareaSlotName } from './textarea-core.js'
 import { toShadowCss, withShadowUtilityStyles } from '../../composables/shadow-css'
 
 import textareaCss from './textarea.css?raw'
+import labelPositionCss from '../form/label-position.css?raw'
+import fieldTooltipCss from '../form/field-tooltip.css?raw'
+import fieldValidationCss from '../form/field-validation.css?raw'
 import { flushSsrHydration } from '../../composables/hydration-flush'
 
 // Shadow-only: hide the label / helper / footer regions when they carry no
@@ -39,7 +42,7 @@ export class MonoTextareaShadow extends withShadowUtilityStyles(MonoTextareaCore
   }
 
   static override styles = [
-    unsafeCSS(toShadowCss(textareaCss, { host: 'mono-textarea', append: SHADOW_EXTRA_CSS })),
+    unsafeCSS(toShadowCss(textareaCss + labelPositionCss + fieldTooltipCss + fieldValidationCss, { host: 'mono-textarea', append: SHADOW_EXTRA_CSS })),
   ]
 
   protected override get _slotsAlwaysRender(): boolean {
