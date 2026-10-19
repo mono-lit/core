@@ -1,6 +1,6 @@
 {
     "name": "@mono-lit/helper",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "description": "Lit web components (tables, forms, inputs, dialogs, charts) for Vue and Nuxt, with light-DOM and shadow-DOM builds.",
     "keywords": [
         "lit",
