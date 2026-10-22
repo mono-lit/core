@@ -13,6 +13,13 @@ export { setErrorMessages, resolveErrorMessages, describeError, errorStatus, nor
 // component registers.
 export { createMonoUI, getMonoUI, getMonoUIStatus, resetMonoUI } from '../composables/mono-ui'
 export type { MonoUI, MonoUIConfig, MonoUIComponents, MonoUIStatus } from '../composables/mono-ui'
+// `mono-width` / `mono-min-width` / `mono-max-width` on any element (a `th` / `td` sizes its
+// column; `auto` measures it). `createMonoUI()` starts it; exported for apps that never call that.
+export {
+  startMonoSizeAttributes,
+  stopMonoSizeAttributes,
+  applyMonoSizeAttributes,
+} from '../composables/mono-size-attrs'
 // The automatic skeleton behind the universal `pending` prop (phantom-ui). Pure as well:
 // status / reset helpers and the types; activation itself is driven by the element registry.
 export { getMonoSkeletonStatus, resetMonoSkeleton, isMonoSsrApp } from '../composables/mono-skeleton'

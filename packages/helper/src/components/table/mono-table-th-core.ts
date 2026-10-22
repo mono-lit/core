@@ -34,6 +34,9 @@ import {
   type Constructor,
 } from '../../composables/hybird-prop'
 import { PopupPortalController } from '../../composables/popup-portal.js'
+import type { CssSizeValue } from '../../composables/css-size'
+import { ColumnAutoSize, cssLengthToPx } from './column-autosize.js'
+import { startMonoSizeAttributes } from '../../composables/mono-size-attrs'
 
 /** Slot regions the header cell lays out. */
 export type TableThSlotName = 'label'
@@ -59,6 +62,8 @@ export declare class MonoTableThCoreInterface extends MonoTableMenuCoreInterface
   dateFilter: boolean | MonoDateFilter
   align?: TableThAlign
   width?: string | number
+  minWidth?: CssSizeValue
+  maxWidth?: CssSizeValue
   height?: string | number
   protected renderSlot(name: TableThSlotName): TemplateResult
   protected renderIcon(name: TableThIconName): TemplateResult
@@ -105,7 +110,7 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
       // `:editable-trigger` / `:editabletrigger` as Vue *property* bindings.
       // Only camelCase names may be listed — an already-lowercase name would
       // self-alias and recurse.
-      defineHybridPropAliases(this, ['editableTrigger'])
+      defineHybridPropAliases(this, ['editableTrigger', 'minWidth', 'maxWidth'])
     }
 
     /** Column key (data property). Omit to render a plain, non-sortable label. */
@@ -204,9 +209,28 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
      * Column width — applied to the parent `<th>` (so it sizes the column; use
      * `mono-table-fixed` on the `<table>` for strict widths). A number is `px`;
      * a string is used verbatim (`'10rem'`, `'40%'`). `:width="160"` / `width="10rem"`.
+     *
+     * `'auto'` sizes the column to its content — header, body AND footer cells — clamped to
+     * `minWidth` / `maxWidth`, and re-measured whenever the rows change. It works under
+     * `mono-table-fixed`, where a CSS `auto` would swallow the surplus instead: the measured
+     * width is written as px to the column's `<col>` and to the `<th>` (see `column-autosize.ts`).
      */
     @property()
     width?: string | number
+
+    /**
+     * Lower bound of the column width. With `width="auto"` it clamps the measured width (px,
+     * `rem` or `em`); with a fixed width it is written to the `<th>`'s `min-width`.
+     * `min-width="90"` / `:minWidth="'6rem'"` / `{ minWidth: 90 }` on a column entry.
+     */
+    @property({ attribute: 'min-width' })
+    minWidth?: CssSizeValue
+
+    /** Upper bound of the column width — the `minWidth` counterpart. A longer figure ellipses. */
+    @property({ attribute: 'max-width' })
+    maxWidth?: CssSizeValue
+
+    private _autoSize?: ColumnAutoSize
 
     /**
      * Horizontal alignment of the header cell — applied to the parent `<th>`, the same way
@@ -246,10 +270,14 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
     override connectedCallback(): void {
       super.connectedCallback()
       this._register()
+      // A table that pairs this element with plain `<th mono-width>` cells works without
+      // `createMonoUI()` too. Idempotent; a no-op on a server.
+      if (!isServer) startMonoSizeAttributes()
     }
 
     override disconnectedCallback(): void {
       this.dataGrid?.unregisterColumn(this as unknown as MonoColumnEl)
+      this._autoSize?.stop()
       super.disconnectedCallback() // menu core detaches the contextmenu + doc listeners
     }
 
@@ -265,6 +293,30 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
       if (isServer || !this.dataGrid) return
       this.dataGrid.registerColumn(this as unknown as MonoColumnEl)
       this._seedSort()
+    }
+
+    /**
+     * `width="auto"` → hand the column to the auto-sizer (re-run on every update: each controller
+     * notify lands here). A fixed width → written as before, and an auto-sizer left over from an
+     * earlier `'auto'` is stopped with its px cleared. The bounds go onto the cell either way —
+     * the auto-sizer clamps with them, an auto-layout table honours them.
+     */
+    private _syncWidth(cell: HTMLElement): void {
+      const auto = String(this.width ?? '').trim().toLowerCase() === 'auto'
+      if (auto) {
+        const sizer = (this._autoSize ??= new ColumnAutoSize(this))
+        sizer.min = cssLengthToPx(this.minWidth ?? null, cell)
+        sizer.max = cssLengthToPx(this.maxWidth ?? null, cell)
+        sizer.schedule()
+      } else {
+        if (this._autoSize) {
+          this._autoSize.stop(true)
+          this._autoSize = undefined
+        }
+        if (this.width != null && this.width !== '') cell.style.width = toCssSize(this.width)
+      }
+      cell.style.minWidth = this.minWidth != null && this.minWidth !== '' ? toCssSize(this.minWidth) : ''
+      cell.style.maxWidth = this.maxWidth != null && this.maxWidth !== '' ? toCssSize(this.maxWidth) : ''
     }
 
     /** Apply `sort.order` once, unless THIS column is already sorted (don't fight a user sort). */
@@ -293,7 +345,7 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
       if (cell) {
         cell.setAttribute('aria-sort', ariaSort(this._current))
         // Size the column by sizing the parent header cell (reflect, like aria-sort).
-        if (this.width != null && this.width !== '') cell.style.width = toCssSize(this.width)
+        this._syncWidth(cell)
         if (this.height != null && this.height !== '') cell.style.height = toCssSize(this.height)
         // Set AND cleared: a column whose `align` is removed must go back to the sheet default,
         // not keep the last value written onto the cell's inline style.

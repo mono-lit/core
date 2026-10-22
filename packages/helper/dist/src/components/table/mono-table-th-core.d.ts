@@ -1,4 +1,5 @@
 import { Constructor } from "../../composables/hybird-prop.js";
+import { CssSizeValue } from "../../composables/css-size.js";
 import { MonoColumnSort, MonoDateFilter, MonoEditableTrigger, MonoHeaderFilter, SortOrder } from "./mono-data-grid.js";
 import { MonoTableMenuCoreInterface } from "./table-menu-core.js";
 import { LitElement, TemplateResult } from "lit";
@@ -26,6 +27,8 @@ export declare class MonoTableThCoreInterface extends MonoTableMenuCoreInterface
   dateFilter: boolean | MonoDateFilter;
   align?: TableThAlign;
   width?: string | number;
+  minWidth?: CssSizeValue;
+  maxWidth?: CssSizeValue;
   height?: string | number;
   protected renderSlot(name: TableThSlotName): TemplateResult;
   protected renderIcon(name: TableThIconName): TemplateResult;

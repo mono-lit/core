@@ -380,7 +380,17 @@ export interface MonoTableColumnProps {
    * @example map: (v) => formatDateTime(v)
    */
   map?: (value: any, row: any, index: number) => unknown
+  /**
+   * Column width. Number → px; string used as-is (`'10rem'`). `'auto'` sizes the column to its
+   * content (header, body and footer cells), clamped to `minWidth` / `maxWidth` — also under
+   * `mono-table-fixed`. Money columns are the case: narrow while every figure is `0`, wider
+   * once a large one appears.
+   */
   width?: string | number
+  /** Lower bound of the column width (px / `rem` / `em`). Clamps `width: 'auto'`. */
+  minWidth?: string | number
+  /** Upper bound of the column width (px / `rem` / `em`). Clamps `width: 'auto'`. */
+  maxWidth?: string | number
   height?: string | number
   /**
    * Header alignment: `'left' | 'center' | 'right'`. Applied to the column's `<th>`.

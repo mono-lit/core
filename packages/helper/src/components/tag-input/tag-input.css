@@ -438,13 +438,13 @@ mono-tag-input {
   --_mono-tag-input-ring: 0 0 0 var(--_mono-tag-input-ring-width) var(--mono-tag-input-ds-error-ring, var(--mono-mode-invalid-ring));
 }
 
-[mono-tag-input][mono-ds-error] [mono-native]::placeholder {
+[mono-tag-input][mono-ds-error] > [mono-field] > [mono-native]::placeholder {
   color: var(--mono-tag-input-ds-error-text, var(--_mono-tag-input-invalid));
 }
 
 /* EXTENSION — the first load (or a retry) is in flight: read-only */
 [mono-tag-input][mono-ds-loading] > [mono-field],
-[mono-tag-input][mono-ds-loading] [mono-native] {
+[mono-tag-input][mono-ds-loading] > [mono-field] > [mono-native] {
   cursor: progress;
 }
 
@@ -488,8 +488,11 @@ mono-tag-input {
    ========================================= */
 
 /* basecoat@1.0.2 components/combobox.css .combobox-chips > input[role='combobox']
-   — min-w-16 flex-1 bg-transparent outline-none placeholder:text-muted-foreground */
-[mono-tag-input] [mono-native] {
+   — min-w-16 flex-1 bg-transparent outline-none placeholder:text-muted-foreground.
+   Child combinators, not a descendant match: `slot="list"` / `slot="select-all"` content lives
+   inside the host too, and a mono control there (mono-button's <button mono-native>, mono-input,
+   mono-select) would lose its own background, padding, border and height to this reset. */
+[mono-tag-input] > [mono-field] > [mono-native] {
   flex: 1 1 calc(var(--mono-spacing) * 16);
   min-width: calc(var(--mono-spacing) * 16);
   align-self: stretch;

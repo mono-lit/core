@@ -1,6 +1,5 @@
-import { a as __decorate, c as defineHybridPropAlias, f as customElement, l as defineHybridPropAliases, n as adoptIconStyles, r as toShadowCss, t as flushSsrHydration } from "../../hydration-flush-DHrl4_KK.js";
+import { _ as buildSizeStyle, a as __decorate, c as defineHybridPropAlias, f as customElement, l as defineHybridPropAliases, n as adoptIconStyles, r as toShadowCss, t as flushSsrHydration } from "../../hydration-flush-W_DI9kRo.js";
 import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
-import { t as buildSizeStyle } from "../../css-size-DWAPgQdT.js";
 import { n as detachEventHandlers, t as applyProps } from "../../element-props-xvw0EB7H.js";
 import { c as splitMulti, d as OPERATOR_ARITY, l as treeToArray, m as operatorsFor, n as arrayToTree, s as odataStringToArray, t as arrayToODataString, u as DEFAULT_TEXTS } from "../../filter-odata-Bi27XUpQ.js";
 import { t as monoFilterBuilder } from "../../filter-builder-B6Y2mmbM.js";

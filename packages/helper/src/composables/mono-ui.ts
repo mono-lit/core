@@ -27,6 +27,7 @@ import {
   setMonoSkeletonDefaults,
   type MonoSkeletonDefaults,
 } from './mono-skeleton'
+import { startMonoSizeAttributes } from './mono-size-attrs'
 
 /**
  * Tag → props map for typed configs. `scripts/gen-vue-types.mjs` augments it in
@@ -149,6 +150,8 @@ export function createMonoUI(config: MonoUIConfig = {}): MonoUI {
   }
 
   state.store = next
+  // The `mono-width` / `mono-min-width` / `mono-max-width` attributes — a no-op on a server.
+  startMonoSizeAttributes()
   const snapshot = { ...next } as MonoUIConfig
   return {
     config: snapshot,

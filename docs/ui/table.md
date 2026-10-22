@@ -181,6 +181,43 @@ The **body** cells are your markup, so the grid cannot align them for you — bu
 
 That drift is what this exists for: a money column whose figures were right-aligned in the body kept a left-aligned caption above them, because the two were written in different places.
 
+## Column width
+
+`width` sizes the column through its `<th>`: a number is px, a string is used as-is (`'10rem'`, `'40%'`). Use `mono-table-fixed` on the `<table>` for strict widths.
+
+`width: 'auto'` sizes the column to its **content** instead — the header (caption + icons), every body cell and every **footer** cell — clamped to `minWidth` / `maxWidth` (px, `rem` or `em`). A money column is the case: narrow while every figure is `0`, wider once a large one appears.
+
+```ts
+props: {
+  th: [
+    { field: 'Jan',   caption: 'JAN',   align: 'right', width: 'auto', minWidth: 90,  maxWidth: 220 },
+    { field: 'Total', caption: 'TOTAL', align: 'right', width: 'auto', minWidth: 100, maxWidth: 260, summary: { type: 'sum' } },
+  ],
+}
+```
+
+Or on the element: `<mono-table-th field="Jan" width="auto" min-width="90" max-width="220">`.
+
+- **It works under `mono-table-fixed`.** CSS `auto` cannot: a fixed-layout table gives an unsized column the whole surplus, and ignores `min-width` / `max-width` on cells. So the column is measured and the px is written to its `<col>` (which wins under fixed layout) and to the `<th>`. Banded headers (`<th colspan>` rows above) map to the right `<col>`.
+- **It re-measures** on every controller notify (data, sort, filter, page, summary), on any change to the body or footer, and while the user types into an editor in the column.
+- **The footer counts.** A `<mono-table-summary>` total covers the whole set, so a page — or a virtual-scroll window — that only shows small figures still sizes for the largest one.
+- **Cells are measured as one line.** An `<input>` counts with its value; an element hidden by `v-show` does not count.
+- A column whose width is summed into a **sticky offset** (the second of two `mono-table-sticky-left` columns reads the first's width) should keep a fixed width — the offset is computed before anything is measured.
+
+### Plain markup: `mono-width`, `mono-min-width`, `mono-max-width`
+
+The same sizing as attributes, for a `<th>` no `mono-table-th` sits in — or any other element:
+
+```html
+<th mono-width="auto" mono-min-width="90" mono-max-width="220">JAN</th>
+<div mono-width="auto" mono-max-width="20rem">…</div>
+```
+
+- On a **`th` / `td`** they size the column exactly as `width: 'auto'` above does (measured, clamped, written to the `<col>`). A fixed `mono-width="150"` is written to the cell.
+- On **any other element** they are plain CSS: `auto` is `fit-content`, the bounds are `min-width` / `max-width`.
+- A number is px; any other length is used as-is. Bound values (`:mono-width="…"`) are followed as they change, and elements that mount later are picked up.
+- `createMonoUI()` turns them on, and so does the first `mono-table-th` to connect. An app that has neither calls `startMonoSizeAttributes()` from `@mono-lit/helper` once.
+
 ## Sorting
 
 Give a column `sort: true` in `props.th` (or a bare `sort` attribute on `<mono-table-th>`) and an arrow appears beside its caption. Pass an object instead — `{ order, index, noClear, showIcon, disabled }` — only when you need to tune it; an empty `{}` is accepted and means the same as `true`, but write `true`. The gesture decides how many keys you get:

@@ -1,7 +1,7 @@
-import { t as customElement } from "../mono-element-C7vCschg.js";
+import { d as buildSizeStyle } from "../mono-ui-BtxdHLoF.js";
+import { t as customElement } from "../mono-element-LZggUgFj.js";
 import { a as defineHybridPropAliases, r as booleanStringConverter, t as __decorate } from "../decorate-DbYFpi8R.js";
 import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
-import { t as buildSizeStyle } from "../css-size-DWAPgQdT.js";
 import { t as MonoFormControlCore } from "../form-control-core-CRZPZ1ru.js";
 import { t as FieldTooltipController } from "../field-tooltip-FyMi9vNM.js";
 import { t as FieldValidationController } from "../field-validation-CHHQi1zl.js";

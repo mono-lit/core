@@ -3,14 +3,13 @@ import { a as buildGroups, c as isGroupNode, o as collectGroupPaths, s as flatte
 import { A as resolveSearchEntries, D as isWildcardPattern, O as normalizeSearchExpr, c as resolveErrorMessages, h as mergeSearchFields, k as plainSearchColumns, l as setErrorMessages, n as describeError, r as errorStatus, s as normalizeError, t as DEFAULT_ERROR_MESSAGES, w as expandWildcard } from "../normalize-error-D93O4q8g.js";
 import { h as monoArraySource } from "../data-source-options-QjuI73g8.js";
 import { a as seedFromRanges, i as minimize, n as buildDateTree, o as setAllChecked, r as checkState, s as setChecked, t as monoDataGrid } from "../mono-data-grid-8jmeIXUU.js";
-import { c as monoApplyPhantomOptions, d as monoPendingActive, f as monoPendingGrace, p as monoPhantomOptions, u as monoHostChildren } from "../mono-ui-BwUc0L6B.js";
+import { _ as monoHostChildren, b as monoPhantomOptions, d as buildSizeStyle, h as monoApplyPhantomOptions, l as ColumnAutoSize, s as startMonoSizeAttributes, u as cssLengthToPx, v as monoPendingActive, y as monoPendingGrace } from "../mono-ui-BtxdHLoF.js";
 import { n as detachEventHandlers, t as applyProps } from "../element-props-xvw0EB7H.js";
-import { t as customElement } from "../mono-element-C7vCschg.js";
+import { t as customElement } from "../mono-element-LZggUgFj.js";
 import { a as defineHybridPropAliases, i as defineHybridPropAlias, o as numberStringConverter, r as booleanStringConverter, t as __decorate } from "../decorate-DbYFpi8R.js";
 import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
 import { t as isIconifyClass } from "../icon-ClxnYhBG.js";
-import { n as bucketHasContent, o as placeLightSlots, r as captureLightSlots, s as placeSlotNode } from "../light-slots-DdDdZ6zs.js";
-import { t as buildSizeStyle } from "../css-size-DWAPgQdT.js";
+import { n as bucketHasContent, o as placeLightSlots, r as captureLightSlots, s as placeSlotNode } from "../light-slots-BwTYwSpZ.js";
 import { t as PopupPortalController } from "../popup-portal-C8ttHDRX.js";
 import { n as cssPart } from "../css-class-B6Tc_MAx.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
@@ -2254,7 +2253,11 @@ const MonoTableThCore = (superClass) => {
 			this._valuesError = false;
 			this._search = "";
 			this._fromIcon = false;
-			defineHybridPropAliases(this, ["editableTrigger"]);
+			defineHybridPropAliases(this, [
+				"editableTrigger",
+				"minWidth",
+				"maxWidth"
+			]);
 		}
 		/** The sort config as an object: `true` → `{}`, `false` → `undefined`. */
 		get _sortObj() {
@@ -2266,9 +2269,11 @@ const MonoTableThCore = (superClass) => {
 		connectedCallback() {
 			super.connectedCallback();
 			this._register();
+			if (!isServer) startMonoSizeAttributes();
 		}
 		disconnectedCallback() {
 			this.dataGrid?.unregisterColumn(this);
+			this._autoSize?.stop();
 			super.disconnectedCallback();
 		}
 		willUpdate(changed) {
@@ -2279,6 +2284,28 @@ const MonoTableThCore = (superClass) => {
 			if (isServer || !this.dataGrid) return;
 			this.dataGrid.registerColumn(this);
 			this._seedSort();
+		}
+		/**
+		* `width="auto"` → hand the column to the auto-sizer (re-run on every update: each controller
+		* notify lands here). A fixed width → written as before, and an auto-sizer left over from an
+		* earlier `'auto'` is stopped with its px cleared. The bounds go onto the cell either way —
+		* the auto-sizer clamps with them, an auto-layout table honours them.
+		*/
+		_syncWidth(cell) {
+			if (String(this.width ?? "").trim().toLowerCase() === "auto") {
+				const sizer = this._autoSize ??= new ColumnAutoSize(this);
+				sizer.min = cssLengthToPx(this.minWidth ?? null, cell);
+				sizer.max = cssLengthToPx(this.maxWidth ?? null, cell);
+				sizer.schedule();
+			} else {
+				if (this._autoSize) {
+					this._autoSize.stop(true);
+					this._autoSize = void 0;
+				}
+				if (this.width != null && this.width !== "") cell.style.width = toCssSize(this.width);
+			}
+			cell.style.minWidth = this.minWidth != null && this.minWidth !== "" ? toCssSize(this.minWidth) : "";
+			cell.style.maxWidth = this.maxWidth != null && this.maxWidth !== "" ? toCssSize(this.maxWidth) : "";
 		}
 		/** Apply `sort.order` once, unless THIS column is already sorted (don't fight a user sort). */
 		_seedSort() {
@@ -2296,7 +2323,7 @@ const MonoTableThCore = (superClass) => {
 			const cell = this.closest("th, td");
 			if (cell) {
 				cell.setAttribute("aria-sort", ariaSort(this._current));
-				if (this.width != null && this.width !== "") cell.style.width = toCssSize(this.width);
+				this._syncWidth(cell);
 				if (this.height != null && this.height !== "") cell.style.height = toCssSize(this.height);
 				cell.style.textAlign = this.align ?? "";
 			}
@@ -2936,6 +2963,8 @@ const MonoTableThCore = (superClass) => {
 	__decorate([state()], MonoTableThCoreClass.prototype, "_tree", void 0);
 	__decorate([state()], MonoTableThCoreClass.prototype, "_expanded", void 0);
 	__decorate([property()], MonoTableThCoreClass.prototype, "width", void 0);
+	__decorate([property({ attribute: "min-width" })], MonoTableThCoreClass.prototype, "minWidth", void 0);
+	__decorate([property({ attribute: "max-width" })], MonoTableThCoreClass.prototype, "maxWidth", void 0);
 	__decorate([property({ reflect: true })], MonoTableThCoreClass.prototype, "align", void 0);
 	__decorate([property()], MonoTableThCoreClass.prototype, "height", void 0);
 	__decorate([state()], MonoTableThCoreClass.prototype, "_filterOpen", void 0);

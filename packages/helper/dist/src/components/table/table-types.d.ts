@@ -305,8 +305,15 @@ export interface TableThProps extends TableControlBase {
    * `<td>` loop so the two sides cannot drift.
    */
   align?: 'left' | 'center' | 'right';
-  /** Column width, applied to the parent `<th>`. Number → px; string used as-is (`'10rem'`, `'40%'`). */
+  /**
+   * Column width, applied to the parent `<th>`. Number → px; string used as-is (`'10rem'`, `'40%'`).
+   * `'auto'` measures the column's content and writes the px to its `<col>` + `<th>`.
+   */
   width?: string | number;
+  /** Lower bound of the column width — clamps `width="auto"`. Number → px; `rem` / `em` too. */
+  minWidth?: string | number;
+  /** Upper bound of the column width — clamps `width="auto"`. */
+  maxWidth?: string | number;
   /** Header-cell height, applied to the parent `<th>`. Number → px; string used as-is. */
   height?: string | number;
 }

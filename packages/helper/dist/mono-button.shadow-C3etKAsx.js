@@ -1,6 +1,5 @@
-import { a as __decorate, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration } from "./hydration-flush-DHrl4_KK.js";
+import { _ as buildSizeStyle, a as __decorate, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration } from "./hydration-flush-W_DI9kRo.js";
 import { t as dispatchMonoEvent } from "./mono-event-BPku9HpS.js";
-import { t as buildSizeStyle } from "./css-size-DWAPgQdT.js";
 import { a as rateLimitHasChanged, i as rateLimitConverter, n as normalizeDebounce, r as normalizeThrottle, t as createRateLimiter } from "./rate-limit-e9Jlpl5l.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { property, query, state } from "lit/decorators.js";

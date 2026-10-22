@@ -1,10 +1,10 @@
 import { c as splitMulti, d as OPERATOR_ARITY, l as treeToArray, m as operatorsFor, n as arrayToTree, s as odataStringToArray, t as arrayToODataString, u as DEFAULT_TEXTS } from "../filter-odata-Bi27XUpQ.js";
 import { t as monoFilterBuilder } from "../filter-builder-C0T3pMx2.js";
+import { d as buildSizeStyle } from "../mono-ui-BtxdHLoF.js";
 import { n as detachEventHandlers, t as applyProps } from "../element-props-xvw0EB7H.js";
-import { t as customElement } from "../mono-element-C7vCschg.js";
+import { t as customElement } from "../mono-element-LZggUgFj.js";
 import { a as defineHybridPropAliases, i as defineHybridPropAlias, t as __decorate } from "../decorate-DbYFpi8R.js";
 import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
-import { t as buildSizeStyle } from "../css-size-DWAPgQdT.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { property, state } from "lit/decorators.js";
 import { styleMap } from "lit/directives/style-map.js";

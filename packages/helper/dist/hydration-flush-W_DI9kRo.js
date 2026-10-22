@@ -218,6 +218,362 @@ function monoHostChildren(host) {
 }
 
 //#endregion
+//#region src/composables/css-size.ts
+/**
+* Normalize a sizing prop to a CSS length string.
+* - `number` (or numeric string) → `${n}px`
+* - any other non-empty string → passed through verbatim (`"12rem"`, `"80%"`, …)
+* - `null` / `undefined` / `''` → `undefined` (treated as "not set")
+*/
+function toCssSize(value) {
+	if (value === null || value === void 0) return void 0;
+	if (typeof value === "number") return Number.isFinite(value) ? `${value}px` : void 0;
+	const trimmed = String(value).trim();
+	if (trimmed === "") return void 0;
+	if (/^-?\d+(\.\d+)?$/.test(trimmed)) return `${trimmed}px`;
+	return trimmed;
+}
+/**
+* Build a Lit `styleMap` object from the six sizing props, normalizing each via
+* `toCssSize` and omitting the ones that aren't set.
+*/
+function buildSizeStyle(src) {
+	const style = {};
+	const width = toCssSize(src.width);
+	const height = toCssSize(src.height);
+	const minWidth = toCssSize(src.minWidth);
+	const maxWidth = toCssSize(src.maxWidth);
+	const minHeight = toCssSize(src.minHeight);
+	const maxHeight = toCssSize(src.maxHeight);
+	if (width) style.width = width;
+	if (height) style.height = height;
+	if (minWidth) style["min-width"] = minWidth;
+	if (maxWidth) style["max-width"] = maxWidth;
+	if (minHeight) style["min-height"] = minHeight;
+	if (maxHeight) style["max-height"] = maxHeight;
+	return style;
+}
+
+//#endregion
+//#region src/components/table/column-autosize.ts
+/**
+* Content-sized columns — what `mono-table-th`'s `width="auto"` drives.
+*
+* Under `mono-table-fixed` (`table-layout: fixed`) CSS cannot do this: an `auto` column takes
+* the WHOLE surplus instead of fitting its content, and `min-width` / `max-width` on a cell are
+* ignored by the table algorithm. So the column is measured here and handed a concrete px width,
+* clamped to `minWidth` / `maxWidth`, written to its `<col>` (which wins under fixed layout) and
+* to the header cell.
+*
+* Text is measured with a canvas, not read back from the cell: reading the cell's own width would
+* return the width last written, and a column could then never shrink. Measuring text also keeps
+* the pass free of layout reads, so re-running it on every change is cheap.
+*
+* What is measured: the header (caption + its icons), every body cell and every FOOTER cell of
+* the column. The footer matters — a `<mono-table-summary>` total covers the whole set, so a
+* virtual-scroll window that only shows small figures still sizes for the largest one.
+*
+* Cell content is treated as one line (what a money column is). An editor (`<input>`, including
+* the one inside `mono-input`) counts with its value and its own padding / border.
+*/
+/** The text measurer — swappable so tests can run where there is no canvas (jsdom). */
+const autosizeEnv = { measure: defaultMeasure };
+let ctx;
+function defaultMeasure(text, font) {
+	if (ctx === void 0) ctx = document.createElement("canvas").getContext("2d");
+	if (!ctx) return text.length * 8;
+	ctx.font = font;
+	return ctx.measureText(text).width;
+}
+/** A computed style's font shorthand — some engines leave `font` empty and only fill the longhands. */
+function fontOf(style) {
+	return style.font || [
+		style.fontStyle,
+		style.fontVariant,
+		style.fontWeight,
+		style.fontSize,
+		style.fontFamily
+	].filter(Boolean).join(" ");
+}
+const px = (v) => parseFloat(v) || 0;
+/** Horizontal padding + border of an element's box. */
+function boxX(style) {
+	return px(style.paddingLeft) + px(style.paddingRight) + px(style.borderLeftWidth) + px(style.borderRightWidth);
+}
+/**
+* A size prop as px: a number / bare numeric string / `px` → px, `rem` → × the root font size,
+* `em` → × `el`'s font size. Anything else (`%`, `auto`, a var) → `undefined`: not a bound.
+*/
+function cssLengthToPx(value, el) {
+	if (value == null) return void 0;
+	if (typeof value === "number") return Number.isFinite(value) ? value : void 0;
+	const m = /^\s*(-?\d+(?:\.\d+)?)\s*(px|rem|em)?\s*$/i.exec(value);
+	if (!m) return void 0;
+	const n = parseFloat(m[1]);
+	const unit = (m[2] ?? "px").toLowerCase();
+	if (unit === "px") return n;
+	const ref = unit === "rem" ? document.documentElement : el ?? document.documentElement;
+	return n * (px(getComputedStyle(ref).fontSize) || 16);
+}
+/** `w` clamped to `[min, max]`; an unset bound does not clamp. `min` wins over a smaller `max`. */
+function clampWidth(w, min, max) {
+	if (max != null) w = Math.min(w, max);
+	if (min != null) w = Math.max(w, min);
+	return w;
+}
+/**
+* The grid column a header cell STARTS at — a walk over its section's rows honouring `rowspan`
+* and `colspan`, so a leaf header under a band row (`<th colspan>` above it) maps to its real
+* column. `cellIndex` alone would count only the cells of its own row.
+*/
+function headerColumnIndex(cell) {
+	const section = cell.parentElement?.parentElement;
+	if (!section) return cell.cellIndex;
+	const taken = [];
+	const rows = Array.from(section.children).filter((r) => r.tagName === "TR");
+	for (let r = 0; r < rows.length; r++) {
+		taken[r] ??= [];
+		let c = 0;
+		for (const cur of Array.from(rows[r].cells)) {
+			while (taken[r][c]) c++;
+			if (cur === cell) return c;
+			for (let dr = 0; dr < Math.max(1, cur.rowSpan); dr++) {
+				const row = taken[r + dr] ??= [];
+				for (let dc = 0; dc < Math.max(1, cur.colSpan); dc++) row[c + dc] = true;
+			}
+			c += Math.max(1, cur.colSpan);
+		}
+	}
+	return cell.cellIndex;
+}
+/** The single-column cell of `row` at grid column `col` — a spanning cell (a spacer row) is none. */
+function cellAt(row, col) {
+	let c = 0;
+	for (const cell of Array.from(row.cells)) {
+		const span = Math.max(1, cell.colSpan);
+		if (c === col) return span === 1 ? cell : void 0;
+		if (c > col) return void 0;
+		c += span;
+	}
+}
+/** The `<col>` at grid column `col`, honouring `<col span>`. */
+function colAt(table, col) {
+	let c = 0;
+	for (const group of Array.from(table.children).filter((e) => e.tagName === "COLGROUP")) {
+		const cols = Array.from(group.children).filter((e) => e.tagName === "COL");
+		for (const el of cols) {
+			const span = Math.max(1, el.span || 1);
+			if (col < c + span) return span === 1 ? el : void 0;
+			c += span;
+		}
+	}
+}
+/** An element hidden by `v-show` / `hidden` — its text does not show, so it does not count. */
+function isHidden(el) {
+	return el.hidden === true || el.style?.display === "none";
+}
+/** The one-line width a cell's content needs, padding included. */
+function contentWidth(cell) {
+	let width = 0;
+	const walk = (node) => {
+		for (const child of Array.from(node.childNodes)) if (child.nodeType === Node.TEXT_NODE) {
+			const text = (child.textContent ?? "").replace(/\s+/g, " ");
+			if (!text.trim()) continue;
+			const parent = child.parentElement ?? cell;
+			width += autosizeEnv.measure(text, fontOf(getComputedStyle(parent)));
+		} else if (child.nodeType === Node.ELEMENT_NODE) {
+			const el = child;
+			if (isHidden(el)) continue;
+			if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+				const input = el;
+				const style = getComputedStyle(input);
+				width += autosizeEnv.measure(input.value || input.placeholder || "", fontOf(style)) + boxX(style);
+				continue;
+			}
+			if (el.tagName === "SVG" || el.tagName === "svg") {
+				width += el.getBoundingClientRect?.().width || 0;
+				continue;
+			}
+			walk(el.shadowRoot ?? el);
+		}
+	};
+	walk(cell);
+	return width + boxX(getComputedStyle(cell));
+}
+/** The header cell's need: the caption text plus whatever icons sit beside it. */
+function headerWidth(cell, host) {
+	const label = host.querySelector("[data-mono-slot=\"label\"]");
+	const text = (label?.textContent ?? host.textContent ?? "").replace(/\s+/g, " ").trim();
+	let width = text ? autosizeEnv.measure(text, fontOf(getComputedStyle(label ?? host))) : 0;
+	for (const icon of Array.from(host.querySelectorAll(".mono-th-filter-ind, .mono-table-sort-btn:not(.label-trigger), .mono-th-required"))) {
+		const w = icon.getBoundingClientRect?.().width || 0;
+		width += w ? w + 4 : 0;
+	}
+	return width + boxX(getComputedStyle(cell));
+}
+/**
+* One auto-sized column, owned by its `mono-table-th`. `schedule()` coalesces every trigger (a
+* controller notify, a body mutation, typing in an editor) into one measurement per frame.
+*/
+var ColumnAutoSize = class {
+	constructor(host) {
+		this.host = host;
+		this._raf = 0;
+		this._onInput = (e) => {
+			const t = e.target;
+			if (t && this._table && !this._table.tHead?.contains(t)) this.schedule();
+		};
+	}
+	schedule() {
+		if (this._raf) return;
+		this._raf = requestAnimationFrame(() => {
+			this._raf = 0;
+			this._run();
+		});
+	}
+	/** Stop watching, and hand the column back to whatever width it is given next. */
+	stop(clear = false) {
+		if (this._raf) cancelAnimationFrame(this._raf);
+		this._raf = 0;
+		this._unwatch();
+		if (clear && this._wrote) {
+			if (this._wrote.col) this._wrote.col.style.width = "";
+			this._wrote.cell.style.width = "";
+		}
+		this._wrote = void 0;
+	}
+	_watch(table) {
+		if (this._table === table) return;
+		this._unwatch();
+		this._table = table;
+		this._observer = new MutationObserver((records) => {
+			const head = table.tHead;
+			if (records.some((r) => !head?.contains(r.target))) this.schedule();
+		});
+		this._observer.observe(table, {
+			childList: true,
+			characterData: true,
+			subtree: true
+		});
+		table.addEventListener("input", this._onInput, true);
+	}
+	_unwatch() {
+		this._observer?.disconnect();
+		this._observer = void 0;
+		this._table?.removeEventListener("input", this._onInput, true);
+		this._table = void 0;
+	}
+	_run() {
+		const cell = this.host.closest("th, td");
+		const table = cell?.closest("table");
+		if (!cell || !table || !this.host.isConnected) return;
+		this._watch(table);
+		const index = headerColumnIndex(cell);
+		let width = headerWidth(cell, this.host);
+		const sections = [...Array.from(table.tBodies), ...table.tFoot ? [table.tFoot] : []];
+		for (const section of sections) for (const row of Array.from(section.rows)) {
+			const target = cellAt(row, index);
+			if (target) width = Math.max(width, contentWidth(target));
+		}
+		width = Math.ceil(clampWidth(width + 1, this.min, this.max));
+		const value = `${width}px`;
+		const col = colAt(table, index);
+		if (cell.style.width !== value) cell.style.width = value;
+		if (col && col.style.width !== value) col.style.width = value;
+		this._wrote = {
+			col,
+			cell
+		};
+	}
+};
+
+//#endregion
+//#region src/composables/mono-size-attrs.ts
+const ATTRS = [
+	"mono-width",
+	"mono-min-width",
+	"mono-max-width"
+];
+const SELECTOR = ATTRS.map((a) => `[${a}]`).join(", ");
+/** Auto-sized cells and their sizers — a cell that loses `auto` or the document gets stopped. */
+const sizers = /* @__PURE__ */ new Map();
+let observer = null;
+const isCell = (el) => el.tagName === "TH" || el.tagName === "TD";
+/** Apply the three attributes to one element. Re-run whenever one of them changes. */
+function applyMonoSizeAttributes(el) {
+	const width = el.getAttribute("mono-width")?.trim() ?? "";
+	const min = el.getAttribute("mono-min-width")?.trim() ?? "";
+	const max = el.getAttribute("mono-max-width")?.trim() ?? "";
+	const auto = width.toLowerCase() === "auto";
+	el.style.minWidth = min ? toCssSize(min) ?? "" : "";
+	el.style.maxWidth = max ? toCssSize(max) ?? "" : "";
+	if (!isCell(el)) {
+		el.style.width = auto ? "fit-content" : width ? toCssSize(width) ?? "" : "";
+		return;
+	}
+	let sizer = sizers.get(el);
+	if (!auto) {
+		if (sizer) {
+			sizer.stop(true);
+			sizers.delete(el);
+		}
+		el.style.width = width ? toCssSize(width) ?? "" : "";
+		return;
+	}
+	if (!sizer) sizers.set(el, sizer = new ColumnAutoSize(el));
+	sizer.min = cssLengthToPx(min || null, el);
+	sizer.max = cssLengthToPx(max || null, el);
+	sizer.schedule();
+}
+/** Stop the sizers of cells that left the document. */
+function sweep() {
+	for (const [el, sizer] of sizers) {
+		if (el.isConnected) continue;
+		sizer.stop();
+		sizers.delete(el);
+	}
+}
+function scan(root) {
+	if (root instanceof HTMLElement && root.matches(SELECTOR)) applyMonoSizeAttributes(root);
+	for (const el of Array.from(root.querySelectorAll(SELECTOR))) applyMonoSizeAttributes(el);
+}
+/**
+* Turn the attributes on for the whole document — idempotent, so every caller may call it.
+* Returns a stop function (tests; an app never needs it).
+*/
+function startMonoSizeAttributes() {
+	if (typeof document === "undefined" || typeof MutationObserver === "undefined") return () => {};
+	if (!observer) {
+		observer = new MutationObserver((records) => {
+			let removed = false;
+			for (const r of records) {
+				if (r.type === "attributes") {
+					applyMonoSizeAttributes(r.target);
+					continue;
+				}
+				for (const node of Array.from(r.addedNodes)) if (node.nodeType === 1) scan(node);
+				if (r.removedNodes.length) removed = true;
+			}
+			if (removed) sweep();
+		});
+		observer.observe(document.documentElement, {
+			subtree: true,
+			childList: true,
+			attributes: true,
+			attributeFilter: [...ATTRS]
+		});
+		scan(document);
+	}
+	return stopMonoSizeAttributes;
+}
+function stopMonoSizeAttributes() {
+	observer?.disconnect();
+	observer = null;
+	for (const sizer of sizers.values()) sizer.stop();
+	sizers.clear();
+}
+
+//#endregion
 //#region src/composables/mono-ui.ts
 const STATE_KEY = Symbol.for("mono-helper.ui");
 const state$1 = globalThis[STATE_KEY] ??= {
@@ -1011,4 +1367,4 @@ function flushSsrHydration(el, options = {}) {
 }
 
 //#endregion
-export { monoPendingActive as _, __decorate as a, defineHybridPropAlias as c, optionalNumberConverter as d, customElement as f, monoHostChildren as g, monoHostChildNodes as h, withShadowUtilityStyles as i, defineHybridPropAliases as l, monoApplyPhantomOptions as m, adoptIconStyles as n, arrayHasChanged as o, defineMonoElement as p, toShadowCss as r, booleanStringConverter as s, flushSsrHydration as t, numberStringConverter as u, monoPendingGrace as v, monoPhantomOptions as y };
+export { monoPendingGrace as C, monoPendingActive as S, buildSizeStyle as _, __decorate as a, monoHostChildNodes as b, defineHybridPropAlias as c, optionalNumberConverter as d, customElement as f, cssLengthToPx as g, ColumnAutoSize as h, withShadowUtilityStyles as i, defineHybridPropAliases as l, startMonoSizeAttributes as m, adoptIconStyles as n, arrayHasChanged as o, defineMonoElement as p, toShadowCss as r, booleanStringConverter as s, flushSsrHydration as t, numberStringConverter as u, toCssSize as v, monoPhantomOptions as w, monoHostChildren as x, monoApplyPhantomOptions as y };
