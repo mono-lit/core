@@ -35,15 +35,51 @@ function defaultMeasure(text: string, font: string): number {
   return ctx.measureText(text).width
 }
 
-/** A computed style's font shorthand — some engines leave `font` empty and only fill the longhands. */
+/**
+ * A canvas `font` string for a computed style — always built from the longhands.
+ *
+ * NOT `style.font`: the shorthand serialises to `''` whenever a longhand it cannot express is set,
+ * and `font-variant-numeric: tabular-nums` (every `mono-table-summary`) is one. The old fallback then
+ * put `fontVariant` (`tabular-nums`) into the string, canvas rejected it, kept its default
+ * `10px sans-serif`, and a footer total measured far too narrow — the largest figure ellipsed.
+ * Only `small-caps` is a variant canvas takes; tabular figures are handled in `measureStyled`.
+ */
 function fontOf(style: CSSStyleDeclaration): string {
-  return (
-    style.font ||
-    [style.fontStyle, style.fontVariant, style.fontWeight, style.fontSize, style.fontFamily].filter(Boolean).join(' ')
-  )
+  const caps = style.fontVariantCaps === 'small-caps' ? 'small-caps' : ''
+  return [style.fontStyle, caps, style.fontWeight, style.fontSize, style.fontFamily].filter(Boolean).join(' ')
 }
 
 const px = (v: string) => parseFloat(v) || 0
+
+/** The widest digit in `font` — a tabular figure's advance, which canvas cannot be asked for. */
+const digitWidths = new Map<string, number>()
+function maxDigit(font: string): number {
+  let w = digitWidths.get(font)
+  if (w === undefined) {
+    w = Math.max(...'0123456789'.split('').map((d) => autosizeEnv.measure(d, font)))
+    digitWidths.set(font, w)
+  }
+  return w
+}
+
+/**
+ * `text` as the element renders it: its `text-transform`, its `letter-spacing` (canvas ignores
+ * both) and its `font-variant-numeric: tabular-nums` (every digit at the widest digit's advance —
+ * a safe upper bound; tabular figures are wider than the proportional ones canvas measures).
+ */
+export function measureStyled(text: string, style: CSSStyleDeclaration): number {
+  const font = fontOf(style)
+  if (style.textTransform === 'uppercase') text = text.toUpperCase()
+  else if (style.textTransform === 'lowercase') text = text.toLowerCase()
+  let width: number
+  if (/tabular-nums/.test(style.fontVariantNumeric ?? '')) {
+    const digits = text.replace(/\D/g, '').length
+    width = autosizeEnv.measure(text.replace(/\d/g, ''), font) + digits * maxDigit(font)
+  } else {
+    width = autosizeEnv.measure(text, font)
+  }
+  return width + px(style.letterSpacing) * text.length
+}
 
 /** Horizontal padding + border of an element's box. */
 function boxX(style: CSSStyleDeclaration): number {
@@ -140,15 +176,16 @@ export function contentWidth(cell: HTMLElement): number {
       if (child.nodeType === Node.TEXT_NODE) {
         const text = (child.textContent ?? '').replace(/\s+/g, ' ')
         if (!text.trim()) continue
-        const parent = child.parentElement ?? cell
-        width += autosizeEnv.measure(text, fontOf(getComputedStyle(parent)))
+        // A text node straight under a shadow root has no parent ELEMENT — its styles are the host's.
+        const parent = child.parentElement ?? (node as ShadowRoot).host ?? cell
+        width += measureStyled(text, getComputedStyle(parent))
       } else if (child.nodeType === Node.ELEMENT_NODE) {
         const el = child as HTMLElement
         if (isHidden(el)) continue
         if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
           const input = el as HTMLInputElement
           const style = getComputedStyle(input)
-          width += autosizeEnv.measure(input.value || input.placeholder || '', fontOf(style)) + boxX(style)
+          width += measureStyled(input.value || input.placeholder || '', style) + boxX(style)
           continue
         }
         if (el.tagName === 'SVG' || el.tagName === 'svg') {
@@ -168,7 +205,7 @@ export function contentWidth(cell: HTMLElement): number {
 function headerWidth(cell: HTMLElement, host: HTMLElement): number {
   const label = host.querySelector('[data-mono-slot="label"]') as HTMLElement | null
   const text = (label?.textContent ?? host.textContent ?? '').replace(/\s+/g, ' ').trim()
-  let width = text ? autosizeEnv.measure(text, fontOf(getComputedStyle(label ?? host))) : 0
+  let width = text ? measureStyled(text, getComputedStyle(label ?? host)) : 0
   // The sort arrow and the filter funnel — laid out boxes, so read their size. A label-trigger
   // sort button wraps the caption itself and is already counted.
   for (const icon of Array.from(
@@ -195,6 +232,14 @@ export class ColumnAutoSize {
   private readonly _onInput = (e: Event): void => {
     const t = e.target as Element | null
     if (t && this._table && !this._table.tHead?.contains(t)) this.schedule()
+  }
+  /**
+   * A web font that finished loading after a measurement: canvas measured the FALLBACK face, so
+   * the width (and the cached digit advances) are stale — usually too narrow for the real font.
+   */
+  private readonly _onFonts = (): void => {
+    digitWidths.clear()
+    this.schedule()
   }
 
   constructor(private readonly host: HTMLElement) {}
@@ -232,12 +277,14 @@ export class ColumnAutoSize {
     this._observer.observe(table, { childList: true, characterData: true, subtree: true })
     // Typing changes an input's value without touching the DOM.
     table.addEventListener('input', this._onInput, true)
+    document.fonts?.addEventListener?.('loadingdone', this._onFonts)
   }
 
   private _unwatch(): void {
     this._observer?.disconnect()
     this._observer = undefined
     this._table?.removeEventListener('input', this._onInput, true)
+    document.fonts?.removeEventListener?.('loadingdone', this._onFonts)
     this._table = undefined
   }
 

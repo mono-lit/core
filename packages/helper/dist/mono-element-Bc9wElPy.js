@@ -1,4 +1,4 @@
-import { S as registerPendingProperty, h as monoApplyPhantomOptions, m as isMonoSsrApp, t as applyMonoUIDefaults, v as monoPendingActive, w as watchSkeletonActivation, x as monoSkeletonInternals } from "./mono-ui-BtxdHLoF.js";
+import { S as registerPendingProperty, h as monoApplyPhantomOptions, m as isMonoSsrApp, t as applyMonoUIDefaults, v as monoPendingActive, w as watchSkeletonActivation, x as monoSkeletonInternals } from "./mono-ui-KOBJcnXk.js";
 import { html } from "lit";
 
 //#region src/composables/mono-pending.ts

@@ -1,4 +1,4 @@
-import { t as MonoButton } from "../mono-button-BuAaEEgr.js";
+import { t as MonoButton } from "../mono-button-Cy5-Y0At.js";
 
 //#region src/components/button/button-utils.ts
 /**

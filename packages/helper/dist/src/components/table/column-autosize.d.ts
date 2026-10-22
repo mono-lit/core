@@ -25,6 +25,12 @@ export declare const autosizeEnv: {
   measure: (text: string, font: string) => number;
 };
 /**
+ * `text` as the element renders it: its `text-transform`, its `letter-spacing` (canvas ignores
+ * both) and its `font-variant-numeric: tabular-nums` (every digit at the widest digit's advance —
+ * a safe upper bound; tabular figures are wider than the proportional ones canvas measures).
+ */
+export declare function measureStyled(text: string, style: CSSStyleDeclaration): number;
+/**
  * A size prop as px: a number / bare numeric string / `px` → px, `rem` → × the root font size,
  * `em` → × `el`'s font size. Anything else (`%`, `auto`, a var) → `undefined`: not a bound.
  */
@@ -52,6 +58,11 @@ export declare class ColumnAutoSize {
   private _observer?;
   private _wrote?;
   private readonly _onInput;
+  /**
+   * A web font that finished loading after a measurement: canvas measured the FALLBACK face, so
+   * the width (and the cached digit advances) are stale — usually too narrow for the real font.
+   */
+  private readonly _onFonts;
   constructor(host: HTMLElement);
   schedule(): void;
   /** Stop watching, and hand the column back to whatever width it is given next. */

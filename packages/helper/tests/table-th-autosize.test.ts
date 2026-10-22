@@ -18,6 +18,7 @@ import {
   clampWidth,
   cssLengthToPx,
   headerColumnIndex,
+  measureStyled,
 } from '../src/components/table/column-autosize'
 import { startMonoSizeAttributes } from '../src/composables/mono-size-attrs'
 
@@ -192,5 +193,44 @@ describe('mono-width / mono-min-width / mono-max-width attributes', () => {
     expect(a!.style.minWidth).toBe('10rem')
     expect(a!.style.maxWidth).toBe('300px')
     expect(b!.style.width).toBe('240px')
+  })
+})
+
+describe('measureStyled — what canvas cannot be told', () => {
+  const realMeasure = autosizeEnv.measure
+  const fonts: string[] = []
+  beforeEach(() => {
+    fonts.length = 0
+    // Digits 10px, "9" the widest at 12px (a tabular advance), everything else 5px.
+    autosizeEnv.measure = (text, font) => {
+      fonts.push(font)
+      return [...text].reduce((w, ch) => w + (ch === '9' ? 12 : /\d/.test(ch) ? 10 : 5), 0)
+    }
+  })
+  afterEach(() => {
+    autosizeEnv.measure = realMeasure
+  })
+
+  const style = (s: Partial<CSSStyleDeclaration>) =>
+    ({ fontStyle: 'normal', fontWeight: '600', fontSize: '14px', fontFamily: 'Inter, sans-serif', ...s }) as CSSStyleDeclaration
+
+  it('never hands canvas a font with tabular-nums in it (the empty-shorthand regression)', () => {
+    // A computed style with `font-variant-numeric` set serialises `font` to '' — the old code then
+    // fed `fontVariant` ("tabular-nums") to canvas, which rejected the whole string.
+    measureStyled('10.725', style({ font: '', fontVariant: 'tabular-nums', fontVariantNumeric: 'tabular-nums' }))
+    expect(fonts.every((f) => f === 'normal 600 14px Inter, sans-serif')).toBe(true)
+  })
+
+  it('sizes tabular digits at the widest digit', () => {
+    // "10.725": 5 digits × 12 (widest) + "." 5 — wider than the proportional 10+10+5+10+10+10.
+    const tab = measureStyled('10.725', style({ fontVariantNumeric: 'tabular-nums' }))
+    const prop = measureStyled('10.725', style({ fontVariantNumeric: 'normal' }))
+    expect(tab).toBe(65)
+    expect(prop).toBe(55)
+  })
+
+  it('applies text-transform and letter-spacing', () => {
+    expect(measureStyled('ab', style({ letterSpacing: '1.5px' }))).toBe(13)
+    expect(measureStyled('jan', style({ textTransform: 'uppercase' }))).toBe(15)
   })
 })

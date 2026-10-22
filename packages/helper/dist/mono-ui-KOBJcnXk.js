@@ -314,17 +314,52 @@ function defaultMeasure(text, font) {
 	ctx.font = font;
 	return ctx.measureText(text).width;
 }
-/** A computed style's font shorthand — some engines leave `font` empty and only fill the longhands. */
+/**
+* A canvas `font` string for a computed style — always built from the longhands.
+*
+* NOT `style.font`: the shorthand serialises to `''` whenever a longhand it cannot express is set,
+* and `font-variant-numeric: tabular-nums` (every `mono-table-summary`) is one. The old fallback then
+* put `fontVariant` (`tabular-nums`) into the string, canvas rejected it, kept its default
+* `10px sans-serif`, and a footer total measured far too narrow — the largest figure ellipsed.
+* Only `small-caps` is a variant canvas takes; tabular figures are handled in `measureStyled`.
+*/
 function fontOf(style) {
-	return style.font || [
+	const caps = style.fontVariantCaps === "small-caps" ? "small-caps" : "";
+	return [
 		style.fontStyle,
-		style.fontVariant,
+		caps,
 		style.fontWeight,
 		style.fontSize,
 		style.fontFamily
 	].filter(Boolean).join(" ");
 }
 const px = (v) => parseFloat(v) || 0;
+/** The widest digit in `font` — a tabular figure's advance, which canvas cannot be asked for. */
+const digitWidths = /* @__PURE__ */ new Map();
+function maxDigit(font) {
+	let w = digitWidths.get(font);
+	if (w === void 0) {
+		w = Math.max(..."0123456789".split("").map((d) => autosizeEnv.measure(d, font)));
+		digitWidths.set(font, w);
+	}
+	return w;
+}
+/**
+* `text` as the element renders it: its `text-transform`, its `letter-spacing` (canvas ignores
+* both) and its `font-variant-numeric: tabular-nums` (every digit at the widest digit's advance —
+* a safe upper bound; tabular figures are wider than the proportional ones canvas measures).
+*/
+function measureStyled(text, style) {
+	const font = fontOf(style);
+	if (style.textTransform === "uppercase") text = text.toUpperCase();
+	else if (style.textTransform === "lowercase") text = text.toLowerCase();
+	let width;
+	if (/tabular-nums/.test(style.fontVariantNumeric ?? "")) {
+		const digits = text.replace(/\D/g, "").length;
+		width = autosizeEnv.measure(text.replace(/\d/g, ""), font) + digits * maxDigit(font);
+	} else width = autosizeEnv.measure(text, font);
+	return width + px(style.letterSpacing) * text.length;
+}
 /** Horizontal padding + border of an element's box. */
 function boxX(style) {
 	return px(style.paddingLeft) + px(style.paddingRight) + px(style.borderLeftWidth) + px(style.borderRightWidth);
@@ -408,15 +443,15 @@ function contentWidth(cell) {
 		for (const child of Array.from(node.childNodes)) if (child.nodeType === Node.TEXT_NODE) {
 			const text = (child.textContent ?? "").replace(/\s+/g, " ");
 			if (!text.trim()) continue;
-			const parent = child.parentElement ?? cell;
-			width += autosizeEnv.measure(text, fontOf(getComputedStyle(parent)));
+			const parent = child.parentElement ?? node.host ?? cell;
+			width += measureStyled(text, getComputedStyle(parent));
 		} else if (child.nodeType === Node.ELEMENT_NODE) {
 			const el = child;
 			if (isHidden(el)) continue;
 			if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
 				const input = el;
 				const style = getComputedStyle(input);
-				width += autosizeEnv.measure(input.value || input.placeholder || "", fontOf(style)) + boxX(style);
+				width += measureStyled(input.value || input.placeholder || "", style) + boxX(style);
 				continue;
 			}
 			if (el.tagName === "SVG" || el.tagName === "svg") {
@@ -433,7 +468,7 @@ function contentWidth(cell) {
 function headerWidth(cell, host) {
 	const label = host.querySelector("[data-mono-slot=\"label\"]");
 	const text = (label?.textContent ?? host.textContent ?? "").replace(/\s+/g, " ").trim();
-	let width = text ? autosizeEnv.measure(text, fontOf(getComputedStyle(label ?? host))) : 0;
+	let width = text ? measureStyled(text, getComputedStyle(label ?? host)) : 0;
 	for (const icon of Array.from(host.querySelectorAll(".mono-th-filter-ind, .mono-table-sort-btn:not(.label-trigger), .mono-th-required"))) {
 		const w = icon.getBoundingClientRect?.().width || 0;
 		width += w ? w + 4 : 0;
@@ -451,6 +486,10 @@ var ColumnAutoSize = class {
 		this._onInput = (e) => {
 			const t = e.target;
 			if (t && this._table && !this._table.tHead?.contains(t)) this.schedule();
+		};
+		this._onFonts = () => {
+			digitWidths.clear();
+			this.schedule();
 		};
 	}
 	schedule() {
@@ -485,11 +524,13 @@ var ColumnAutoSize = class {
 			subtree: true
 		});
 		table.addEventListener("input", this._onInput, true);
+		document.fonts?.addEventListener?.("loadingdone", this._onFonts);
 	}
 	_unwatch() {
 		this._observer?.disconnect();
 		this._observer = void 0;
 		this._table?.removeEventListener("input", this._onInput, true);
+		document.fonts?.removeEventListener?.("loadingdone", this._onFonts);
 		this._table = void 0;
 	}
 	_run() {

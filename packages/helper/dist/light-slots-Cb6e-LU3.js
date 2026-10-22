@@ -1,4 +1,4 @@
-import { _ as monoHostChildren, g as monoHostChildNodes } from "./mono-ui-BtxdHLoF.js";
+import { b as monoHostChildNodes, x as monoHostChildren } from "./hydration-flush-9AJE8FRl.js";
 
 //#region src/composables/light-slots.ts
 /**
@@ -202,16 +202,6 @@ function parkDetachedNodes(holder, nodes) {
 	return holder;
 }
 /**
-* Whether a bucket holds anything the user can actually see — used to decide
-* whether a region is worth rendering.
-*
-* Comments are explicitly excluded: an anchor like `<!--v-if-->` has a non-blank
-* `textContent`, so a naive check would report an empty region as occupied.
-*/
-function bucketHasContent(nodes) {
-	return Boolean(nodes?.some((node) => node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE && Boolean((node.textContent ?? "").trim())));
-}
-/**
 * Watches a host for a named slot child that arrives AFTER `connectedCallback`.
 *
 * The one-shot capture the light builds do at connect is right for the common case — a framework
@@ -253,4 +243,4 @@ var LateSlotWatcher = class {
 };
 
 //#endregion
-export { parkDetachedNodes as a, guardHostTextContent as i, bucketHasContent as n, placeLightSlots as o, captureLightSlots as r, placeSlotNode as s, LateSlotWatcher as t };
+export { captureLightSlots as n, placeLightSlots as r, LateSlotWatcher as t };
