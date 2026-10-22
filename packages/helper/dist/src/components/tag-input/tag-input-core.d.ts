@@ -7,7 +7,7 @@ import { LateSlotWatcher } from "../../composables/light-slots.js";
 import { LitElement, TemplateResult } from "lit";
 //#region src/components/tag-input/tag-input-core.d.ts
 /** Named slots projected by `mono-tag-input` (light: captured; shadow: native). */
-export type TagInputSlotName = 'label' | 'helper' | 'list';
+export type TagInputSlotName = 'label' | 'helper' | 'list' | 'select-all';
 /**
  * `MonoTagInputCore` — render-mode-agnostic logic for `mono-tag-input` (props,
  * hybrid aliases, array value/model sync, DataSource paging, search, grouping,
@@ -34,6 +34,14 @@ export declare class MonoTagInputCoreInterface {
   protected _onListSlotClick: (event: Event) => void;
   /** The list wrapper's parking spot, portal-aware. */
   protected readonly _listSlotTarget: HTMLElement | null;
+  /** True once a build has found a `slot="select-all"`; swaps the "All" label for it. */
+  protected _hasSelectAllSlotState: boolean;
+  protected _lateSelectAllSlot: LateSlotWatcher;
+  protected _onLateSelectAllSlot(): void;
+  /** Per-build render point for the consumer's select-all content. */
+  protected renderSelectAllSlot(): TemplateResult;
+  /** The select-all wrapper's target inside the "All" row, portal-aware. */
+  protected readonly _selectAllSlotTarget: HTMLElement | null;
   size: TagInputSize;
   color: TagInputColor;
   variant: TagInputVariant;

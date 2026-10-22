@@ -370,6 +370,34 @@ The box is **tri-state** — checked when every visible row is selected, an inde
 <mono-tag-input :items.prop="items" checkable :select-all="false" />      <!-- off -->
 ```
 
+### Custom content
+
+`slot="select-all"` replaces the label beside the "All" checkbox with your own markup — an icon, a
+count, a button. The row itself stays mono's: the checkbox, its tri-state, the click that selects
+every visible row and the server drain below all work unchanged, and `select-all="false"` still
+removes the row, slot and all. `select-all-label` is the fallback when no slot is given.
+
+A control inside the slot keeps its own click and does **not** toggle the row — `button`,
+`a[href]`, `input`, `select`, `textarea`, `label`, or anything you mark `data-mono-no-toggle`. A click
+anywhere else on the row (your text, your icon) selects all as usual.
+
+```vue
+<mono-tag-input :items.prop="items" checkable>
+  <div slot="select-all" class="my-all">
+    <span class="i-mdi-domain"></span>
+    <span>Semua departemen</span>
+    <button type="button" @click="showHelp">?</button>
+  </div>
+</mono-tag-input>
+```
+
+Use the plain `slot="select-all"` attribute, never `<template #select-all>`. The wrapper sits in a
+flex row after the checkbox, so give it `display: flex; flex: 1` to lay your pieces out across the
+line. With the slot in use the row renders as a `div[role="option"]` rather than a `<button>`,
+because a button cannot contain your button.
+
+<DemoSingle name="tag-input" id="custom-select-all" />
+
 ### From the server
 
 With a bound `DataSource` **and** `load-more`, the list is a window onto something bigger — and there "All" would otherwise mean *all ten of the eleven hundred*. So on that combination, and only there, the row **drains the source** instead: it walks the store in `page-size` chunks (or the source's own page size, when that is larger) and selects every row the query matches, the same thing `<mono-table-checkbox type="all">` does for a grid. It only drains what is not here yet: once the last page has been loaded — scrolled to the end, or a result that fit its first page — the row selects the loaded rows outright, with no request.

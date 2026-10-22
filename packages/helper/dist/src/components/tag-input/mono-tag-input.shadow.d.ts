@@ -22,7 +22,9 @@ export declare class MonoTagInputShadow extends MonoTagInputShadow_base {
   private _onSlotChange;
   /** A wrapper appeared after connect — the flag is all this build needs, projection does the rest. */
   protected _onLateListSlot(): void;
-  /** Reconcile the 3 slot-presence flags from their slots' assigned content. */
+  /** Same for `slot="select-all"` — the flag swaps the row to its slotted shape. */
+  protected _onLateSelectAllSlot(): void;
+  /** Reconcile the 4 slot-presence flags from their slots' assigned content. */
   private _scanSlots;
   /**
    * The consumer's list wrapper, PROJECTED rather than moved.
@@ -32,6 +34,12 @@ export declare class MonoTagInputShadow extends MonoTagInputShadow_base {
    * would cut them off from it — the same reason this build inlines SVGs instead of icon classes.
    */
   protected renderListSlot(): TemplateResult;
+  /**
+   * The select-all content, projected — the panel stays in this shadow root, so a native `<slot>`
+   * reaches it and the page's CSS still styles what the consumer put there. Presence is read off
+   * the light child, never `slotchange` — see `_scanSlots`.
+   */
+  protected renderSelectAllSlot(): TemplateResult;
   /** Native `<slot>` carrying the prop fallback as native slot content. */
   protected _slotOutlet(name: TagInputSlotName, fallback?: unknown): TemplateResult;
   /** Inline SVG — the global `.mono-icon`/`i-mdi-close` UnoCSS icon can't reach a

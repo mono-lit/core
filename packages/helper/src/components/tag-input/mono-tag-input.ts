@@ -38,6 +38,8 @@ export class MonoTagInput extends MonoTagInputCore(LitElement) {
    * `insertBefore(node, anchor)` against the sibling that mono had moved away.
    */
   private _slotList: Element | null = null
+  /** The consumer's `slot="select-all"` wrapper — held and placed as one node, like `_slotList`. */
+  private _slotSelectAll: Element | null = null
 
   override connectedCallback(): void {
     super.connectedCallback()
@@ -53,9 +55,11 @@ export class MonoTagInput extends MonoTagInputCore(LitElement) {
   protected override updated(changed: Map<string, unknown>): void {
     super.updated(changed)
     this._onLateListSlot()
+    this._onLateSelectAllSlot()
     this._placeSlot('label', this._slotLabel)
     this._placeSlot('helper', this._slotHelper)
     this._placeListSlot()
+    this._placeSelectAllSlot()
     // After placement, so the wrapper is where the chrome expects it — and before the browser
     // paints, so a row never flashes without its checkbox.
     this._watchListChrome()
@@ -89,6 +93,23 @@ export class MonoTagInput extends MonoTagInputCore(LitElement) {
     if (!wrapper) return
 
     const target = this._listSlotTarget
+    if (!target || wrapper.parentNode === target) return
+
+    target.appendChild(wrapper)
+  }
+
+  /**
+   * Move the select-all wrapper into the "All" row, once that row exists.
+   *
+   * The row only renders while the panel is open and has rows to select, so the target comes and
+   * goes. When Lit drops it the wrapper leaves WITH it, still inside the detached placeholder — it
+   * always keeps a parent, which is what the consumer's framework needs to keep patching it.
+   */
+  private _placeSelectAllSlot(): void {
+    const wrapper = this._slotSelectAll
+    if (!wrapper) return
+
+    const target = this._selectAllSlotTarget
     if (!target || wrapper.parentNode === target) return
 
     target.appendChild(wrapper)
@@ -128,6 +149,13 @@ export class MonoTagInput extends MonoTagInputCore(LitElement) {
         this._hasListSlotState = true
         capturedSlotNodes.add(node)
       }
+
+      // Same shape as `list`: the first wrapper only, `slot` attribute left on.
+      if (slotName === 'select-all' && !this._slotSelectAll) {
+        this._slotSelectAll = node
+        this._hasSelectAllSlotState = true
+        capturedSlotNodes.add(node)
+      }
     }
 
     this._hasLabelSlotState = this._slotLabel.length > 0
@@ -160,6 +188,18 @@ export class MonoTagInput extends MonoTagInputCore(LitElement) {
     this._slotList = wrapper
     if (wrapper.parentNode === this) this.removeChild(wrapper)
     this._hasListSlotState = true
+  }
+
+  /** Adopt a late `slot="select-all"` wrapper — parked out of the host first, as above. */
+  protected override _onLateSelectAllSlot(): void {
+    if (this._slotSelectAll) return
+
+    const wrapper = this._lateSelectAllSlot.find()
+    if (!wrapper) return
+
+    this._slotSelectAll = wrapper
+    if (wrapper.parentNode === this) this.removeChild(wrapper)
+    this._hasSelectAllSlotState = true
   }
 
   private _placeSlot(name: string, nodes: Node[]): void {

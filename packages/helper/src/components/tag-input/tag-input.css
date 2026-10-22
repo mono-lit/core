@@ -42,6 +42,7 @@
      [mono-item][mono-selected]                    ≡ [role='option'][aria-selected='true'] — the --check-icon, unless the row has its own checkbox
      [mono-group]                                  ≡ .combobox [role='heading'] (px-2 py-1.5 text-xs text-muted-foreground)
      [mono-select-all]                             ≡ EXTENSION (a sticky option row over the list)
+     [mono-select-all] > [mono-select-all-slot]    ≡ EXTENSION (slot="select-all" content beside the checkbox)
      [mono-more-panel]                             ≡ [data-popover] holding the overflow chips
      [mono-empty-row]                              ≡ [role='listbox']::before (py-6 text-center text-sm)
      [mono-message-wrap] > [mono-message]          ≡ .field > p / .field [role='alert']
@@ -56,7 +57,7 @@
    [mono-chip-color="…"]) > [mono-chip-main] > [mono-chip-content] > [mono-chip-dot] /
    [mono-chip-label] / [mono-chip-close] > [mono-icon], [mono-native], [mono-actions] >
    [mono-scroll="prev|next"] (+ [mono-idle]) / [mono-clear] > [mono-icon] / [mono-arrow],
-   [mono-dropdown], [mono-select-all] (+ [mono-loading]), [mono-item] (+ [mono-active],
+   [mono-dropdown], [mono-select-all] (+ [mono-loading]) > [mono-select-all-slot], [mono-item] (+ [mono-active],
    [mono-selected], [mono-disabled], [mono-check], [mono-level="n"]) > [mono-check-box] /
    [mono-item-text] > [mono-item-title] / [mono-item-sub], [mono-group] (+ [mono-level],
    [mono-sticky], [mono-toggle], [mono-selected]) > [mono-group-label], [mono-empty-row],
@@ -1095,6 +1096,22 @@ mono-tag-input {
   [mono-tag-input] [mono-select-all]:hover:not(:disabled) {
     background-color: var(--mono-tag-input-option-active-bg, var(--muted));
   }
+}
+
+/* EXTENSION — `slot="select-all"`: the consumer's content beside the checkbox, in place of the
+   label. Its own flex row (not [mono-item-title], whose nowrap + ellipsis would clip a button),
+   taking the rest of the line so a trailing action can push to the end with `margin-inline-start: auto`. */
+[mono-tag-input] [mono-select-all-slot] {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: center;
+  gap: var(--mono-tag-input-option-gap, calc(var(--mono-spacing) * 2));
+}
+
+/* the light build places the wrapper inside a placeholder span — let it fill the box too */
+[mono-tag-input] [mono-select-all-slot] > [data-mono-slot='select-all'] {
+  display: contents;
 }
 
 /* while it drains the server the row is `disabled` so a second click cannot start

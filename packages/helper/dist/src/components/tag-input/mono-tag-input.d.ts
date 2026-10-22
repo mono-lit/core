@@ -27,6 +27,8 @@ export declare class MonoTagInput extends MonoTagInput_base {
    * `insertBefore(node, anchor)` against the sibling that mono had moved away.
    */
   private _slotList;
+  /** The consumer's `slot="select-all"` wrapper — held and placed as one node, like `_slotList`. */
+  private _slotSelectAll;
   connectedCallback(): void;
   protected updated(changed: Map<string, unknown>): void;
   /**
@@ -46,6 +48,14 @@ export declare class MonoTagInput extends MonoTagInput_base {
    * the consumer's scroll position and focus.
    */
   private _placeListSlot;
+  /**
+   * Move the select-all wrapper into the "All" row, once that row exists.
+   *
+   * The row only renders while the panel is open and has rows to select, so the target comes and
+   * goes. When Lit drops it the wrapper leaves WITH it, still inside the detached placeholder — it
+   * always keeps a parent, which is what the consumer's framework needs to keep patching it.
+   */
+  private _placeSelectAllSlot;
   private _captureSlots;
   /**
    * Adopt a wrapper that appeared after `connectedCallback` — see `LateSlotWatcher`.
@@ -59,6 +69,8 @@ export declare class MonoTagInput extends MonoTagInput_base {
    * anchors that are its OWN children, and those move with it.
    */
   protected _onLateListSlot(): void;
+  /** Adopt a late `slot="select-all"` wrapper — parked out of the host first, as above. */
+  protected _onLateSelectAllSlot(): void;
   private _placeSlot;
 }
 declare global {

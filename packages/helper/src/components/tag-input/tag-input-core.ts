@@ -55,7 +55,14 @@ import { readAllRows } from '../../utils/data-source-read'
 import { resolveChipLimit, visibleChipCap } from '../../composables/chip-limits'
 
 /** Named slots projected by `mono-tag-input` (light: captured; shadow: native). */
-export type TagInputSlotName = 'label' | 'helper' | 'list'
+export type TagInputSlotName = 'label' | 'helper' | 'list' | 'select-all'
+
+/**
+ * What inside the consumer's `slot="select-all"` content keeps its own click. A press on one of
+ * these is the consumer's action — a help button, a link — and must not also tick every row.
+ */
+const SELECT_ALL_SLOT_INTERACTIVE =
+  'button, a[href], input, select, textarea, label, [contenteditable], [data-mono-no-toggle]'
 
 const numberStringConverter = {
   fromAttribute(value: string | null): number | undefined {
@@ -847,6 +854,11 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
     return this._popup.panelRoot.querySelector('[data-mono-slot="list"]')
   }
 
+  /** Where the consumer's `slot="select-all"` content goes — inside the "All" row, portal-aware. */
+  protected get _selectAllSlotTarget(): HTMLElement | null {
+    return this._popup.panelRoot.querySelector('[data-mono-slot="select-all"]')
+  }
+
   /**
    * Relocates the dropdown panel into a body portal while open so the shared
    * popup-stack z-index ranks it against every other popup, and owns this
@@ -918,11 +930,22 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
   /** A late wrapper arrived. Overridden per build — one adopts it, the other rescans. */
   protected _onLateListSlot(): void {}
 
+  /** The same watch for `slot="select-all"`, which can arrive late for all the same reasons. */
+  protected _lateSelectAllSlot = new LateSlotWatcher(
+    this as unknown as Element,
+    'select-all',
+    () => this._onLateSelectAllSlot(),
+  )
+
+  /** A late select-all wrapper arrived. Overridden per build, like `_onLateListSlot`. */
+  protected _onLateSelectAllSlot(): void {}
+
   override connectedCallback(): void {
     super.connectedCallback()
     // Above the guard on purpose: `start()` renders nothing and already no-ops without a
     // MutationObserver, and a wrapper can be appended before anything else has run.
     this._lateListSlot.start()
+    this._lateSelectAllSlot.start()
 
     if (isServer) return
     // CAPTURE phase, matching mono-dropdown. The trigger handlers call
@@ -948,6 +971,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
     // it behind pollutes a DataSource the app still owns and shares.
     this._sourceSearch.clear(this.dataSource)
     this._lateListSlot.stop()
+    this._lateSelectAllSlot.stop()
     this._stopWatchingListChrome()
     if (!isServer) {
       // The `true` must match the add above or the listener is never removed.
@@ -2411,6 +2435,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
     event: Event,
   ): void {
     if (this._selectAllPending) return
+    if (this._isSelectAllSlotControl(event)) return
     if (!this._serverSelectAll) {
       this._toggleMany(items, event)
       return
@@ -3343,6 +3368,35 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
       .filter(Boolean)
       .join(' ')
 
+    // `slot="select-all"`: the consumer's content replaces the label, and it may well hold a
+    // button of its own. A <button> cannot contain one, so the row becomes an option-roled <div>;
+    // `pending` then rides on `aria-disabled` + `[mono-loading]` (pointer-events: none) instead of
+    // `disabled`, and `_onSelectAllClick` already refuses a click while a drain runs.
+    if (this._hasSelectAllSlotState) {
+      return html`
+        <div
+          role="option"
+          tabindex="-1"
+          class=${cls}
+          mono-item
+          mono-select-all
+          mono-check
+          ?mono-selected=${state !== 'none'}
+          ?mono-loading=${pending}
+          aria-selected=${state === 'all' ? 'true' : 'false'}
+          aria-busy=${pending ? 'true' : 'false'}
+          aria-disabled=${pending ? 'true' : 'false'}
+          @mousedown=${(event: MouseEvent) => event.preventDefault()}
+          @click=${(event: Event) => this._onSelectAllClick(usable, state, event)}
+        >
+          ${this._renderCheckBox(state, pending)}
+          <div class=${this._cls('mono-tag-input-select-all-slot', 'selectAllSlot')} mono-select-all-slot>
+            ${this.renderSelectAllSlot()}
+          </div>
+        </div>
+      `
+    }
+
     return html`
       <button
         type="button"
@@ -3367,6 +3421,37 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
         </div>
       </button>
     `
+  }
+
+  /**
+   * Where the consumer's `slot="select-all"` content renders — overridden by the shadow build,
+   * which projects it through a native `<slot>`. Light: a placeholder the build moves the
+   * captured wrapper into, exactly as `renderListSlot` does for the rows.
+   */
+  protected renderSelectAllSlot(): TemplateResult {
+    return html`<span data-mono-slot="select-all"></span>`
+  }
+
+  /**
+   * Whether a click on the "All" row actually landed on a control inside the consumer's slot
+   * content. Walked through `composedPath()` so projected content counts in the shadow build too;
+   * it stops at the row, so a `<label>` wrapping the whole panel cannot claim every click.
+   */
+  private _isSelectAllSlotControl(event: Event): boolean {
+    if (!this._hasSelectAllSlotState) return false
+
+    const row = event.currentTarget
+    let inSlot = false
+    let control = false
+    for (const node of event.composedPath()) {
+      if (node === row) break
+      if (!(node instanceof Element)) continue
+      if (node.matches(SELECT_ALL_SLOT_INTERACTIVE)) control = true
+      if (node.getAttribute('slot') === 'select-all' || node.hasAttribute('mono-select-all-slot')) {
+        inSlot = true
+      }
+    }
+    return inSlot && control
   }
 
   /**
@@ -3436,6 +3521,10 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
    */
   @state()
   protected _hasListSlotState = false
+
+  /** Whether a `select-all` slot was supplied — swaps the "All" label for it. Set by the builds. */
+  @state()
+  protected _hasSelectAllSlotState = false
 
   private _publishedEntries: MonoFormListEntry[] = []
 
@@ -4119,6 +4208,7 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
   protected _setSlotState(name: TagInputSlotName, has: boolean): void {
     if (name === 'label') this._hasLabelSlotState = has
     else if (name === 'list') this._hasListSlotState = has
+    else if (name === 'select-all') this._hasSelectAllSlotState = has
     else this._hasHelperSlotState = has
   }
 
@@ -4166,6 +4256,14 @@ export declare class MonoTagInputCoreInterface {
   protected _onListSlotClick: (event: Event) => void
   /** The list wrapper's parking spot, portal-aware. */
   protected readonly _listSlotTarget: HTMLElement | null
+  /** True once a build has found a `slot="select-all"`; swaps the "All" label for it. */
+  protected _hasSelectAllSlotState: boolean
+  protected _lateSelectAllSlot: LateSlotWatcher
+  protected _onLateSelectAllSlot(): void
+  /** Per-build render point for the consumer's select-all content. */
+  protected renderSelectAllSlot(): TemplateResult
+  /** The select-all wrapper's target inside the "All" row, portal-aware. */
+  protected readonly _selectAllSlotTarget: HTMLElement | null
   size: TagInputSize
   color: TagInputColor
   variant: TagInputVariant

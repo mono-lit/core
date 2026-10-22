@@ -120,6 +120,8 @@ export interface TagInputCssClass {
   groupLabel?: string;
   /** The leading "All" row. Sits alongside `item`, which it also carries. */
   selectAll?: string;
+  /** The box beside the "All" checkbox holding the consumer's `slot="select-all"` content. */
+  selectAllSlot?: string;
   item?: string;
   itemActive?: string;
   itemSelected?: string;

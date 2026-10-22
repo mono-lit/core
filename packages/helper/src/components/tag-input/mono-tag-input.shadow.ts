@@ -72,6 +72,7 @@ export class MonoTagInputShadow extends withShadowUtilityStyles(MonoTagInputCore
     // Before the first render, so the very first open already renders the <slot> — and above the
     // isServer guard, so an SSR pass emits it too rather than leaving the wrapper unprojected.
     this._onLateListSlot()
+    this._onLateSelectAllSlot()
 
     if (isServer) return
     // Under nuxt-ssr-lit the SSR'd element can stay `hasUpdated:false` with
@@ -139,21 +140,32 @@ export class MonoTagInputShadow extends withShadowUtilityStyles(MonoTagInputCore
     if (has !== this._hasListSlotState) this._setSlotState('list', has)
   }
 
-  /** Reconcile the 3 slot-presence flags from their slots' assigned content. */
+  /** Same for `slot="select-all"` — the flag swaps the row to its slotted shape. */
+  protected override _onLateSelectAllSlot(): void {
+    const has = !!this._lateSelectAllSlot.find()
+    if (has !== this._hasSelectAllSlotState) this._setSlotState('select-all', has)
+  }
+
+  /** Reconcile the 4 slot-presence flags from their slots' assigned content. */
   private _scanSlots(): void {
-    for (const name of ['label', 'helper', 'list'] as TagInputSlotName[]) {
+    for (const name of ['label', 'helper', 'list', 'select-all'] as TagInputSlotName[]) {
       const has = name === 'list'
         // The list slot cannot be measured the way the others are. Its <slot> lives inside the
         // dropdown AND behind this very flag, so it does not exist until the flag is already on —
         // scanning for it would keep the feature switched off forever. The light child carrying
         // `slot="list"` is the honest signal, and it is readable from the moment it is appended.
         ? !!this._lateListSlot.find()
-        : this._slotHasContent(this._slotFor(name))
+        // `select-all` sits in the same closed-panel limbo, so it is read the same way.
+        : name === 'select-all'
+          ? !!this._lateSelectAllSlot.find()
+          : this._slotHasContent(this._slotFor(name))
       const current = name === 'label'
         ? this._hasLabelSlotState
         : name === 'helper'
           ? this._hasHelperSlotState
-          : this._hasListSlotState
+          : name === 'list'
+            ? this._hasListSlotState
+            : this._hasSelectAllSlotState
       // Guard: only assign on change so we don't loop (updated → state → updated).
       if (has !== current) this._setSlotState(name, has)
     }
@@ -170,6 +182,15 @@ export class MonoTagInputShadow extends withShadowUtilityStyles(MonoTagInputCore
     return html`<div class="mono-tag-input-list-slot" mono-list-slot @click=${this._onListSlotClick}>
       <slot name="list" @slotchange=${(e: Event) => this._onSlotChange('list', e)}></slot>
     </div>`
+  }
+
+  /**
+   * The select-all content, projected — the panel stays in this shadow root, so a native `<slot>`
+   * reaches it and the page's CSS still styles what the consumer put there. Presence is read off
+   * the light child, never `slotchange` — see `_scanSlots`.
+   */
+  protected override renderSelectAllSlot(): TemplateResult {
+    return html`<slot name="select-all">${this.selectAllLabel}</slot>`
   }
 
   /** Native `<slot>` carrying the prop fallback as native slot content. */
