@@ -94,6 +94,22 @@ function pathAppRoots(roots) {
 }
 /** @deprecated renamed {@link pathAppRoots}. */
 const linkedAppRoots = pathAppRoots;
+/**
+* `true` for a HOSTED (mini) app: a source-only root with no `package.json`.
+*
+* A mini remote ships pages/components/composables and its `mono.config.ts`,
+* nothing else — no dependencies, no build config, no env. It cannot install
+* or run by itself; the host that federates it supplies all of that. Derived
+* from the folder rather than declared, so nothing in `apps[]` changes: the
+* same entry (`url` or `path`) serves a full remote and a mini.
+*/
+function isHostedApp(root) {
+	return isDirectory(root) && !fs.existsSync(path.join(root, "package.json"));
+}
+/** The hosted (mini) subset of `roots` — see {@link isHostedApp}. */
+function hostedAppRoots(roots) {
+	return roots.filter((r) => isHostedApp(r.root));
+}
 /** `true` when an app entry can be synced from GitHub. */
 function hasUrl(app) {
 	return typeof app?.url === "string" && app.url.trim().length > 0;
@@ -125,4 +141,4 @@ function resetAppPathWarnings() {
 }
 
 //#endregion
-export { missingPathMessage as a, resolveAppRoots as c, linkedAppRoots as i, hasUrl as n, pathAppRoots as o, isMissingPathError as r, resetAppPathWarnings as s, appRootDirs as t };
+export { isMissingPathError as a, pathAppRoots as c, isHostedApp as i, resetAppPathWarnings as l, hasUrl as n, linkedAppRoots as o, hostedAppRoots as r, missingPathMessage as s, appRootDirs as t, resolveAppRoots as u };

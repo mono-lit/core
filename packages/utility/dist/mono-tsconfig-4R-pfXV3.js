@@ -1,5 +1,6 @@
-import { c as resolveAppRoots } from "./app-roots-CvJnmXcs.js";
-import { f as stripCommentsSafe, n as extractConfig, s as monoAlias } from "./mono-alias-DNDm-jB_.js";
+import { r as hostedAppRoots, u as resolveAppRoots } from "./app-roots-LpDrHF_J.js";
+import { l as srcDirForType } from "./create-config-DdL3Fh6T.js";
+import { f as stripCommentsSafe, n as extractConfig, s as monoAlias } from "./mono-alias-BU2B0tYL.js";
 import fs from "node:fs";
 import path from "node:path";
 import { readTSConfig, writeTSConfig } from "pkg-types";
@@ -148,6 +149,7 @@ async function runMonoPrepare(opts) {
 	}
 	await writeTSConfig(rootTsconfigPath, root);
 	const wiredApps = await wireClonedApps(dirname, monoTsconfigPath, writtenKeys);
+	const hostedApps = adoptHostedApps(dirname);
 	const unpreparedApps = unpreparedPathApps(dirname);
 	if (unpreparedApps.length) console.warn(`[mono] ${unpreparedApps.join(", ")}: tsconfig.json extends ./.mono/tsconfig.json but the file is missing — run \`mono prepare\` in that app.`);
 	return {
@@ -158,8 +160,119 @@ async function runMonoPrepare(opts) {
 		addedExtends,
 		wiredApps,
 		outsideProject,
-		unpreparedApps
+		unpreparedApps,
+		hostedApps
 	};
+}
+/**
+* Prepare every HOSTED (mini) app read in place through `apps[].path`, from the
+* host's side — the mini has no `package.json`, so it can never run a
+* `mono prepare` (or an install) of its own.
+*
+*  1. `<mini>/node_modules` becomes a link (a junction on Windows — no admin
+*     rights needed) to the host's `node_modules`. A sibling outside the host
+*     has no `node_modules` above it, so every bare import in its files —
+*     `vue`, `@mono-lit/utility/*` — fails in Vite AND in jiti (the host's c12
+*     loads the mini's `mono.config.ts`). One link fixes Vite, jiti, vue-tsc and
+*     the editor together, and because the realpaths ARE the host's, there is
+*     still exactly one copy of Vue. A real directory there is never touched.
+*  2. `<mini>/.mono/tsconfig.json` extends the host's config (Nuxt host:
+*     `.nuxt/tsconfig.app.json`, Vite host: `tsconfig.json`), and — when the
+*     mini has none — `<mini>/tsconfig.json` extends that, so the editor
+*     type-checks the mini against the host's aliases and generated
+*     auto-import/route types.
+*
+* Unlike `wireClonedApps`' rule for full `path` apps, this DOES write into the
+* sibling — but only files a mini gitignores (`node_modules`, `.mono/`, the
+* generated `tsconfig.json`). Nothing it commits is ever edited. A clone under `.mono/apps` needs none
+* of this: Node already walks up to the host's `node_modules`.
+*/
+function adoptHostedApps(dirname) {
+	const host = extractConfig(dirname);
+	const roots = resolveAppRoots({
+		dirname,
+		appsDir: MONO_APPS_DIR,
+		apps: host.apps,
+		onMissingPath: "ignore",
+		listClones: false
+	});
+	const hostModules = path.join(dirname, "node_modules");
+	const base = host.type === "nuxt" ? path.join(dirname, ".nuxt", "tsconfig.app.json") : path.join(dirname, "tsconfig.json");
+	const prepared = [];
+	for (const { name, type, root } of hostedAppRoots(roots)) {
+		const link = linkHostModules(name, root, hostModules);
+		const miniMono = path.join(root, MONO_DIR);
+		if (!fs.existsSync(miniMono)) fs.mkdirSync(miniMono, { recursive: true });
+		const tsconfigPath = path.join(miniMono, "tsconfig.json");
+		const rel = (abs) => toRelativePosix(miniMono, abs);
+		const miniSrc = srcDirForType(type ?? host.type);
+		const include = host.type === "nuxt" ? [rel(path.join(dirname, ".nuxt", "nuxt.d.ts"))] : [`${rel(dirname)}/*.d.ts`, `${rel(path.join(dirname, srcDirForType(host.type)))}/**/*.d.ts`];
+		const json = {
+			extends: rel(base),
+			compilerOptions: { rootDir: rel(commonDir(dirname, root)) },
+			include: [
+				`../${miniSrc}/**/*`,
+				"../mono.config.ts",
+				"../*.d.ts",
+				...include
+			],
+			exclude: ["../node_modules", `${rel(hostModules)}`]
+		};
+		const text = `${JSON.stringify(json, null, 2)}\n`;
+		if (!fs.existsSync(tsconfigPath) || fs.readFileSync(tsconfigPath, "utf8") !== text) fs.writeFileSync(tsconfigPath, text);
+		const entryPath = path.join(root, "tsconfig.json");
+		if (!fs.existsSync(entryPath)) fs.writeFileSync(entryPath, `${JSON.stringify({ extends: MONO_TSCONFIG_REF }, null, 2)}\n`);
+		prepared.push({
+			name,
+			link,
+			tsconfig: tsconfigPath
+		});
+	}
+	return prepared;
+}
+/** Point `<root>/node_modules` at the host's. Never replaces a real directory. */
+function linkHostModules(name, root, hostModules) {
+	if (!fs.existsSync(hostModules)) {
+		console.warn(`[mono] ${name}: the host has no node_modules yet — install the host first.`);
+		return "skipped";
+	}
+	const linkPath = path.join(root, "node_modules");
+	let stat;
+	try {
+		stat = fs.lstatSync(linkPath);
+	} catch {
+		stat = void 0;
+	}
+	if (stat) {
+		if (!stat.isSymbolicLink()) {
+			console.warn(`[mono] ${name}: ${linkPath} is a real directory — a hosted app uses the host's node_modules; delete it to let mono link them.`);
+			return "skipped";
+		}
+		let current = "";
+		try {
+			current = fs.realpathSync(linkPath);
+		} catch {}
+		if (current && samePath(current, fs.realpathSync(hostModules))) return "kept";
+		fs.unlinkSync(linkPath);
+	}
+	fs.symlinkSync(hostModules, linkPath, process.platform === "win32" ? "junction" : "dir");
+	return "created";
+}
+function samePath(a, b) {
+	const norm = (p) => {
+		const r = path.resolve(p);
+		return process.platform === "win32" ? r.toLowerCase() : r;
+	};
+	return norm(a) === norm(b);
+}
+/** Deepest directory containing both `a` and `b`. */
+function commonDir(a, b) {
+	const pa = path.resolve(a).split(path.sep);
+	const pb = path.resolve(b).split(path.sep);
+	const eq = (x, y) => process.platform === "win32" ? x.toLowerCase() === y.toLowerCase() : x === y;
+	let i = 0;
+	while (i < pa.length && i < pb.length && eq(pa[i], pb[i])) i++;
+	return pa.slice(0, i).join(path.sep) || path.sep;
 }
 /** Written alias keys whose target directory is not under `dirname`. */
 function pathsOutsideProject(dirname, paths) {
@@ -201,4 +314,4 @@ function unpreparedPathApps(dirname) {
 }
 
 //#endregion
-export { monoTsconfigPaths as a, buildMonoTsconfig as i, MONO_DIR as n, runMonoPrepare as o, MONO_TSCONFIG_REF as r, MONO_APPS_DIR as t };
+export { buildMonoTsconfig as a, adoptHostedApps as i, MONO_DIR as n, monoTsconfigPaths as o, MONO_TSCONFIG_REF as r, runMonoPrepare as s, MONO_APPS_DIR as t };

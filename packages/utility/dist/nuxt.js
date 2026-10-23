@@ -1,10 +1,10 @@
-import { o as pathAppRoots, t as appRootDirs } from "./app-roots-CvJnmXcs.js";
+import { c as pathAppRoots, t as appRootDirs } from "./app-roots-LpDrHF_J.js";
 import { c as resolveMonoConfig, l as srcDirForType, o as resolveExtendsAppNames, s as resolveExtendsEcosystems } from "./create-config-DdL3Fh6T.js";
-import { n as mergeEcosystem, r as monoEcosystem, t as ecosystemSubAllowed } from "./merge-file-CtyKTu5L.js";
+import { n as mergeEcosystem, r as monoEcosystem, t as ecosystemSubAllowed } from "./merge-file-DahuGcvr.js";
 import { t as getMonoConfig } from "./config-node-UzJrXg0Z.js";
-import { d as resolveFederatedRoots, n as extractConfig, o as formatMissingApps, s as monoAlias, t as assertAppSources, u as monoStubAliases } from "./mono-alias-DNDm-jB_.js";
-import { a as defaultMonoExpose, i as monoRouterLinkToNuxtLink, l as remoteGate, o as sanitizeForExpose, s as parsePageMeta } from "./mono-link-YlOQ2PVS.js";
-import { r as registerMonoNuxtLayers, t as monoLayerCandidates } from "./nuxt-layers-DP1m7f1-.js";
+import { d as resolveFederatedRoots, n as extractConfig, o as formatMissingApps, s as monoAlias, t as assertAppSources, u as monoStubAliases } from "./mono-alias-BU2B0tYL.js";
+import { a as defaultMonoExpose, c as createMonoLithHooks, f as remoteGate, i as monoRouterLinkToNuxtLink, o as sanitizeForExpose, u as parsePageMeta } from "./mono-link-URGX8xsT.js";
+import { r as registerMonoNuxtLayers, t as monoLayerCandidates } from "./nuxt-layers-BO0AGwA5.js";
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 import { addComponentsDir, addImportsDir, addPlugin, addPluginTemplate, addRouteMiddleware, addTemplate, addVitePlugin, defineNuxtModule, extendPages, extendViteConfig } from "@nuxt/kit";
@@ -246,6 +246,18 @@ const monoNuxtModule = defineNuxtModule({
 		const activeNames = resolveExtendsAppNames(rawConfig);
 		const activeApps = hasExtends ? (rawConfig.apps ?? []).filter((a) => activeNames.includes(a.name)) : rawConfig.apps ?? [];
 		const activeRoots = appRoots.filter((r) => activeApps.some((a) => a.name === r.name));
+		const lith = createMonoLithHooks({
+			dirname: rootDir,
+			appRoots,
+			...hasExtends ? { activeNames } : {},
+			restartOnConfigChange: false
+		});
+		addVitePlugin({
+			name: "mono-nuxt-apps",
+			configureServer: lith.configureServer,
+			resolveId: lith.resolveId,
+			load: lith.load
+		});
 		const extendsEcosystems = resolveExtendsEcosystems(rawConfig);
 		const monoConfig = {
 			...resolveMonoConfig(rawConfig),

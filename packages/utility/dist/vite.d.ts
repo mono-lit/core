@@ -1,5 +1,5 @@
 import { c as MonoConfig, o as MonoAppType, w as MonoTemplate } from "./create-config-B8IhX4ht.js";
-import { r as MonoAppRootSource, t as MonoAppRoot } from "./app-roots-DK41xMWj.js";
+import { r as MonoAppRootSource, t as MonoAppRoot } from "./app-roots-BlcIuAan.js";
 import { Plugin, PluginOption, ViteDevServer } from "vite";
 //#region src/vite/remote-matcher.d.ts
 /** The options every compat transform accepts, so they stay interchangeable. */

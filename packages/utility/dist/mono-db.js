@@ -1,6 +1,6 @@
 import { c as resolveMonoConfig } from "./create-config-DdL3Fh6T.js";
 import { t as getMonoConfig } from "./config-node-UzJrXg0Z.js";
-import { s as monoAlias } from "./mono-alias-DNDm-jB_.js";
+import { s as monoAlias } from "./mono-alias-BU2B0tYL.js";
 import { n as generateSeed, s as parseMockSchema } from "./generate-CJ7MtcDd.js";
 import { writeFileSync } from "node:fs";
 import path from "node:path";

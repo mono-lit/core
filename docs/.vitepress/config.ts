@@ -156,6 +156,7 @@ export default withMermaid({
             { text: 'Config', link: '/repo/config' },
             { text: 'Useful Utils', link: '/repo/useful-utils' },
             { text: 'Sync Host and Remotes', link: '/repo/sync' },
+            { text: 'Mini Remotes', link: '/repo/mini-remote' },
             { text: 'Environment', link: '/repo/env' },
             { text: 'Data Fetching', link: '/repo/data-fetching' },
             { text: 'Mock API', link: '/repo/mock-api' },

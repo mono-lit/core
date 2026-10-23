@@ -1,4 +1,4 @@
-import { i as extractSkill, n as extractConfig } from "./mono-alias-DNDm-jB_.js";
+import { i as extractSkill, n as extractConfig } from "./mono-alias-BU2B0tYL.js";
 import fs from "node:fs";
 import path from "node:path";
 import { config } from "dotenv";

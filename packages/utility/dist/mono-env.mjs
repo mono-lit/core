@@ -87,8 +87,9 @@ const childEnv = {
   ...process.env,
 }
 
-function loadEnvByPath(fullPath, displayPath, label) {
+function loadEnvByPath(fullPath, displayPath, label, quietIfMissing = false) {
   if (!existsSync(fullPath)) {
+    if (quietIfMissing) return
     console.warn(`[mono-env] Warning: ${label} env file not found: ${displayPath}`)
     return
   }
@@ -161,12 +162,16 @@ function loadAppEnv(app) {
     return
   }
 
+  // A hosted (mini) app — no package.json — ships no env of its own: the host
+  // owns env, so a missing file there is the normal case, not worth a warning.
+  const hosted = !existsSync(resolve(app.dir, 'package.json'))
+
   for (const file of envFiles) {
     const envFileName = basename(file)
     const appEnvPath = resolve(app.dir, envFileName)
     const displayPath = `${displayDir(app.dir)}/${envFileName}`
 
-    loadEnvByPath(appEnvPath, displayPath, `app:${app.name}`)
+    loadEnvByPath(appEnvPath, displayPath, `app:${app.name}`, hosted)
   }
 }
 

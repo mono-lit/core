@@ -38,6 +38,7 @@ import {
   type MonoConfig,
 } from '../composables/create-config'
 import { monoLayerCandidates, registerMonoNuxtLayers } from './nuxt-layers'
+import { createMonoLithHooks } from '../vite/mono-lith'
 import {
   ecosystemFileKey,
   layoutNameFor,
@@ -305,6 +306,25 @@ const monoNuxtModule: NuxtModule<MonoModuleOptions, MonoModuleOptions, false> = 
       : (rawConfig.apps ?? [])
     // The merged apps' folders (same gate), e.g. for their definePrefetch files.
     const activeRoots = appRoots.filter((r) => activeApps.some((a) => a.name === r.name))
+
+    // `virtual:mono-apps` — the lith-aware replacement for a host's
+    // `import.meta.glob('…/.mono/apps/**/mono.config.ts')` menu loader, which
+    // cannot see an `apps[].path` sibling (a hosted mini, typically). Same
+    // module `monoRepo().vite()` serves a Vite host; Nuxt restarts on its own
+    // config watch, so only the module and the sibling watch are taken.
+    const lith = createMonoLithHooks({
+      dirname: rootDir,
+      appRoots,
+      ...(hasExtends ? { activeNames } : {}),
+      restartOnConfigChange: false,
+    })
+    // Cast: @nuxt/kit types its Vite from its own copy, not ours.
+    addVitePlugin({
+      name: 'mono-nuxt-apps',
+      configureServer: lith.configureServer,
+      resolveId: lith.resolveId,
+      load: lith.load,
+    } as unknown as Parameters<typeof addVitePlugin>[0])
 
     // Per-layer directory allowlists from a selective `extends` entry
     // (`{ config, ecosystems: [...] }`). Same raw-config reasoning as above.

@@ -152,6 +152,9 @@ describe('runMonoPrepare — path siblings (mono-lith)', () => {
         )
         const sibling = path.join(dir, 'sibling')
         fs.mkdirSync(path.join(sibling, 'src'), { recursive: true })
+        // A FULL app: without a package.json it would be a hosted (mini) app,
+        // which the host prepares itself (see mono-prepare-hosted-apps.test.ts).
+        fs.writeFileSync(path.join(sibling, 'package.json'), '{}')
         fs.writeFileSync(
             path.join(sibling, 'tsconfig.json'),
             JSON.stringify({ extends: opts.siblingExtends ?? [], compilerOptions: {} }, null, 2),

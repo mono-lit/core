@@ -2,7 +2,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { readTSConfig, writeTSConfig, type TSConfig } from 'pkg-types'
 import { monoAlias, extractConfig, stripCommentsSafe, type MonoAliasOptions } from './mono-alias'
-import { resolveAppRoots } from './app-roots'
+import { hostedAppRoots, resolveAppRoots } from './app-roots'
+import { srcDirForType } from './create-config'
 
 /** Folder (relative to an app root) that holds the generated tsconfig. */
 export const MONO_DIR = '.mono'
@@ -101,6 +102,11 @@ export interface RunMonoPrepareResult {
    * does not exist yet — they have not run their own `mono prepare`.
    */
   unpreparedApps: string[]
+  /**
+   * Hosted (mini) `path` apps — no `package.json` — this host prepared on their
+   * behalf: `node_modules` linked to the host's, `.mono/tsconfig.json` written.
+   */
+  hostedApps: HostedAppPrepared[]
 }
 
 /** Normalise a tsconfig `extends` field (string | string[] | undefined) to an array. */
@@ -307,6 +313,10 @@ export async function runMonoPrepare(
   //    pipeline, so a fresh clone is wired straight away.
   const wiredApps = await wireClonedApps(dirname, monoTsconfigPath, writtenKeys)
 
+  // 6b. A hosted (mini) sibling cannot run its own prepare — do it for it.
+  //     Before step 7, which would otherwise flag it as unprepared.
+  const hostedApps = adoptHostedApps(dirname)
+
   // 7. A sibling that has not run ITS OWN prepare still `extends` a
   //    `.mono/tsconfig.json` that is not there — vite's esbuild plugin then
   //    fails its SFCs with "Tsconfig not found", which reads as our fault.
@@ -327,7 +337,162 @@ export async function runMonoPrepare(
     wiredApps,
     outsideProject,
     unpreparedApps,
+    hostedApps,
   }
+}
+
+/** What {@link adoptHostedApps} did for one hosted (mini) `path` app. */
+export interface HostedAppPrepared {
+  name: string
+  /** `<mini>/node_modules` -> `<host>/node_modules`: made, already right, or left alone. */
+  link: 'created' | 'kept' | 'skipped'
+  /** Absolute path of the generated `<mini>/.mono/tsconfig.json`. */
+  tsconfig: string
+}
+
+/**
+ * Prepare every HOSTED (mini) app read in place through `apps[].path`, from the
+ * host's side — the mini has no `package.json`, so it can never run a
+ * `mono prepare` (or an install) of its own.
+ *
+ *  1. `<mini>/node_modules` becomes a link (a junction on Windows — no admin
+ *     rights needed) to the host's `node_modules`. A sibling outside the host
+ *     has no `node_modules` above it, so every bare import in its files —
+ *     `vue`, `@mono-lit/utility/*` — fails in Vite AND in jiti (the host's c12
+ *     loads the mini's `mono.config.ts`). One link fixes Vite, jiti, vue-tsc and
+ *     the editor together, and because the realpaths ARE the host's, there is
+ *     still exactly one copy of Vue. A real directory there is never touched.
+ *  2. `<mini>/.mono/tsconfig.json` extends the host's config (Nuxt host:
+ *     `.nuxt/tsconfig.app.json`, Vite host: `tsconfig.json`), and — when the
+ *     mini has none — `<mini>/tsconfig.json` extends that, so the editor
+ *     type-checks the mini against the host's aliases and generated
+ *     auto-import/route types.
+ *
+ * Unlike `wireClonedApps`' rule for full `path` apps, this DOES write into the
+ * sibling — but only files a mini gitignores (`node_modules`, `.mono/`, the
+ * generated `tsconfig.json`). Nothing it commits is ever edited. A clone under `.mono/apps` needs none
+ * of this: Node already walks up to the host's `node_modules`.
+ */
+export function adoptHostedApps(dirname: string): HostedAppPrepared[] {
+  const host = extractConfig(dirname)
+  const roots = resolveAppRoots({
+    dirname,
+    appsDir: MONO_APPS_DIR,
+    apps: host.apps,
+    onMissingPath: 'ignore',
+    listClones: false,
+  })
+
+  const hostModules = path.join(dirname, 'node_modules')
+  const base =
+    host.type === 'nuxt'
+      ? path.join(dirname, '.nuxt', 'tsconfig.app.json')
+      : path.join(dirname, 'tsconfig.json')
+
+  const prepared: HostedAppPrepared[] = []
+  for (const { name, type, root } of hostedAppRoots(roots)) {
+    const link = linkHostModules(name, root, hostModules)
+
+    const miniMono = path.join(root, MONO_DIR)
+    if (!fs.existsSync(miniMono)) fs.mkdirSync(miniMono, { recursive: true })
+    const tsconfigPath = path.join(miniMono, 'tsconfig.json')
+    const rel = (abs: string) => toRelativePosix(miniMono, abs)
+    const miniSrc = srcDirForType(type ?? host.type)
+
+    const include =
+      host.type === 'nuxt'
+        ? [rel(path.join(dirname, '.nuxt', 'nuxt.d.ts'))]
+        : [`${rel(dirname)}/*.d.ts`, `${rel(path.join(dirname, srcDirForType(host.type)))}/**/*.d.ts`]
+
+    const json = {
+      extends: rel(base),
+      compilerOptions: {
+        // The host may pin `rootDir: "."`; the mini lies outside it. Widen to the
+        // folder holding both so TypeScript does not reject the mini's own files.
+        rootDir: rel(commonDir(dirname, root)),
+      },
+      include: [`../${miniSrc}/**/*`, '../mono.config.ts', '../*.d.ts', ...include],
+      exclude: ['../node_modules', `${rel(hostModules)}`],
+    }
+    const text = `${JSON.stringify(json, null, 2)}\n`
+    // Unchanged content is not rewritten: the file sits in a watched sibling.
+    if (!fs.existsSync(tsconfigPath) || fs.readFileSync(tsconfigPath, 'utf8') !== text) {
+      fs.writeFileSync(tsconfigPath, text)
+    }
+
+    // The entry the editor finds. Generated rather than committed: a committed
+    // `extends: ./.mono/tsconfig.json` dangles until a host has prepared the
+    // mini, and Vite/oxc FAILS every transform of the mini's files on a missing
+    // extends ("Tsconfig not found") — e.g. a clone, or a test importing its
+    // mono.config. An existing file is the author's and is never replaced.
+    const entryPath = path.join(root, 'tsconfig.json')
+    if (!fs.existsSync(entryPath)) {
+      fs.writeFileSync(entryPath, `${JSON.stringify({ extends: MONO_TSCONFIG_REF }, null, 2)}\n`)
+    }
+
+    prepared.push({ name, link, tsconfig: tsconfigPath })
+  }
+  return prepared
+}
+
+/** Point `<root>/node_modules` at the host's. Never replaces a real directory. */
+function linkHostModules(
+  name: string,
+  root: string,
+  hostModules: string,
+): HostedAppPrepared['link'] {
+  if (!fs.existsSync(hostModules)) {
+    console.warn(`[mono] ${name}: the host has no node_modules yet — install the host first.`)
+    return 'skipped'
+  }
+  const linkPath = path.join(root, 'node_modules')
+
+  let stat: fs.Stats | undefined
+  try {
+    stat = fs.lstatSync(linkPath)
+  } catch {
+    stat = undefined
+  }
+
+  if (stat) {
+    if (!stat.isSymbolicLink()) {
+      console.warn(
+        `[mono] ${name}: ${linkPath} is a real directory — a hosted app uses the host's ` +
+          `node_modules; delete it to let mono link them.`,
+      )
+      return 'skipped'
+    }
+    let current = ''
+    try {
+      current = fs.realpathSync(linkPath)
+    } catch {
+      // dangling link — replaced below
+    }
+    if (current && samePath(current, fs.realpathSync(hostModules))) return 'kept'
+    fs.unlinkSync(linkPath)
+  }
+
+  fs.symlinkSync(hostModules, linkPath, process.platform === 'win32' ? 'junction' : 'dir')
+  return 'created'
+}
+
+function samePath(a: string, b: string): boolean {
+  const norm = (p: string) => {
+    const r = path.resolve(p)
+    return process.platform === 'win32' ? r.toLowerCase() : r
+  }
+  return norm(a) === norm(b)
+}
+
+/** Deepest directory containing both `a` and `b`. */
+function commonDir(a: string, b: string): string {
+  const pa = path.resolve(a).split(path.sep)
+  const pb = path.resolve(b).split(path.sep)
+  const eq = (x: string, y: string) =>
+    process.platform === 'win32' ? x.toLowerCase() === y.toLowerCase() : x === y
+  let i = 0
+  while (i < pa.length && i < pb.length && eq(pa[i]!, pb[i]!)) i++
+  return pa.slice(0, i).join(path.sep) || path.sep
 }
 
 /** Written alias keys whose target directory is not under `dirname`. */

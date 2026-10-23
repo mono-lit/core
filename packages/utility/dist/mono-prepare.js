@@ -1,4 +1,4 @@
-import { o as runMonoPrepare } from "./mono-tsconfig-D2qRL9_R.js";
+import { s as runMonoPrepare } from "./mono-tsconfig-4R-pfXV3.js";
 import path from "node:path";
 import { defineCommand, runMain } from "citty";
 
@@ -21,6 +21,10 @@ const main = defineCommand({
 		else console.log("[mono] tsconfig.json already extends ./.mono/tsconfig.json");
 		if (result.removedKeys.length) console.log(`[mono] removed ${result.removedKeys.length} inline alias path(s) from tsconfig.json`);
 		if (result.wiredApps.length) console.log(`[mono] wired ${result.wiredApps.length} cloned app tsconfig(s) -> ${monoRel}: ${result.wiredApps.join(", ")}`);
+		for (const app of result.hostedApps) {
+			const link = app.link === "skipped" ? "node_modules NOT linked" : `node_modules ${app.link}`;
+			console.log(`[mono] hosted app ${app.name}: ${link}, wrote ${path.relative(dirname, app.tsconfig)}`);
+		}
 	}
 });
 runMain(main);

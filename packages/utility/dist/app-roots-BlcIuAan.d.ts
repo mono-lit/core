@@ -78,6 +78,18 @@ declare function appRootDirs(roots: MonoAppRoot[]): string[];
 declare function pathAppRoots(roots: MonoAppRoot[]): MonoAppRoot[];
 /** @deprecated renamed {@link pathAppRoots}. */
 declare const linkedAppRoots: typeof pathAppRoots;
+/**
+ * `true` for a HOSTED (mini) app: a source-only root with no `package.json`.
+ *
+ * A mini remote ships pages/components/composables and its `mono.config.ts`,
+ * nothing else — no dependencies, no build config, no env. It cannot install
+ * or run by itself; the host that federates it supplies all of that. Derived
+ * from the folder rather than declared, so nothing in `apps[]` changes: the
+ * same entry (`url` or `path`) serves a full remote and a mini.
+ */
+declare function isHostedApp(root: string): boolean;
+/** The hosted (mini) subset of `roots` — see {@link isHostedApp}. */
+declare function hostedAppRoots(roots: MonoAppRoot[]): MonoAppRoot[];
 /** `true` when an app entry can be synced from GitHub. */
 declare function hasUrl(app: MonoAppRootInput | undefined): boolean;
 /** The error every entry point raises for a `path` with no directory and no `url`. */
@@ -87,4 +99,4 @@ declare function isMissingPathError(e: unknown): boolean;
 /** Test seam: forget which missing paths have been reported. */
 declare function resetAppPathWarnings(): void;
 //#endregion
-export { ResolveAppRootsOptions as a, isMissingPathError as c, pathAppRoots as d, resetAppPathWarnings as f, MonoMissingPathPolicy as i, linkedAppRoots as l, MonoAppRootInput as n, appRootDirs as o, resolveAppRoots as p, MonoAppRootSource as r, hasUrl as s, MonoAppRoot as t, missingPathMessage as u };
+export { ResolveAppRootsOptions as a, hostedAppRoots as c, linkedAppRoots as d, missingPathMessage as f, resolveAppRoots as h, MonoMissingPathPolicy as i, isHostedApp as l, resetAppPathWarnings as m, MonoAppRootInput as n, appRootDirs as o, pathAppRoots as p, MonoAppRootSource as r, hasUrl as s, MonoAppRoot as t, isMissingPathError as u };

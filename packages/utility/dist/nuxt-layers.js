@@ -1,3 +1,3 @@
-import { n as monoNuxtLayers } from "./nuxt-layers-DP1m7f1-.js";
+import { n as monoNuxtLayers } from "./nuxt-layers-BO0AGwA5.js";
 
 export { monoNuxtLayers };

@@ -1,4 +1,4 @@
-import { c as resolveAppRoots } from "./app-roots-CvJnmXcs.js";
+import { u as resolveAppRoots } from "./app-roots-LpDrHF_J.js";
 import { l as srcDirForType } from "./create-config-DdL3Fh6T.js";
 import fs from "node:fs";
 import path from "node:path";

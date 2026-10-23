@@ -1,5 +1,5 @@
 import "./create-config-B8IhX4ht.js";
-import "./app-roots-DK41xMWj.js";
+import "./app-roots-BlcIuAan.js";
 //#region src/nuxt/nuxt-layers.d.ts
 interface MonoNuxtLayersOptions {
   /** Project root. `apps[].path` resolves against it. @default process.cwd() */

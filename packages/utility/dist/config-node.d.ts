@@ -1,5 +1,5 @@
 import { S as MonoSkillConfig, c as MonoConfig, o as MonoAppType, w as MonoTemplate } from "./create-config-B8IhX4ht.js";
-import { a as ResolveAppRootsOptions, c as isMissingPathError, d as pathAppRoots, f as resetAppPathWarnings, i as MonoMissingPathPolicy, l as linkedAppRoots, n as MonoAppRootInput, o as appRootDirs, p as resolveAppRoots, r as MonoAppRootSource, s as hasUrl, t as MonoAppRoot, u as missingPathMessage } from "./app-roots-DK41xMWj.js";
+import { a as ResolveAppRootsOptions, c as hostedAppRoots, d as linkedAppRoots, f as missingPathMessage, h as resolveAppRoots, i as MonoMissingPathPolicy, l as isHostedApp, m as resetAppPathWarnings, n as MonoAppRootInput, o as appRootDirs, p as pathAppRoots, r as MonoAppRootSource, s as hasUrl, t as MonoAppRoot, u as isMissingPathError } from "./app-roots-BlcIuAan.js";
 import { LoadConfigOptions } from "c12";
 import { TSConfig } from "pkg-types";
 //#region src/composables/config-node.d.ts
@@ -305,6 +305,11 @@ export interface RunMonoPrepareResult {
    * does not exist yet — they have not run their own `mono prepare`.
    */
   unpreparedApps: string[];
+  /**
+   * Hosted (mini) `path` apps — no `package.json` — this host prepared on their
+   * behalf: `node_modules` linked to the host's, `.mono/tsconfig.json` written.
+   */
+  hostedApps: HostedAppPrepared[];
 }
 /**
  * Generate `<dirname>/.mono/tsconfig.json` from the mono alias map and wire it
@@ -312,6 +317,38 @@ export interface RunMonoPrepareResult {
  * inline `@mono-*` paths. Idempotent: safe to run repeatedly.
  */
 export declare function runMonoPrepare(opts: RunMonoPrepareOptions): Promise<RunMonoPrepareResult>;
+/** What {@link adoptHostedApps} did for one hosted (mini) `path` app. */
+export interface HostedAppPrepared {
+  name: string;
+  /** `<mini>/node_modules` -> `<host>/node_modules`: made, already right, or left alone. */
+  link: 'created' | 'kept' | 'skipped';
+  /** Absolute path of the generated `<mini>/.mono/tsconfig.json`. */
+  tsconfig: string;
+}
+/**
+ * Prepare every HOSTED (mini) app read in place through `apps[].path`, from the
+ * host's side — the mini has no `package.json`, so it can never run a
+ * `mono prepare` (or an install) of its own.
+ *
+ *  1. `<mini>/node_modules` becomes a link (a junction on Windows — no admin
+ *     rights needed) to the host's `node_modules`. A sibling outside the host
+ *     has no `node_modules` above it, so every bare import in its files —
+ *     `vue`, `@mono-lit/utility/*` — fails in Vite AND in jiti (the host's c12
+ *     loads the mini's `mono.config.ts`). One link fixes Vite, jiti, vue-tsc and
+ *     the editor together, and because the realpaths ARE the host's, there is
+ *     still exactly one copy of Vue. A real directory there is never touched.
+ *  2. `<mini>/.mono/tsconfig.json` extends the host's config (Nuxt host:
+ *     `.nuxt/tsconfig.app.json`, Vite host: `tsconfig.json`), and — when the
+ *     mini has none — `<mini>/tsconfig.json` extends that, so the editor
+ *     type-checks the mini against the host's aliases and generated
+ *     auto-import/route types.
+ *
+ * Unlike `wireClonedApps`' rule for full `path` apps, this DOES write into the
+ * sibling — but only files a mini gitignores (`node_modules`, `.mono/`, the
+ * generated `tsconfig.json`). Nothing it commits is ever edited. A clone under `.mono/apps` needs none
+ * of this: Node already walks up to the host's `node_modules`.
+ */
+export declare function adoptHostedApps(dirname: string): HostedAppPrepared[];
 //#endregion
 //#region src/skills/config.d.ts
 /**
@@ -920,4 +957,4 @@ export declare function runSessionShow({ cwd, app, sessionId, remote, run }: {
   run?: GitRunner;
 }): SessionShowResult;
 //#endregion
-export { MonoAppRoot, MonoAppRootInput, MonoAppRootSource, MonoMissingPathPolicy, type MonoSkillConfig, ResolveAppRootsOptions, appRootDirs, hasUrl, isMissingPathError, linkedAppRoots, missingPathMessage, pathAppRoots, resetAppPathWarnings, resolveAppRoots };
+export { MonoAppRoot, MonoAppRootInput, MonoAppRootSource, MonoMissingPathPolicy, type MonoSkillConfig, ResolveAppRootsOptions, appRootDirs, hasUrl, hostedAppRoots, isHostedApp, isMissingPathError, linkedAppRoots, missingPathMessage, pathAppRoots, resetAppPathWarnings, resolveAppRoots };
