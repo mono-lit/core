@@ -355,6 +355,11 @@ export interface HostedAppPrepared {
  * host's side — the mini has no `package.json`, so it can never run a
  * `mono prepare` (or an install) of its own.
  *
+ * Only a mini that names THIS host in its own `apps[]` (by name — typically a
+ * `url` entry — or by a `path` landing here) is prepared: the wiring is declared
+ * on both sides, never inferred. Any other hosted app is skipped with a warning
+ * that spells out the entry to add.
+ *
  *  1. `<mini>/node_modules` becomes a link (a junction on Windows — no admin
  *     rights needed) to the host's `node_modules`. A sibling outside the host
  *     has no `node_modules` above it, so every bare import in its files —
@@ -391,6 +396,16 @@ export function adoptHostedApps(dirname: string): HostedAppPrepared[] {
 
   const prepared: HostedAppPrepared[] = []
   for (const { name, type, root } of hostedAppRoots(roots)) {
+    // Wired both ways, never assumed: the mini names its host in its own `apps[]`.
+    if (!namesHost(root, dirname, host.name)) {
+      const hint = `{ name: '${host.name ?? path.basename(dirname)}', url: '<the host repo>', type: '${host.type}' }`
+      console.warn(
+        `[mono] ${name}: not prepared — its mono.config.ts does not name this host. ` +
+          `Add ${hint} to its apps[].`,
+      )
+      continue
+    }
+
     const link = linkHostModules(name, root, hostModules)
 
     const miniMono = path.join(root, MONO_DIR)
@@ -474,6 +489,19 @@ function linkHostModules(
 
   fs.symlinkSync(hostModules, linkPath, process.platform === 'win32' ? 'junction' : 'dir')
   return 'created'
+}
+
+/**
+ * Does the app at `root` name this host in its `apps[]`? By the host's `name` (a
+ * `url` entry, the usual way), or by a `path` that lands on `hostDir`. Read
+ * statically, like every other `apps[]` read before the config can execute.
+ */
+function namesHost(root: string, hostDir: string, hostName: string | null): boolean {
+  return extractConfig(root).apps.some(
+    (app) =>
+      (hostName !== null && app.name === hostName) ||
+      (typeof app.path === 'string' && samePath(path.resolve(root, app.path), hostDir)),
+  )
 }
 
 function samePath(a: string, b: string): boolean {

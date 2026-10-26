@@ -1,6 +1,6 @@
 {
     "name": "@mono-lit/utility",
-    "version": "0.0.5",
+    "version": "0.0.6",
     "description": "Mono config, fetching, auth/token, Nuxt/Vite integration and shared helpers for the @mono-lit ecosystem.",
     "keywords": [
         "vue",

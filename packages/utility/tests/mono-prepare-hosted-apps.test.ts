@@ -16,8 +16,17 @@ let base: string
 let host: string
 let mini: string
 
-function scaffold(opts: { hostType?: 'vue' | 'nuxt'; miniType?: 'vue' | 'nuxt'; hostModules?: boolean } = {}) {
-  const { hostType = 'vue', miniType = hostType, hostModules = true } = opts
+function scaffold(
+  opts: { hostType?: 'vue' | 'nuxt'; miniType?: 'vue' | 'nuxt'; hostModules?: boolean; miniApps?: string } = {},
+) {
+  const {
+    hostType = 'vue',
+    miniType = hostType,
+    hostModules = true,
+    // The mini names its host back (by url, like a full remote) — what makes the
+    // host prepare it.
+    miniApps = `[{ name: 'host', type: '${hostType}', url: 'https://github.com/org/repo/tree/main/host' }]`,
+  } = opts
   host = path.join(base, 'host')
   mini = path.join(base, 'remote-mini')
   fs.mkdirSync(host, { recursive: true })
@@ -32,7 +41,10 @@ function scaffold(opts: { hostType?: 'vue' | 'nuxt'; miniType?: 'vue' | 'nuxt'; 
   if (hostModules) fs.mkdirSync(path.join(host, 'node_modules', 'vue'), { recursive: true })
 
   // No tsconfig.json: a mini commits none — the host generates it.
-  fs.writeFileSync(path.join(mini, 'mono.config.ts'), `export default { name: 'remote-mini', type: '${miniType}' }\n`)
+  fs.writeFileSync(
+    path.join(mini, 'mono.config.ts'),
+    `export default { name: 'remote-mini', type: '${miniType}', template: 'remote', apps: ${miniApps} }\n`,
+  )
 }
 
 const readMiniTsconfig = () =>
@@ -146,6 +158,36 @@ describe('runMonoPrepare — hosted (mini) path apps', () => {
     expect(result.hostedApps[0]!.link).toBe('skipped')
     expect(fs.existsSync(path.join(mini, 'node_modules'))).toBe(false)
     expect(warn.mock.calls.join(' ')).toContain('install the host first')
+  })
+
+  it('does not prepare a mini that does not name this host by path', async () => {
+    scaffold({ miniApps: '[]' })
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const result = await runMonoPrepare({ dirname: host })
+
+    expect(result.hostedApps).toEqual([])
+    expect(fs.existsSync(path.join(mini, 'node_modules'))).toBe(false)
+    expect(fs.existsSync(path.join(mini, '.mono'))).toBe(false)
+    expect(warn.mock.calls.join(' ')).toContain(`Add { name: 'host', url: '<the host repo>', type: 'vue' } to its apps[]`)
+  })
+
+  it('does not prepare a mini that names a different host', async () => {
+    scaffold({ miniApps: `[{ name: 'other-host', type: 'vue', url: 'https://github.com/org/repo/tree/main/other-host' }]` })
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const result = await runMonoPrepare({ dirname: host })
+
+    expect(result.hostedApps).toEqual([])
+    expect(fs.existsSync(path.join(mini, 'node_modules'))).toBe(false)
+  })
+
+  it('also accepts a back-reference by path (a mono-lith)', async () => {
+    scaffold({ miniApps: `[{ name: 'lith-host', type: 'vue', path: '../host' }]` })
+
+    const result = await runMonoPrepare({ dirname: host })
+
+    expect(result.hostedApps.map((a) => a.link)).toEqual(['created'])
   })
 
   it('leaves a full path app (with package.json) untouched', async () => {

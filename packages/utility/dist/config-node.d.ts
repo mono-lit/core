@@ -330,6 +330,11 @@ export interface HostedAppPrepared {
  * host's side — the mini has no `package.json`, so it can never run a
  * `mono prepare` (or an install) of its own.
  *
+ * Only a mini that names THIS host in its own `apps[]` (by name — typically a
+ * `url` entry — or by a `path` landing here) is prepared: the wiring is declared
+ * on both sides, never inferred. Any other hosted app is skipped with a warning
+ * that spells out the entry to add.
+ *
  *  1. `<mini>/node_modules` becomes a link (a junction on Windows — no admin
  *     rights needed) to the host's `node_modules`. A sibling outside the host
  *     has no `node_modules` above it, so every bare import in its files —

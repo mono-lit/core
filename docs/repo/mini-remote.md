@@ -24,16 +24,25 @@ export default defineConfig({
     name: 'vue-remote-mini',
     type: 'vue',
     template: 'remote',
-    apps: [],          // federates nothing itself
+    // The Host this mini belongs to, by its GitHub url — the same entry a full Remote declares.
+    apps: [
+        { name: 'vue-host', url: 'https://github.com/mono-lit/templates/tree/main/vue-host', type: 'vue', template: 'host' },
+    ],
     menu: [{ title: 'Module Vue Mini', url: '/module-vue-mini', icon: 'i-mdi-vuejs', items: [] }],
 })
 ```
 
-The mini has no `extends` back to the Host. The Host is the controller, and it already merges the mini through **its own** `extends`. So the Host's cookies, JWT and `fetching.api` entries are the ones in effect.
+The mini names its Host in `apps[]`, but has no `extends` back to it. The Host is the controller, and it already merges the mini through **its own** `extends`. So the Host's cookies, JWT and `fetching.api` entries are the ones in effect.
 
 ## How the Host knows it's a mini
 
-The Host doesn't need a flag. **An app root with no `package.json` is a hosted (mini) app** (`isHostedApp()` in `@mono-lit/utility/config/node`). The `apps[]` entry looks the same as for any Remote:
+**An app root with no `package.json` is a hosted (mini) app** (`isHostedApp()` in `@mono-lit/utility/config/node`). The wiring is declared on both sides, never assumed: the Host lists the mini in its `apps[]`, and the mini names the Host in its own `apps[]`, by the Host's name (its `url` entry). A `path` that lands on the Host also counts; a mono-lith adds one beside the `url`. A mini that names no Host is not prepared. `mono prepare` warns and spells out the entry to add:
+
+```
+[mono] vue-remote-mini: not prepared — its mono.config.ts does not name this host. Add { name: 'vue-host', url: '<the host repo>', type: 'vue' } to its apps[].
+```
+
+The Host's `apps[]` entry for the mini looks the same as for any Remote:
 
 ```ts
 // host mono.config.ts
