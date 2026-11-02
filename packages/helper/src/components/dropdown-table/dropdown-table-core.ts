@@ -628,10 +628,9 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
         document.addEventListener('keydown', this._onDocKey, true)
         // Shadow build only — the light build's panel is repositioned by the
         // popup controller, which registers its own scroll/resize listeners.
-        if (this._isShadowHost) {
-          window.addEventListener('scroll', this._onViewportChange, true)
-          window.addEventListener('resize', this._onViewportChange)
-        }
+        // Open-only (see `_syncViewportListeners`); re-bound here for a reconnect
+        // while open, which schedules no update of its own.
+        this._syncViewportListeners()
       }
     }
 
@@ -646,6 +645,9 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
         document.removeEventListener('keydown', this._onDocKey, true)
         window.removeEventListener('scroll', this._onViewportChange, true)
         window.removeEventListener('resize', this._onViewportChange)
+        if (this._viewportFrame) cancelAnimationFrame(this._viewportFrame)
+        this._viewportFrame = 0
+        this._viewportBound = false
       }
       super.disconnectedCallback()
     }
@@ -987,13 +989,45 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
      * popup controller's own listeners; a shadow host has none.
      */
     private _onViewportChange = (): void => {
-      if (this._isOpen) this._positionPanel()
-      if (this._moreOpen) this._positionMorePanel()
+      if ((!this._isOpen && !this._moreOpen) || this._viewportFrame) return
+      // One placement per frame: `_positionPanel` measures (a forced layout) and walks the
+      // ancestors with `getComputedStyle`, and a capture-phase scroll fires per event.
+      this._viewportFrame = requestAnimationFrame(() => {
+        this._viewportFrame = 0
+        if (this._isOpen) this._positionPanel()
+        if (this._moreOpen) this._positionMorePanel()
+      })
+    }
+
+    private _viewportBound = false
+    private _viewportFrame = 0
+
+    /**
+     * Shadow build only, and only while a panel is OPEN — the popup controller's rule. They used
+     * to be bound at connect for every shadow instance: a capture-phase, non-passive `scroll`
+     * listener on `window` per field, open or not, which also keeps the page's scrolling off the
+     * compositor thread.
+     */
+    private _syncViewportListeners(): void {
+      if (isServer) return
+      const want = this._isShadowHost && this.isConnected && (this._isOpen || this._moreOpen)
+      if (want === this._viewportBound) return
+      if (want) {
+        window.addEventListener('scroll', this._onViewportChange, { capture: true, passive: true })
+        window.addEventListener('resize', this._onViewportChange, { passive: true })
+      } else {
+        window.removeEventListener('scroll', this._onViewportChange, true)
+        window.removeEventListener('resize', this._onViewportChange)
+        if (this._viewportFrame) cancelAnimationFrame(this._viewportFrame)
+        this._viewportFrame = 0
+      }
+      this._viewportBound = want
     }
 
     protected override updated(changed: Map<string, unknown>): void {
       super.updated(changed)
       if (isServer) return
+      this._syncViewportListeners()
       if (this._isOpen) {
         this._observePanel()
         this._reflectSelection()

@@ -1,13 +1,13 @@
-import { C as monoPendingGrace, _ as buildSizeStyle, a as __decorate, c as defineHybridPropAlias, d as optionalNumberConverter, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration, u as numberStringConverter, v as toCssSize } from "../../hydration-flush-y3en4P1-.js";
+import { C as monoPendingGrace, _ as buildSizeStyle, a as __decorate, c as defineHybridPropAlias, d as optionalNumberConverter, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration, u as numberStringConverter, v as toCssSize } from "../../hydration-flush-BHnOMTN4.js";
 import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
 import { n as detachEventHandlers, t as applyProps } from "../../element-props-xvw0EB7H.js";
-import { t as MonoFormControlCore } from "../../form-control-core-Cp29vXaN.js";
+import { t as MonoFormControlCore } from "../../form-control-core-BSD5TNXn.js";
 import { a as closeIcon, i as chevronIcon, n as caretIcon } from "../../field-icons-t8rXRCKs.js";
 import { n as FieldTooltipController, t as field_tooltip_css_raw_default } from "../../field-tooltip.css_raw-U5UeTa2d.js";
 import { n as label_position_css_raw_default, r as FieldValidationController, t as field_validation_css_raw_default } from "../../field-validation.css_raw-Cx6SGrfP.js";
-import { n as applyPopupPlacement, r as computePopupPlacement, t as PopupPortalController } from "../../popup-portal-C8ttHDRX.js";
+import { n as applyPopupPlacement, r as computePopupPlacement, t as PopupPortalController } from "../../popup-portal-CINuVjNY.js";
 import { t as createNotifier } from "../../notifier-BIrqUzRh.js";
-import { t as monoDataGrid } from "../../mono-data-grid-Bg-G3nqU.js";
+import { t as monoDataGrid } from "../../mono-data-grid-DYELywOK.js";
 import { n as resolveChipLimit, r as visibleChipCap, t as ChipStripController } from "../../chip-strip-bNfLn52Z.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { property } from "lit/decorators.js";
@@ -145,9 +145,15 @@ const MonoDropdownTableCore = (superClass) => {
 				this._reflectSelection();
 			};
 			this._onViewportChange = () => {
-				if (this._isOpen) this._positionPanel();
-				if (this._moreOpen) this._positionMorePanel();
+				if (!this._isOpen && !this._moreOpen || this._viewportFrame) return;
+				this._viewportFrame = requestAnimationFrame(() => {
+					this._viewportFrame = 0;
+					if (this._isOpen) this._positionPanel();
+					if (this._moreOpen) this._positionMorePanel();
+				});
 			};
+			this._viewportBound = false;
+			this._viewportFrame = 0;
 			this._wasOpen = false;
 			this._lastSelectedCount = 0;
 			this._searchFocused = false;
@@ -403,10 +409,7 @@ const MonoDropdownTableCore = (superClass) => {
 			if (!isServer) {
 				document.addEventListener("pointerdown", this._onDocPointer, true);
 				document.addEventListener("keydown", this._onDocKey, true);
-				if (this._isShadowHost) {
-					window.addEventListener("scroll", this._onViewportChange, true);
-					window.addEventListener("resize", this._onViewportChange);
-				}
+				this._syncViewportListeners();
 			}
 		}
 		disconnectedCallback() {
@@ -420,6 +423,9 @@ const MonoDropdownTableCore = (superClass) => {
 				document.removeEventListener("keydown", this._onDocKey, true);
 				window.removeEventListener("scroll", this._onViewportChange, true);
 				window.removeEventListener("resize", this._onViewportChange);
+				if (this._viewportFrame) cancelAnimationFrame(this._viewportFrame);
+				this._viewportFrame = 0;
+				this._viewportBound = false;
 			}
 			super.disconnectedCallback();
 		}
@@ -628,9 +634,34 @@ const MonoDropdownTableCore = (superClass) => {
 			});
 			applyPopupPlacement(panel, placement, true);
 		}
+		/**
+		* Shadow build only, and only while a panel is OPEN — the popup controller's rule. They used
+		* to be bound at connect for every shadow instance: a capture-phase, non-passive `scroll`
+		* listener on `window` per field, open or not, which also keeps the page's scrolling off the
+		* compositor thread.
+		*/
+		_syncViewportListeners() {
+			if (isServer) return;
+			const want = this._isShadowHost && this.isConnected && (this._isOpen || this._moreOpen);
+			if (want === this._viewportBound) return;
+			if (want) {
+				window.addEventListener("scroll", this._onViewportChange, {
+					capture: true,
+					passive: true
+				});
+				window.addEventListener("resize", this._onViewportChange, { passive: true });
+			} else {
+				window.removeEventListener("scroll", this._onViewportChange, true);
+				window.removeEventListener("resize", this._onViewportChange);
+				if (this._viewportFrame) cancelAnimationFrame(this._viewportFrame);
+				this._viewportFrame = 0;
+			}
+			this._viewportBound = want;
+		}
 		updated(changed) {
 			super.updated(changed);
 			if (isServer) return;
+			this._syncViewportListeners();
 			if (this._isOpen) {
 				this._observePanel();
 				this._reflectSelection();
@@ -1634,7 +1665,39 @@ function monoDataDropdown(source = null, opts = {}) {
 		}
 		notify();
 	}
-	const offGrid = grid.subscribe(() => notify());
+	/**
+	* Forward a grid notify only when something THIS controller's readers use has moved.
+	*
+	* Forwarding every one re-rendered the whole `<mono-dropdown-table>` (chips, `selectedItems()`),
+	* repositioned its open panel (a forced layout) and re-reflected the selection onto every row —
+	* for notifies that change none of it, chiefly each virtual-scroll window shift. What the field
+	* reads from the grid: the selection (`check().version` / `pending`), the load state
+	* (`loading` / `hasLoaded` / `error` — the skeleton release), and the rows for chip labels and
+	* key typing — the page array itself, or under virtual scroll (whose `items` is only the window)
+	* the loaded count. Rows a window shift brings in are re-reflected by the panel's own
+	* MutationObserver, not by this notify.
+	*/
+	let forwarded = [];
+	const gridSignature = () => {
+		const c = grid.check();
+		return [
+			c.version,
+			c.pending,
+			grid.loading,
+			grid.hasLoaded,
+			grid.error,
+			grid.scrollMode === "virtual" ? grid.loadedCount : grid.items,
+			grid.totalCount,
+			grid.hasMore,
+			grid.pageIndex
+		];
+	};
+	const offGrid = grid.subscribe(() => {
+		const sig = gridSignature();
+		if (sig.length === forwarded.length && sig.every((v, i) => Object.is(v, forwarded[i]))) return;
+		forwarded = sig;
+		notify();
+	});
 	const ctrl = {
 		grid,
 		/** Alias of {@link grid} — the inner `controlMonoTable`. Preferred in new

@@ -1,12 +1,12 @@
-import { _ as buildSizeStyle, a as __decorate, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, o as arrayHasChanged, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration, v as toCssSize } from "../../hydration-flush-y3en4P1-.js";
+import { _ as buildSizeStyle, a as __decorate, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, o as arrayHasChanged, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration, v as toCssSize } from "../../hydration-flush-BHnOMTN4.js";
 import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
-import { t as MonoFormControlCore } from "../../form-control-core-Cp29vXaN.js";
+import { t as MonoFormControlCore } from "../../form-control-core-BSD5TNXn.js";
 import { c as spinnerIcon, i as chevronIcon, n as caretIcon, s as refreshIcon } from "../../field-icons-t8rXRCKs.js";
 import { n as FieldTooltipController, t as field_tooltip_css_raw_default } from "../../field-tooltip.css_raw-U5UeTa2d.js";
 import { n as label_position_css_raw_default, r as FieldValidationController, t as field_validation_css_raw_default } from "../../field-validation.css_raw-Cx6SGrfP.js";
-import { t as PopupPortalController } from "../../popup-portal-C8ttHDRX.js";
+import { t as PopupPortalController } from "../../popup-portal-CINuVjNY.js";
 import { a as errorTitle, d as MonoSourceSearch, i as errorText, m as searchRowPredicate, n as describeError, p as resolveSearchFields } from "../../normalize-error-BmLbgANw.js";
-import { t as LateSlotWatcher } from "../../light-slots-CEID7fhG.js";
+import { t as LateSlotWatcher } from "../../light-slots-Cs3XHtqa.js";
 import { t as checkbox_css_raw_default } from "../../checkbox.css_raw-AYtSbUtY.js";
 import { r as readAllRows } from "../../data-source-read-i6CYSUEl.js";
 import { n as unwrapReactive, r as unwrapReactiveDeep } from "../../reactive-Dtd-esHO.js";
@@ -149,6 +149,8 @@ const MonoTagInputCore = (superClass) => {
 			this._listboxId = `${this._inputId}-listbox`;
 			this._lateListSlot = new LateSlotWatcher(this, "list", () => this._onLateListSlot());
 			this._lateSelectAllSlot = new LateSlotWatcher(this, "select-all", () => this._onLateSelectAllSlot());
+			this._filteredMemo = null;
+			this._filteredMemoOn = false;
 			this._selectedSetFor = null;
 			this._selectedSetLen = -1;
 			this._selectedSetMemo = /* @__PURE__ */ new Set();
@@ -500,6 +502,8 @@ const MonoTagInputCore = (superClass) => {
 			super.disconnectedCallback();
 		}
 		willUpdate(changed) {
+			this._filteredMemo = null;
+			this._filteredMemoOn = true;
 			for (const key of [
 				"disabled",
 				"loading",
@@ -545,7 +549,10 @@ const MonoTagInputCore = (superClass) => {
 		updated(changed) {
 			super.updated(changed);
 			this._syncListEntries();
-			if (isServer) return;
+			if (isServer) {
+				this._endFilteredMemo();
+				return;
+			}
 			this._rememberSelected(this._selectedValues);
 			if (changed.has("_open")) {
 				this._cursorPending = this._open;
@@ -562,6 +569,11 @@ const MonoTagInputCore = (superClass) => {
 				this._measuredChipCount = this._renderedChipCount;
 				this._chipStrip.invalidate();
 			}
+			this._endFilteredMemo();
+		}
+		_endFilteredMemo() {
+			this._filteredMemoOn = false;
+			this._filteredMemo = null;
 		}
 		_setCssClass(value) {
 			if (value == null) {
@@ -1122,8 +1134,10 @@ const MonoTagInputCore = (superClass) => {
 			return index >= 0 ? index : 0;
 		}
 		get _filteredItems() {
-			if (this._grouped) return this._groupRows().filter((r) => r.kind === "item").map((r) => r.item);
-			return this._visibleItems.filter((item) => this._searchMatches(item));
+			if (this._filteredMemoOn && this._filteredMemo) return this._filteredMemo;
+			const out = this._grouped ? this._groupRows().filter((r) => r.kind === "item").map((r) => r.item) : this._visibleItems.filter((item) => this._searchMatches(item));
+			if (this._filteredMemoOn) this._filteredMemo = out;
+			return out;
 		}
 		/**
 		* The selection limits in force: `chip.max` / `chip.min` pin, the element's
@@ -2299,6 +2313,7 @@ const MonoTagInputCore = (superClass) => {
 		* back fresh row objects under the same keys, and a consumer reading `e.item.Nama` must see them.
 		*/
 		_syncListEntries() {
+			if (!this.dataForm || !this.keyForm) return;
 			const next = this._listEntries();
 			const prev = this._publishedEntries;
 			let same = prev.length === next.length;

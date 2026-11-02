@@ -1,7 +1,7 @@
-import { a as __decorate, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration, u as numberStringConverter } from "../../hydration-flush-y3en4P1-.js";
+import { a as __decorate, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration, u as numberStringConverter } from "../../hydration-flush-BHnOMTN4.js";
 import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
 import { n as cssPart, r as defineCssClassAliases, t as applyCssClass } from "../../css-class-B6Tc_MAx.js";
-import { n as applyPopupPlacement, r as computePopupPlacement, t as PopupPortalController } from "../../popup-portal-C8ttHDRX.js";
+import { n as applyPopupPlacement, r as computePopupPlacement, t as PopupPortalController } from "../../popup-portal-CINuVjNY.js";
 import { LitElement, html, isServer, unsafeCSS } from "lit";
 import { property, state } from "lit/decorators.js";
 
@@ -236,7 +236,7 @@ const MonoDropdownCore = (superClass) => {
 			this._syncTriggerListeners();
 			if (this.modelValue) {
 				this._bindViewport();
-				this._popup.reposition();
+				if (changed.has("modelValue")) this._popup.reposition();
 				this._positionPanel();
 			} else this._unbindViewport();
 		}

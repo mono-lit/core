@@ -485,6 +485,8 @@ export class PopupPortalController implements ReactiveController, PopupLayer {
     // its popup is open would otherwise strand a window listener.
     this._unbindViewport()
     this._leaveStack()
+    this._unobserveSize()
+    this._wasOpen = false
     this._classObserver?.disconnect()
     this._classObserver = null
     if (this._portal?.parentNode) {
@@ -498,20 +500,66 @@ export class PopupPortalController implements ReactiveController, PopupLayer {
     this._adopted = false
   }
 
+  /**
+   * Position SYNCHRONOUSLY only on the open edge; every later update of an open popup is
+   * coalesced into one frame (`scheduleReposition`), and the custom-property carry-over
+   * (`_syncPortalVars`, two `getComputedStyle`) runs on the open edge only.
+   *
+   * `reposition()` is a write-then-read forced layout, and hosts update constantly while open —
+   * every keystroke in a search box, every arrow-key cursor move, every controller notify — so
+   * running it per update cost one synchronous layout each. A frame callback still runs before
+   * that frame paints, so nothing visibly lags; a panel whose content resizes WITHOUT a host
+   * update (a consumer re-rendering its rows) is caught by the ResizeObserver instead.
+   */
   hostUpdated(): void {
     if (isServer) return
 
     if (this.opts.isOpen()) {
+      const opening = !this._wasOpen
+      this._wasOpen = true
       this._adopt()
       this._enterStack()
-      this._syncPortalClass()
-      this.reposition()
+      if (opening) {
+        this._syncPortalClass()
+        this.reposition()
+        this._observeSize()
+      } else {
+        this._syncPortalClass(false)
+        this.scheduleReposition()
+      }
     } else {
+      this._wasOpen = false
+      this._unobserveSize()
       this._leaveStack()
       // Keep the portal's mirrored class in sync so the (still-adopted) panel
       // picks up the host losing its `open` class and hides itself.
-      this._syncPortalClass()
+      this._syncPortalClass(false)
     }
+  }
+
+  /** Whether the last `hostUpdated` saw the popup open — the open edge is the change. */
+  private _wasOpen = false
+  private _sizeObserver: ResizeObserver | null = null
+
+  /** Reposition when the panel or its anchor changes size while open (content, chips wrapping). */
+  private _observeSize(): void {
+    if (this._sizeObserver || typeof ResizeObserver === 'undefined') return
+    const panel = this._panel ?? this.opts.getPanel()
+    const anchor = this.opts.getAnchor()
+    if (!panel && !anchor) return
+    this._sizeObserver = new ResizeObserver(() => this.scheduleReposition())
+    if (panel) this._sizeObserver.observe(panel)
+    if (anchor) this._sizeObserver.observe(anchor)
+  }
+
+  private _unobserveSize(): void {
+    this._sizeObserver?.disconnect()
+    this._sizeObserver = null
+  }
+
+  /** Reposition on the next frame, coalesced with any viewport movement already pending. */
+  scheduleReposition(): void {
+    this._onViewport()
   }
 
   /* ------------------------------ portal ------------------------------- */
@@ -573,8 +621,12 @@ export class PopupPortalController implements ReactiveController, PopupLayer {
     this._adopted = true
   }
 
-  /** Mirror the style-scope element's classes and `mono-*` attributes onto the portal. */
-  private _syncPortalClass(): void {
+  /**
+   * Mirror the style-scope element's classes and `mono-*` attributes onto the portal.
+   * `withVars` also carries the custom properties across — a computed-style read, so only on
+   * the open edge and on a scope attribute change, not on every host update.
+   */
+  private _syncPortalClass(withVars = true): void {
     if (!this._portal) return
     const scope = this.opts.getStyleScope()
     const cls = scope?.getAttribute('class') ?? ''
@@ -600,7 +652,7 @@ export class PopupPortalController implements ReactiveController, PopupLayer {
       if (this._portal.getAttribute(name) !== value) this._portal.setAttribute(name, value)
     }
 
-    this._syncPortalVars(scope)
+    if (withVars) this._syncPortalVars(scope)
   }
 
   /**

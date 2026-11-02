@@ -1,4 +1,4 @@
-import { t as monoDataGrid } from "./mono-data-grid-BdVhuMZo.js";
+import { t as monoDataGrid } from "./mono-data-grid-DVAt2Loc.js";
 import { t as createNotifier } from "./notifier-BIrqUzRh.js";
 
 //#region src/components/dropdown-table/mono-data-dropdown.ts
@@ -308,7 +308,39 @@ function monoDataDropdown(source = null, opts = {}) {
 		}
 		notify();
 	}
-	const offGrid = grid.subscribe(() => notify());
+	/**
+	* Forward a grid notify only when something THIS controller's readers use has moved.
+	*
+	* Forwarding every one re-rendered the whole `<mono-dropdown-table>` (chips, `selectedItems()`),
+	* repositioned its open panel (a forced layout) and re-reflected the selection onto every row —
+	* for notifies that change none of it, chiefly each virtual-scroll window shift. What the field
+	* reads from the grid: the selection (`check().version` / `pending`), the load state
+	* (`loading` / `hasLoaded` / `error` — the skeleton release), and the rows for chip labels and
+	* key typing — the page array itself, or under virtual scroll (whose `items` is only the window)
+	* the loaded count. Rows a window shift brings in are re-reflected by the panel's own
+	* MutationObserver, not by this notify.
+	*/
+	let forwarded = [];
+	const gridSignature = () => {
+		const c = grid.check();
+		return [
+			c.version,
+			c.pending,
+			grid.loading,
+			grid.hasLoaded,
+			grid.error,
+			grid.scrollMode === "virtual" ? grid.loadedCount : grid.items,
+			grid.totalCount,
+			grid.hasMore,
+			grid.pageIndex
+		];
+	};
+	const offGrid = grid.subscribe(() => {
+		const sig = gridSignature();
+		if (sig.length === forwarded.length && sig.every((v, i) => Object.is(v, forwarded[i]))) return;
+		forwarded = sig;
+		notify();
+	});
 	const ctrl = {
 		grid,
 		/** Alias of {@link grid} — the inner `controlMonoTable`. Preferred in new

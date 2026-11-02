@@ -1703,6 +1703,12 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
     this._cursorPending = false
     this.requestUpdate() // instant client filter
     if (this._searchTimer) clearTimeout(this._searchTimer)
+    // Client filtering is done by the render just requested; the debounced pass would only
+    // re-render the same filtered list a second time per keystroke.
+    if (!this._serverSearch()) {
+      this._searchTimer = undefined
+      return
+    }
     const wait = Math.max(0, Number(this.searchDebounce) || 0)
     this._searchTimer = setTimeout(() => void this._applySearch(this._query), wait)
   }
@@ -2366,6 +2372,10 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
    * back fresh row objects under the same keys, and a consumer reading `e.item.Nama` must see them.
    */
   protected _syncListEntries(): void {
+    // Nothing to publish to without a bound form (`slot="list"` reads the entries back through
+    // it) — and this runs on EVERY update, open or closed, building an entry per option. A form
+    // bound later is published on its first update.
+    if (!this.dataForm || !this.keyForm) return
     const next = this._listEntries()
     const prev = this._publishedEntries
 

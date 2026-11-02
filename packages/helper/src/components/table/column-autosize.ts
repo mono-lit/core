@@ -252,12 +252,33 @@ export class ColumnAutoSize {
 
   constructor(private readonly host: HTMLElement) {}
 
+  /**
+   * Every sizer on the page shares ONE frame callback (`_flush`), which measures all of them
+   * first and writes all of them after.
+   *
+   * Each used to run in its own frame callback, measure-then-write: column A wrote its width,
+   * so column B's measurement (`getBoundingClientRect` on header icons, an SVG) forced a
+   * synchronous layout of the whole table — one per auto column, per frame.
+   */
+  private static _queued = new Set<ColumnAutoSize>()
+  private static _frame = 0
+
+  private static _flush(): void {
+    ColumnAutoSize._frame = 0
+    const batch = [...ColumnAutoSize._queued]
+    ColumnAutoSize._queued.clear()
+    const writes = batch.map((s) => {
+      s._raf = 0
+      return s._measure()
+    })
+    for (const write of writes) write?.()
+  }
+
   schedule(): void {
     if (this._raf) return
-    this._raf = requestAnimationFrame(() => {
-      this._raf = 0
-      this._run()
-    })
+    this._raf = 1
+    ColumnAutoSize._queued.add(this)
+    ColumnAutoSize._frame ||= requestAnimationFrame(() => ColumnAutoSize._flush())
   }
 
   /** Forget the grow-only floor (new rows) and re-measure. */
@@ -269,7 +290,7 @@ export class ColumnAutoSize {
 
   /** Stop watching, and hand the column back to whatever width it is given next. */
   stop(clear = false): void {
-    if (this._raf) cancelAnimationFrame(this._raf)
+    ColumnAutoSize._queued.delete(this)
     this._raf = 0
     this._unwatch()
     if (clear && this._wrote) {
@@ -303,10 +324,11 @@ export class ColumnAutoSize {
     this._table = undefined
   }
 
-  private _run(): void {
+  /** Measure now (reads only); returns the write to apply after every sizer has measured. */
+  private _measure(): (() => void) | null {
     const cell = this.host.closest('th, td') as HTMLTableCellElement | null
     const table = cell?.closest('table') as HTMLTableElement | null
-    if (!cell || !table || !this.host.isConnected) return
+    if (!cell || !table || !this.host.isConnected) return null
     this._watch(table)
 
     const index = headerColumnIndex(cell)
@@ -324,9 +346,11 @@ export class ColumnAutoSize {
     const value = `${width}px`
 
     const col = colAt(table, index)
-    // Skip a write that changes nothing — it would only re-trigger layout.
-    if (cell.style.width !== value) cell.style.width = value
-    if (col && col.style.width !== value) col.style.width = value
-    this._wrote = { col, cell }
+    return () => {
+      // Skip a write that changes nothing — it would only re-trigger layout.
+      if (cell.style.width !== value) cell.style.width = value
+      if (col && col.style.width !== value) col.style.width = value
+      this._wrote = { col, cell }
+    }
   }
 }

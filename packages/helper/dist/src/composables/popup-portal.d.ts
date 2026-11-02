@@ -146,7 +146,26 @@ export declare class PopupPortalController implements ReactiveController, PopupL
   constructor(host: PopupHost, opts: PopupPortalOptions);
   hostConnected(): void;
   hostDisconnected(): void;
+  /**
+   * Position SYNCHRONOUSLY only on the open edge; every later update of an open popup is
+   * coalesced into one frame (`scheduleReposition`), and the custom-property carry-over
+   * (`_syncPortalVars`, two `getComputedStyle`) runs on the open edge only.
+   *
+   * `reposition()` is a write-then-read forced layout, and hosts update constantly while open —
+   * every keystroke in a search box, every arrow-key cursor move, every controller notify — so
+   * running it per update cost one synchronous layout each. A frame callback still runs before
+   * that frame paints, so nothing visibly lags; a panel whose content resizes WITHOUT a host
+   * update (a consumer re-rendering its rows) is caught by the ResizeObserver instead.
+   */
   hostUpdated(): void;
+  /** Whether the last `hostUpdated` saw the popup open — the open edge is the change. */
+  private _wasOpen;
+  private _sizeObserver;
+  /** Reposition when the panel or its anchor changes size while open (content, chips wrapping). */
+  private _observeSize;
+  private _unobserveSize;
+  /** Reposition on the next frame, coalesced with any viewport movement already pending. */
+  scheduleReposition(): void;
   /**
    * Only relocate to `<body>` when the host renders into light DOM
    * (`renderRoot === host`). Shadow hosts keep the panel in their shadow root.
@@ -155,7 +174,11 @@ export declare class PopupPortalController implements ReactiveController, PopupL
   private _ensurePortal;
   /** Move the panel into the body portal on first open; keep it there after. */
   private _adopt;
-  /** Mirror the style-scope element's classes and `mono-*` attributes onto the portal. */
+  /**
+   * Mirror the style-scope element's classes and `mono-*` attributes onto the portal.
+   * `withVars` also carries the custom properties across — a computed-style read, so only on
+   * the open edge and on a scope attribute change, not on every host update.
+   */
   private _syncPortalClass;
   /**
    * Carry the component's public custom properties across the portal (see

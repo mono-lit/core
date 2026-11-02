@@ -573,6 +573,12 @@ export interface MonoCheckHandle<T = any> {
   selectAll(): Promise<void>
   /** Empty the selection. */
   clear(): void
+  /**
+   * Increments on every selection notify — tick, untick (even a rejected one), page / all
+   * select, replace, clear, and the drain's start / end. Compare it to tell "the selection
+   * moved" from the grid's other notifies (a load, a virtual-scroll window shift).
+   */
+  readonly version: number
   /** Whether a `selectAll()` drain is in flight. */
   readonly pending: boolean
   /** Every loaded row is selected (and there is at least one). */
@@ -2730,6 +2736,16 @@ export function monoDataGrid<T = any>(
   const checkedRows = new Map<string, T>()
   let checkConfig: MonoCheckConfig = {}
   let checkPending = false
+  /**
+   * Bumped on every selection notify (a rejected toggle included — its subscribers repaint the
+   * revert), so a listener can tell a selection change from the grid's other notifies without
+   * diffing the store. See `MonoCheckHandle.version`.
+   */
+  let checkVersion = 0
+  function checkChanged(): void {
+    checkVersion += 1
+    notify()
+  }
 
   /** `keyValue` as a list (empty = project nothing, i.e. keep the whole row). */
   function checkKeys(): string[] {
@@ -2870,16 +2886,16 @@ export function monoDataGrid<T = any>(
         if (next) checkedRows.set(key, item)
         else checkedRows.delete(key)
       }
-      notify()
+      checkChanged()
     },
     selectPage(): void {
       addChecked(ctrl.items as T[])
-      notify()
+      checkChanged()
     },
     replace(rows: readonly T[]): void {
       checkedRows.clear()
       addChecked(rows, false)
-      notify()
+      checkChanged()
     },
     async selectAll(): Promise<void> {
       if (checkPending) return
@@ -2889,12 +2905,12 @@ export function monoDataGrid<T = any>(
       // "untick one, then select all again" path, and it issues NO request.
       if (drainIsReusable()) {
         addChecked(drainedRows!)
-        notify()
+        checkChanged()
         return
       }
 
       checkPending = true
-      notify()
+      checkChanged()
       try {
         // `readAllRows` walks the store in chunks AND rebuilds the source's live
         // `filter` + `searchValue` (see `searchFilterOf`), so "select all" means
@@ -2916,7 +2932,7 @@ export function monoDataGrid<T = any>(
         throw err
       } finally {
         checkPending = false
-        notify()
+        checkChanged()
       }
     },
     clear(): void {
@@ -2926,7 +2942,7 @@ export function monoDataGrid<T = any>(
       const min = checkLimits().min ?? 0
       if (min > 0) {
         if (checkedRows.size <= min) {
-          notify()
+          checkChanged()
           return
         }
         const keep = [...checkedRows.entries()].slice(0, min)
@@ -2935,7 +2951,7 @@ export function monoDataGrid<T = any>(
       } else {
         checkedRows.clear()
       }
-      notify()
+      checkChanged()
     },
     limits: checkLimits,
     get atMax(): boolean {
@@ -2945,6 +2961,9 @@ export function monoDataGrid<T = any>(
     get atMin(): boolean {
       const min = checkLimits().min
       return min !== undefined && checkedRows.size <= min
+    },
+    get version(): number {
+      return checkVersion
     },
     get pending(): boolean {
       return checkPending
@@ -3294,7 +3313,16 @@ export function monoDataGrid<T = any>(
   }
 
   function isEditingCell(rowKeyStr: string, field: string): boolean {
-    const editableCol = registeredColumns().some((c) => c.field === field && !!c.editable)
+    // The raw element set, not `registeredColumns()`: that sorts every header into document
+    // order and copies each one, and this runs per CELL per consumer render. Order is irrelevant
+    // to "is this field an editable column".
+    let editableCol = false
+    for (const el of columnEls) {
+      if (el.field === field && el.editable) {
+        editableCol = true
+        break
+      }
+    }
     if (!editableCol) return false
     // The row being inline-edited (via the row trigger or `beginEditRow`), OR any
     // `showForm` add row — its editors show with no trigger at all so the user
@@ -4409,14 +4437,32 @@ export function monoDataGrid<T = any>(
     return out
   }
 
-  /** Recompute `ctrl.mapped` from `ctrl.items`. Cheap no-op without a map. */
+  /** What `ctrl.mapped` was last built from — see `syncMapped`. */
+  let mappedFrom: unknown[] = []
+
+  /**
+   * Recompute `ctrl.mapped` from `ctrl.items`. Cheap no-op without a map.
+   *
+   * Skipped when nothing it reads has moved: the same `items` array (same length), the same
+   * row set (`rowSetVersion`) and the same map config. It runs on EVERY notifier flush, so a
+   * checkbox tick or a loading flip re-mapped every row — every accumulated row under infinity
+   * scroll or page-size "all" — and handed out new `mapped` identities each time.
+   *
+   * Never skipped while a row can be edited IN PLACE (an inline edit, a `showForm` row, form
+   * ops): those write straight into the row objects, which no identity check can see.
+   */
   function syncMapped(): void {
     if (!hasMap()) {
       ctrl.mapped = ctrl.items as unknown as any[]
+      mappedFrom = []
       return
     }
+    const from = [ctrl.items, ctrl.items.length, rowSetVersion, elementProps.th, opts.map]
+    const live = formHandle != null || formOps.length > 0 || ctrl.editingKey != null
+    if (!live && from.length === mappedFrom.length && from.every((v, i) => Object.is(v, mappedFrom[i]))) return
     const cols = mapColumns()
     ctrl.mapped = (ctrl.items as T[]).map((row, i) => mapRow(row, i, cols))
+    mappedFrom = from
   }
 
   /** Flatten `ctrl.items` into the ready-to-render, keyed `displayRows` list. */
@@ -4424,13 +4470,16 @@ export function monoDataGrid<T = any>(
     const out: Array<MonoDisplayRow<T>> = []
     const cols = mapColumns()
     if (!isGrouped()) {
+      // Reuse the flat mapped view rather than mapping every row a second time.
+      syncMapped()
+      const mapped = ctrl.mapped as unknown[]
       ;(ctrl.items as T[]).forEach((row, i) =>
         out.push({
           key: `r:${rowKeyOf(row, i)}`,
           kind: 'row',
           level: 0,
           row,
-          mapped: mapRow(row, i, cols),
+          mapped: mapped[i],
         }),
       )
       return out

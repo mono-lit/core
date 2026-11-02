@@ -1,12 +1,93 @@
-import { t as createNotifier } from "./notifier-BIrqUzRh.js";
 import { a as parseFieldPath, c as toODataClause, l as toODataSelector, n as isPath, o as projectFields, r as mergePatch, s as setFieldValue, t as getFieldValue } from "./field-path-BabiMrrA.js";
-import { C as resolveSearchEntries, D as compileFilterPredicate, E as andPredicates, O as joinFilters, S as plainSearchColumns, T as andFilters, f as mergeSearchFields, g as customRemoteClause, h as customPredicate, n as describeError, o as isCanceled, u as DEFAULT_SEARCH_FIELDS, v as hasCustomSearch, w as searchEntryFor, y as hasWildcardSearch } from "./normalize-error-BmLbgANw.js";
-import { a as buildGroups, c as isGroupNode, i as searchFilterOf, o as collectGroupPaths, r as readAllRows, s as flattenLeaves } from "./data-source-read-i6CYSUEl.js";
-import { a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, h as monoArraySource, i as normalizeSortList, l as summaryAliases, m as storeRows, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-BRBnaq7b.js";
+import { a as buildGroups, c as isGroupNode, i as searchFilterOf, o as collectGroupPaths, r as readAllRows, s as flattenLeaves } from "./data-source-read-FxqzQkk2.js";
+import { i as joinFilters, n as andPredicates, r as compileFilterPredicate, t as andFilters } from "./filter-eval-ChDSaAUH.js";
+import { A as resolveSearchEntries, C as customRemoteClause, E as hasWildcardSearch, S as customPredicate, T as hasCustomSearch, h as mergeSearchFields, j as searchEntryFor, k as plainSearchColumns, n as describeError, o as isCanceled, u as DEFAULT_SEARCH_FIELDS } from "./normalize-error-D93O4q8g.js";
+import { a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, h as monoArraySource, i as normalizeSortList, l as summaryAliases, m as storeRows, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-Ky5ZGbc8.js";
 import { n as unwrapReactive } from "./reactive-Dtd-esHO.js";
 import { t as arrayToODataString } from "./filter-odata-Bi27XUpQ.js";
-import { t as monoFilterBuilder } from "./filter-builder-B6Y2mmbM.js";
+import { t as createNotifier } from "./notifier-BIrqUzRh.js";
+import { t as monoFilterBuilder } from "./filter-builder-C0T3pMx2.js";
 
+//#region src/components/table/store-group-source.ts
+/**
+* Build a {@link MonoServerGroupSource} that drives **server-side** group paging
+* straight from a devextreme `DataSource`'s store — no extra fetcher, no custom
+* callbacks. `loadGroups` issues one cheap grouped query (group keys + counts +
+* optional summaries, no rows); `loadRows` fetches a single group's page with
+* `$filter` + `$skip`/`$top`. Returns `null` if the source has no usable store
+* (e.g. a plain in-memory array), so the caller can fall back to client grouping.
+*/
+function storeGroupSource(source, config) {
+	const store = source.store?.();
+	if (!store || typeof store.load !== "function") return null;
+	const { groupField, select, searchExpr, searchOperation, groupSummary } = config;
+	const summaryDesc = groupSummary ? Object.entries(groupSummary).map(([selector, summaryType]) => ({
+		selector,
+		summaryType
+	})) : void 0;
+	/**
+	* Build a devextreme filter expression for the active search (or undefined).
+	* Delegates to the shared builder, which takes the search state off a source;
+	* here the search arrives per-call via `ctx`, so a minimal stand-in carries it.
+	*/
+	function searchFilter(search) {
+		if (!search || !searchExpr) return void 0;
+		return searchFilterOf({
+			load: () => [],
+			items: () => [],
+			searchValue: () => search,
+			searchExpr: () => searchExpr,
+			searchOperation: () => searchOperation ?? "contains"
+		});
+	}
+	/** devextreme `store.load` returns either an array or `{ data, … }`. */
+	const rows = (res) => Array.isArray(res) ? res : res?.data ?? [];
+	return {
+		async loadGroups(ctx) {
+			const filter = joinFilters([ctx.filter, searchFilter(ctx.search)], "and");
+			const res = await store.load({
+				group: [{
+					selector: groupField,
+					isExpanded: false
+				}],
+				...summaryDesc ? { groupSummary: summaryDesc } : {},
+				requireGroupCount: true,
+				...filter ? { filter } : {},
+				sort: ctx.sort ?? [{ selector: groupField }],
+				...ctx.loadOptions ?? {}
+			});
+			return rows(res).map((g) => ({
+				key: g.key,
+				count: Number(g.count ?? (Array.isArray(g.items) ? g.items.length : 0)) || 0,
+				aggregates: summaryDesc && Array.isArray(g.summary) ? Object.fromEntries(summaryDesc.map((s, i) => [s.selector, Number(g.summary[i]) || 0])) : void 0
+			}));
+		},
+		async loadRows(key, ctx) {
+			const groupFilter = [
+				groupField,
+				"=",
+				key
+			];
+			const rowSelect = select ?? ctx.select;
+			const res = await store.load({
+				filter: joinFilters([
+					groupFilter,
+					ctx.filter,
+					searchFilter(ctx.search)
+				], "and"),
+				...rowSelect ? { select: rowSelect } : {},
+				...ctx.sort ? { sort: ctx.sort } : {},
+				skip: ctx.skip,
+				take: ctx.take,
+				requireTotalCount: false,
+				...ctx.loadOptions ?? {}
+			});
+			return rows(res);
+		}
+	};
+}
+
+//#endregion
 //#region src/components/table/date-filter-tree.ts
 const DATE_LEVELS = [
 	"year",
@@ -294,86 +375,6 @@ function seedFromRanges(roots, values) {
 function inRange(d, r) {
 	const t = d.getTime();
 	return t >= r.from.getTime() && t < r.to.getTime();
-}
-
-//#endregion
-//#region src/components/table/store-group-source.ts
-/**
-* Build a {@link MonoServerGroupSource} that drives **server-side** group paging
-* straight from a devextreme `DataSource`'s store — no extra fetcher, no custom
-* callbacks. `loadGroups` issues one cheap grouped query (group keys + counts +
-* optional summaries, no rows); `loadRows` fetches a single group's page with
-* `$filter` + `$skip`/`$top`. Returns `null` if the source has no usable store
-* (e.g. a plain in-memory array), so the caller can fall back to client grouping.
-*/
-function storeGroupSource(source, config) {
-	const store = source.store?.();
-	if (!store || typeof store.load !== "function") return null;
-	const { groupField, select, searchExpr, searchOperation, groupSummary } = config;
-	const summaryDesc = groupSummary ? Object.entries(groupSummary).map(([selector, summaryType]) => ({
-		selector,
-		summaryType
-	})) : void 0;
-	/**
-	* Build a devextreme filter expression for the active search (or undefined).
-	* Delegates to the shared builder, which takes the search state off a source;
-	* here the search arrives per-call via `ctx`, so a minimal stand-in carries it.
-	*/
-	function searchFilter(search) {
-		if (!search || !searchExpr) return void 0;
-		return searchFilterOf({
-			load: () => [],
-			items: () => [],
-			searchValue: () => search,
-			searchExpr: () => searchExpr,
-			searchOperation: () => searchOperation ?? "contains"
-		});
-	}
-	/** devextreme `store.load` returns either an array or `{ data, … }`. */
-	const rows = (res) => Array.isArray(res) ? res : res?.data ?? [];
-	return {
-		async loadGroups(ctx) {
-			const filter = joinFilters([ctx.filter, searchFilter(ctx.search)], "and");
-			const res = await store.load({
-				group: [{
-					selector: groupField,
-					isExpanded: false
-				}],
-				...summaryDesc ? { groupSummary: summaryDesc } : {},
-				requireGroupCount: true,
-				...filter ? { filter } : {},
-				sort: ctx.sort ?? [{ selector: groupField }],
-				...ctx.loadOptions ?? {}
-			});
-			return rows(res).map((g) => ({
-				key: g.key,
-				count: Number(g.count ?? (Array.isArray(g.items) ? g.items.length : 0)) || 0,
-				aggregates: summaryDesc && Array.isArray(g.summary) ? Object.fromEntries(summaryDesc.map((s, i) => [s.selector, Number(g.summary[i]) || 0])) : void 0
-			}));
-		},
-		async loadRows(key, ctx) {
-			const groupFilter = [
-				groupField,
-				"=",
-				key
-			];
-			const rowSelect = select ?? ctx.select;
-			const res = await store.load({
-				filter: joinFilters([
-					groupFilter,
-					ctx.filter,
-					searchFilter(ctx.search)
-				], "and"),
-				...rowSelect ? { select: rowSelect } : {},
-				...ctx.sort ? { sort: ctx.sort } : {},
-				skip: ctx.skip,
-				take: ctx.take,
-				requireTotalCount: false,
-				...ctx.loadOptions ?? {}
-			});
-			return rows(res);
-		}
-	};
 }
 
 //#endregion
@@ -1004,6 +1005,16 @@ function monoDataGrid(ds = null, opts = {}) {
 	const checkedRows = /* @__PURE__ */ new Map();
 	let checkConfig = {};
 	let checkPending = false;
+	/**
+	* Bumped on every selection notify (a rejected toggle included — its subscribers repaint the
+	* revert), so a listener can tell a selection change from the grid's other notifies without
+	* diffing the store. See `MonoCheckHandle.version`.
+	*/
+	let checkVersion = 0;
+	function checkChanged() {
+		checkVersion += 1;
+		notify();
+	}
 	/** `keyValue` as a list (empty = project nothing, i.e. keep the whole row). */
 	function checkKeys() {
 		const k = checkConfig.keyValue;
@@ -1126,26 +1137,26 @@ function monoDataGrid(ds = null, opts = {}) {
 				if (next) checkedRows.set(key, item);
 				else checkedRows.delete(key);
 			}
-			notify();
+			checkChanged();
 		},
 		selectPage() {
 			addChecked(ctrl.items);
-			notify();
+			checkChanged();
 		},
 		replace(rows) {
 			checkedRows.clear();
 			addChecked(rows, false);
-			notify();
+			checkChanged();
 		},
 		async selectAll() {
 			if (checkPending) return;
 			if (drainIsReusable()) {
 				addChecked(drainedRows);
-				notify();
+				checkChanged();
 				return;
 			}
 			checkPending = true;
-			notify();
+			checkChanged();
 			try {
 				const select = checkSelect();
 				const rows = await readAllRows(bound, {
@@ -1161,7 +1172,7 @@ function monoDataGrid(ds = null, opts = {}) {
 				throw err;
 			} finally {
 				checkPending = false;
-				notify();
+				checkChanged();
 			}
 		},
 		clear() {
@@ -1169,14 +1180,14 @@ function monoDataGrid(ds = null, opts = {}) {
 			const min = checkLimits().min ?? 0;
 			if (min > 0) {
 				if (checkedRows.size <= min) {
-					notify();
+					checkChanged();
 					return;
 				}
 				const keep = [...checkedRows.entries()].slice(0, min);
 				checkedRows.clear();
 				for (const [key, row] of keep) checkedRows.set(key, row);
 			} else checkedRows.clear();
-			notify();
+			checkChanged();
 		},
 		limits: checkLimits,
 		get atMax() {
@@ -1186,6 +1197,9 @@ function monoDataGrid(ds = null, opts = {}) {
 		get atMin() {
 			const min = checkLimits().min;
 			return min !== void 0 && checkedRows.size <= min;
+		},
+		get version() {
+			return checkVersion;
 		},
 		get pending() {
 			return checkPending;
@@ -1439,7 +1453,12 @@ function monoDataGrid(ds = null, opts = {}) {
 		return !!row && row._Type === EDITABLE_MARK;
 	}
 	function isEditingCell(rowKeyStr, field) {
-		if (!registeredColumns().some((c) => c.field === field && !!c.editable)) return false;
+		let editableCol = false;
+		for (const el of columnEls) if (el.field === field && el.editable) {
+			editableCol = true;
+			break;
+		}
+		if (!editableCol) return false;
 		return ctrl.editingKey === rowKeyStr || isEditableRow(rowByKey(rowKeyStr));
 	}
 	function commitCell(rowKey, field, value) {
@@ -2258,26 +2277,50 @@ function monoDataGrid(ds = null, opts = {}) {
 		if (cols.length && out && typeof out === "object") for (const c of cols) out[c.field] = c.map(row?.[c.field], row, index);
 		return out;
 	}
-	/** Recompute `ctrl.mapped` from `ctrl.items`. Cheap no-op without a map. */
+	/** What `ctrl.mapped` was last built from — see `syncMapped`. */
+	let mappedFrom = [];
+	/**
+	* Recompute `ctrl.mapped` from `ctrl.items`. Cheap no-op without a map.
+	*
+	* Skipped when nothing it reads has moved: the same `items` array (same length), the same
+	* row set (`rowSetVersion`) and the same map config. It runs on EVERY notifier flush, so a
+	* checkbox tick or a loading flip re-mapped every row — every accumulated row under infinity
+	* scroll or page-size "all" — and handed out new `mapped` identities each time.
+	*
+	* Never skipped while a row can be edited IN PLACE (an inline edit, a `showForm` row, form
+	* ops): those write straight into the row objects, which no identity check can see.
+	*/
 	function syncMapped() {
 		if (!hasMap()) {
 			ctrl.mapped = ctrl.items;
+			mappedFrom = [];
 			return;
 		}
+		const from = [
+			ctrl.items,
+			ctrl.items.length,
+			rowSetVersion,
+			elementProps.th,
+			opts.map
+		];
+		if (!(formHandle != null || formOps.length > 0 || ctrl.editingKey != null) && from.length === mappedFrom.length && from.every((v, i) => Object.is(v, mappedFrom[i]))) return;
 		const cols = mapColumns();
 		ctrl.mapped = ctrl.items.map((row, i) => mapRow(row, i, cols));
+		mappedFrom = from;
 	}
 	/** Flatten `ctrl.items` into the ready-to-render, keyed `displayRows` list. */
 	function buildDisplayRows() {
 		const out = [];
 		const cols = mapColumns();
 		if (!isGrouped()) {
+			syncMapped();
+			const mapped = ctrl.mapped;
 			ctrl.items.forEach((row, i) => out.push({
 				key: `r:${rowKeyOf(row, i)}`,
 				kind: "row",
 				level: 0,
 				row,
-				mapped: mapRow(row, i, cols)
+				mapped: mapped[i]
 			}));
 			return out;
 		}
@@ -3936,7 +3979,7 @@ function monoDataGrid(ds = null, opts = {}) {
 		return buildGroups(source, groupFields);
 	}
 	async function importSheet(options) {
-		const { importTable } = await import("./import-Dc4eXC02.js");
+		const { importTable } = await import("./import.js");
 		return importTable(options, {
 			getData,
 			rowKeyOf,
@@ -3953,7 +3996,7 @@ function monoDataGrid(ds = null, opts = {}) {
 		});
 	}
 	async function exportReport(options) {
-		const { exportTable } = await import("./export-DgomqI_3.js");
+		const { exportTable } = await import("./export.js");
 		return exportTable(options);
 	}
 	function subscribe(cb) {

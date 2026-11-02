@@ -484,6 +484,12 @@ export interface MonoCheckHandle<T = any> {
   selectAll(): Promise<void>;
   /** Empty the selection. */
   clear(): void;
+  /**
+   * Increments on every selection notify — tick, untick (even a rejected one), page / all
+   * select, replace, clear, and the drain's start / end. Compare it to tell "the selection
+   * moved" from the grid's other notifies (a load, a virtual-scroll window shift).
+   */
+  readonly version: number;
   /** Whether a `selectAll()` drain is in flight. */
   readonly pending: boolean;
   /** Every loaded row is selected (and there is at least one). */

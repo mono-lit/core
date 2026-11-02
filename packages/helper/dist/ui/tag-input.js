@@ -1,12 +1,12 @@
 import { r as readAllRows } from "../data-source-read-FxqzQkk2.js";
 import { a as errorTitle, f as MonoSourceSearch, i as errorText, n as describeError, x as searchRowPredicate, y as resolveSearchFields } from "../normalize-error-D93O4q8g.js";
 import { n as unwrapReactive, r as unwrapReactiveDeep } from "../reactive-Dtd-esHO.js";
-import { d as buildSizeStyle, f as toCssSize, g as monoHostChildNodes } from "../mono-ui-CK5wNw-7.js";
-import { t as customElement } from "../mono-element-BP0RKeDD.js";
+import { d as buildSizeStyle, f as toCssSize, g as monoHostChildNodes } from "../mono-ui-jtBvJ9d5.js";
+import { t as customElement } from "../mono-element-9uQRbp5X.js";
 import { a as defineHybridPropAliases, n as arrayHasChanged, r as booleanStringConverter, t as __decorate } from "../decorate-DbYFpi8R.js";
 import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
-import { s as placeSlotNode, t as LateSlotWatcher } from "../light-slots-RAAINrYd.js";
-import { t as PopupPortalController } from "../popup-portal-C8ttHDRX.js";
+import { s as placeSlotNode, t as LateSlotWatcher } from "../light-slots-B980aknU.js";
+import { t as PopupPortalController } from "../popup-portal-CINuVjNY.js";
 import { c as spinnerIcon, i as chevronIcon, n as caretIcon, s as refreshIcon } from "../field-icons-t8rXRCKs.js";
 import { t as MonoFormControlCore } from "../form-control-core-CRZPZ1ru.js";
 import { t as FieldTooltipController } from "../field-tooltip-Csk4s2ve.js";
@@ -149,6 +149,8 @@ const MonoTagInputCore = (superClass) => {
 			this._listboxId = `${this._inputId}-listbox`;
 			this._lateListSlot = new LateSlotWatcher(this, "list", () => this._onLateListSlot());
 			this._lateSelectAllSlot = new LateSlotWatcher(this, "select-all", () => this._onLateSelectAllSlot());
+			this._filteredMemo = null;
+			this._filteredMemoOn = false;
 			this._selectedSetFor = null;
 			this._selectedSetLen = -1;
 			this._selectedSetMemo = /* @__PURE__ */ new Set();
@@ -500,6 +502,8 @@ const MonoTagInputCore = (superClass) => {
 			super.disconnectedCallback();
 		}
 		willUpdate(changed) {
+			this._filteredMemo = null;
+			this._filteredMemoOn = true;
 			for (const key of [
 				"disabled",
 				"loading",
@@ -545,7 +549,10 @@ const MonoTagInputCore = (superClass) => {
 		updated(changed) {
 			super.updated(changed);
 			this._syncListEntries();
-			if (isServer) return;
+			if (isServer) {
+				this._endFilteredMemo();
+				return;
+			}
 			this._rememberSelected(this._selectedValues);
 			if (changed.has("_open")) {
 				this._cursorPending = this._open;
@@ -562,6 +569,11 @@ const MonoTagInputCore = (superClass) => {
 				this._measuredChipCount = this._renderedChipCount;
 				this._chipStrip.invalidate();
 			}
+			this._endFilteredMemo();
+		}
+		_endFilteredMemo() {
+			this._filteredMemoOn = false;
+			this._filteredMemo = null;
 		}
 		_setCssClass(value) {
 			if (value == null) {
@@ -1122,8 +1134,10 @@ const MonoTagInputCore = (superClass) => {
 			return index >= 0 ? index : 0;
 		}
 		get _filteredItems() {
-			if (this._grouped) return this._groupRows().filter((r) => r.kind === "item").map((r) => r.item);
-			return this._visibleItems.filter((item) => this._searchMatches(item));
+			if (this._filteredMemoOn && this._filteredMemo) return this._filteredMemo;
+			const out = this._grouped ? this._groupRows().filter((r) => r.kind === "item").map((r) => r.item) : this._visibleItems.filter((item) => this._searchMatches(item));
+			if (this._filteredMemoOn) this._filteredMemo = out;
+			return out;
 		}
 		/**
 		* The selection limits in force: `chip.max` / `chip.min` pin, the element's
@@ -2299,6 +2313,7 @@ const MonoTagInputCore = (superClass) => {
 		* back fresh row objects under the same keys, and a consumer reading `e.item.Nama` must see them.
 		*/
 		_syncListEntries() {
+			if (!this.dataForm || !this.keyForm) return;
 			const next = this._listEntries();
 			const prev = this._publishedEntries;
 			let same = prev.length === next.length;

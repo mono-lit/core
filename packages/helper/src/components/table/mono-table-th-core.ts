@@ -233,6 +233,8 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
     private _autoSize?: ColumnAutoSize
     /** `loadedCount` at the last width sync — a drop resets the virtual-scroll grow-only floor. */
     private _lastLoaded = 0
+    /** What the auto-sizer last measured from — see `_syncWidth`. */
+    private _sizeSig: unknown[] = []
 
     /**
      * Horizontal alignment of the header cell — applied to the parent `<th>`, the same way
@@ -280,6 +282,7 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
     override disconnectedCallback(): void {
       this.dataGrid?.unregisterColumn(this as unknown as MonoColumnEl)
       this._autoSize?.stop()
+      this._sizeSig = [] // `stop()` dropped the observer — a reconnect must measure (and re-watch) again
       super.disconnectedCallback() // menu core detaches the contextmenu + doc listeners
     }
 
@@ -306,22 +309,33 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
     private _syncWidth(cell: HTMLElement): void {
       const auto = String(this.width ?? '').trim().toLowerCase() === 'auto'
       if (auto) {
+        const fresh = !this._autoSize
         const sizer = (this._autoSize ??= new ColumnAutoSize(this))
-        sizer.min = cssLengthToPx(this.minWidth ?? null, cell)
-        sizer.max = cssLengthToPx(this.maxWidth ?? null, cell)
         // A virtual-scroll body holds only the window, so the column grows to the widest row seen
         // and holds there. A drop in `loadedCount` is a reset load (search / filter / sort / scope):
         // a new result set, which may shrink the column again.
         const grid = this.dataGrid
-        sizer.growOnly = grid?.scrollMode === 'virtual'
         const loaded = grid?.loadedCount ?? 0
         if (loaded < this._lastLoaded) sizer.resetFloor()
         this._lastLoaded = loaded
-        sizer.schedule()
+        // Re-measure only when an input of the measurement moved. This runs on EVERY update —
+        // every controller notify, a checkbox tick included — and body changes (rows, cell text,
+        // an editor's value) already reach the sizer through its own observer + input listener.
+        // The header is the part that observer skips, hence the caption here.
+        const sig = [this.minWidth, this.maxWidth, grid?.scrollMode, loaded, this.caption, cell.closest('table')]
+        const moved = sig.length !== this._sizeSig.length || sig.some((v, i) => !Object.is(v, this._sizeSig[i]))
+        if (fresh || moved) {
+          this._sizeSig = sig
+          sizer.min = cssLengthToPx(this.minWidth ?? null, cell)
+          sizer.max = cssLengthToPx(this.maxWidth ?? null, cell)
+          sizer.growOnly = grid?.scrollMode === 'virtual'
+          sizer.schedule()
+        }
       } else {
         if (this._autoSize) {
           this._autoSize.stop(true)
           this._autoSize = undefined
+          this._sizeSig = []
         }
         if (this.width != null && this.width !== '') cell.style.width = toCssSize(this.width)
       }
@@ -824,8 +838,7 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
      * the table body — the checkbox still carries the RAW value, so
      * `setColumnFilter` keeps matching the real data.
      */
-    private _display(value: unknown): string {
-      const map = this.dataGrid?.columnMap?.(this.field)
+    private _display(value: unknown, map = this.dataGrid?.columnMap?.(this.field)): string {
       if (map) {
         try {
           const mapped = map(value, { [this.field]: value }, 0)
@@ -851,7 +864,9 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
     private _filteredValues(): MonoColumnValue[] {
       const q = this._search.trim().toLowerCase()
       if (!q) return this._values
-      return this._values.filter((v) => this._display(v.value).toLowerCase().includes(q))
+      // `columnMap` resolved once, not per value — it walks the column list each call.
+      const map = this.dataGrid?.columnMap?.(this.field)
+      return this._values.filter((v) => this._display(v.value, map).toLowerCase().includes(q))
     }
 
     private _toggleValue(key: string, on: boolean): void {
@@ -992,7 +1007,13 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
     }
 
     private _renderFilterPanel(): TemplateResult {
-      const list = this._filteredValues()
+      // CLOSED, the panel keeps its element (the popup portal has adopted it — the root must
+      // never be swapped) but renders no value list. `_values` survives a close, so the list —
+      // which can run to thousands of labels — used to be re-rendered and re-diffed on every
+      // controller notify for every filterable column, for a panel nobody could see.
+      const open = this._filterOpen
+      const list = open ? this._filteredValues() : []
+      const map = open ? this.dataGrid?.columnMap?.(this.field) : undefined
       const allChecked = list.length > 0 && list.every((v) => this._checked.has(String(v.value)))
       // Via the FUNNEL the filter is single-column, so its "Clear" already drops
       // everything and a second button would be noise. Via the MENU the filter
@@ -1004,7 +1025,7 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
       // than about the other columns. Absent when it has nothing to do, and
       // named for its scope with a count when it does.
       const multi = this._filterMulti
-      const filteredColumns = this.dataGrid?.filteredColumns?.() ?? []
+      const filteredColumns = open ? (this.dataGrid?.filteredColumns?.() ?? []) : []
       const otherFiltered = filteredColumns.filter((f) => f !== this.field).length
       const clearAllCount = otherFiltered + (filteredColumns.includes(this.field) ? 1 : 0)
       return html`
@@ -1030,7 +1051,9 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
                 </div>
               `}
           <div class="mono-th-filter-list" mono-th-filter-list>
-            ${this._valuesLoading
+            ${!open
+              ? nothing
+              : this._valuesLoading
               ? html`<div class="mono-th-filter-msg" mono-th-filter-msg><span class="mono-th-filter-spin" mono-th-filter-spin></span>Loading…</div>`
               : this._valuesError
                 ? this._renderMessage('Failed to load values.')
@@ -1063,7 +1086,7 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
                                 this._toggleValue(key, (e.target as HTMLInputElement).checked)}
                             />
                             <span class="mono-th-check-box" mono-th-check-box></span>
-                            <span class="mono-th-check-label" mono-th-check-label>${this._display(v.value)}</span>
+                            <span class="mono-th-check-label" mono-th-check-label>${this._display(v.value, map)}</span>
                             <span class="mono-th-check-count" mono-th-check-count>${v.count}</span>
                           </label>
                         `

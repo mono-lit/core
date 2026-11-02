@@ -72,6 +72,17 @@ export declare class ColumnAutoSize {
    */
   private readonly _onFonts;
   constructor(host: HTMLElement);
+  /**
+   * Every sizer on the page shares ONE frame callback (`_flush`), which measures all of them
+   * first and writes all of them after.
+   *
+   * Each used to run in its own frame callback, measure-then-write: column A wrote its width,
+   * so column B's measurement (`getBoundingClientRect` on header icons, an SVG) forced a
+   * synchronous layout of the whole table — one per auto column, per frame.
+   */
+  private static _queued;
+  private static _frame;
+  private static _flush;
   schedule(): void;
   /** Forget the grow-only floor (new rows) and re-measure. */
   resetFloor(): void;
@@ -79,6 +90,7 @@ export declare class ColumnAutoSize {
   stop(clear?: boolean): void;
   private _watch;
   private _unwatch;
-  private _run;
+  /** Measure now (reads only); returns the write to apply after every sizer has measured. */
+  private _measure;
 }
 //#endregion

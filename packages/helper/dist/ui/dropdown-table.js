@@ -1,11 +1,11 @@
-import { d as buildSizeStyle, f as toCssSize, g as monoHostChildNodes, y as monoPendingGrace } from "../mono-ui-CK5wNw-7.js";
+import { d as buildSizeStyle, f as toCssSize, g as monoHostChildNodes, y as monoPendingGrace } from "../mono-ui-jtBvJ9d5.js";
 import { n as detachEventHandlers, t as applyProps } from "../element-props-xvw0EB7H.js";
-import { t as monoDataDropdown } from "../mono-data-dropdown-AiAwwUvY.js";
-import { t as customElement } from "../mono-element-BP0RKeDD.js";
+import { t as monoDataDropdown } from "../mono-data-dropdown-D4Pv7W7u.js";
+import { t as customElement } from "../mono-element-9uQRbp5X.js";
 import { a as defineHybridPropAliases, i as defineHybridPropAlias, o as numberStringConverter, r as booleanStringConverter, s as optionalNumberConverter, t as __decorate } from "../decorate-DbYFpi8R.js";
 import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
-import { i as guardHostTextContent, s as placeSlotNode } from "../light-slots-RAAINrYd.js";
-import { n as applyPopupPlacement, r as computePopupPlacement, t as PopupPortalController } from "../popup-portal-C8ttHDRX.js";
+import { i as guardHostTextContent, s as placeSlotNode } from "../light-slots-B980aknU.js";
+import { n as applyPopupPlacement, r as computePopupPlacement, t as PopupPortalController } from "../popup-portal-CINuVjNY.js";
 import { a as closeIcon, i as chevronIcon, n as caretIcon } from "../field-icons-t8rXRCKs.js";
 import { t as MonoFormControlCore } from "../form-control-core-CRZPZ1ru.js";
 import { t as FieldTooltipController } from "../field-tooltip-Csk4s2ve.js";
@@ -147,9 +147,15 @@ const MonoDropdownTableCore = (superClass) => {
 				this._reflectSelection();
 			};
 			this._onViewportChange = () => {
-				if (this._isOpen) this._positionPanel();
-				if (this._moreOpen) this._positionMorePanel();
+				if (!this._isOpen && !this._moreOpen || this._viewportFrame) return;
+				this._viewportFrame = requestAnimationFrame(() => {
+					this._viewportFrame = 0;
+					if (this._isOpen) this._positionPanel();
+					if (this._moreOpen) this._positionMorePanel();
+				});
 			};
+			this._viewportBound = false;
+			this._viewportFrame = 0;
 			this._wasOpen = false;
 			this._lastSelectedCount = 0;
 			this._searchFocused = false;
@@ -405,10 +411,7 @@ const MonoDropdownTableCore = (superClass) => {
 			if (!isServer) {
 				document.addEventListener("pointerdown", this._onDocPointer, true);
 				document.addEventListener("keydown", this._onDocKey, true);
-				if (this._isShadowHost) {
-					window.addEventListener("scroll", this._onViewportChange, true);
-					window.addEventListener("resize", this._onViewportChange);
-				}
+				this._syncViewportListeners();
 			}
 		}
 		disconnectedCallback() {
@@ -422,6 +425,9 @@ const MonoDropdownTableCore = (superClass) => {
 				document.removeEventListener("keydown", this._onDocKey, true);
 				window.removeEventListener("scroll", this._onViewportChange, true);
 				window.removeEventListener("resize", this._onViewportChange);
+				if (this._viewportFrame) cancelAnimationFrame(this._viewportFrame);
+				this._viewportFrame = 0;
+				this._viewportBound = false;
 			}
 			super.disconnectedCallback();
 		}
@@ -630,9 +636,34 @@ const MonoDropdownTableCore = (superClass) => {
 			});
 			applyPopupPlacement(panel, placement, true);
 		}
+		/**
+		* Shadow build only, and only while a panel is OPEN — the popup controller's rule. They used
+		* to be bound at connect for every shadow instance: a capture-phase, non-passive `scroll`
+		* listener on `window` per field, open or not, which also keeps the page's scrolling off the
+		* compositor thread.
+		*/
+		_syncViewportListeners() {
+			if (isServer) return;
+			const want = this._isShadowHost && this.isConnected && (this._isOpen || this._moreOpen);
+			if (want === this._viewportBound) return;
+			if (want) {
+				window.addEventListener("scroll", this._onViewportChange, {
+					capture: true,
+					passive: true
+				});
+				window.addEventListener("resize", this._onViewportChange, { passive: true });
+			} else {
+				window.removeEventListener("scroll", this._onViewportChange, true);
+				window.removeEventListener("resize", this._onViewportChange);
+				if (this._viewportFrame) cancelAnimationFrame(this._viewportFrame);
+				this._viewportFrame = 0;
+			}
+			this._viewportBound = want;
+		}
 		updated(changed) {
 			super.updated(changed);
 			if (isServer) return;
+			this._syncViewportListeners();
 			if (this._isOpen) {
 				this._observePanel();
 				this._reflectSelection();

@@ -233,6 +233,8 @@ var PopupPortalController = class {
 		this._classObserver = null;
 		this._viewportBound = false;
 		this._viewportFrame = 0;
+		this._wasOpen = false;
+		this._sizeObserver = null;
 		this._onViewport = () => {
 			if (!this.opts.isOpen() || this._viewportFrame) return;
 			this._viewportFrame = requestAnimationFrame(() => {
@@ -254,23 +256,64 @@ var PopupPortalController = class {
 	hostDisconnected() {
 		this._unbindViewport();
 		this._leaveStack();
+		this._unobserveSize();
+		this._wasOpen = false;
 		this._classObserver?.disconnect();
 		this._classObserver = null;
 		if (this._portal?.parentNode) this._portal.parentNode.removeChild(this._portal);
 		this._portal = null;
 		this._adopted = false;
 	}
+	/**
+	* Position SYNCHRONOUSLY only on the open edge; every later update of an open popup is
+	* coalesced into one frame (`scheduleReposition`), and the custom-property carry-over
+	* (`_syncPortalVars`, two `getComputedStyle`) runs on the open edge only.
+	*
+	* `reposition()` is a write-then-read forced layout, and hosts update constantly while open —
+	* every keystroke in a search box, every arrow-key cursor move, every controller notify — so
+	* running it per update cost one synchronous layout each. A frame callback still runs before
+	* that frame paints, so nothing visibly lags; a panel whose content resizes WITHOUT a host
+	* update (a consumer re-rendering its rows) is caught by the ResizeObserver instead.
+	*/
 	hostUpdated() {
 		if (isServer) return;
 		if (this.opts.isOpen()) {
+			const opening = !this._wasOpen;
+			this._wasOpen = true;
 			this._adopt();
 			this._enterStack();
-			this._syncPortalClass();
-			this.reposition();
+			if (opening) {
+				this._syncPortalClass();
+				this.reposition();
+				this._observeSize();
+			} else {
+				this._syncPortalClass(false);
+				this.scheduleReposition();
+			}
 		} else {
+			this._wasOpen = false;
+			this._unobserveSize();
 			this._leaveStack();
-			this._syncPortalClass();
+			this._syncPortalClass(false);
 		}
+	}
+	/** Reposition when the panel or its anchor changes size while open (content, chips wrapping). */
+	_observeSize() {
+		if (this._sizeObserver || typeof ResizeObserver === "undefined") return;
+		const panel = this._panel ?? this.opts.getPanel();
+		const anchor = this.opts.getAnchor();
+		if (!panel && !anchor) return;
+		this._sizeObserver = new ResizeObserver(() => this.scheduleReposition());
+		if (panel) this._sizeObserver.observe(panel);
+		if (anchor) this._sizeObserver.observe(anchor);
+	}
+	_unobserveSize() {
+		this._sizeObserver?.disconnect();
+		this._sizeObserver = null;
+	}
+	/** Reposition on the next frame, coalesced with any viewport movement already pending. */
+	scheduleReposition() {
+		this._onViewport();
 	}
 	/**
 	* Only relocate to `<body>` when the host renders into light DOM
@@ -307,8 +350,12 @@ var PopupPortalController = class {
 		this._panel = panel;
 		this._adopted = true;
 	}
-	/** Mirror the style-scope element's classes and `mono-*` attributes onto the portal. */
-	_syncPortalClass() {
+	/**
+	* Mirror the style-scope element's classes and `mono-*` attributes onto the portal.
+	* `withVars` also carries the custom properties across — a computed-style read, so only on
+	* the open edge and on a scope attribute change, not on every host update.
+	*/
+	_syncPortalClass(withVars = true) {
 		if (!this._portal) return;
 		const scope = this.opts.getStyleScope();
 		const cls = scope?.getAttribute("class") ?? "";
@@ -320,7 +367,7 @@ var PopupPortalController = class {
 		}
 		for (const a of Array.from(this._portal.attributes)) if (mirrored(a.name) && !wanted.has(a.name)) this._portal.removeAttribute(a.name);
 		for (const [name, value] of wanted) if (this._portal.getAttribute(name) !== value) this._portal.setAttribute(name, value);
-		this._syncPortalVars(scope);
+		if (withVars) this._syncPortalVars(scope);
 	}
 	/**
 	* Carry the component's public custom properties across the portal (see

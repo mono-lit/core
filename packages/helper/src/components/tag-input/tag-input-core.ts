@@ -983,6 +983,8 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
   }
 
   override willUpdate(changed: Map<string, unknown>): void {
+    this._filteredMemo = null
+    this._filteredMemoOn = true
     // SSR (nuxt-ssr-lit) can set a boolean prop to a raw string (e.g. '');
     // coerce so render() sees real booleans and hydration matches.
     // (see project_shadow_boolean_prop_ssr)
@@ -1094,7 +1096,10 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
     // too. Everything below this line touches the DOM and rightly stops short.
     this._syncListEntries()
 
-    if (isServer) return
+    if (isServer) {
+      this._endFilteredMemo()
+      return
+    }
 
     // Rows arrive asynchronously, so a value selected before its page loaded (or
     // set from outside as `model-value`) becomes resolvable only later. Catch it
@@ -1151,6 +1156,23 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
       this._measuredChipCount = this._renderedChipCount
       this._chipStrip.invalidate()
     }
+    this._endFilteredMemo()
+  }
+
+  /**
+   * `_filteredItems`, memoised for ONE update cycle (`willUpdate` → end of `updated`).
+   *
+   * It is a full filter pass — `_searchMatches` lower-cases display, value and description per
+   * row — and one update read it 4–6 times (render, the grouped rows, the list entries, the
+   * scroll auto-height, the cursor seed). Nothing it depends on can change mid-cycle, so the cycle
+   * shares one result; outside a cycle (an input handler) it is computed fresh, as before.
+   */
+  private _filteredMemo: TagInputItem[] | null = null
+  private _filteredMemoOn = false
+
+  private _endFilteredMemo(): void {
+    this._filteredMemoOn = false
+    this._filteredMemo = null
   }
 
   private _setCssClass(value: unknown): void {
@@ -1922,12 +1944,14 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
   }
 
   private get _filteredItems(): TagInputItem[] {
-    if (this._grouped) {
-      return this._groupRows()
-        .filter((r): r is { kind: 'item'; item: TagInputItem; index: number; level: number } => r.kind === 'item')
-        .map((r) => r.item)
-    }
-    return this._visibleItems.filter((item) => this._searchMatches(item))
+    if (this._filteredMemoOn && this._filteredMemo) return this._filteredMemo
+    const out = this._grouped
+      ? this._groupRows()
+          .filter((r): r is { kind: 'item'; item: TagInputItem; index: number; level: number } => r.kind === 'item')
+          .map((r) => r.item)
+      : this._visibleItems.filter((item) => this._searchMatches(item))
+    if (this._filteredMemoOn) this._filteredMemo = out
+    return out
   }
 
   /**
@@ -3628,6 +3652,10 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
    * back fresh row objects under the same keys, and a consumer reading `e.item.Nama` must see them.
    */
   protected _syncListEntries(): void {
+    // Nothing to publish to without a bound form (`slot="list"` reads the entries back through
+    // it) — and this runs on EVERY update, open or closed, building an entry per option. A form
+    // bound later is published on its first update.
+    if (!this.dataForm || !this.keyForm) return
     const next = this._listEntries()
     const prev = this._publishedEntries
 

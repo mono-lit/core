@@ -479,7 +479,7 @@ function headerWidth(cell, host) {
 * One auto-sized column, owned by its `mono-table-th`. `schedule()` coalesces every trigger (a
 * controller notify, a body mutation, typing in an editor) into one measurement per frame.
 */
-var ColumnAutoSize = class {
+var ColumnAutoSize = class ColumnAutoSize {
 	constructor(host) {
 		this.host = host;
 		this.growOnly = false;
@@ -494,12 +494,27 @@ var ColumnAutoSize = class {
 			this.schedule();
 		};
 	}
+	static {
+		this._queued = /* @__PURE__ */ new Set();
+	}
+	static {
+		this._frame = 0;
+	}
+	static _flush() {
+		ColumnAutoSize._frame = 0;
+		const batch = [...ColumnAutoSize._queued];
+		ColumnAutoSize._queued.clear();
+		const writes = batch.map((s) => {
+			s._raf = 0;
+			return s._measure();
+		});
+		for (const write of writes) write?.();
+	}
 	schedule() {
 		if (this._raf) return;
-		this._raf = requestAnimationFrame(() => {
-			this._raf = 0;
-			this._run();
-		});
+		this._raf = 1;
+		ColumnAutoSize._queued.add(this);
+		ColumnAutoSize._frame ||= requestAnimationFrame(() => ColumnAutoSize._flush());
 	}
 	/** Forget the grow-only floor (new rows) and re-measure. */
 	resetFloor() {
@@ -509,7 +524,7 @@ var ColumnAutoSize = class {
 	}
 	/** Stop watching, and hand the column back to whatever width it is given next. */
 	stop(clear = false) {
-		if (this._raf) cancelAnimationFrame(this._raf);
+		ColumnAutoSize._queued.delete(this);
 		this._raf = 0;
 		this._unwatch();
 		if (clear && this._wrote) {
@@ -541,10 +556,11 @@ var ColumnAutoSize = class {
 		document.fonts?.removeEventListener?.("loadingdone", this._onFonts);
 		this._table = void 0;
 	}
-	_run() {
+	/** Measure now (reads only); returns the write to apply after every sizer has measured. */
+	_measure() {
 		const cell = this.host.closest("th, td");
 		const table = cell?.closest("table");
-		if (!cell || !table || !this.host.isConnected) return;
+		if (!cell || !table || !this.host.isConnected) return null;
 		this._watch(table);
 		const index = headerColumnIndex(cell);
 		let width = headerWidth(cell, this.host);
@@ -558,11 +574,13 @@ var ColumnAutoSize = class {
 		else this._floor = 0;
 		const value = `${width}px`;
 		const col = colAt(table, index);
-		if (cell.style.width !== value) cell.style.width = value;
-		if (col && col.style.width !== value) col.style.width = value;
-		this._wrote = {
-			col,
-			cell
+		return () => {
+			if (cell.style.width !== value) cell.style.width = value;
+			if (col && col.style.width !== value) col.style.width = value;
+			this._wrote = {
+				col,
+				cell
+			};
 		};
 	}
 };

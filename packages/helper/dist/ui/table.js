@@ -2,15 +2,15 @@ import { a as parseFieldPath, c as toODataClause, l as toODataSelector, n as isP
 import { a as buildGroups, c as isGroupNode, o as collectGroupPaths, s as flattenLeaves } from "../data-source-read-FxqzQkk2.js";
 import { A as resolveSearchEntries, D as isWildcardPattern, O as normalizeSearchExpr, c as resolveErrorMessages, h as mergeSearchFields, k as plainSearchColumns, l as setErrorMessages, n as describeError, r as errorStatus, s as normalizeError, t as DEFAULT_ERROR_MESSAGES, w as expandWildcard } from "../normalize-error-D93O4q8g.js";
 import { h as monoArraySource } from "../data-source-options-Ky5ZGbc8.js";
-import { a as seedFromRanges, i as minimize, n as buildDateTree, o as setAllChecked, r as checkState, s as setChecked, t as monoDataGrid } from "../mono-data-grid-BdVhuMZo.js";
-import { _ as monoHostChildren, b as monoPhantomOptions, d as buildSizeStyle, h as monoApplyPhantomOptions, l as ColumnAutoSize, s as startMonoSizeAttributes, u as cssLengthToPx, v as monoPendingActive, y as monoPendingGrace } from "../mono-ui-CK5wNw-7.js";
+import { a as seedFromRanges, i as minimize, n as buildDateTree, o as setAllChecked, r as checkState, s as setChecked, t as monoDataGrid } from "../mono-data-grid-DVAt2Loc.js";
+import { _ as monoHostChildren, b as monoPhantomOptions, d as buildSizeStyle, h as monoApplyPhantomOptions, l as ColumnAutoSize, s as startMonoSizeAttributes, u as cssLengthToPx, v as monoPendingActive, y as monoPendingGrace } from "../mono-ui-jtBvJ9d5.js";
 import { n as detachEventHandlers, t as applyProps } from "../element-props-xvw0EB7H.js";
-import { t as customElement } from "../mono-element-BP0RKeDD.js";
+import { t as customElement } from "../mono-element-9uQRbp5X.js";
 import { a as defineHybridPropAliases, i as defineHybridPropAlias, o as numberStringConverter, r as booleanStringConverter, t as __decorate } from "../decorate-DbYFpi8R.js";
 import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
 import { t as isIconifyClass } from "../icon-ClxnYhBG.js";
-import { n as bucketHasContent, o as placeLightSlots, r as captureLightSlots, s as placeSlotNode } from "../light-slots-RAAINrYd.js";
-import { t as PopupPortalController } from "../popup-portal-C8ttHDRX.js";
+import { n as bucketHasContent, o as placeLightSlots, r as captureLightSlots, s as placeSlotNode } from "../light-slots-B980aknU.js";
+import { t as PopupPortalController } from "../popup-portal-CINuVjNY.js";
 import { n as cssPart } from "../css-class-B6Tc_MAx.js";
 import { LitElement, html, isServer, nothing } from "lit";
 import { property, query, state } from "lit/decorators.js";
@@ -2227,6 +2227,7 @@ const MonoTableThCore = (superClass) => {
 			this._expanded = /* @__PURE__ */ new Set();
 			this._exclusiveWarned = false;
 			this._lastLoaded = 0;
+			this._sizeSig = [];
 			this._seededSort = false;
 			this._filterOpen = false;
 			this._values = [];
@@ -2256,6 +2257,7 @@ const MonoTableThCore = (superClass) => {
 		disconnectedCallback() {
 			this.dataGrid?.unregisterColumn(this);
 			this._autoSize?.stop();
+			this._sizeSig = [];
 			super.disconnectedCallback();
 		}
 		willUpdate(changed) {
@@ -2275,19 +2277,33 @@ const MonoTableThCore = (superClass) => {
 		*/
 		_syncWidth(cell) {
 			if (String(this.width ?? "").trim().toLowerCase() === "auto") {
+				const fresh = !this._autoSize;
 				const sizer = this._autoSize ??= new ColumnAutoSize(this);
-				sizer.min = cssLengthToPx(this.minWidth ?? null, cell);
-				sizer.max = cssLengthToPx(this.maxWidth ?? null, cell);
 				const grid = this.dataGrid;
-				sizer.growOnly = grid?.scrollMode === "virtual";
 				const loaded = grid?.loadedCount ?? 0;
 				if (loaded < this._lastLoaded) sizer.resetFloor();
 				this._lastLoaded = loaded;
-				sizer.schedule();
+				const sig = [
+					this.minWidth,
+					this.maxWidth,
+					grid?.scrollMode,
+					loaded,
+					this.caption,
+					cell.closest("table")
+				];
+				const moved = sig.length !== this._sizeSig.length || sig.some((v, i) => !Object.is(v, this._sizeSig[i]));
+				if (fresh || moved) {
+					this._sizeSig = sig;
+					sizer.min = cssLengthToPx(this.minWidth ?? null, cell);
+					sizer.max = cssLengthToPx(this.maxWidth ?? null, cell);
+					sizer.growOnly = grid?.scrollMode === "virtual";
+					sizer.schedule();
+				}
 			} else {
 				if (this._autoSize) {
 					this._autoSize.stop(true);
 					this._autoSize = void 0;
+					this._sizeSig = [];
 				}
 				if (this.width != null && this.width !== "") cell.style.width = toCssSize(this.width);
 			}
@@ -2699,8 +2715,7 @@ const MonoTableThCore = (superClass) => {
 		* the table body — the checkbox still carries the RAW value, so
 		* `setColumnFilter` keeps matching the real data.
 		*/
-		_display(value) {
-			const map = this.dataGrid?.columnMap?.(this.field);
+		_display(value, map = this.dataGrid?.columnMap?.(this.field)) {
 			if (map) try {
 				const mapped = map(value, { [this.field]: value }, 0);
 				if (mapped != null && mapped !== "") return String(mapped);
@@ -2720,7 +2735,8 @@ const MonoTableThCore = (superClass) => {
 		_filteredValues() {
 			const q = this._search.trim().toLowerCase();
 			if (!q) return this._values;
-			return this._values.filter((v) => this._display(v.value).toLowerCase().includes(q));
+			const map = this.dataGrid?.columnMap?.(this.field);
+			return this._values.filter((v) => this._display(v.value, map).toLowerCase().includes(q));
 		}
 		_toggleValue(key, on) {
 			const next = new Set(this._checked);
@@ -2839,10 +2855,12 @@ const MonoTableThCore = (superClass) => {
       `;
 		}
 		_renderFilterPanel() {
-			const list = this._filteredValues();
+			const open = this._filterOpen;
+			const list = open ? this._filteredValues() : [];
+			const map = open ? this.dataGrid?.columnMap?.(this.field) : void 0;
 			const allChecked = list.length > 0 && list.every((v) => this._checked.has(String(v.value)));
 			const multi = this._filterMulti;
-			const filteredColumns = this.dataGrid?.filteredColumns?.() ?? [];
+			const filteredColumns = open ? this.dataGrid?.filteredColumns?.() ?? [] : [];
 			const otherFiltered = filteredColumns.filter((f) => f !== this.field).length;
 			const clearAllCount = otherFiltered + (filteredColumns.includes(this.field) ? 1 : 0);
 			return html`
@@ -2866,7 +2884,7 @@ const MonoTableThCore = (superClass) => {
                 </div>
               `}
           <div class="mono-th-filter-list" mono-th-filter-list>
-            ${this._valuesLoading ? html`<div class="mono-th-filter-msg" mono-th-filter-msg><span class="mono-th-filter-spin" mono-th-filter-spin></span>Loading…</div>` : this._valuesError ? this._renderMessage("Failed to load values.") : this._hf.date ? this._tree.length === 0 ? this._renderMessage("No values.") : this._renderDateTree() : list.length === 0 ? this._renderMessage("No values.") : html`
+            ${!open ? nothing : this._valuesLoading ? html`<div class="mono-th-filter-msg" mono-th-filter-msg><span class="mono-th-filter-spin" mono-th-filter-spin></span>Loading…</div>` : this._valuesError ? this._renderMessage("Failed to load values.") : this._hf.date ? this._tree.length === 0 ? this._renderMessage("No values.") : this._renderDateTree() : list.length === 0 ? this._renderMessage("No values.") : html`
                       <label class="mono-th-check mono-th-check-all" mono-th-check mono-th-check-all>
                         <input
                           type="checkbox"
@@ -2887,7 +2905,7 @@ const MonoTableThCore = (superClass) => {
                               @change=${(e) => this._toggleValue(key, e.target.checked)}
                             />
                             <span class="mono-th-check-box" mono-th-check-box></span>
-                            <span class="mono-th-check-label" mono-th-check-label>${this._display(v.value)}</span>
+                            <span class="mono-th-check-label" mono-th-check-label>${this._display(v.value, map)}</span>
                             <span class="mono-th-check-count" mono-th-check-count>${v.count}</span>
                           </label>
                         `;

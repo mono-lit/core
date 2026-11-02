@@ -1,4 +1,4 @@
-import { b as monoHostChildNodes, x as monoHostChildren } from "./hydration-flush-y3en4P1-.js";
+import { b as monoHostChildNodes, x as monoHostChildren } from "./hydration-flush-BHnOMTN4.js";
 
 //#region src/composables/light-slots.ts
 /**

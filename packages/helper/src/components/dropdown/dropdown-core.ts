@@ -293,7 +293,9 @@ export const MonoDropdownCore = <T extends Constructor<LitElement>>(superClass: 
         // `updated()`, before calling `super`), so the controller saw a DETACHED
         // anchor. Reposition now that the activator is in place; a no-op for the
         // shadow build, which never portals. Shadow DOM: position in place.
-        this._popup.reposition()
+        // Synchronously on the open edge only (the detached-anchor case); a later update is
+        // already coalesced into a frame by the controller's own `hostUpdated`.
+        if (changed.has('modelValue')) this._popup.reposition()
         this._positionPanel()
       } else {
         this._unbindViewport()
