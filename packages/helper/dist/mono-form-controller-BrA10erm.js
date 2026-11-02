@@ -179,6 +179,9 @@ function monoForm(options) {
 	const state = {};
 	/** Props pushed at runtime by the `setProp()` METHOD (watchers / outside code). */
 	const dynamicProps = {};
+	const mergedProps = {};
+	/** Keys whose `dynamicProps` moved since their merged props were cached. */
+	const propsDirty = /* @__PURE__ */ new Set();
 	const elements = {};
 	for (const key of keys) {
 		const initial = inputs[key].value;
@@ -212,10 +215,14 @@ function monoForm(options) {
 	* it is merged LAST over whatever the `setProp()` method has accumulated.
 	*/
 	function propsFor(key) {
+		const hit = mergedProps[key];
+		if (hit && !propsDirty.has(key)) return hit;
 		const merged = {
 			...dynamicProps[key] ?? {},
 			...inputs[key]?.props ?? {}
 		};
+		mergedProps[key] = merged;
+		propsDirty.delete(key);
 		state[key] && (state[key].props = merged);
 		return merged;
 	}
@@ -320,7 +327,10 @@ function monoForm(options) {
 			bag[p] = v;
 			changed = true;
 		}
-		if (changed) notify();
+		if (changed) {
+			propsDirty.add(arg.key);
+			notify();
+		}
 	}
 	function setValidation(arg) {
 		const item = state[arg?.key];
@@ -352,6 +362,7 @@ function monoForm(options) {
 			};
 			state[key].touched = false;
 			dynamicProps[key] = {};
+			propsDirty.add(key);
 		}
 		notify();
 	}

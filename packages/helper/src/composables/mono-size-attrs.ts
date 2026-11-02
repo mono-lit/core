@@ -86,10 +86,16 @@ export function startMonoSizeAttributes(): () => void {
           applyMonoSizeAttributes(r.target as HTMLElement)
           continue
         }
-        for (const node of Array.from(r.addedNodes)) if (node.nodeType === 1) scan(node as Element)
+        // This observer sees ALL DOM churn in the app. A node already gone again by the time
+        // the batch is delivered (a framework patch that inserted and replaced it) has nothing
+        // to size — skip its subtree scan.
+        for (const node of Array.from(r.addedNodes)) {
+          if (node.nodeType === 1 && node.isConnected) scan(node as Element)
+        }
         if (r.removedNodes.length) removed = true
       }
-      if (removed) sweep()
+      // Removals anywhere in the app land here; with no auto-sized cell there is nothing to sweep.
+      if (removed && sizers.size) sweep()
     })
     observer.observe(document.documentElement, {
       subtree: true,

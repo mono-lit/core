@@ -620,10 +620,10 @@ function startMonoSizeAttributes() {
 					applyMonoSizeAttributes(r.target);
 					continue;
 				}
-				for (const node of Array.from(r.addedNodes)) if (node.nodeType === 1) scan(node);
+				for (const node of Array.from(r.addedNodes)) if (node.nodeType === 1 && node.isConnected) scan(node);
 				if (r.removedNodes.length) removed = true;
 			}
-			if (removed) sweep();
+			if (removed && sizers.size) sweep();
 		});
 		observer.observe(document.documentElement, {
 			subtree: true,
@@ -1105,6 +1105,27 @@ let _iconSheet = null;
 let _iconSheetReady = false;
 /** How many icon rules the last collection saw, so a later one can be detected. */
 let _iconRuleCount = -1;
+/**
+* The refresh poll ran its course without seeing a glyph rule (a page whose icons are all inline
+* SVG has none). From then on the sheet is treated like a ready one — re-collected only when the
+* rule count moves — instead of a full collect + `replaceSync` on every adopt, and the poll is
+* never re-armed.
+*/
+let _iconPollDone = false;
+/** A rule count was taken this frame — later adopts in the same frame trust it. */
+let _iconCountFresh = false;
+/**
+* `countIconRules()` walks every rule of every stylesheet. `adoptIconStyles` runs from
+* `updated()` (every render of a shadow button-dropdown, for one), so the walk is taken at most
+* once per frame; a rule UnoCSS generates mid-frame is picked up on the next.
+*/
+function iconRulesUnchanged() {
+	if (_iconCountFresh) return true;
+	_iconCountFresh = true;
+	if (typeof requestAnimationFrame !== "undefined") requestAnimationFrame(() => _iconCountFresh = false);
+	else _iconCountFresh = false;
+	return countIconRules() === _iconRuleCount;
+}
 /** Selectors that target an icon utility class (`.i-…`) or the `.mono-icon` helper. */
 const ICON_SELECTOR = /(^|[\s,>+~(])\.(i-[a-z0-9]|mono-icon)/i;
 /** A real data-driven icon utility (`.i-mdi-…`) — what we actually wait for. */
@@ -1162,7 +1183,7 @@ function ensureIconSheet() {
 	} catch {
 		return null;
 	}
-	if (_iconSheetReady && countIconRules() === _iconRuleCount) return _iconSheet;
+	if ((_iconSheetReady || _iconPollDone) && iconRulesUnchanged()) return _iconSheet;
 	const collected = [];
 	const seen = /* @__PURE__ */ new Set();
 	let glyphFound = false;
@@ -1203,7 +1224,7 @@ let _refreshScheduled = false;
 * glyphs appear as soon as the rules land — no component re-render required.
 */
 function scheduleIconRefresh() {
-	if (_refreshScheduled || _iconSheetReady || isServer) return;
+	if (_refreshScheduled || _iconSheetReady || _iconPollDone || isServer) return;
 	const raf = typeof requestAnimationFrame !== "undefined" ? requestAnimationFrame : typeof setTimeout !== "undefined" ? (cb) => setTimeout(cb, 16) : null;
 	if (!raf) return;
 	_refreshScheduled = true;
@@ -1213,6 +1234,7 @@ function scheduleIconRefresh() {
 		ensureIconSheet();
 		if (_iconSheetReady || attempts > 60) {
 			_refreshScheduled = false;
+			if (!_iconSheetReady) _iconPollDone = true;
 			return;
 		}
 		raf(tick);

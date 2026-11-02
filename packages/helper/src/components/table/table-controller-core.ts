@@ -29,6 +29,8 @@ export declare class MonoTableControllerCoreInterface {
    */
   protected _propsSlot?: MonoTablePropsSlot
   protected _applyControllerProps(): void
+  /** What the element renders from the controller; a notify with an unchanged key is skipped. */
+  protected _stateKey(): unknown[] | undefined
 }
 
 /** The `props` key an element reads — see {@link MonoTableProps}. */
@@ -130,11 +132,36 @@ export const MonoTableControllerCore = <T extends Constructor<LitElement>>(super
       // Listeners the previous controller's `props.on*` attached leave with it;
       // the new one's are re-attached by the apply below.
       detachEventHandlers(this)
+      this._lastStateKey = undefined
       this._off = this.dataGrid?.subscribe(() => {
+        if (this._stateUnchanged()) return
         this._scheduleApplyProps()
         this.requestUpdate()
       })
       this._scheduleApplyProps()
+    }
+
+    /**
+     * What this element renders from the CONTROLLER, as a flat list — or `undefined` (the
+     * default) for "re-render on every notify", which is what every element did.
+     *
+     * An element that defines it skips a notify whose key equals the last one. Worth it for the
+     * per-row elements: every `<mono-table-checkbox>` re-rendered on every notify (a load flag, a
+     * summary, another row's tick), N updates for a change that moves one box. Its own props are
+     * unaffected — a Lit property change still updates it the normal way.
+     */
+    protected _stateKey(): unknown[] | undefined {
+      return undefined
+    }
+
+    private _lastStateKey: unknown[] | undefined
+
+    private _stateUnchanged(): boolean {
+      const key = this._stateKey()
+      if (!key) return false
+      const last = this._lastStateKey
+      this._lastStateKey = key
+      return !!last && last.length === key.length && key.every((v, i) => Object.is(v, last[i]))
     }
 
     /**

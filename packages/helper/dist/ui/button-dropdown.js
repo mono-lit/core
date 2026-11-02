@@ -1,9 +1,9 @@
 import { t as applyProps } from "../element-props-xvw0EB7H.js";
-import { t as customElement } from "../mono-element-9uQRbp5X.js";
+import { t as customElement } from "../mono-element-CKcT0rwv.js";
 import { a as defineHybridPropAliases, o as numberStringConverter, r as booleanStringConverter, t as __decorate } from "../decorate-DbYFpi8R.js";
 import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
 import { a as rateLimitHasChanged } from "../rate-limit-e9Jlpl5l.js";
-import "../mono-button-DT6otWqs.js";
+import "../mono-button-CLkHg3WW.js";
 import { t as PopupPortalController } from "../popup-portal-CINuVjNY.js";
 import { LitElement, html, isServer, nothing } from "lit";
 import { ref } from "lit/directives/ref.js";
@@ -169,6 +169,7 @@ const MonoButtonDropdownCore = (superClass) => {
 			this.closeOnEscape = true;
 			this.cssClass = {};
 			this._resolvedSide = "bottom";
+			this._documentBound = false;
 			this._onDocumentClick = (event) => {
 				if (!this.modelValue || !this.closeOnOutsideClick) return;
 				const path = event.composedPath();
@@ -256,15 +257,27 @@ const MonoButtonDropdownCore = (superClass) => {
 		connectedCallback() {
 			super.connectedCallback();
 			if (isServer) return;
-			document.addEventListener("click", this._onDocumentClick, true);
-			document.addEventListener("keydown", this._onDocumentKeydown);
+			this._syncDocument();
 		}
 		disconnectedCallback() {
-			if (!isServer) {
+			this._syncDocument(false);
+			super.disconnectedCallback();
+		}
+		/**
+		* Outside-click / Escape listeners, bound while OPEN only (select's rule). Both handlers
+		* bail when closed, and a grid that puts one of these in every row held two `document`
+		* listeners per row — one capture-phase — in the path of every click and keystroke.
+		*/
+		_syncDocument(want = this.modelValue && this.isConnected) {
+			if (isServer || want === this._documentBound) return;
+			this._documentBound = want;
+			if (want) {
+				document.addEventListener("click", this._onDocumentClick, true);
+				document.addEventListener("keydown", this._onDocumentKeydown);
+			} else {
 				document.removeEventListener("click", this._onDocumentClick, true);
 				document.removeEventListener("keydown", this._onDocumentKeydown);
 			}
-			super.disconnectedCallback();
 		}
 		/** Entries are behind the trigger once there are more of them than `min`. */
 		get collapsed() {
@@ -328,6 +341,7 @@ const MonoButtonDropdownCore = (superClass) => {
 		}
 		updated(changed) {
 			super.updated?.(changed);
+			this._syncDocument();
 			this._applyRootAttrs(this._rootEl);
 		}
 		willUpdate(changed) {

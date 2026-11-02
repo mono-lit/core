@@ -4521,9 +4521,32 @@ export function monoDataGrid<T = any>(
 
   /** Build the full group tree from every matched row the source holds. */
   function fullGroups(): Array<MonoGroupNode<T>> {
-    const raw = bound ? [...(bound.items?.() ?? [])] : []
-    return buildGroups<T>(flattenLeaves<T>(raw), groupFields, collapsed)
+    const src = (bound ? (bound.items?.() ?? []) : []) as unknown[]
+    // The bucketed tree is cached on its inputs; a collapse toggle or a group-page change only
+    // re-stamps `collapsed` (toDisplay clones the nodes it hands out, so the cache is never
+    // touched downstream). Each of those used to re-flatten and re-bucket every row — and every
+    // group footer mounting calls `setGroupPageSize`, so G footers cost G full rebuilds. Not
+    // cached while a row can be edited in place (its group field may be the one being edited).
+    const from = [src, src.length, groupFields.join('\u0000'), rowSetVersion]
+    const live = formHandle != null || formOps.length > 0 || ctrl.editingKey != null
+    const same =
+      !live && from.length === groupTreeFrom.length && from.every((v, i) => Object.is(v, groupTreeFrom[i]))
+    if (!same) {
+      groupTree = buildGroups<T>(flattenLeaves<T>([...src] as T[]), groupFields, collapsed)
+      groupTreeFrom = from
+      return groupTree
+    }
+    const stamp = (nodes: Array<MonoGroupNode<T>>): void => {
+      for (const node of nodes) {
+        node.collapsed = collapsed.has(node.path)
+        if (node.items.length && isGroupNode(node.items[0])) stamp(node.items as Array<MonoGroupNode<T>>)
+      }
+    }
+    stamp(groupTree)
+    return groupTree
   }
+  let groupTreeFrom: unknown[] = []
+  let groupTree: Array<MonoGroupNode<T>> = []
 
   /** Index every group node by path (full, unsliced) for `groupPageInfo`. */
   function indexPaths(nodes: Array<MonoGroupNode<T>>): void {

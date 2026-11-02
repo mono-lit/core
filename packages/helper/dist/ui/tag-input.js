@@ -1,11 +1,11 @@
-import { r as readAllRows } from "../data-source-read-FxqzQkk2.js";
+import { r as readAllRows } from "../data-source-read-Cp_h7NIf.js";
 import { a as errorTitle, f as MonoSourceSearch, i as errorText, n as describeError, x as searchRowPredicate, y as resolveSearchFields } from "../normalize-error-D93O4q8g.js";
 import { n as unwrapReactive, r as unwrapReactiveDeep } from "../reactive-Dtd-esHO.js";
-import { d as buildSizeStyle, f as toCssSize, g as monoHostChildNodes } from "../mono-ui-jtBvJ9d5.js";
-import { t as customElement } from "../mono-element-9uQRbp5X.js";
+import { d as buildSizeStyle, f as toCssSize, g as monoHostChildNodes } from "../mono-ui-kvLVIf1V.js";
+import { t as customElement } from "../mono-element-CKcT0rwv.js";
 import { a as defineHybridPropAliases, n as arrayHasChanged, r as booleanStringConverter, t as __decorate } from "../decorate-DbYFpi8R.js";
 import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
-import { s as placeSlotNode, t as LateSlotWatcher } from "../light-slots-B980aknU.js";
+import { s as placeSlotNode, t as LateSlotWatcher } from "../light-slots-B5Ck0t_E.js";
 import { t as PopupPortalController } from "../popup-portal-CINuVjNY.js";
 import { c as spinnerIcon, i as chevronIcon, n as caretIcon, s as refreshIcon } from "../field-icons-t8rXRCKs.js";
 import { t as MonoFormControlCore } from "../form-control-core-CRZPZ1ru.js";
@@ -149,6 +149,7 @@ const MonoTagInputCore = (superClass) => {
 			this._listboxId = `${this._inputId}-listbox`;
 			this._lateListSlot = new LateSlotWatcher(this, "list", () => this._onLateListSlot());
 			this._lateSelectAllSlot = new LateSlotWatcher(this, "select-all", () => this._onLateSelectAllSlot());
+			this._docListenersBound = false;
 			this._filteredMemo = null;
 			this._filteredMemoOn = false;
 			this._selectedSetFor = null;
@@ -481,9 +482,7 @@ const MonoTagInputCore = (superClass) => {
 			this._lateListSlot.start();
 			this._lateSelectAllSlot.start();
 			if (isServer) return;
-			document.addEventListener("click", this._handleDocumentClick, true);
-			document.addEventListener("focusin", this._handleDocumentFocusIn, true);
-			document.addEventListener("keydown", this._handleDocumentKeydown);
+			if (this._open || this._moreOpen) this._bindDocumentListeners();
 		}
 		disconnectedCallback() {
 			if (this._searchTimer) {
@@ -494,12 +493,28 @@ const MonoTagInputCore = (superClass) => {
 			this._lateListSlot.stop();
 			this._lateSelectAllSlot.stop();
 			this._stopWatchingListChrome();
-			if (!isServer) {
-				document.removeEventListener("click", this._handleDocumentClick, true);
-				document.removeEventListener("focusin", this._handleDocumentFocusIn, true);
-				document.removeEventListener("keydown", this._handleDocumentKeydown);
-			}
+			if (!isServer) this._unbindDocumentListeners();
 			super.disconnectedCallback();
+		}
+		/**
+		* Outside-dismiss listeners, bound while a panel is OPEN (the list or the "+N more") rather
+		* than on connect — select's rule, same reasoning: all three handlers bail when both panels are
+		* closed, so the only cost they carried at rest was dispatch, three `document` listeners per
+		* field (two capture-phase) in the path of every click, focus move and keystroke.
+		*/
+		_bindDocumentListeners() {
+			if (this._docListenersBound) return;
+			this._docListenersBound = true;
+			document.addEventListener("click", this._handleDocumentClick, true);
+			document.addEventListener("focusin", this._handleDocumentFocusIn, true);
+			document.addEventListener("keydown", this._handleDocumentKeydown);
+		}
+		_unbindDocumentListeners() {
+			if (!this._docListenersBound) return;
+			this._docListenersBound = false;
+			document.removeEventListener("click", this._handleDocumentClick, true);
+			document.removeEventListener("focusin", this._handleDocumentFocusIn, true);
+			document.removeEventListener("keydown", this._handleDocumentKeydown);
 		}
 		willUpdate(changed) {
 			this._filteredMemo = null;
@@ -553,6 +568,8 @@ const MonoTagInputCore = (superClass) => {
 				this._endFilteredMemo();
 				return;
 			}
+			if (this._open || this._moreOpen) this._bindDocumentListeners();
+			else this._unbindDocumentListeners();
 			this._rememberSelected(this._selectedValues);
 			if (changed.has("_open")) {
 				this._cursorPending = this._open;
@@ -952,6 +969,18 @@ const MonoTagInputCore = (superClass) => {
 		_close() {
 			this._open = false;
 			this._resetSearch();
+			this._pruneSelectedCache();
+		}
+		/**
+		* Drop remembered rows no current value needs, once the cache has outgrown the selection — it
+		* only ever grew (every value ever picked, every row a select-all drained). On close, with
+		* slack, so toggling a few tags never thrashes it.
+		*/
+		_pruneSelectedCache() {
+			const values = this._selectedValues;
+			if (this._selectedItemCache.size <= values.length * 2 + 200) return;
+			const keep = new Set(values.map((v) => this._cacheKey(v)).filter((k) => k !== void 0));
+			for (const k of this._selectedItemCache.keys()) if (!keep.has(k)) this._selectedItemCache.delete(k);
 		}
 		/** Debounce a server search for the current input text. */
 		_scheduleSearch() {

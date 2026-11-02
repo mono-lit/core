@@ -1,13 +1,13 @@
-import { C as monoPendingGrace, _ as buildSizeStyle, a as __decorate, c as defineHybridPropAlias, d as optionalNumberConverter, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration, u as numberStringConverter, v as toCssSize } from "../../hydration-flush-BHnOMTN4.js";
+import { C as monoPendingGrace, _ as buildSizeStyle, a as __decorate, c as defineHybridPropAlias, d as optionalNumberConverter, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration, u as numberStringConverter, v as toCssSize } from "../../hydration-flush-BaE9gN3C.js";
 import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
 import { n as detachEventHandlers, t as applyProps } from "../../element-props-xvw0EB7H.js";
-import { t as MonoFormControlCore } from "../../form-control-core-BSD5TNXn.js";
+import { t as MonoFormControlCore } from "../../form-control-core-BbiACMtL.js";
 import { a as closeIcon, i as chevronIcon, n as caretIcon } from "../../field-icons-t8rXRCKs.js";
 import { n as FieldTooltipController, t as field_tooltip_css_raw_default } from "../../field-tooltip.css_raw-U5UeTa2d.js";
 import { n as label_position_css_raw_default, r as FieldValidationController, t as field_validation_css_raw_default } from "../../field-validation.css_raw-Cx6SGrfP.js";
 import { n as applyPopupPlacement, r as computePopupPlacement, t as PopupPortalController } from "../../popup-portal-CINuVjNY.js";
 import { t as createNotifier } from "../../notifier-BIrqUzRh.js";
-import { t as monoDataGrid } from "../../mono-data-grid-DYELywOK.js";
+import { t as monoDataGrid } from "../../mono-data-grid-CZFjpnOD.js";
 import { n as resolveChipLimit, r as visibleChipCap, t as ChipStripController } from "../../chip-strip-bNfLn52Z.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { property } from "lit/decorators.js";
@@ -154,6 +154,7 @@ const MonoDropdownTableCore = (superClass) => {
 			};
 			this._viewportBound = false;
 			this._viewportFrame = 0;
+			this._docBound = false;
 			this._wasOpen = false;
 			this._lastSelectedCount = 0;
 			this._searchFocused = false;
@@ -406,11 +407,7 @@ const MonoDropdownTableCore = (superClass) => {
 			super.connectedCallback();
 			this._subscribe();
 			this._wireDropdown();
-			if (!isServer) {
-				document.addEventListener("pointerdown", this._onDocPointer, true);
-				document.addEventListener("keydown", this._onDocKey, true);
-				this._syncViewportListeners();
-			}
+			if (!isServer) this._syncViewportListeners();
 		}
 		disconnectedCallback() {
 			this._off?.();
@@ -421,6 +418,7 @@ const MonoDropdownTableCore = (superClass) => {
 			if (!isServer) {
 				document.removeEventListener("pointerdown", this._onDocPointer, true);
 				document.removeEventListener("keydown", this._onDocKey, true);
+				this._docBound = false;
 				window.removeEventListener("scroll", this._onViewportChange, true);
 				window.removeEventListener("resize", this._onViewportChange);
 				if (this._viewportFrame) cancelAnimationFrame(this._viewportFrame);
@@ -556,11 +554,9 @@ const MonoDropdownTableCore = (superClass) => {
 		get _rowScope() {
 			return this.renderRoot === this ? this._popup.panelRoot : this;
 		}
-		_reflectSelection() {
+		_reflectSelection(rows = this._rowEls()) {
 			const dd = this._dd;
-			const root = this._rowScope;
-			if (!dd || !root?.querySelectorAll) return;
-			const rows = Array.from(root.querySelectorAll("[data-row-key]"));
+			if (!dd) return;
 			if ((this._focusZone === "list" || this._activeRowKey != null) && rows.length && !rows.some((el) => el.getAttribute("data-row-key") === this._activeRowKey)) this._activeRowKey = rows[0].getAttribute("data-row-key");
 			rows.forEach((el) => {
 				const key = el.getAttribute("data-row-key");
@@ -571,15 +567,27 @@ const MonoDropdownTableCore = (superClass) => {
 				el.toggleAttribute("mono-selected", on);
 				el.toggleAttribute("mono-dd-selected", on);
 				el.toggleAttribute("mono-dd-active", active);
-				if (on) el.setAttribute("aria-selected", "true");
-				else el.removeAttribute("aria-selected");
+				if (on !== el.hasAttribute("aria-selected")) {
+					if (on) el.setAttribute("aria-selected", "true");
+					else el.removeAttribute("aria-selected");
+				}
 			});
 		}
 		/** Re-reflect after the consumer's Vue re-renders rows (paging/search). */
 		_observePanel() {
 			const root = this._rowScope;
 			if (!root || this._panelObserver) return;
-			this._panelObserver = new MutationObserver(() => this._reflectSelection());
+			const touchesRows = (nodes) => {
+				for (const n of Array.from(nodes)) {
+					if (n.nodeType !== 1) continue;
+					const el = n;
+					if (el.matches("[data-row-key]") || el.querySelector("[data-row-key]")) return true;
+				}
+				return false;
+			};
+			this._panelObserver = new MutationObserver((records) => {
+				if (records.some((r) => touchesRows(r.addedNodes) || touchesRows(r.removedNodes))) this._reflectSelection();
+			});
 			this._panelObserver.observe(root, {
 				childList: true,
 				subtree: true
@@ -635,6 +643,23 @@ const MonoDropdownTableCore = (superClass) => {
 			applyPopupPlacement(panel, placement, true);
 		}
 		/**
+		* Outside-dismiss listeners, both builds, bound while a panel is OPEN only (select's rule).
+		* Both handlers bail when the list and "+N more" panels are closed, so at rest they cost
+		* only dispatch — two capture-phase `document` listeners per field.
+		*/
+		_syncDocListeners() {
+			const want = this.isConnected && (this._isOpen || this._moreOpen);
+			if (want === this._docBound) return;
+			this._docBound = want;
+			if (want) {
+				document.addEventListener("pointerdown", this._onDocPointer, true);
+				document.addEventListener("keydown", this._onDocKey, true);
+			} else {
+				document.removeEventListener("pointerdown", this._onDocPointer, true);
+				document.removeEventListener("keydown", this._onDocKey, true);
+			}
+		}
+		/**
 		* Shadow build only, and only while a panel is OPEN — the popup controller's rule. They used
 		* to be bound at connect for every shadow instance: a capture-phase, non-passive `scroll`
 		* listener on `window` per field, open or not, which also keeps the page's scrolling off the
@@ -642,6 +667,7 @@ const MonoDropdownTableCore = (superClass) => {
 		*/
 		_syncViewportListeners() {
 			if (isServer) return;
+			this._syncDocListeners();
 			const want = this._isShadowHost && this.isConnected && (this._isOpen || this._moreOpen);
 			if (want === this._viewportBound) return;
 			if (want) {
@@ -762,18 +788,20 @@ const MonoDropdownTableCore = (superClass) => {
 		_panelEl() {
 			return (this._popup.panelRoot ?? this.renderRoot)?.querySelector?.(".mono-dropdown-table-panel") ?? null;
 		}
-		_setActiveRow(key, reveal = false) {
+		/** `rows`: the caller's own `_rowEls()` — one query per arrow key, not three. */
+		_setActiveRow(key, reveal = false, rows = this._rowEls()) {
 			this._activeRowKey = key;
-			this._reflectSelection();
+			this._reflectSelection(rows);
 			if (!reveal || key == null) return;
-			this._rowEls().find((r) => r.getAttribute("data-row-key") === key)?.scrollIntoView?.({ block: "nearest" });
+			rows.find((r) => r.getAttribute("data-row-key") === key)?.scrollIntoView?.({ block: "nearest" });
 		}
 		_moveActiveRow(delta) {
-			const keys = this._rowEls().map((r) => r.getAttribute("data-row-key") ?? "");
+			const rows = this._rowEls();
+			const keys = rows.map((r) => r.getAttribute("data-row-key") ?? "");
 			if (!keys.length) return;
 			const i = this._activeRowKey == null ? -1 : keys.indexOf(this._activeRowKey);
 			const next = i < 0 ? delta > 0 ? 0 : keys.length - 1 : Math.min(Math.max(i + delta, 0), keys.length - 1);
-			this._setActiveRow(keys[next], true);
+			this._setActiveRow(keys[next], true, rows);
 		}
 		/** Move the keyboard into the row list, highlighting the first row. */
 		_enterList() {
@@ -1608,7 +1636,21 @@ function monoDataDropdown(source = null, opts = {}) {
 	function setOpen(next) {
 		if (ctrl.open === next) return;
 		ctrl.open = next;
+		if (!next) pruneCache();
 		notify();
+	}
+	/**
+	* Drop cached rows no current key needs, once the cache has outgrown the selection.
+	*
+	* The cache exists to label chips whose row is not on the loaded page; it only ever grew —
+	* every key ever selected, and after a select-all every drained row — and was cleared only on
+	* `bind()`. Pruned on close, with slack, so toggling a few rows never thrashes it.
+	*/
+	function pruneCache() {
+		const keys = currentKeys();
+		if (cache.size <= keys.length * 2 + 200) return;
+		const keep = new Set(keys.map((k) => keyStr(normKey(k))));
+		for (const k of cache.keys()) if (!keep.has(k)) cache.delete(k);
 	}
 	function hasStore() {
 		const s = grid.dataSource;
@@ -1622,6 +1664,26 @@ function monoDataDropdown(source = null, opts = {}) {
 		for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
 		return out;
 	}
+	/**
+	* `run` over every part, at most `limit` requests in flight — the result order kept.
+	*
+	* A thousand preset keys are twenty `in` chunks (or ~67 OR-chain chunks in the fallback), and
+	* `Promise.all` over them fired every request at once: a burst a backend may throttle or reject,
+	* and that queues behind the browser's per-host connection cap anyway.
+	*/
+	async function mapLimited(parts, limit, run) {
+		const out = new Array(parts.length);
+		let next = 0;
+		const worker = async () => {
+			while (next < parts.length) {
+				const i = next++;
+				out[i] = await run(parts[i]);
+			}
+		};
+		await Promise.all(Array.from({ length: Math.min(limit, parts.length) }, worker));
+		return out;
+	}
+	const RESOLVE_CONCURRENCY = 4;
 	const selectFields = () => typeof displayExpr === "string" && displayExpr ? [keyExpr, displayExpr] : void 0;
 	async function resolveSelected() {
 		const missing = currentKeys().filter((k) => !cache.has(keyStr(normKey(k))));
@@ -1631,14 +1693,14 @@ function monoDataDropdown(source = null, opts = {}) {
 			const store = s.store();
 			let rows = [];
 			try {
-				rows = (await Promise.all(chunk(missing, 50).map((part) => store.load({
+				rows = (await mapLimited(chunk(missing, 50), RESOLVE_CONCURRENCY, (part) => store.load({
 					filter: [
 						keyExpr,
 						"in",
 						part
 					],
 					select: selectFields()
-				})))).flatMap(storeRows);
+				}))).flatMap(storeRows);
 			} catch {
 				const orFilter = (arr) => arr.map((v) => [
 					keyExpr,
@@ -1649,10 +1711,10 @@ function monoDataDropdown(source = null, opts = {}) {
 					"or",
 					b
 				] : b, null);
-				rows = (await Promise.all(chunk(missing, 15).map((part) => store.load({
+				rows = (await mapLimited(chunk(missing, 15), RESOLVE_CONCURRENCY, (part) => store.load({
 					filter: orFilter(part),
 					select: selectFields()
-				})))).flatMap(storeRows);
+				}))).flatMap(storeRows);
 			}
 			for (const row of rows) cacheRow(row?.[keyExpr], row);
 		} else if (typeof s?.data === "function") {

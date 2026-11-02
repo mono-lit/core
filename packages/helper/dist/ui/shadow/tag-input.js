@@ -1,14 +1,14 @@
-import { _ as buildSizeStyle, a as __decorate, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, o as arrayHasChanged, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration, v as toCssSize } from "../../hydration-flush-BHnOMTN4.js";
+import { _ as buildSizeStyle, a as __decorate, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, o as arrayHasChanged, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration, v as toCssSize } from "../../hydration-flush-BaE9gN3C.js";
 import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
-import { t as MonoFormControlCore } from "../../form-control-core-BSD5TNXn.js";
+import { t as MonoFormControlCore } from "../../form-control-core-BbiACMtL.js";
 import { c as spinnerIcon, i as chevronIcon, n as caretIcon, s as refreshIcon } from "../../field-icons-t8rXRCKs.js";
 import { n as FieldTooltipController, t as field_tooltip_css_raw_default } from "../../field-tooltip.css_raw-U5UeTa2d.js";
 import { n as label_position_css_raw_default, r as FieldValidationController, t as field_validation_css_raw_default } from "../../field-validation.css_raw-Cx6SGrfP.js";
 import { t as PopupPortalController } from "../../popup-portal-CINuVjNY.js";
 import { a as errorTitle, d as MonoSourceSearch, i as errorText, m as searchRowPredicate, n as describeError, p as resolveSearchFields } from "../../normalize-error-BmLbgANw.js";
-import { t as LateSlotWatcher } from "../../light-slots-Cs3XHtqa.js";
+import { t as LateSlotWatcher } from "../../light-slots-_no0r2Z-.js";
 import { t as checkbox_css_raw_default } from "../../checkbox.css_raw-AYtSbUtY.js";
-import { r as readAllRows } from "../../data-source-read-i6CYSUEl.js";
+import { r as readAllRows } from "../../data-source-read-DTJ_Mnez.js";
 import { n as unwrapReactive, r as unwrapReactiveDeep } from "../../reactive-Dtd-esHO.js";
 import { n as resolveChipLimit, r as visibleChipCap, t as ChipStripController } from "../../chip-strip-bNfLn52Z.js";
 import { t as chip_css_raw_default } from "../../chip.css_raw-ChfRSHLO.js";
@@ -149,6 +149,7 @@ const MonoTagInputCore = (superClass) => {
 			this._listboxId = `${this._inputId}-listbox`;
 			this._lateListSlot = new LateSlotWatcher(this, "list", () => this._onLateListSlot());
 			this._lateSelectAllSlot = new LateSlotWatcher(this, "select-all", () => this._onLateSelectAllSlot());
+			this._docListenersBound = false;
 			this._filteredMemo = null;
 			this._filteredMemoOn = false;
 			this._selectedSetFor = null;
@@ -481,9 +482,7 @@ const MonoTagInputCore = (superClass) => {
 			this._lateListSlot.start();
 			this._lateSelectAllSlot.start();
 			if (isServer) return;
-			document.addEventListener("click", this._handleDocumentClick, true);
-			document.addEventListener("focusin", this._handleDocumentFocusIn, true);
-			document.addEventListener("keydown", this._handleDocumentKeydown);
+			if (this._open || this._moreOpen) this._bindDocumentListeners();
 		}
 		disconnectedCallback() {
 			if (this._searchTimer) {
@@ -494,12 +493,28 @@ const MonoTagInputCore = (superClass) => {
 			this._lateListSlot.stop();
 			this._lateSelectAllSlot.stop();
 			this._stopWatchingListChrome();
-			if (!isServer) {
-				document.removeEventListener("click", this._handleDocumentClick, true);
-				document.removeEventListener("focusin", this._handleDocumentFocusIn, true);
-				document.removeEventListener("keydown", this._handleDocumentKeydown);
-			}
+			if (!isServer) this._unbindDocumentListeners();
 			super.disconnectedCallback();
+		}
+		/**
+		* Outside-dismiss listeners, bound while a panel is OPEN (the list or the "+N more") rather
+		* than on connect — select's rule, same reasoning: all three handlers bail when both panels are
+		* closed, so the only cost they carried at rest was dispatch, three `document` listeners per
+		* field (two capture-phase) in the path of every click, focus move and keystroke.
+		*/
+		_bindDocumentListeners() {
+			if (this._docListenersBound) return;
+			this._docListenersBound = true;
+			document.addEventListener("click", this._handleDocumentClick, true);
+			document.addEventListener("focusin", this._handleDocumentFocusIn, true);
+			document.addEventListener("keydown", this._handleDocumentKeydown);
+		}
+		_unbindDocumentListeners() {
+			if (!this._docListenersBound) return;
+			this._docListenersBound = false;
+			document.removeEventListener("click", this._handleDocumentClick, true);
+			document.removeEventListener("focusin", this._handleDocumentFocusIn, true);
+			document.removeEventListener("keydown", this._handleDocumentKeydown);
 		}
 		willUpdate(changed) {
 			this._filteredMemo = null;
@@ -553,6 +568,8 @@ const MonoTagInputCore = (superClass) => {
 				this._endFilteredMemo();
 				return;
 			}
+			if (this._open || this._moreOpen) this._bindDocumentListeners();
+			else this._unbindDocumentListeners();
 			this._rememberSelected(this._selectedValues);
 			if (changed.has("_open")) {
 				this._cursorPending = this._open;
@@ -952,6 +969,18 @@ const MonoTagInputCore = (superClass) => {
 		_close() {
 			this._open = false;
 			this._resetSearch();
+			this._pruneSelectedCache();
+		}
+		/**
+		* Drop remembered rows no current value needs, once the cache has outgrown the selection — it
+		* only ever grew (every value ever picked, every row a select-all drained). On close, with
+		* slack, so toggling a few tags never thrashes it.
+		*/
+		_pruneSelectedCache() {
+			const values = this._selectedValues;
+			if (this._selectedItemCache.size <= values.length * 2 + 200) return;
+			const keep = new Set(values.map((v) => this._cacheKey(v)).filter((k) => k !== void 0));
+			for (const k of this._selectedItemCache.keys()) if (!keep.has(k)) this._selectedItemCache.delete(k);
 		}
 		/** Debounce a server search for the current input text. */
 		_scheduleSearch() {

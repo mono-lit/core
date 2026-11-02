@@ -122,6 +122,28 @@ let _iconSheet: CSSStyleSheet | null = null
 let _iconSheetReady = false
 /** How many icon rules the last collection saw, so a later one can be detected. */
 let _iconRuleCount = -1
+/**
+ * The refresh poll ran its course without seeing a glyph rule (a page whose icons are all inline
+ * SVG has none). From then on the sheet is treated like a ready one — re-collected only when the
+ * rule count moves — instead of a full collect + `replaceSync` on every adopt, and the poll is
+ * never re-armed.
+ */
+let _iconPollDone = false
+/** A rule count was taken this frame — later adopts in the same frame trust it. */
+let _iconCountFresh = false
+
+/**
+ * `countIconRules()` walks every rule of every stylesheet. `adoptIconStyles` runs from
+ * `updated()` (every render of a shadow button-dropdown, for one), so the walk is taken at most
+ * once per frame; a rule UnoCSS generates mid-frame is picked up on the next.
+ */
+function iconRulesUnchanged(): boolean {
+  if (_iconCountFresh) return true
+  _iconCountFresh = true
+  if (typeof requestAnimationFrame !== 'undefined') requestAnimationFrame(() => (_iconCountFresh = false))
+  else _iconCountFresh = false
+  return countIconRules() === _iconRuleCount
+}
 
 /** Selectors that target an icon utility class (`.i-…`) or the `.mono-icon` helper. */
 const ICON_SELECTOR = /(^|[\s,>+~(])\.(i-[a-z0-9]|mono-icon)/i
@@ -198,7 +220,7 @@ function ensureIconSheet(): CSSStyleSheet | null {
   // last pass: UnoCSS generates them on demand, so a class whose first use comes
   // after the snapshot would otherwise never reach a shadow root — the glyph box
   // is there and empty while the light build paints it.
-  if (_iconSheetReady && countIconRules() === _iconRuleCount) return _iconSheet
+  if ((_iconSheetReady || _iconPollDone) && iconRulesUnchanged()) return _iconSheet
 
   const collected: string[] = []
   const seen = new Set<string>()
@@ -254,7 +276,7 @@ let _refreshScheduled = false
  * glyphs appear as soon as the rules land — no component re-render required.
  */
 function scheduleIconRefresh(): void {
-  if (_refreshScheduled || _iconSheetReady || isServer) return
+  if (_refreshScheduled || _iconSheetReady || _iconPollDone || isServer) return
   const raf =
     typeof requestAnimationFrame !== 'undefined'
       ? requestAnimationFrame
@@ -270,6 +292,7 @@ function scheduleIconRefresh(): void {
     ensureIconSheet()
     if (_iconSheetReady || attempts > 60) {
       _refreshScheduled = false
+      if (!_iconSheetReady) _iconPollDone = true
       return
     }
     raf(tick)

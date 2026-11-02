@@ -1,4 +1,4 @@
-import { C as monoPendingGrace, S as monoPendingActive, _ as buildSizeStyle, a as __decorate, c as defineHybridPropAlias, f as customElement, g as cssLengthToPx, h as ColumnAutoSize, l as defineHybridPropAliases, m as startMonoSizeAttributes, n as adoptIconStyles, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration, u as numberStringConverter, w as monoPhantomOptions, y as monoApplyPhantomOptions } from "../../hydration-flush-BHnOMTN4.js";
+import { C as monoPendingGrace, S as monoPendingActive, _ as buildSizeStyle, a as __decorate, c as defineHybridPropAlias, f as customElement, g as cssLengthToPx, h as ColumnAutoSize, l as defineHybridPropAliases, m as startMonoSizeAttributes, n as adoptIconStyles, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration, u as numberStringConverter, w as monoPhantomOptions, y as monoApplyPhantomOptions } from "../../hydration-flush-BaE9gN3C.js";
 import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
 import { t as isIconifyClass } from "../../icon-BM9N-jOt.js";
 import { n as cssPart } from "../../css-class-B6Tc_MAx.js";
@@ -6,11 +6,11 @@ import { n as detachEventHandlers, t as applyProps } from "../../element-props-x
 import { t as input_css_raw_default } from "../../input.css_raw-Br-T8RWv.js";
 import { t as PopupPortalController } from "../../popup-portal-CINuVjNY.js";
 import { C as resolveSearchEntries, S as plainSearchColumns, _ as expandWildcard, b as isWildcardPattern, c as resolveErrorMessages, f as mergeSearchFields, l as setErrorMessages, n as describeError, r as errorStatus, s as normalizeError, t as DEFAULT_ERROR_MESSAGES, x as normalizeSearchExpr } from "../../normalize-error-BmLbgANw.js";
-import { a as seedFromRanges, i as minimize, n as buildDateTree, o as setAllChecked, r as checkState, s as setChecked, t as monoDataGrid } from "../../mono-data-grid-DYELywOK.js";
-import { n as captureLightSlots, r as placeLightSlots } from "../../light-slots-Cs3XHtqa.js";
+import { a as seedFromRanges, i as minimize, n as buildDateTree, o as setAllChecked, r as checkState, s as setChecked, t as monoDataGrid } from "../../mono-data-grid-CZFjpnOD.js";
+import { n as captureLightSlots, r as placeLightSlots } from "../../light-slots-_no0r2Z-.js";
 import { t as checkbox_css_raw_default } from "../../checkbox.css_raw-AYtSbUtY.js";
-import { a as buildGroups, c as isGroupNode, o as collectGroupPaths, s as flattenLeaves } from "../../data-source-read-i6CYSUEl.js";
-import { h as monoArraySource } from "../../data-source-options-BRBnaq7b.js";
+import { a as buildGroups, c as isGroupNode, o as collectGroupPaths, s as flattenLeaves } from "../../data-source-read-DTJ_Mnez.js";
+import { h as monoArraySource } from "../../data-source-options-CS0w0wlO.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { property, query, state } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
@@ -70,11 +70,30 @@ const MonoTableControllerCore = (superClass) => {
 		_subscribe() {
 			this._off?.();
 			detachEventHandlers(this);
+			this._lastStateKey = void 0;
 			this._off = this.dataGrid?.subscribe(() => {
+				if (this._stateUnchanged()) return;
 				this._scheduleApplyProps();
 				this.requestUpdate();
 			});
 			this._scheduleApplyProps();
+		}
+		/**
+		* What this element renders from the CONTROLLER, as a flat list — or `undefined` (the
+		* default) for "re-render on every notify", which is what every element did.
+		*
+		* An element that defines it skips a notify whose key equals the last one. Worth it for the
+		* per-row elements: every `<mono-table-checkbox>` re-rendered on every notify (a load flag, a
+		* summary, another row's tick), N updates for a change that moves one box. Its own props are
+		* unaffected — a Lit property change still updates it the normal way.
+		*/
+		_stateKey() {}
+		_stateUnchanged() {
+			const key = this._stateKey();
+			if (!key) return false;
+			const last = this._lastStateKey;
+			this._lastStateKey = key;
+			return !!last && last.length === key.length && key.every((v, i) => Object.is(v, last[i]));
 		}
 		/**
 		* Drive the apply from `update()` as well as `_subscribe()`.
@@ -1707,7 +1726,7 @@ const MonoTablePagingCore = (superClass) => {
 			this._off?.();
 			this._off = this.dataGrid?.subscribe(() => {
 				this.requestUpdate();
-				if (this.type === "virtual-scroll") this._recomputeWindow();
+				if (this.type === "virtual-scroll") this._scheduleScroll();
 			});
 		}
 		_scrollActive() {
@@ -4655,6 +4674,24 @@ const MonoTableCheckboxCore = (superClass) => {
 			row?.classList.toggle("mono-table-row-selected", this._checked);
 			if (this._checked) row?.setAttribute("mono-selected", "");
 			else row?.removeAttribute("mono-selected");
+		}
+		/**
+		* All this box draws from the controller: ticked, mixed (select-all), and the drain's
+		* `pending`. A notify that moves none of them — another row's tick, a load flag, a summary —
+		* no longer re-renders every row's checkbox (see the base's `_stateKey`).
+		*/
+		_stateKey() {
+			return this.type === "all" ? [
+				this.type,
+				this._checked,
+				this._indeterminate,
+				this._pending
+			] : [
+				this.type,
+				this._checked,
+				this._pending,
+				this.item
+			];
 		}
 		/** Whether this box is ticked right now. */
 		get _checked() {

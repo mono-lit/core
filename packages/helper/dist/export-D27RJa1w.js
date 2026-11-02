@@ -1,5 +1,5 @@
 import { a as stripDirectives, i as escapeCellText, n as parseMarkdown, o as __commonJSMin, r as encodeDirective, s as __toESM } from "./markdown-uGlE_OfJ.js";
-import { n as isReadableSource, r as readAllRows } from "./data-source-read-i6CYSUEl.js";
+import { n as isReadableSource, r as readAllRows } from "./data-source-read-DTJ_Mnez.js";
 import { n as unwrapReactive } from "./reactive-Dtd-esHO.js";
 import { t as DEFAULT_STYLES } from "./excel-BXzr3uI1.js";
 

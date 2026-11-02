@@ -164,7 +164,9 @@ export const MonoTablePagingCore = <T extends Constructor<LitElement>>(superClas
       this._off?.()
       this._off = this.dataGrid?.subscribe(() => {
         this.requestUpdate()
-        if (this.type === 'virtual-scroll') this._recomputeWindow()
+        // Through the frame coalescer, not inline: the window reads `scrollTop` / `clientHeight`,
+        // and inside the notify flush any DOM write earlier in the task makes that a forced layout.
+        if (this.type === 'virtual-scroll') this._scheduleScroll()
       })
     }
 

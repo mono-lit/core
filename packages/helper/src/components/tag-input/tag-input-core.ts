@@ -948,15 +948,9 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
     this._lateSelectAllSlot.start()
 
     if (isServer) return
-    // CAPTURE phase, matching mono-dropdown. The trigger handlers call
-    // `stopPropagation()`, so a bubble-phase listener never sees a click landing
-    // on ANOTHER tag-input's trigger — which is why opening a second one used to
-    // leave the first open.
-    document.addEventListener('click', this._handleDocumentClick, true)
-    // Tab traversal fires no click, so without this, keyboarding from one field
-    // into the next leaves both panels down.
-    document.addEventListener('focusin', this._handleDocumentFocusIn, true)
-    document.addEventListener('keydown', this._handleDocumentKeydown)
+    // Open-only (see `_bindDocumentListeners`). A reconnect schedules no update, so an element
+    // detached while open rebinds here — nothing else would.
+    if (this._open || this._moreOpen) this._bindDocumentListeners()
   }
 
   override disconnectedCallback(): void {
@@ -973,13 +967,39 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
     this._lateListSlot.stop()
     this._lateSelectAllSlot.stop()
     this._stopWatchingListChrome()
-    if (!isServer) {
-      // The `true` must match the add above or the listener is never removed.
-      document.removeEventListener('click', this._handleDocumentClick, true)
-      document.removeEventListener('focusin', this._handleDocumentFocusIn, true)
-      document.removeEventListener('keydown', this._handleDocumentKeydown)
-    }
+    if (!isServer) this._unbindDocumentListeners()
     super.disconnectedCallback()
+  }
+
+  private _docListenersBound = false
+
+  /**
+   * Outside-dismiss listeners, bound while a panel is OPEN (the list or the "+N more") rather
+   * than on connect — select's rule, same reasoning: all three handlers bail when both panels are
+   * closed, so the only cost they carried at rest was dispatch, three `document` listeners per
+   * field (two capture-phase) in the path of every click, focus move and keystroke.
+   */
+  private _bindDocumentListeners(): void {
+    if (this._docListenersBound) return
+    this._docListenersBound = true
+    // CAPTURE phase, matching mono-dropdown. The trigger handlers call
+    // `stopPropagation()`, so a bubble-phase listener never sees a click landing
+    // on ANOTHER tag-input's trigger — which is why opening a second one used to
+    // leave the first open.
+    document.addEventListener('click', this._handleDocumentClick, true)
+    // Tab traversal fires no click, so without this, keyboarding from one field
+    // into the next leaves both panels down.
+    document.addEventListener('focusin', this._handleDocumentFocusIn, true)
+    document.addEventListener('keydown', this._handleDocumentKeydown)
+  }
+
+  private _unbindDocumentListeners(): void {
+    if (!this._docListenersBound) return
+    this._docListenersBound = false
+    // The `true` must match the add above or the listener is never removed.
+    document.removeEventListener('click', this._handleDocumentClick, true)
+    document.removeEventListener('focusin', this._handleDocumentFocusIn, true)
+    document.removeEventListener('keydown', this._handleDocumentKeydown)
   }
 
   override willUpdate(changed: Map<string, unknown>): void {
@@ -1100,6 +1120,9 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
       this._endFilteredMemo()
       return
     }
+
+    if (this._open || this._moreOpen) this._bindDocumentListeners()
+    else this._unbindDocumentListeners()
 
     // Rows arrive asynchronously, so a value selected before its page loaded (or
     // set from outside as `model-value`) becomes resolvable only later. Catch it
@@ -1705,6 +1728,19 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
   private _close(): void {
     this._open = false
     this._resetSearch()
+    this._pruneSelectedCache()
+  }
+
+  /**
+   * Drop remembered rows no current value needs, once the cache has outgrown the selection — it
+   * only ever grew (every value ever picked, every row a select-all drained). On close, with
+   * slack, so toggling a few tags never thrashes it.
+   */
+  private _pruneSelectedCache(): void {
+    const values = this._selectedValues
+    if (this._selectedItemCache.size <= values.length * 2 + 200) return
+    const keep = new Set(values.map((v) => this._cacheKey(v)).filter((k) => k !== undefined))
+    for (const k of this._selectedItemCache.keys()) if (!keep.has(k)) this._selectedItemCache.delete(k)
   }
 
   /** Debounce a server search for the current input text. */

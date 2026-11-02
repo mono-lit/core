@@ -1,10 +1,10 @@
-import { d as buildSizeStyle, f as toCssSize, g as monoHostChildNodes, y as monoPendingGrace } from "../mono-ui-jtBvJ9d5.js";
+import { d as buildSizeStyle, f as toCssSize, g as monoHostChildNodes, y as monoPendingGrace } from "../mono-ui-kvLVIf1V.js";
 import { n as detachEventHandlers, t as applyProps } from "../element-props-xvw0EB7H.js";
-import { t as monoDataDropdown } from "../mono-data-dropdown-D4Pv7W7u.js";
-import { t as customElement } from "../mono-element-9uQRbp5X.js";
+import { t as monoDataDropdown } from "../mono-data-dropdown-BsY5IuIo.js";
+import { t as customElement } from "../mono-element-CKcT0rwv.js";
 import { a as defineHybridPropAliases, i as defineHybridPropAlias, o as numberStringConverter, r as booleanStringConverter, s as optionalNumberConverter, t as __decorate } from "../decorate-DbYFpi8R.js";
 import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
-import { i as guardHostTextContent, s as placeSlotNode } from "../light-slots-B980aknU.js";
+import { i as guardHostTextContent, s as placeSlotNode } from "../light-slots-B5Ck0t_E.js";
 import { n as applyPopupPlacement, r as computePopupPlacement, t as PopupPortalController } from "../popup-portal-CINuVjNY.js";
 import { a as closeIcon, i as chevronIcon, n as caretIcon } from "../field-icons-t8rXRCKs.js";
 import { t as MonoFormControlCore } from "../form-control-core-CRZPZ1ru.js";
@@ -156,6 +156,7 @@ const MonoDropdownTableCore = (superClass) => {
 			};
 			this._viewportBound = false;
 			this._viewportFrame = 0;
+			this._docBound = false;
 			this._wasOpen = false;
 			this._lastSelectedCount = 0;
 			this._searchFocused = false;
@@ -408,11 +409,7 @@ const MonoDropdownTableCore = (superClass) => {
 			super.connectedCallback();
 			this._subscribe();
 			this._wireDropdown();
-			if (!isServer) {
-				document.addEventListener("pointerdown", this._onDocPointer, true);
-				document.addEventListener("keydown", this._onDocKey, true);
-				this._syncViewportListeners();
-			}
+			if (!isServer) this._syncViewportListeners();
 		}
 		disconnectedCallback() {
 			this._off?.();
@@ -423,6 +420,7 @@ const MonoDropdownTableCore = (superClass) => {
 			if (!isServer) {
 				document.removeEventListener("pointerdown", this._onDocPointer, true);
 				document.removeEventListener("keydown", this._onDocKey, true);
+				this._docBound = false;
 				window.removeEventListener("scroll", this._onViewportChange, true);
 				window.removeEventListener("resize", this._onViewportChange);
 				if (this._viewportFrame) cancelAnimationFrame(this._viewportFrame);
@@ -558,11 +556,9 @@ const MonoDropdownTableCore = (superClass) => {
 		get _rowScope() {
 			return this.renderRoot === this ? this._popup.panelRoot : this;
 		}
-		_reflectSelection() {
+		_reflectSelection(rows = this._rowEls()) {
 			const dd = this._dd;
-			const root = this._rowScope;
-			if (!dd || !root?.querySelectorAll) return;
-			const rows = Array.from(root.querySelectorAll("[data-row-key]"));
+			if (!dd) return;
 			if ((this._focusZone === "list" || this._activeRowKey != null) && rows.length && !rows.some((el) => el.getAttribute("data-row-key") === this._activeRowKey)) this._activeRowKey = rows[0].getAttribute("data-row-key");
 			rows.forEach((el) => {
 				const key = el.getAttribute("data-row-key");
@@ -573,15 +569,27 @@ const MonoDropdownTableCore = (superClass) => {
 				el.toggleAttribute("mono-selected", on);
 				el.toggleAttribute("mono-dd-selected", on);
 				el.toggleAttribute("mono-dd-active", active);
-				if (on) el.setAttribute("aria-selected", "true");
-				else el.removeAttribute("aria-selected");
+				if (on !== el.hasAttribute("aria-selected")) {
+					if (on) el.setAttribute("aria-selected", "true");
+					else el.removeAttribute("aria-selected");
+				}
 			});
 		}
 		/** Re-reflect after the consumer's Vue re-renders rows (paging/search). */
 		_observePanel() {
 			const root = this._rowScope;
 			if (!root || this._panelObserver) return;
-			this._panelObserver = new MutationObserver(() => this._reflectSelection());
+			const touchesRows = (nodes) => {
+				for (const n of Array.from(nodes)) {
+					if (n.nodeType !== 1) continue;
+					const el = n;
+					if (el.matches("[data-row-key]") || el.querySelector("[data-row-key]")) return true;
+				}
+				return false;
+			};
+			this._panelObserver = new MutationObserver((records) => {
+				if (records.some((r) => touchesRows(r.addedNodes) || touchesRows(r.removedNodes))) this._reflectSelection();
+			});
 			this._panelObserver.observe(root, {
 				childList: true,
 				subtree: true
@@ -637,6 +645,23 @@ const MonoDropdownTableCore = (superClass) => {
 			applyPopupPlacement(panel, placement, true);
 		}
 		/**
+		* Outside-dismiss listeners, both builds, bound while a panel is OPEN only (select's rule).
+		* Both handlers bail when the list and "+N more" panels are closed, so at rest they cost
+		* only dispatch — two capture-phase `document` listeners per field.
+		*/
+		_syncDocListeners() {
+			const want = this.isConnected && (this._isOpen || this._moreOpen);
+			if (want === this._docBound) return;
+			this._docBound = want;
+			if (want) {
+				document.addEventListener("pointerdown", this._onDocPointer, true);
+				document.addEventListener("keydown", this._onDocKey, true);
+			} else {
+				document.removeEventListener("pointerdown", this._onDocPointer, true);
+				document.removeEventListener("keydown", this._onDocKey, true);
+			}
+		}
+		/**
 		* Shadow build only, and only while a panel is OPEN — the popup controller's rule. They used
 		* to be bound at connect for every shadow instance: a capture-phase, non-passive `scroll`
 		* listener on `window` per field, open or not, which also keeps the page's scrolling off the
@@ -644,6 +669,7 @@ const MonoDropdownTableCore = (superClass) => {
 		*/
 		_syncViewportListeners() {
 			if (isServer) return;
+			this._syncDocListeners();
 			const want = this._isShadowHost && this.isConnected && (this._isOpen || this._moreOpen);
 			if (want === this._viewportBound) return;
 			if (want) {
@@ -764,18 +790,20 @@ const MonoDropdownTableCore = (superClass) => {
 		_panelEl() {
 			return (this._popup.panelRoot ?? this.renderRoot)?.querySelector?.(".mono-dropdown-table-panel") ?? null;
 		}
-		_setActiveRow(key, reveal = false) {
+		/** `rows`: the caller's own `_rowEls()` — one query per arrow key, not three. */
+		_setActiveRow(key, reveal = false, rows = this._rowEls()) {
 			this._activeRowKey = key;
-			this._reflectSelection();
+			this._reflectSelection(rows);
 			if (!reveal || key == null) return;
-			this._rowEls().find((r) => r.getAttribute("data-row-key") === key)?.scrollIntoView?.({ block: "nearest" });
+			rows.find((r) => r.getAttribute("data-row-key") === key)?.scrollIntoView?.({ block: "nearest" });
 		}
 		_moveActiveRow(delta) {
-			const keys = this._rowEls().map((r) => r.getAttribute("data-row-key") ?? "");
+			const rows = this._rowEls();
+			const keys = rows.map((r) => r.getAttribute("data-row-key") ?? "");
 			if (!keys.length) return;
 			const i = this._activeRowKey == null ? -1 : keys.indexOf(this._activeRowKey);
 			const next = i < 0 ? delta > 0 ? 0 : keys.length - 1 : Math.min(Math.max(i + delta, 0), keys.length - 1);
-			this._setActiveRow(keys[next], true);
+			this._setActiveRow(keys[next], true, rows);
 		}
 		/** Move the keyboard into the row list, highlighting the first row. */
 		_enterList() {

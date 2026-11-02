@@ -49,14 +49,16 @@ export function isGroupNode(x: unknown): x is MonoGroupNode {
  * payload (devextreme `type:'data'` with `group`) and a plain array.
  */
 export function flattenLeaves<T = any>(rows: ReadonlyArray<MonoGroupNode<T> | T>): T[] {
+  // One shared output array: `out.push(...flattenLeaves(child))` copied every level into an
+  // intermediate array, and spreading a very large group into `push` overflows the stack.
   const out: T[] = []
-  for (const row of rows) {
-    if (isGroupNode(row)) {
-      out.push(...flattenLeaves<T>(row.items as Array<MonoGroupNode<T> | T>))
-    } else {
-      out.push(row as T)
+  const walk = (list: ReadonlyArray<MonoGroupNode<T> | T>): void => {
+    for (const row of list) {
+      if (isGroupNode(row)) walk(row.items as Array<MonoGroupNode<T> | T>)
+      else out.push(row as T)
     }
   }
+  walk(rows)
   return out
 }
 

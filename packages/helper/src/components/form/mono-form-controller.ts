@@ -121,6 +121,9 @@ export function monoForm(options: MonoFormOptions): MonoFormController {
   const state: Record<string, MonoFormItem> = {}
   /** Props pushed at runtime by the `setProp()` METHOD (watchers / outside code). */
   const dynamicProps: Record<string, Record<string, unknown>> = {}
+  const mergedProps: Record<string, Record<string, unknown> | undefined> = {}
+  /** Keys whose `dynamicProps` moved since their merged props were cached. */
+  const propsDirty = new Set<string>()
   const elements: Record<string, Set<unknown>> = {}
 
   for (const key of keys) {
@@ -156,7 +159,13 @@ export function monoForm(options: MonoFormOptions): MonoFormController {
    * it is merged LAST over whatever the `setProp()` method has accumulated.
    */
   function propsFor(key: string): Record<string, unknown> {
+    // Cached until `setProp` / `reset` moves this key: every flush asks for EVERY key, and every
+    // bound control asks again for its own on every notify — a fresh merged object each time.
+    const hit = mergedProps[key]
+    if (hit && !propsDirty.has(key)) return hit
     const merged = { ...(dynamicProps[key] ?? {}), ...((inputs[key]?.props as object) ?? {}) }
+    mergedProps[key] = merged
+    propsDirty.delete(key)
     state[key] && (state[key].props = merged)
     return merged
   }
@@ -285,7 +294,10 @@ export function monoForm(options: MonoFormOptions): MonoFormController {
       bag[p] = v
       changed = true
     }
-    if (changed) notify()
+    if (changed) {
+      propsDirty.add(arg.key)
+      notify()
+    }
   }
 
   function setValidation(arg: MonoFormSetValidation): void {
@@ -319,6 +331,7 @@ export function monoForm(options: MonoFormOptions): MonoFormController {
       state[key].validate = { success: true, message: '' }
       state[key].touched = false
       dynamicProps[key] = {}
+      propsDirty.add(key)
     }
     notify()
   }

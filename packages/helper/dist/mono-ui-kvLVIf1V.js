@@ -649,10 +649,10 @@ function startMonoSizeAttributes() {
 					applyMonoSizeAttributes(r.target);
 					continue;
 				}
-				for (const node of Array.from(r.addedNodes)) if (node.nodeType === 1) scan(node);
+				for (const node of Array.from(r.addedNodes)) if (node.nodeType === 1 && node.isConnected) scan(node);
 				if (r.removedNodes.length) removed = true;
 			}
-			if (removed) sweep();
+			if (removed && sizers.size) sweep();
 		});
 		observer.observe(document.documentElement, {
 			subtree: true,

@@ -1,8 +1,8 @@
-import { g as monoHostChildNodes } from "../mono-ui-jtBvJ9d5.js";
-import { t as customElement } from "../mono-element-9uQRbp5X.js";
+import { g as monoHostChildNodes } from "../mono-ui-kvLVIf1V.js";
+import { t as customElement } from "../mono-element-CKcT0rwv.js";
 import { a as defineHybridPropAliases, o as numberStringConverter, r as booleanStringConverter, t as __decorate } from "../decorate-DbYFpi8R.js";
 import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
-import { i as guardHostTextContent, s as placeSlotNode } from "../light-slots-B980aknU.js";
+import { i as guardHostTextContent, s as placeSlotNode } from "../light-slots-B5Ck0t_E.js";
 import { n as applyPopupPlacement, r as computePopupPlacement, t as PopupPortalController } from "../popup-portal-CINuVjNY.js";
 import { n as cssPart, r as defineCssClassAliases, t as applyCssClass } from "../css-class-B6Tc_MAx.js";
 import { LitElement, html, isServer, nothing } from "lit";
@@ -150,6 +150,7 @@ const MonoDropdownCore = (superClass) => {
 			this._appliedHostClasses = /* @__PURE__ */ new Set();
 			this._viewportBound = false;
 			this._viewportFrame = 0;
+			this._documentBound = false;
 			this._handleTriggerClick = (event) => {
 				if (this.disabled || this.trigger !== "click") return;
 				event.stopPropagation();
@@ -220,15 +221,13 @@ const MonoDropdownCore = (superClass) => {
 			this._resolvedSide = this._sideFromPlacement(this.placement);
 			this._updateHostClasses();
 			if (isServer) return;
-			document.addEventListener("click", this._handleDocumentClick, true);
-			document.addEventListener("keydown", this._handleDocumentKeydown);
-			if (this.modelValue) this._bindViewport();
+			if (this.modelValue) {
+				this._bindViewport();
+				this._bindDocument();
+			}
 		}
 		disconnectedCallback() {
-			if (!isServer) {
-				document.removeEventListener("click", this._handleDocumentClick, true);
-				document.removeEventListener("keydown", this._handleDocumentKeydown);
-			}
+			this._unbindDocument();
 			this._unbindViewport();
 			this._detachTriggerListeners();
 			super.disconnectedCallback();
@@ -239,9 +238,30 @@ const MonoDropdownCore = (superClass) => {
 			this._syncTriggerListeners();
 			if (this.modelValue) {
 				this._bindViewport();
+				this._bindDocument();
 				if (changed.has("modelValue")) this._popup.reposition();
 				this._positionPanel();
-			} else this._unbindViewport();
+			} else {
+				this._unbindViewport();
+				this._unbindDocument();
+			}
+		}
+		/**
+		* Outside-click / Escape listeners, bound while OPEN only (select's rule). Both handlers
+		* bail when closed, so at rest they cost only dispatch — two `document` listeners per
+		* dropdown (one capture-phase) in the path of every click and keystroke on the page.
+		*/
+		_bindDocument() {
+			if (isServer || this._documentBound) return;
+			this._documentBound = true;
+			document.addEventListener("click", this._handleDocumentClick, true);
+			document.addEventListener("keydown", this._handleDocumentKeydown);
+		}
+		_unbindDocument() {
+			if (isServer || !this._documentBound) return;
+			this._documentBound = false;
+			document.removeEventListener("click", this._handleDocumentClick, true);
+			document.removeEventListener("keydown", this._handleDocumentKeydown);
 		}
 		_toBoolean(value) {
 			if (typeof value === "boolean") return value;

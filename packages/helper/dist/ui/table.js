@@ -1,15 +1,15 @@
 import { a as parseFieldPath, c as toODataClause, l as toODataSelector, n as isPath, r as mergePatch, s as setFieldValue, t as getFieldValue } from "../field-path-BabiMrrA.js";
-import { a as buildGroups, c as isGroupNode, o as collectGroupPaths, s as flattenLeaves } from "../data-source-read-FxqzQkk2.js";
+import { a as buildGroups, c as isGroupNode, o as collectGroupPaths, s as flattenLeaves } from "../data-source-read-Cp_h7NIf.js";
 import { A as resolveSearchEntries, D as isWildcardPattern, O as normalizeSearchExpr, c as resolveErrorMessages, h as mergeSearchFields, k as plainSearchColumns, l as setErrorMessages, n as describeError, r as errorStatus, s as normalizeError, t as DEFAULT_ERROR_MESSAGES, w as expandWildcard } from "../normalize-error-D93O4q8g.js";
-import { h as monoArraySource } from "../data-source-options-Ky5ZGbc8.js";
-import { a as seedFromRanges, i as minimize, n as buildDateTree, o as setAllChecked, r as checkState, s as setChecked, t as monoDataGrid } from "../mono-data-grid-DVAt2Loc.js";
-import { _ as monoHostChildren, b as monoPhantomOptions, d as buildSizeStyle, h as monoApplyPhantomOptions, l as ColumnAutoSize, s as startMonoSizeAttributes, u as cssLengthToPx, v as monoPendingActive, y as monoPendingGrace } from "../mono-ui-jtBvJ9d5.js";
+import { h as monoArraySource } from "../data-source-options-lDR-g9Eb.js";
+import { a as seedFromRanges, i as minimize, n as buildDateTree, o as setAllChecked, r as checkState, s as setChecked, t as monoDataGrid } from "../mono-data-grid-kV4jYu2g.js";
+import { _ as monoHostChildren, b as monoPhantomOptions, d as buildSizeStyle, h as monoApplyPhantomOptions, l as ColumnAutoSize, s as startMonoSizeAttributes, u as cssLengthToPx, v as monoPendingActive, y as monoPendingGrace } from "../mono-ui-kvLVIf1V.js";
 import { n as detachEventHandlers, t as applyProps } from "../element-props-xvw0EB7H.js";
-import { t as customElement } from "../mono-element-9uQRbp5X.js";
+import { t as customElement } from "../mono-element-CKcT0rwv.js";
 import { a as defineHybridPropAliases, i as defineHybridPropAlias, o as numberStringConverter, r as booleanStringConverter, t as __decorate } from "../decorate-DbYFpi8R.js";
 import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
 import { t as isIconifyClass } from "../icon-ClxnYhBG.js";
-import { n as bucketHasContent, o as placeLightSlots, r as captureLightSlots, s as placeSlotNode } from "../light-slots-B980aknU.js";
+import { n as bucketHasContent, o as placeLightSlots, r as captureLightSlots, s as placeSlotNode } from "../light-slots-B5Ck0t_E.js";
 import { t as PopupPortalController } from "../popup-portal-CINuVjNY.js";
 import { n as cssPart } from "../css-class-B6Tc_MAx.js";
 import { LitElement, html, isServer, nothing } from "lit";
@@ -71,11 +71,30 @@ const MonoTableControllerCore = (superClass) => {
 		_subscribe() {
 			this._off?.();
 			detachEventHandlers(this);
+			this._lastStateKey = void 0;
 			this._off = this.dataGrid?.subscribe(() => {
+				if (this._stateUnchanged()) return;
 				this._scheduleApplyProps();
 				this.requestUpdate();
 			});
 			this._scheduleApplyProps();
+		}
+		/**
+		* What this element renders from the CONTROLLER, as a flat list — or `undefined` (the
+		* default) for "re-render on every notify", which is what every element did.
+		*
+		* An element that defines it skips a notify whose key equals the last one. Worth it for the
+		* per-row elements: every `<mono-table-checkbox>` re-rendered on every notify (a load flag, a
+		* summary, another row's tick), N updates for a change that moves one box. Its own props are
+		* unaffected — a Lit property change still updates it the normal way.
+		*/
+		_stateKey() {}
+		_stateUnchanged() {
+			const key = this._stateKey();
+			if (!key) return false;
+			const last = this._lastStateKey;
+			this._lastStateKey = key;
+			return !!last && last.length === key.length && key.every((v, i) => Object.is(v, last[i]));
 		}
 		/**
 		* Drive the apply from `update()` as well as `_subscribe()`.
@@ -1189,7 +1208,7 @@ const MonoTablePagingCore = (superClass) => {
 			this._off?.();
 			this._off = this.dataGrid?.subscribe(() => {
 				this.requestUpdate();
-				if (this.type === "virtual-scroll") this._recomputeWindow();
+				if (this.type === "virtual-scroll") this._scheduleScroll();
 			});
 		}
 		_scrollActive() {
@@ -4538,6 +4557,24 @@ const MonoTableCheckboxCore = (superClass) => {
 			row?.classList.toggle("mono-table-row-selected", this._checked);
 			if (this._checked) row?.setAttribute("mono-selected", "");
 			else row?.removeAttribute("mono-selected");
+		}
+		/**
+		* All this box draws from the controller: ticked, mixed (select-all), and the drain's
+		* `pending`. A notify that moves none of them — another row's tick, a load flag, a summary —
+		* no longer re-renders every row's checkbox (see the base's `_stateKey`).
+		*/
+		_stateKey() {
+			return this.type === "all" ? [
+				this.type,
+				this._checked,
+				this._indeterminate,
+				this._pending
+			] : [
+				this.type,
+				this._checked,
+				this._pending,
+				this.item
+			];
 		}
 		/** Whether this box is ticked right now. */
 		get _checked() {

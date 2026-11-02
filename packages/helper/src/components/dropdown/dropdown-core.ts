@@ -254,20 +254,18 @@ export const MonoDropdownCore = <T extends Constructor<LitElement>>(superClass: 
       this._resolvedSide = this._sideFromPlacement(this.placement)
       this._updateHostClasses()
       if (isServer) return
-      document.addEventListener('click', this._handleDocumentClick, true)
-      document.addEventListener('keydown', this._handleDocumentKeydown)
-      // The viewport listeners are NOT bound here for a CLOSED dropdown — see
+      // The document AND viewport listeners are NOT bound here for a CLOSED dropdown — see
       // `_bindViewport`; `updated()` owns them from open to close. This line covers
       // the one case `updated()` cannot: reattaching an already-open dropdown
       // schedules no Lit update, so nothing else would rebind it.
-      if (this.modelValue) this._bindViewport()
+      if (this.modelValue) {
+        this._bindViewport()
+        this._bindDocument()
+      }
     }
 
     override disconnectedCallback(): void {
-      if (!isServer) {
-        document.removeEventListener('click', this._handleDocumentClick, true)
-        document.removeEventListener('keydown', this._handleDocumentKeydown)
-      }
+      this._unbindDocument()
       this._unbindViewport()
       this._detachTriggerListeners()
       super.disconnectedCallback()
@@ -286,6 +284,7 @@ export const MonoDropdownCore = <T extends Constructor<LitElement>>(superClass: 
       // where `_setOpen` never runs.
       if (this.modelValue) {
         this._bindViewport()
+        this._bindDocument()
         // Light DOM: the portal controller positions the relocated panel — but its
         // `hostUpdated` runs BEFORE `updated()` (Lit calls controllers first). On
         // the first render of an initially-open dropdown the light build has not
@@ -299,7 +298,29 @@ export const MonoDropdownCore = <T extends Constructor<LitElement>>(superClass: 
         this._positionPanel()
       } else {
         this._unbindViewport()
+        this._unbindDocument()
       }
+    }
+
+    private _documentBound = false
+
+    /**
+     * Outside-click / Escape listeners, bound while OPEN only (select's rule). Both handlers
+     * bail when closed, so at rest they cost only dispatch — two `document` listeners per
+     * dropdown (one capture-phase) in the path of every click and keystroke on the page.
+     */
+    private _bindDocument(): void {
+      if (isServer || this._documentBound) return
+      this._documentBound = true
+      document.addEventListener('click', this._handleDocumentClick, true)
+      document.addEventListener('keydown', this._handleDocumentKeydown)
+    }
+
+    private _unbindDocument(): void {
+      if (isServer || !this._documentBound) return
+      this._documentBound = false
+      document.removeEventListener('click', this._handleDocumentClick, true)
+      document.removeEventListener('keydown', this._handleDocumentKeydown)
     }
 
     protected _toBoolean(value: unknown): boolean {

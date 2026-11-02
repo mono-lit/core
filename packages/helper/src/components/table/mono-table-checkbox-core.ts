@@ -234,6 +234,17 @@ export const MonoTableCheckboxCore = <T extends Constructor<LitElement>>(superCl
       else row?.removeAttribute('mono-selected')
     }
 
+    /**
+     * All this box draws from the controller: ticked, mixed (select-all), and the drain's
+     * `pending`. A notify that moves none of them — another row's tick, a load flag, a summary —
+     * no longer re-renders every row's checkbox (see the base's `_stateKey`).
+     */
+    protected override _stateKey(): unknown[] {
+      return this.type === 'all'
+        ? [this.type, this._checked, this._indeterminate, this._pending]
+        : [this.type, this._checked, this._pending, this.item]
+    }
+
     /** Whether this box is ticked right now. */
     private get _checked(): boolean {
       const check = this.dataGrid?.check?.()

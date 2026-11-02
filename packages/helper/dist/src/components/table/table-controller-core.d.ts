@@ -19,6 +19,8 @@ export declare class MonoTableControllerCoreInterface {
    */
   protected _propsSlot?: MonoTablePropsSlot;
   protected _applyControllerProps(): void;
+  /** What the element renders from the controller; a notify with an unchanged key is skipped. */
+  protected _stateKey(): unknown[] | undefined;
 }
 /** The `props` key an element reads — see {@link MonoTableProps}. */
 export type MonoTablePropsSlot = 'th' | 'sort' | 'summary' | 'search' | 'info' | 'paging' | 'loading' | 'empty' | 'error' | 'pageSize' | 'pagingGroup' | 'detail' | 'checkbox';

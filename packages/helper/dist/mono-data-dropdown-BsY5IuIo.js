@@ -1,4 +1,4 @@
-import { t as monoDataGrid } from "./mono-data-grid-DVAt2Loc.js";
+import { t as monoDataGrid } from "./mono-data-grid-kV4jYu2g.js";
 import { t as createNotifier } from "./notifier-BIrqUzRh.js";
 
 //#region src/components/dropdown-table/mono-data-dropdown.ts
@@ -251,7 +251,21 @@ function monoDataDropdown(source = null, opts = {}) {
 	function setOpen(next) {
 		if (ctrl.open === next) return;
 		ctrl.open = next;
+		if (!next) pruneCache();
 		notify();
+	}
+	/**
+	* Drop cached rows no current key needs, once the cache has outgrown the selection.
+	*
+	* The cache exists to label chips whose row is not on the loaded page; it only ever grew —
+	* every key ever selected, and after a select-all every drained row — and was cleared only on
+	* `bind()`. Pruned on close, with slack, so toggling a few rows never thrashes it.
+	*/
+	function pruneCache() {
+		const keys = currentKeys();
+		if (cache.size <= keys.length * 2 + 200) return;
+		const keep = new Set(keys.map((k) => keyStr(normKey(k))));
+		for (const k of cache.keys()) if (!keep.has(k)) cache.delete(k);
 	}
 	function hasStore() {
 		const s = grid.dataSource;
@@ -265,6 +279,26 @@ function monoDataDropdown(source = null, opts = {}) {
 		for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
 		return out;
 	}
+	/**
+	* `run` over every part, at most `limit` requests in flight — the result order kept.
+	*
+	* A thousand preset keys are twenty `in` chunks (or ~67 OR-chain chunks in the fallback), and
+	* `Promise.all` over them fired every request at once: a burst a backend may throttle or reject,
+	* and that queues behind the browser's per-host connection cap anyway.
+	*/
+	async function mapLimited(parts, limit, run) {
+		const out = new Array(parts.length);
+		let next = 0;
+		const worker = async () => {
+			while (next < parts.length) {
+				const i = next++;
+				out[i] = await run(parts[i]);
+			}
+		};
+		await Promise.all(Array.from({ length: Math.min(limit, parts.length) }, worker));
+		return out;
+	}
+	const RESOLVE_CONCURRENCY = 4;
 	const selectFields = () => typeof displayExpr === "string" && displayExpr ? [keyExpr, displayExpr] : void 0;
 	async function resolveSelected() {
 		const missing = currentKeys().filter((k) => !cache.has(keyStr(normKey(k))));
@@ -274,14 +308,14 @@ function monoDataDropdown(source = null, opts = {}) {
 			const store = s.store();
 			let rows = [];
 			try {
-				rows = (await Promise.all(chunk(missing, 50).map((part) => store.load({
+				rows = (await mapLimited(chunk(missing, 50), RESOLVE_CONCURRENCY, (part) => store.load({
 					filter: [
 						keyExpr,
 						"in",
 						part
 					],
 					select: selectFields()
-				})))).flatMap(storeRows);
+				}))).flatMap(storeRows);
 			} catch {
 				const orFilter = (arr) => arr.map((v) => [
 					keyExpr,
@@ -292,10 +326,10 @@ function monoDataDropdown(source = null, opts = {}) {
 					"or",
 					b
 				] : b, null);
-				rows = (await Promise.all(chunk(missing, 15).map((part) => store.load({
+				rows = (await mapLimited(chunk(missing, 15), RESOLVE_CONCURRENCY, (part) => store.load({
 					filter: orFilter(part),
 					select: selectFields()
-				})))).flatMap(storeRows);
+				}))).flatMap(storeRows);
 			}
 			for (const row of rows) cacheRow(row?.[keyExpr], row);
 		} else if (typeof s?.data === "function") {

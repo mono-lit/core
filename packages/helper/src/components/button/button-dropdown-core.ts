@@ -356,16 +356,32 @@ export const MonoButtonDropdownCore = <T extends Constructor<LitElement>>(
     override connectedCallback(): void {
       super.connectedCallback()
       if (isServer) return
-      document.addEventListener('click', this._onDocumentClick, true)
-      document.addEventListener('keydown', this._onDocumentKeydown)
+      // Open-only (see `_syncDocument`); a reconnect while open schedules no update.
+      this._syncDocument()
     }
 
     override disconnectedCallback(): void {
-      if (!isServer) {
+      this._syncDocument(false)
+      super.disconnectedCallback()
+    }
+
+    private _documentBound = false
+
+    /**
+     * Outside-click / Escape listeners, bound while OPEN only (select's rule). Both handlers
+     * bail when closed, and a grid that puts one of these in every row held two `document`
+     * listeners per row — one capture-phase — in the path of every click and keystroke.
+     */
+    private _syncDocument(want = this.modelValue && this.isConnected): void {
+      if (isServer || want === this._documentBound) return
+      this._documentBound = want
+      if (want) {
+        document.addEventListener('click', this._onDocumentClick, true)
+        document.addEventListener('keydown', this._onDocumentKeydown)
+      } else {
         document.removeEventListener('click', this._onDocumentClick, true)
         document.removeEventListener('keydown', this._onDocumentKeydown)
       }
-      super.disconnectedCallback()
     }
 
     /* -------------------------------- state -------------------------------- */
@@ -505,6 +521,7 @@ export const MonoButtonDropdownCore = <T extends Constructor<LitElement>>(
     override updated(changed: Map<string, unknown>): void {
       // @ts-ignore — super may not declare updated through the generic base.
       super.updated?.(changed)
+      this._syncDocument()
       // `_resolvedSide` and `modelValue` both move after a render, and the root
       // is a static template node, so its attributes are written here rather
       // than bound one by one.

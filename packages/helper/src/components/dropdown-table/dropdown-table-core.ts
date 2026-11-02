@@ -624,8 +624,6 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
       // reconnect bug; `_wireDropdown()` is idempotent, so calling it here is safe.
       this._wireDropdown()
       if (!isServer) {
-        document.addEventListener('pointerdown', this._onDocPointer, true)
-        document.addEventListener('keydown', this._onDocKey, true)
         // Shadow build only — the light build's panel is repositioned by the
         // popup controller, which registers its own scroll/resize listeners.
         // Open-only (see `_syncViewportListeners`); re-bound here for a reconnect
@@ -643,6 +641,7 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
       if (!isServer) {
         document.removeEventListener('pointerdown', this._onDocPointer, true)
         document.removeEventListener('keydown', this._onDocKey, true)
+        this._docBound = false
         window.removeEventListener('scroll', this._onViewportChange, true)
         window.removeEventListener('resize', this._onViewportChange)
         if (this._viewportFrame) cancelAnimationFrame(this._viewportFrame)
@@ -882,11 +881,9 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
       this._reflectSelection()
     }
 
-    protected _reflectSelection(): void {
+    protected _reflectSelection(rows: Element[] = this._rowEls()): void {
       const dd = this._dd
-      const root = this._rowScope
-      if (!dd || !root?.querySelectorAll) return
-      const rows = Array.from(root.querySelectorAll('[data-row-key]'))
+      if (!dd) return
       // Searching / paging swaps the rows out from under the highlight; drop it
       // onto the new first row rather than leaving nothing highlighted.
       //
@@ -916,8 +913,11 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
         el.toggleAttribute('mono-selected', on)
         el.toggleAttribute('mono-dd-selected', on)
         el.toggleAttribute('mono-dd-active', active)
-        if (on) el.setAttribute('aria-selected', 'true')
-        else el.removeAttribute('aria-selected')
+        // Written only on a change — this runs per row on every reflect.
+        if (on !== el.hasAttribute('aria-selected')) {
+          if (on) el.setAttribute('aria-selected', 'true')
+          else el.removeAttribute('aria-selected')
+        }
       })
     }
 
@@ -925,7 +925,22 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
     private _observePanel(): void {
       const root = this._rowScope as Node | null
       if (!root || this._panelObserver) return
-      this._panelObserver = new MutationObserver(() => this._reflectSelection())
+      // Only a batch that adds or removes ROWS re-reflects. The scope is the whole panel content
+      // (pager, loading overlay, header filters, cell text), and any patch there used to run a
+      // full reflect over every row. Rows a framework re-renders always come and go as nodes
+      // that are, or contain, a `[data-row-key]` — this element's own writes are attributes,
+      // which the observer does not watch.
+      const touchesRows = (nodes: NodeList): boolean => {
+        for (const n of Array.from(nodes)) {
+          if (n.nodeType !== 1) continue
+          const el = n as Element
+          if (el.matches('[data-row-key]') || el.querySelector('[data-row-key]')) return true
+        }
+        return false
+      }
+      this._panelObserver = new MutationObserver((records) => {
+        if (records.some((r) => touchesRows(r.addedNodes) || touchesRows(r.removedNodes))) this._reflectSelection()
+      })
       this._panelObserver.observe(root, { childList: true, subtree: true })
     }
 
@@ -1001,6 +1016,25 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
 
     private _viewportBound = false
     private _viewportFrame = 0
+    private _docBound = false
+
+    /**
+     * Outside-dismiss listeners, both builds, bound while a panel is OPEN only (select's rule).
+     * Both handlers bail when the list and "+N more" panels are closed, so at rest they cost
+     * only dispatch — two capture-phase `document` listeners per field.
+     */
+    private _syncDocListeners(): void {
+      const want = this.isConnected && (this._isOpen || this._moreOpen)
+      if (want === this._docBound) return
+      this._docBound = want
+      if (want) {
+        document.addEventListener('pointerdown', this._onDocPointer, true)
+        document.addEventListener('keydown', this._onDocKey, true)
+      } else {
+        document.removeEventListener('pointerdown', this._onDocPointer, true)
+        document.removeEventListener('keydown', this._onDocKey, true)
+      }
+    }
 
     /**
      * Shadow build only, and only while a panel is OPEN — the popup controller's rule. They used
@@ -1010,6 +1044,7 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
      */
     private _syncViewportListeners(): void {
       if (isServer) return
+      this._syncDocListeners()
       const want = this._isShadowHost && this.isConnected && (this._isOpen || this._moreOpen)
       if (want === this._viewportBound) return
       if (want) {
@@ -1193,22 +1228,22 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
       return (root?.querySelector?.('.mono-dropdown-table-panel') as HTMLElement | null) ?? null
     }
 
-    private _setActiveRow(key: string | null, reveal = false): void {
+    /** `rows`: the caller's own `_rowEls()` — one query per arrow key, not three. */
+    private _setActiveRow(key: string | null, reveal = false, rows: HTMLElement[] = this._rowEls()): void {
       this._activeRowKey = key
-      this._reflectSelection()
+      this._reflectSelection(rows)
       if (!reveal || key == null) return
-      this._rowEls()
-        .find((r) => r.getAttribute('data-row-key') === key)
-        ?.scrollIntoView?.({ block: 'nearest' })
+      rows.find((r) => r.getAttribute('data-row-key') === key)?.scrollIntoView?.({ block: 'nearest' })
     }
 
     private _moveActiveRow(delta: 1 | -1): void {
-      const keys = this._rowEls().map((r) => r.getAttribute('data-row-key') ?? '')
+      const rows = this._rowEls()
+      const keys = rows.map((r) => r.getAttribute('data-row-key') ?? '')
       if (!keys.length) return
       const i = this._activeRowKey == null ? -1 : keys.indexOf(this._activeRowKey)
       const next =
         i < 0 ? (delta > 0 ? 0 : keys.length - 1) : Math.min(Math.max(i + delta, 0), keys.length - 1)
-      this._setActiveRow(keys[next], true)
+      this._setActiveRow(keys[next], true, rows)
     }
 
     /** Move the keyboard into the row list, highlighting the first row. */

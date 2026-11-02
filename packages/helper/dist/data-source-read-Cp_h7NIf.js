@@ -20,8 +20,11 @@ function isGroupNode(x) {
 */
 function flattenLeaves(rows) {
 	const out = [];
-	for (const row of rows) if (isGroupNode(row)) out.push(...flattenLeaves(row.items));
-	else out.push(row);
+	const walk = (list) => {
+		for (const row of list) if (isGroupNode(row)) walk(row.items);
+		else out.push(row);
+	};
+	walk(rows);
 	return out;
 }
 /**
