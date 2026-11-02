@@ -3,13 +3,13 @@ import { a as buildGroups, c as isGroupNode, o as collectGroupPaths, s as flatte
 import { A as resolveSearchEntries, D as isWildcardPattern, O as normalizeSearchExpr, c as resolveErrorMessages, h as mergeSearchFields, k as plainSearchColumns, l as setErrorMessages, n as describeError, r as errorStatus, s as normalizeError, t as DEFAULT_ERROR_MESSAGES, w as expandWildcard } from "../normalize-error-D93O4q8g.js";
 import { h as monoArraySource } from "../data-source-options-QjuI73g8.js";
 import { a as seedFromRanges, i as minimize, n as buildDateTree, o as setAllChecked, r as checkState, s as setChecked, t as monoDataGrid } from "../mono-data-grid-8jmeIXUU.js";
-import { _ as monoHostChildren, b as monoPhantomOptions, d as buildSizeStyle, h as monoApplyPhantomOptions, l as ColumnAutoSize, s as startMonoSizeAttributes, u as cssLengthToPx, v as monoPendingActive, y as monoPendingGrace } from "../mono-ui-KOBJcnXk.js";
+import { _ as monoHostChildren, b as monoPhantomOptions, d as buildSizeStyle, h as monoApplyPhantomOptions, l as ColumnAutoSize, s as startMonoSizeAttributes, u as cssLengthToPx, v as monoPendingActive, y as monoPendingGrace } from "../mono-ui-CK5wNw-7.js";
 import { n as detachEventHandlers, t as applyProps } from "../element-props-xvw0EB7H.js";
-import { t as customElement } from "../mono-element-Bc9wElPy.js";
+import { t as customElement } from "../mono-element-BP0RKeDD.js";
 import { a as defineHybridPropAliases, i as defineHybridPropAlias, o as numberStringConverter, r as booleanStringConverter, t as __decorate } from "../decorate-DbYFpi8R.js";
 import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
 import { t as isIconifyClass } from "../icon-ClxnYhBG.js";
-import { n as bucketHasContent, o as placeLightSlots, r as captureLightSlots, s as placeSlotNode } from "../light-slots-BnBR29E7.js";
+import { n as bucketHasContent, o as placeLightSlots, r as captureLightSlots, s as placeSlotNode } from "../light-slots-RAAINrYd.js";
 import { t as PopupPortalController } from "../popup-portal-C8ttHDRX.js";
 import { n as cssPart } from "../css-class-B6Tc_MAx.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
@@ -1294,8 +1294,11 @@ const MonoTablePagingCore = (superClass) => {
 			const rh = Math.max(1, Number(this.rowHeight) || 44);
 			const over = Math.max(0, Math.floor(Number(this.overscan) || 0));
 			const loaded = grid.loadedCount;
-			let start = Math.floor(el.scrollTop / rh) - over;
-			let end = Math.ceil((el.scrollTop + el.clientHeight) / rh) + over;
+			const first = Math.floor(el.scrollTop / rh);
+			const last = Math.ceil((el.scrollTop + el.clientHeight) / rh);
+			const stride = Math.max(1, over);
+			let start = Math.floor(first / stride) * stride - over;
+			let end = Math.ceil(last / stride) * stride + over;
 			start = Math.max(0, start);
 			end = Math.min(loaded, Math.max(start, end));
 			const padTop = start * rh;
@@ -2245,6 +2248,7 @@ const MonoTableThCore = (superClass) => {
 			this._tree = [];
 			this._expanded = /* @__PURE__ */ new Set();
 			this._exclusiveWarned = false;
+			this._lastLoaded = 0;
 			this._seededSort = false;
 			this._filterOpen = false;
 			this._values = [];
@@ -2296,6 +2300,11 @@ const MonoTableThCore = (superClass) => {
 				const sizer = this._autoSize ??= new ColumnAutoSize(this);
 				sizer.min = cssLengthToPx(this.minWidth ?? null, cell);
 				sizer.max = cssLengthToPx(this.maxWidth ?? null, cell);
+				const grid = this.dataGrid;
+				sizer.growOnly = grid?.scrollMode === "virtual";
+				const loaded = grid?.loadedCount ?? 0;
+				if (loaded < this._lastLoaded) sizer.resetFloor();
+				this._lastLoaded = loaded;
 				sizer.schedule();
 			} else {
 				if (this._autoSize) {

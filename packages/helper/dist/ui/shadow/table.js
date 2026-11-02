@@ -1,4 +1,4 @@
-import { C as monoPendingGrace, S as monoPendingActive, _ as buildSizeStyle, a as __decorate, c as defineHybridPropAlias, f as customElement, g as cssLengthToPx, h as ColumnAutoSize, l as defineHybridPropAliases, m as startMonoSizeAttributes, n as adoptIconStyles, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration, u as numberStringConverter, w as monoPhantomOptions, y as monoApplyPhantomOptions } from "../../hydration-flush-9AJE8FRl.js";
+import { C as monoPendingGrace, S as monoPendingActive, _ as buildSizeStyle, a as __decorate, c as defineHybridPropAlias, f as customElement, g as cssLengthToPx, h as ColumnAutoSize, l as defineHybridPropAliases, m as startMonoSizeAttributes, n as adoptIconStyles, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration, u as numberStringConverter, w as monoPhantomOptions, y as monoApplyPhantomOptions } from "../../hydration-flush-y3en4P1-.js";
 import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
 import { t as isIconifyClass } from "../../icon-BM9N-jOt.js";
 import { n as cssPart } from "../../css-class-B6Tc_MAx.js";
@@ -7,7 +7,7 @@ import { t as input_css_raw_default } from "../../input.css_raw-Br-T8RWv.js";
 import { t as PopupPortalController } from "../../popup-portal-C8ttHDRX.js";
 import { C as resolveSearchEntries, S as plainSearchColumns, _ as expandWildcard, b as isWildcardPattern, c as resolveErrorMessages, f as mergeSearchFields, l as setErrorMessages, n as describeError, r as errorStatus, s as normalizeError, t as DEFAULT_ERROR_MESSAGES, x as normalizeSearchExpr } from "../../normalize-error-BmLbgANw.js";
 import { a as seedFromRanges, i as minimize, n as buildDateTree, o as setAllChecked, r as checkState, s as setChecked, t as monoDataGrid } from "../../mono-data-grid-KDpu4d4_.js";
-import { n as captureLightSlots, r as placeLightSlots } from "../../light-slots-Cb6e-LU3.js";
+import { n as captureLightSlots, r as placeLightSlots } from "../../light-slots-CEID7fhG.js";
 import { t as checkbox_css_raw_default } from "../../checkbox.css_raw-AYtSbUtY.js";
 import { a as buildGroups, c as isGroupNode, o as collectGroupPaths, s as flattenLeaves } from "../../data-source-read-i6CYSUEl.js";
 import { h as monoArraySource } from "../../data-source-options-Cz9fVLK8.js";
@@ -1805,8 +1805,11 @@ const MonoTablePagingCore = (superClass) => {
 			const rh = Math.max(1, Number(this.rowHeight) || 44);
 			const over = Math.max(0, Math.floor(Number(this.overscan) || 0));
 			const loaded = grid.loadedCount;
-			let start = Math.floor(el.scrollTop / rh) - over;
-			let end = Math.ceil((el.scrollTop + el.clientHeight) / rh) + over;
+			const first = Math.floor(el.scrollTop / rh);
+			const last = Math.ceil((el.scrollTop + el.clientHeight) / rh);
+			const stride = Math.max(1, over);
+			let start = Math.floor(first / stride) * stride - over;
+			let end = Math.ceil(last / stride) * stride + over;
 			start = Math.max(0, start);
 			end = Math.min(loaded, Math.max(start, end));
 			const padTop = start * rh;
@@ -2246,6 +2249,7 @@ const MonoTableThCore = (superClass) => {
 			this._tree = [];
 			this._expanded = /* @__PURE__ */ new Set();
 			this._exclusiveWarned = false;
+			this._lastLoaded = 0;
 			this._seededSort = false;
 			this._filterOpen = false;
 			this._values = [];
@@ -2297,6 +2301,11 @@ const MonoTableThCore = (superClass) => {
 				const sizer = this._autoSize ??= new ColumnAutoSize(this);
 				sizer.min = cssLengthToPx(this.minWidth ?? null, cell);
 				sizer.max = cssLengthToPx(this.maxWidth ?? null, cell);
+				const grid = this.dataGrid;
+				sizer.growOnly = grid?.scrollMode === "virtual";
+				const loaded = grid?.loadedCount ?? 0;
+				if (loaded < this._lastLoaded) sizer.resetFloor();
+				this._lastLoaded = loaded;
 				sizer.schedule();
 			} else {
 				if (this._autoSize) {

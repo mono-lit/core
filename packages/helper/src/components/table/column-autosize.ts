@@ -224,7 +224,15 @@ function headerWidth(cell: HTMLElement, host: HTMLElement): number {
 export class ColumnAutoSize {
   min?: number
   max?: number
+  /**
+   * Never shrink — for a virtual-scroll table, whose body holds only the WINDOW of the rows: each
+   * window shift measured a different slice, so the column grew and shrank as the list scrolled and
+   * every change relaid the whole table. The column settles at the widest value seen instead, until
+   * `resetFloor()` (a new result set).
+   */
+  growOnly = false
 
+  private _floor = 0
   private _raf = 0
   private _table?: HTMLTableElement
   private _observer?: MutationObserver
@@ -250,6 +258,13 @@ export class ColumnAutoSize {
       this._raf = 0
       this._run()
     })
+  }
+
+  /** Forget the grow-only floor (new rows) and re-measure. */
+  resetFloor(): void {
+    if (!this._floor) return
+    this._floor = 0
+    this.schedule()
   }
 
   /** Stop watching, and hand the column back to whatever width it is given next. */
@@ -304,6 +319,8 @@ export class ColumnAutoSize {
       }
     }
     width = Math.ceil(clampWidth(width + 1, this.min, this.max)) // +1: sub-pixel text never ellipses
+    if (this.growOnly) width = this._floor = Math.max(width, this._floor)
+    else this._floor = 0
     const value = `${width}px`
 
     const col = colAt(table, index)

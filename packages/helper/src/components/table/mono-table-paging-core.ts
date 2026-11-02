@@ -111,7 +111,10 @@ export const MonoTablePagingCore = <T extends Constructor<LitElement>>(superClas
     @property({ converter: numberStringConverter })
     threshold = 200
 
-    /** Extra rows rendered above/below the virtual window. */
+    /**
+     * Extra rows rendered above/below the virtual window — and the step the window moves in: it
+     * re-slices once per `overscan` rows scrolled, not once per row.
+     */
     @property({ converter: numberStringConverter })
     overscan = 6
 
@@ -312,8 +315,17 @@ export const MonoTablePagingCore = <T extends Constructor<LitElement>>(superClas
       const rh = Math.max(1, Number(this.rowHeight) || 44)
       const over = Math.max(0, Math.floor(Number(this.overscan) || 0))
       const loaded = grid.loadedCount
-      let start = Math.floor(el.scrollTop / rh) - over
-      let end = Math.ceil((el.scrollTop + el.clientHeight) / rh) + over
+      // Snapped to blocks of `stride` rows, so the window moves once per block instead of once per
+      // row. Every window change is a grid notify — the consumer re-patches its rows, every row's
+      // checkbox, the header cells and the host re-render — and the unsnapped window paid all of it
+      // every ~rowHeight px of scroll (every frame on a fast scroll). The visible rows always keep
+      // between `over` and `over + stride` rows of buffer, and `setVirtualWindow` drops the
+      // unchanged recomputes in between.
+      const first = Math.floor(el.scrollTop / rh)
+      const last = Math.ceil((el.scrollTop + el.clientHeight) / rh)
+      const stride = Math.max(1, over)
+      let start = Math.floor(first / stride) * stride - over
+      let end = Math.ceil(last / stride) * stride + over
       start = Math.max(0, start)
       end = Math.min(loaded, Math.max(start, end))
       const padTop = start * rh

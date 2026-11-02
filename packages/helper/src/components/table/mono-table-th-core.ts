@@ -231,6 +231,8 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
     maxWidth?: CssSizeValue
 
     private _autoSize?: ColumnAutoSize
+    /** `loadedCount` at the last width sync — a drop resets the virtual-scroll grow-only floor. */
+    private _lastLoaded = 0
 
     /**
      * Horizontal alignment of the header cell — applied to the parent `<th>`, the same way
@@ -307,6 +309,14 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
         const sizer = (this._autoSize ??= new ColumnAutoSize(this))
         sizer.min = cssLengthToPx(this.minWidth ?? null, cell)
         sizer.max = cssLengthToPx(this.maxWidth ?? null, cell)
+        // A virtual-scroll body holds only the window, so the column grows to the widest row seen
+        // and holds there. A drop in `loadedCount` is a reset load (search / filter / sort / scope):
+        // a new result set, which may shrink the column again.
+        const grid = this.dataGrid
+        sizer.growOnly = grid?.scrollMode === 'virtual'
+        const loaded = grid?.loadedCount ?? 0
+        if (loaded < this._lastLoaded) sizer.resetFloor()
+        this._lastLoaded = loaded
         sizer.schedule()
       } else {
         if (this._autoSize) {

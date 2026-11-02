@@ -53,6 +53,14 @@ export declare class ColumnAutoSize {
   private readonly host;
   min?: number;
   max?: number;
+  /**
+   * Never shrink — for a virtual-scroll table, whose body holds only the WINDOW of the rows: each
+   * window shift measured a different slice, so the column grew and shrank as the list scrolled and
+   * every change relaid the whole table. The column settles at the widest value seen instead, until
+   * `resetFloor()` (a new result set).
+   */
+  growOnly: boolean;
+  private _floor;
   private _raf;
   private _table?;
   private _observer?;
@@ -65,6 +73,8 @@ export declare class ColumnAutoSize {
   private readonly _onFonts;
   constructor(host: HTMLElement);
   schedule(): void;
+  /** Forget the grow-only floor (new rows) and re-measure. */
+  resetFloor(): void;
   /** Stop watching, and hand the column back to whatever width it is given next. */
   stop(clear?: boolean): void;
   private _watch;

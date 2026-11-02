@@ -139,6 +139,25 @@ describe('ColumnAutoSize', () => {
     sizer.stop(true)
     expect(width()).toEqual({ col: '', th: '' })
   })
+
+  it('growOnly holds the widest width seen (virtual window) until resetFloor()', async () => {
+    const { table, sizer, width } = mount(['9.999.999'])
+    sizer.growOnly = true
+    sizer.schedule()
+    await tick()
+    expect(width().col).toBe('91px')
+
+    // The window scrolled to narrower rows — the column must not shrink.
+    table.tBodies[0]!.rows[1]!.cells[1]!.textContent = '0'
+    await tick()
+    expect(width().col).toBe('91px')
+
+    // A new result set: the floor goes, and the column fits what is there now.
+    sizer.resetFloor()
+    await tick()
+    expect(width().col).toBe('31px')
+    sizer.stop()
+  })
 })
 
 describe('mono-width / mono-min-width / mono-max-width attributes', () => {

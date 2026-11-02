@@ -453,6 +453,8 @@ function headerWidth(cell, host) {
 var ColumnAutoSize = class {
 	constructor(host) {
 		this.host = host;
+		this.growOnly = false;
+		this._floor = 0;
 		this._raf = 0;
 		this._onInput = (e) => {
 			const t = e.target;
@@ -469,6 +471,12 @@ var ColumnAutoSize = class {
 			this._raf = 0;
 			this._run();
 		});
+	}
+	/** Forget the grow-only floor (new rows) and re-measure. */
+	resetFloor() {
+		if (!this._floor) return;
+		this._floor = 0;
+		this.schedule();
 	}
 	/** Stop watching, and hand the column back to whatever width it is given next. */
 	stop(clear = false) {
@@ -517,6 +525,8 @@ var ColumnAutoSize = class {
 			if (target) width = Math.max(width, contentWidth(target));
 		}
 		width = Math.ceil(clampWidth(width + 1, this.min, this.max));
+		if (this.growOnly) width = this._floor = Math.max(width, this._floor);
+		else this._floor = 0;
 		const value = `${width}px`;
 		const col = colAt(table, index);
 		if (cell.style.width !== value) cell.style.width = value;
