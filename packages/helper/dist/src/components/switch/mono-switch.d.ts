@@ -16,7 +16,6 @@ declare const MonoSwitch_base: Constructor<MonoSwitchCoreInterface> & typeof Lit
  * Both register `mono-switch`, so a document loads only one.
  */
 export declare class MonoSwitch extends MonoSwitch_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotsCaptured;
   private _slotLabel;

@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, html, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, html, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoSidebarCore } from './sidebar-core.js'
@@ -23,7 +23,6 @@ import { monoHostChildNodes } from '../../composables/mono-skeleton'
  */
 @customElement('mono-sidebar')
 export class MonoSidebar extends MonoSidebarCore(LitElement) {
-  static override styles = [unsafeCSS(sidebarCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

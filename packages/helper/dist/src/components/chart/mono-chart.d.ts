@@ -21,7 +21,6 @@ declare const MonoChart_base: Constructor<MonoChartCoreInterface> & typeof LitEl
  * ```
  */
 export declare class MonoChart extends MonoChart_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   protected render(): TemplateResult;
 }

@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, unsafeCSS } from 'lit'
+import { LitElement } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoTableSummaryCore } from './mono-table-summary-core.js'
@@ -21,7 +21,6 @@ import tableCss from './table.css?raw'
  */
 @customElement('mono-table-summary')
 export class MonoTableSummary extends MonoTableSummaryCore(LitElement) {
-  static override styles = [unsafeCSS(tableCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

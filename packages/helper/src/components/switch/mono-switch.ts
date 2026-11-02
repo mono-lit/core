@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, unsafeCSS } from 'lit'
+import { LitElement } from 'lit'
 import { state } from 'lit/decorators.js'
 import { customElement } from '../../composables/mono-element'
 
@@ -24,7 +24,6 @@ import { monoHostChildNodes } from '../../composables/mono-skeleton'
  */
 @customElement('mono-switch')
 export class MonoSwitch extends MonoSwitchCore(LitElement) {
-  static override styles = [unsafeCSS(switchCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

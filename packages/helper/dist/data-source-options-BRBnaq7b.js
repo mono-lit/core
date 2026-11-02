@@ -1,7 +1,6 @@
 import { n as isPath, r as mergePatch, t as getFieldValue } from "./field-path-BabiMrrA.js";
-import { i as searchFilterOf, s as flattenLeaves, t as isDataSourceLike } from "./data-source-read-FxqzQkk2.js";
-import { n as andPredicates, r as compileFilterPredicate, t as andFilters } from "./filter-eval-ChDSaAUH.js";
-import { h as mergeSearchFields } from "./normalize-error-D93O4q8g.js";
+import { D as compileFilterPredicate, E as andPredicates, T as andFilters, f as mergeSearchFields } from "./normalize-error-BmLbgANw.js";
+import { i as searchFilterOf, s as flattenLeaves, t as isDataSourceLike } from "./data-source-read-i6CYSUEl.js";
 import { t as resolveMaybeReactive } from "./reactive-Dtd-esHO.js";
 import { s as odataStringToArray, t as arrayToODataString } from "./filter-odata-Bi27XUpQ.js";
 
@@ -37,6 +36,21 @@ function monoArraySource(data = [], opts = {}) {
 	let filter = null;
 	let sortList = [];
 	let page = [];
+	/**
+	* `applied()` as of the last `load()`, or null once a query setter has written since.
+	*
+	* `totalCount()` / `isLastPage()` re-ran the whole filter + search + SORT per call, and the
+	* grid asks them on every sync — every virtual-scroll window shift, ~3 times per chunk of a
+	* chunked "all" load. `load()` always recomputes (so an in-place edit of the data shows on the
+	* next load) and stores it here; every setter that WRITES clears it.
+	*/
+	let appliedCache = null;
+	const matched = () => appliedCache ??= applied();
+	/** Pass a setter's written value through, dropping the cached match set. */
+	const moved = (v) => {
+		appliedCache = null;
+		return v;
+	};
 	const emit = (event, arg) => (handlers[event] ?? []).slice().forEach((h) => h(arg));
 	/** Normalise a single devextreme sort entry into `{ selector, desc }`. */
 	function normalizeSortEntry(value) {
@@ -105,19 +119,19 @@ function monoArraySource(data = [], opts = {}) {
 		/** Full backing array (unfiltered) — lets the grid derive header-filter values. */
 		data: () => [...all],
 		isLoading: () => false,
-		totalCount: () => applied().length,
-		isLastPage: () => (pageIndex + 1) * pageSize >= applied().length,
+		totalCount: () => matched().length,
+		isLastPage: () => (pageIndex + 1) * pageSize >= matched().length,
 		paginate: (value) => value === void 0 ? paginate : paginate = value,
 		pageSize: (value) => value === void 0 ? pageSize : pageSize = value,
 		pageIndex: (value) => value === void 0 ? pageIndex : pageIndex = value,
-		searchValue: (value) => value === void 0 ? search : search = value || null,
-		searchExpr: (value) => value === void 0 ? searchExpr : searchExpr = value ?? null,
-		searchOperation: (op) => op === void 0 ? searchOperation : searchOperation = op,
-		filter: (value) => value === void 0 ? filter : filter = typeof value === "function" ? value : null,
-		sort: (value) => value === void 0 ? sortList : sortList = normalizeSortList(value),
+		searchValue: (value) => value === void 0 ? search : moved(search = value || null),
+		searchExpr: (value) => value === void 0 ? searchExpr : moved(searchExpr = value ?? null),
+		searchOperation: (op) => op === void 0 ? searchOperation : moved(searchOperation = op),
+		filter: (value) => value === void 0 ? filter : moved(filter = typeof value === "function" ? value : null),
+		sort: (value) => value === void 0 ? sortList : moved(sortList = normalizeSortList(value)),
 		load: () => {
 			emit("loadingChanged", true);
-			const rows = applied();
+			const rows = appliedCache = applied();
 			const start = pageIndex * pageSize;
 			page = paginate ? rows.slice(start, start + pageSize) : rows.slice();
 			emit("changed");
@@ -128,6 +142,7 @@ function monoArraySource(data = [], opts = {}) {
 		/** Replace the backing array and reload from page 0. */
 		setData: (next) => {
 			all = normalizeInput(next, opts.group);
+			appliedCache = null;
 			pageIndex = 0;
 			return Promise.resolve(source.load());
 		},
@@ -140,6 +155,7 @@ function monoArraySource(data = [], opts = {}) {
 			const keyExpr = opts.keyExpr ?? "Id";
 			const idx = all.findIndex((row) => String(row?.[keyExpr]) === String(key));
 			if (idx >= 0) all[idx] = mergePatch(all[idx], values);
+			appliedCache = null;
 			return Promise.resolve(source.load());
 		}
 	};

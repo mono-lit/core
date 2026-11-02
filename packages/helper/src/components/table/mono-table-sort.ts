@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, html, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, html, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import {
@@ -30,7 +30,6 @@ import tableCss from './table.css?raw'
  */
 @customElement('mono-table-sort')
 export class MonoTableSort extends MonoTableSortCore(LitElement) {
-  static override styles = [unsafeCSS(tableCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

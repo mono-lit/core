@@ -17,7 +17,6 @@ declare const MonoNav_base: Constructor<MonoNavCoreInterface> & typeof LitElemen
  * given document must load only one of the two builds.
  */
 export declare class MonoNav extends MonoNav_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotsCaptured;
   private _slotNodes;

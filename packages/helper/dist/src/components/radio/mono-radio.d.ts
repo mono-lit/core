@@ -16,7 +16,6 @@ declare const MonoRadio_base: Constructor<MonoRadioCoreInterface> & typeof LitEl
  * document loads only one.
  */
 export declare class MonoRadio extends MonoRadio_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotsCaptured;
   private _slotLabel;

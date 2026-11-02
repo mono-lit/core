@@ -2,8 +2,8 @@ import { _ as buildSizeStyle, a as __decorate, f as customElement, i as withShad
 import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
 import { t as MonoFormControlCore } from "../../form-control-core-Cp29vXaN.js";
 import { c as spinnerIcon, i as chevronIcon, n as caretIcon, s as refreshIcon } from "../../field-icons-t8rXRCKs.js";
-import { n as FieldTooltipController, t as field_tooltip_css_raw_default } from "../../field-tooltip.css_raw-CLOqV4J-.js";
-import { n as label_position_css_raw_default, r as FieldValidationController, t as field_validation_css_raw_default } from "../../field-validation.css_raw-rD0WCsa2.js";
+import { n as FieldTooltipController, t as field_tooltip_css_raw_default } from "../../field-tooltip.css_raw-U5UeTa2d.js";
+import { n as label_position_css_raw_default, r as FieldValidationController, t as field_validation_css_raw_default } from "../../field-validation.css_raw-Cx6SGrfP.js";
 import { t as PopupPortalController } from "../../popup-portal-C8ttHDRX.js";
 import { a as errorTitle, d as MonoSourceSearch, i as errorText, m as searchRowPredicate, n as describeError, p as resolveSearchFields } from "../../normalize-error-BmLbgANw.js";
 import { t as LateSlotWatcher } from "../../light-slots-CEID7fhG.js";
@@ -149,6 +149,9 @@ const MonoTagInputCore = (superClass) => {
 			this._listboxId = `${this._inputId}-listbox`;
 			this._lateListSlot = new LateSlotWatcher(this, "list", () => this._onLateListSlot());
 			this._lateSelectAllSlot = new LateSlotWatcher(this, "select-all", () => this._onLateSelectAllSlot());
+			this._selectedSetFor = null;
+			this._selectedSetLen = -1;
+			this._selectedSetMemo = /* @__PURE__ */ new Set();
 			this._sourceSearch = new MonoSourceSearch();
 			this._searchVersion = 0;
 			this._appliedQuery = "";
@@ -168,6 +171,8 @@ const MonoTagInputCore = (superClass) => {
 				this._ds.retry(clearSearch ? () => this._pushSearch("") : void 0);
 			};
 			this._selectedItemCache = /* @__PURE__ */ new Map();
+			this._leafIndexKey = [];
+			this._leafIndexMemo = /* @__PURE__ */ new Map();
 			this._handleDocumentClick = (event) => {
 				if (this.stayOpen) return;
 				if (!this._open && !this._moreOpen) return;
@@ -756,8 +761,25 @@ const MonoTagInputCore = (superClass) => {
 			return "default";
 		}
 		_isSelected(item) {
-			const value = this._resolveItemValue(item);
-			return this._selectedValues.some((v) => this._isSameValue(v, value));
+			return this._selectedSet.has(unwrapReactive(this._resolveItemValue(item)));
+		}
+		/**
+		* The selection as a Set of RAW values — `_isSameValue`'s rule (identity after
+		* `unwrapReactive`) as an O(1) lookup.
+		*
+		* `_isSelected` runs per row, from the option render, the list entries, the group
+		* headers and the "All" row — a `.some()` over the selection there made every render
+		* O(rows × selected), which after a select-all of a thousand rows is millions of
+		* comparisons per keystroke. Rebuilt when `value` is replaced (or resized in place).
+		*/
+		get _selectedSet() {
+			const values = this._selectedValues;
+			if (values !== this._selectedSetFor || values.length !== this._selectedSetLen) {
+				this._selectedSetFor = values;
+				this._selectedSetLen = values.length;
+				this._selectedSetMemo = new Set(values.map((v) => unwrapReactive(v)));
+			}
+			return this._selectedSetMemo;
 		}
 		/** Whether `search-value` names anything explicitly (vs falling back). */
 		get _hasSearchValue() {
@@ -1216,7 +1238,37 @@ const MonoTagInputCore = (superClass) => {
 		}
 		/** Look a value up in the currently loaded rows only. */
 		_findLoadedItem(value) {
-			return this._leafItems.find((item) => this._isSameValue(this._resolveItemValue(item), value));
+			if (value == null) return this._leafItems.find((item) => this._isSameValue(this._resolveItemValue(item), value));
+			return this._leafIndex.get(unwrapReactive(value));
+		}
+		/**
+		* Loaded leaf rows by RAW resolved value (first one wins, like the `.find()` it replaces).
+		*
+		* Every chip resolves its row through `_findLoadedItem` — `_resolvedValues` alone runs
+		* 4–5 times a render, plus a label lookup per chip — and each was a linear scan of the
+		* loaded rows: O(selected × loaded) per pass. Rebuilt when the source array, its length,
+		* or the key / grouping config changes.
+		*/
+		get _leafIndex() {
+			const src = this._ds.sourceItems;
+			const key = [
+				src,
+				Array.isArray(src) ? src.length : -1,
+				this.keyValue,
+				this._grouped,
+				this.group,
+				this.groupItems
+			];
+			if (key.length !== this._leafIndexKey.length || key.some((v, i) => !Object.is(v, this._leafIndexKey[i]))) {
+				const map = /* @__PURE__ */ new Map();
+				for (const item of this._leafItems) {
+					const v = unwrapReactive(this._resolveItemValue(item));
+					if (v != null && !map.has(v)) map.set(v, item);
+				}
+				this._leafIndexMemo = map;
+				this._leafIndexKey = key;
+			}
+			return this._leafIndexMemo;
 		}
 		_getItemByValue(value) {
 			const loaded = this._findLoadedItem(value);

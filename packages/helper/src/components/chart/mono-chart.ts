@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoChartCore } from './chart-core.js'
@@ -25,7 +25,6 @@ import chartCss from './chart.css?raw'
  */
 @customElement('mono-chart')
 export class MonoChart extends MonoChartCore(LitElement) {
-  static override styles = [unsafeCSS(chartCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

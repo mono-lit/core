@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, html, isServer, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, html, isServer, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 import { MonoOtpCore, type OtpIconName } from './otp-core.js'
 
@@ -18,7 +18,6 @@ import { monoHostChildNodes } from '../../composables/mono-skeleton'
  */
 @customElement('mono-otp')
 export class MonoOtp extends MonoOtpCore(LitElement) {
-  static override styles = [unsafeCSS(otpCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

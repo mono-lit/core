@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, unsafeCSS } from 'lit'
+import { LitElement } from 'lit'
 import { state } from 'lit/decorators.js'
 import { customElement } from '../../composables/mono-element'
 
@@ -25,7 +25,6 @@ import { monoHostChildNodes } from '../../composables/mono-skeleton'
  */
 @customElement('mono-checkbox')
 export class MonoCheckbox extends MonoCheckboxCore(LitElement) {
-  static override styles = [unsafeCSS(checkboxCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

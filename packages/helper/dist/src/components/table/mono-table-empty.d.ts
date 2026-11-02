@@ -22,7 +22,6 @@ declare const MonoTableEmpty_base: Constructor<MonoTableEmptyCoreInterface> & ty
  * INTO the host and would otherwise overwrite it.
  */
 export declare class MonoTableEmpty extends MonoTableEmpty_base {
-  static styles: import("lit").CSSResult[];
   private _buckets;
   private _slotsCaptured;
   protected createRenderRoot(): HTMLElement;

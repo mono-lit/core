@@ -3062,8 +3062,57 @@ export function monoDataGrid<T = any>(
     return columnsHandle
   }
 
+  /**
+   * Row → index and row key → index over `ctrl.items`, built lazily per items ARRAY.
+   *
+   * `rowKey()` / `indexOfRowKey()` were linear scans, and they are per-row calls: every
+   * `<mono-table-checkbox>` asks `check.isChecked(row)` on every notify, so a tick on a grid
+   * holding N rows (infinity scroll and page-size "all" hold the whole set) cost O(N²).
+   *
+   * A HIT is always verified against the live array, and a MISS falls back to the scan
+   * (rebuilding when the scan finds the row) — so an in-place mutation of `ctrl.items`, or a
+   * key that moved, costs one rebuild and is never answered wrong.
+   */
+  let indexFor: unknown[] | null = null
+  let indexByRow = new Map<unknown, number>()
+  let keyIndexFor: unknown[] | null = null
+  let indexByKey = new Map<string, number>()
+
+  function rebuildRowIndex(items: T[]): void {
+    indexFor = items
+    indexByRow = new Map()
+    items.forEach((row, i) => {
+      if (!indexByRow.has(row)) indexByRow.set(row, i)
+    })
+  }
+
+  function indexOfRow(raw: T): number {
+    const items = ctrl.items as T[]
+    if (indexFor !== items) rebuildRowIndex(items)
+    const hit = indexByRow.get(raw)
+    if (hit !== undefined && items[hit] === raw) return hit
+    const i = items.indexOf(raw)
+    if (i >= 0) rebuildRowIndex(items)
+    return i
+  }
+
+  function rebuildKeyIndex(items: T[]): void {
+    keyIndexFor = items
+    indexByKey = new Map()
+    items.forEach((row, i) => {
+      const k = rowKeyOf(row, i)
+      if (!indexByKey.has(k)) indexByKey.set(k, i)
+    })
+  }
+
   function indexOfRowKey(rowKey: string): number {
-    return (ctrl.items as T[]).findIndex((row, i) => rowKeyOf(row, i) === rowKey)
+    const items = ctrl.items as T[]
+    if (keyIndexFor !== items) rebuildKeyIndex(items)
+    const hit = indexByKey.get(rowKey)
+    if (hit !== undefined && hit < items.length && rowKeyOf(items[hit]!, hit) === rowKey) return hit
+    const i = items.findIndex((row, j) => rowKeyOf(row, j) === rowKey)
+    if (i >= 0) rebuildKeyIndex(items)
+    return i
   }
 
   function rowByKey(rowKey: string): T | undefined {
@@ -4304,7 +4353,7 @@ export function monoDataGrid<T = any>(
    */
   function rowKey(row: T): string {
     const raw = unwrapReactive(row) as T
-    const i = (ctrl.items as T[]).indexOf(raw)
+    const i = indexOfRow(raw)
     if (i >= 0) return rowKeyOf(raw, i)
 
     const direct = rowKeyOf(raw, Number.NaN)

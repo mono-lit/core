@@ -16,7 +16,6 @@ declare const MonoTableSummary_base: Constructor<MonoTableSummaryCoreInterface> 
  * build shares the mixin. Both register the same tag, so a document loads one.
  */
 export declare class MonoTableSummary extends MonoTableSummary_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
 }
 declare global {

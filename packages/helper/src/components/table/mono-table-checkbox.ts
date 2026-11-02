@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, unsafeCSS } from 'lit'
+import { LitElement } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoTableCheckboxCore } from './mono-table-checkbox-core.js'
@@ -31,7 +31,6 @@ import tableCss from './table.css?raw'
  */
 @customElement('mono-table-checkbox')
 export class MonoTableCheckbox extends MonoTableCheckboxCore(LitElement) {
-  static override styles = [unsafeCSS(tableCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

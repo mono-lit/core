@@ -16,7 +16,6 @@ declare const MonoBreadcrumbList_base: Constructor<MonoBreadcrumbListCoreInterfa
  *     (`@mono-lit/helper/ui/shadow/breadcrumb`) supports standalone only.
  */
 export declare class MonoBreadcrumbList extends MonoBreadcrumbList_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _parent;
   connectedCallback(): void;

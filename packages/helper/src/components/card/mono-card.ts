@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, html, nothing, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, html, nothing, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 import { ifDefined } from 'lit/directives/if-defined.js'
 import { styleMap } from 'lit/directives/style-map.js'
@@ -49,7 +49,6 @@ const CARD_NAMED_SLOTS = [
  */
 @customElement('mono-card')
 export class MonoCard extends MonoCardCore(LitElement) {
-  static override styles = [unsafeCSS(cardCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

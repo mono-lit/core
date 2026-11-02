@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, html, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, html, type TemplateResult } from 'lit'
 import { state } from 'lit/decorators.js'
 import { customElement } from '../../composables/mono-element'
 
@@ -21,7 +21,6 @@ import { monoHostChildNodes } from '../../composables/mono-skeleton'
  */
 @customElement('mono-menu')
 export class MonoMenu extends MonoMenuCore(LitElement) {
-  static override styles = [unsafeCSS(menuCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

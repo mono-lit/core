@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, isServer, unsafeCSS } from 'lit'
+import { LitElement, isServer } from 'lit'
 import { customElement } from '../../composables/mono-element'
 import { MonoSliderCore } from './slider-core.js'
 
@@ -18,7 +18,6 @@ import { monoHostChildNodes } from '../../composables/mono-skeleton'
  */
 @customElement('mono-slider')
 export class MonoSlider extends MonoSliderCore(LitElement) {
-  static override styles = [unsafeCSS(sliderCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

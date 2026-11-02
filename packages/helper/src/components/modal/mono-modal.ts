@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoModalCore } from './modal-core.js'
@@ -10,7 +10,6 @@ import {
   placeSlotNode,
 } from '../../composables/light-slots'
 
-import modalCss from './modal.css?raw'
 import { monoHostChildNodes } from '../../composables/mono-skeleton'
 
 /**
@@ -28,7 +27,6 @@ import { monoHostChildNodes } from '../../composables/mono-skeleton'
  */
 @customElement('mono-modal')
 export class MonoModal extends MonoModalCore(LitElement) {
-  static override styles = [unsafeCSS(modalCss)]
 
   private _portal: HTMLDivElement | null = null
   private _appliedPortalClasses = new Set<string>()

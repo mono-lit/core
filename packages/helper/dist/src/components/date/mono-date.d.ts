@@ -14,7 +14,6 @@ declare const MonoDate_base: Constructor<MonoDateCoreInterface> & typeof LitElem
  * `mono-date`, so a document loads one.
  */
 export declare class MonoDate extends MonoDate_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
 }
 declare global {

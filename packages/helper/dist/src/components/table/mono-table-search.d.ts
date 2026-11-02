@@ -12,7 +12,6 @@ declare const MonoTableSearch_base: Constructor<MonoTableSearchCoreInterface> & 
  * `dist/ui/index.css` — so no extra stylesheet is needed for the light build.
  */
 export declare class MonoTableSearch extends MonoTableSearch_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   /**
    * Light-DOM slot capture (mirrors `mono-dropdown-table`): a real `<slot>` can't

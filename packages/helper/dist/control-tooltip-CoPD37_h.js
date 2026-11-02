@@ -1,7 +1,5 @@
-import { d as __exportAll } from "./styles-BODNpZV1.js";
 import { n as unwrapReactive, t as resolveMaybeReactive } from "./reactive-Dtd-esHO.js";
 import { i as registerPopupLayer, o as unregisterPopupLayer } from "./popup-stack-C64WCuXq.js";
-import { t as loadFloatingUi } from "./tooltip-loader-Dcp9AUZn.js";
 
 //#region src/components/tooltip/tooltip-config.ts
 const DEFAULT_TOOLTIP_OPTIONS = {
@@ -49,15 +47,26 @@ function resolveTooltipOptions(local, anchor) {
 }
 
 //#endregion
+//#region src/components/tooltip/tooltip-loader.ts
+/**
+* Cached loader for the OPTIONAL `@floating-ui/dom` peer (which itself depends on
+* `@floating-ui/core` — both are the consumer's to install).
+*
+* Loaded on the FIRST show, never at import: registering a tooltip in
+* `<script setup>` costs nothing until somebody actually hovers. Externalized by
+* `NEVER_BUNDLE` in `tsdown.config.ts`, so the consumer's bundler resolves and splits it.
+*/
+let _floatingPromise = null;
+function loadFloatingUi() {
+	_floatingPromise ??= import("@floating-ui/dom").catch((err) => {
+		_floatingPromise = null;
+		throw new Error("[mono-tooltip] needs the optional peer dependencies \"@floating-ui/dom\" and \"@floating-ui/core\". Install them in your app: pnpm add @floating-ui/dom @floating-ui/core" + (err?.message ? ` (original error: ${err.message})` : ""));
+	});
+	return _floatingPromise;
+}
+
+//#endregion
 //#region src/components/tooltip/control-tooltip.ts
-var control_tooltip_exports = /* @__PURE__ */ __exportAll({
-	ANCHOR_ATTR_PREFIX: () => ANCHOR_ATTR_PREFIX,
-	controlMonoTooltip: () => controlMonoTooltip,
-	createTooltipController: () => createTooltipController,
-	destroyAllTooltipControllers: () => destroyAllTooltipControllers,
-	hasLiveDocument: () => hasLiveDocument,
-	monoTooltip: () => monoTooltip
-});
 /** Grace period so an INTERACTIVE tooltip can be reached across the offset gap. */
 const INTERACTIVE_HIDE_GRACE = 120;
 /** Longest the exit transition may take before the element is removed anyway. */
@@ -692,4 +701,4 @@ function destroyAllTooltipControllers() {
 }
 
 //#endregion
-export { hasLiveDocument as a, getMonoTooltipGlobal as c, destroyAllTooltipControllers as i, resolveTooltipOptions as l, control_tooltip_exports as n, monoTooltip as o, createTooltipController as r, DEFAULT_TOOLTIP_OPTIONS as s, controlMonoTooltip as t, setMonoTooltipGlobal as u };
+export { monoTooltip as a, getMonoTooltipGlobal as c, hasLiveDocument as i, resolveTooltipOptions as l, createTooltipController as n, loadFloatingUi as o, destroyAllTooltipControllers as r, DEFAULT_TOOLTIP_OPTIONS as s, controlMonoTooltip as t, setMonoTooltipGlobal as u };

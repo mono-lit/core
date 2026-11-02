@@ -1,6 +1,5 @@
 import { i as registerPopupLayer, o as unregisterPopupLayer } from "./popup-stack-C64WCuXq.js";
 import { n as unwrapReactive, t as resolveMaybeReactive } from "./reactive-Dtd-esHO.js";
-import { loadFloatingUi } from "./tooltip-loader-3U9FTOXj.js";
 
 //#region src/components/tooltip/tooltip-config.ts
 const DEFAULT_TOOLTIP_OPTIONS = {
@@ -37,6 +36,25 @@ function resolveTooltipOptions(local, anchor) {
 		for (const [key, value] of Object.entries(layer)) if (value !== void 0 && !NOT_TOOLTIP_OPTIONS.has(key)) out[key] = value;
 	}
 	return out;
+}
+
+//#endregion
+//#region src/components/tooltip/tooltip-loader.ts
+/**
+* Cached loader for the OPTIONAL `@floating-ui/dom` peer (which itself depends on
+* `@floating-ui/core` — both are the consumer's to install).
+*
+* Loaded on the FIRST show, never at import: registering a tooltip in
+* `<script setup>` costs nothing until somebody actually hovers. Externalized by
+* `NEVER_BUNDLE` in `tsdown.config.ts`, so the consumer's bundler resolves and splits it.
+*/
+let _floatingPromise = null;
+function loadFloatingUi() {
+	_floatingPromise ??= import("@floating-ui/dom").catch((err) => {
+		_floatingPromise = null;
+		throw new Error("[mono-tooltip] needs the optional peer dependencies \"@floating-ui/dom\" and \"@floating-ui/core\". Install them in your app: pnpm add @floating-ui/dom @floating-ui/core" + (err?.message ? ` (original error: ${err.message})` : ""));
+	});
+	return _floatingPromise;
 }
 
 //#endregion
@@ -660,19 +678,25 @@ var TooltipInstance = class {
 function controlMonoTooltip(target, options = {}) {
 	return new TooltipInstance(target, options);
 }
+
+//#endregion
+//#region src/components/tooltip/field-tooltip-addon.ts
 /**
-* @internal — a controller with a per-anchor options layer. Used by the
-* declarative `mono-tooltip-*` attributes (`tooltip-declarative.ts`).
+* The tooltip addon as `field-tooltip` lazy-loads it — ONE module, imported dynamically and
+* from nowhere else.
+*
+* `field-tooltip` used to `import()` `control-tooltip` and `tooltip-loader` directly. Both are
+* also imported STATICALLY by the root entry, so rolldown had to hand the dynamic importer a
+* synthesized namespace object (`__exportAll`) — and its runtime helpers sat in the report
+* engine's markdown chunk, so `import … from '@mono-lit/helper'` loaded and evaluated ~500KB of
+* remark/micromark. A module that is only ever dynamically imported is its own chunk entry, and
+* `import()` returns its real namespace: no helper, no markdown.
 */
-function createTooltipController(target, options, anchorOptions) {
-	return new TooltipInstance(target, options, anchorOptions);
-}
-/** Alias, matching the `monoX` / `controlMonoX` pairs of the other controllers. */
-const monoTooltip = controlMonoTooltip;
-/** @internal — close and forget every live controller. Public as `destroyAllMonoTooltips`. */
-function destroyAllTooltipControllers() {
-	each((i) => i.destroy());
+/** `controlMonoTooltip` once the optional `@floating-ui/dom` peer has loaded; rejects without it. */
+async function loadFieldTooltipAddon() {
+	await loadFloatingUi();
+	return controlMonoTooltip;
 }
 
 //#endregion
-export { ANCHOR_ATTR_PREFIX, controlMonoTooltip, createTooltipController, destroyAllTooltipControllers, hasLiveDocument, monoTooltip };
+export { loadFieldTooltipAddon };

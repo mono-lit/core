@@ -13,7 +13,6 @@ declare const MonoMenu_base: Constructor<MonoMenuCoreInterface> & typeof LitElem
  * lives in `MonoMenuCore`.
  */
 export declare class MonoMenu extends MonoMenu_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotsCaptured;
   private _hasBodySlot;

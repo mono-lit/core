@@ -12,7 +12,6 @@ declare const MonoOtp_base: Constructor<MonoOtpCoreInterface> & typeof LitElemen
  * build (`mono-shadow-otp`) shares it with native `<slot>`s.
  */
 export declare class MonoOtp extends MonoOtp_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slots;
   private _slotObserver?;

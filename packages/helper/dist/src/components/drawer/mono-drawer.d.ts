@@ -17,7 +17,6 @@ declare const MonoDrawer_base: Constructor<MonoDrawerCoreInterface> & typeof Lit
  * `mono-drawer.shadow.ts`; all logic is shared via `MonoDrawerCore`.
  */
 export declare class MonoDrawer extends MonoDrawer_base {
-  static styles: import("lit").CSSResult[];
   private _portal;
   private _appliedPortalClasses;
   private _slotHeader;

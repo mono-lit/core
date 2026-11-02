@@ -15,7 +15,6 @@ declare const MonoAccordion_base: Constructor<MonoAccordionCoreInterface> & type
  * Both register `mono-accordion`, so a document loads only one.
  */
 export declare class MonoAccordion extends MonoAccordion_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotObserver?;
   private _slotTitle;

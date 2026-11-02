@@ -24,7 +24,6 @@ declare const MonoTableDetail_base: Constructor<MonoTableDetailCoreInterface> & 
  * </tr>
  */
 export declare class MonoTableDetail extends MonoTableDetail_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
 }
 declare global {

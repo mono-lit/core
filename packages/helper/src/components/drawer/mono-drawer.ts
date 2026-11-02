@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoDrawerCore } from './drawer-core.js'
@@ -10,7 +10,6 @@ import {
   placeSlotNode,
 } from '../../composables/light-slots'
 
-import drawerCss from './drawer.css?raw'
 import { monoHostChildNodes } from '../../composables/mono-skeleton'
 
 /**
@@ -27,9 +26,7 @@ import { monoHostChildNodes } from '../../composables/mono-skeleton'
  * `mono-drawer.shadow.ts`; all logic is shared via `MonoDrawerCore`.
  */
 @customElement('mono-drawer')
-export class MonoDrawer extends MonoDrawerCore(LitElement) {
-  static override styles = [unsafeCSS(drawerCss)]
-
+export class MonoDrawer extends MonoDrawerCore(LitElement) {
   private _portal: HTMLDivElement | null = null
   private _appliedPortalClasses = new Set<string>()
 

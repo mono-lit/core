@@ -6,7 +6,6 @@ import { LitElement, TemplateResult } from "lit";
 declare const MonoChartBar_base: Constructor<MonoChartCoreInterface> & typeof LitElement;
 /** `<mono-chart-bar>` — vertical bars. */
 export declare class MonoChartBar extends MonoChartBar_base {
-  static styles: import("lit").CSSResult[];
   protected _presetType: MonoChartType;
   protected createRenderRoot(): HTMLElement;
   protected render(): TemplateResult;
@@ -14,7 +13,6 @@ export declare class MonoChartBar extends MonoChartBar_base {
 declare const MonoChartLine_base: Constructor<MonoChartCoreInterface> & typeof LitElement;
 /** `<mono-chart-line>` — a line series. */
 export declare class MonoChartLine extends MonoChartLine_base {
-  static styles: import("lit").CSSResult[];
   protected _presetType: MonoChartType;
   protected createRenderRoot(): HTMLElement;
   protected render(): TemplateResult;
@@ -22,7 +20,6 @@ export declare class MonoChartLine extends MonoChartLine_base {
 declare const MonoChartPie_base: Constructor<MonoChartCoreInterface> & typeof LitElement;
 /** `<mono-chart-pie>` — pie slices. */
 export declare class MonoChartPie extends MonoChartPie_base {
-  static styles: import("lit").CSSResult[];
   protected _presetType: MonoChartType;
   protected createRenderRoot(): HTMLElement;
   protected render(): TemplateResult;
@@ -30,7 +27,6 @@ export declare class MonoChartPie extends MonoChartPie_base {
 declare const MonoChartDoughnut_base: Constructor<MonoChartCoreInterface> & typeof LitElement;
 /** `<mono-chart-doughnut>` — a pie with a hole. */
 export declare class MonoChartDoughnut extends MonoChartDoughnut_base {
-  static styles: import("lit").CSSResult[];
   protected _presetType: MonoChartType;
   protected createRenderRoot(): HTMLElement;
   protected render(): TemplateResult;

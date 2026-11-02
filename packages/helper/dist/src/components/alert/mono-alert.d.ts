@@ -18,7 +18,6 @@ declare const MonoAlert_base: Constructor<MonoAlertCoreInterface> & typeof LitEl
  * rendered, and their captured nodes are parked (kept parented, invisible).
  */
 export declare class MonoAlert extends MonoAlert_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotsCaptured;
   private _buckets;

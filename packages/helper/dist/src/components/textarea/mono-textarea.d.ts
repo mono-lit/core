@@ -14,7 +14,6 @@ declare const MonoTextarea_base: Constructor<MonoTextareaCoreInterface> & typeof
  * `MonoTextareaCore`; both register `mono-textarea`, so a document loads one.
  */
 export declare class MonoTextarea extends MonoTextarea_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotsCaptured;
   private _slotLabel;

@@ -15,7 +15,6 @@ declare const MonoSelect_base: Constructor<MonoSelectCoreInterface> & typeof Lit
  * register `mono-select`, so a document loads only one build.
  */
 export declare class MonoSelect extends MonoSelect_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotsCaptured;
   private _slotLabel;

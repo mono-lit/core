@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, html, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, html, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoTagInputCore } from './tag-input-core.js'
@@ -21,7 +21,6 @@ import { monoHostChildNodes } from '../../composables/mono-skeleton'
  */
 @customElement('mono-tag-input')
 export class MonoTagInput extends MonoTagInputCore(LitElement) {
-  static override styles = [unsafeCSS(tagInputCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, unsafeCSS } from 'lit'
+import { LitElement } from 'lit'
 import { state } from 'lit/decorators.js'
 import { customElement } from '../../composables/mono-element'
 
@@ -24,7 +24,6 @@ import { monoHostChildNodes } from '../../composables/mono-skeleton'
  */
 @customElement('mono-radio')
 export class MonoRadio extends MonoRadioCore(LitElement) {
-  static override styles = [unsafeCSS(radioCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

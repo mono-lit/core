@@ -16,7 +16,6 @@ declare const MonoTabs_base: Constructor<MonoTabsCoreInterface> & typeof LitElem
  * so a document loads only one.
  */
 export declare class MonoTabs extends MonoTabs_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotsCaptured;
   private _slotIcons;

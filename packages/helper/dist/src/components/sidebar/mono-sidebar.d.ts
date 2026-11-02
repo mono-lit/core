@@ -16,7 +16,6 @@ declare const MonoSidebar_base: Constructor<MonoSidebarCoreInterface> & typeof L
  * Both register `mono-sidebar`, so a document loads only one.
  */
 export declare class MonoSidebar extends MonoSidebar_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotsCaptured;
   private _slotHeader;

@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, html, nothing, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, html, nothing, type TemplateResult } from 'lit'
 import { state } from 'lit/decorators.js'
 import { customElement } from '../../composables/mono-element'
 
@@ -23,7 +23,6 @@ import { monoHostChildNodes } from '../../composables/mono-skeleton'
  */
 @customElement('mono-dropdown')
 export class MonoDropdown extends MonoDropdownCore(LitElement) {
-  static override styles = [unsafeCSS(dropdownCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

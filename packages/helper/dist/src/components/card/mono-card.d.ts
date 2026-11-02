@@ -24,7 +24,6 @@ declare const MonoCard_base: Constructor<MonoCardCoreInterface> & typeof LitElem
  * same document.
  */
 export declare class MonoCard extends MonoCard_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotsCaptured;
   private _buckets;

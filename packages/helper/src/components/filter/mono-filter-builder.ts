@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, html, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, html, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoFilterBuilderCore, type FilterIconName } from './filter-builder-core.js'
@@ -16,7 +16,6 @@ import filterCss from './filter.css?raw'
  */
 @customElement('mono-filter-builder')
 export class MonoFilterBuilder extends MonoFilterBuilderCore(LitElement) {
-  static override styles = [unsafeCSS(filterCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

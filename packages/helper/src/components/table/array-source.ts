@@ -74,6 +74,21 @@ export function monoArraySource<T = any>(
   let filter: ((row: T, index: number) => boolean) | null = null
   let sortList: Array<{ selector: string; desc: boolean }> = []
   let page: T[] = []
+  /**
+   * `applied()` as of the last `load()`, or null once a query setter has written since.
+   *
+   * `totalCount()` / `isLastPage()` re-ran the whole filter + search + SORT per call, and the
+   * grid asks them on every sync — every virtual-scroll window shift, ~3 times per chunk of a
+   * chunked "all" load. `load()` always recomputes (so an in-place edit of the data shows on the
+   * next load) and stores it here; every setter that WRITES clears it.
+   */
+  let appliedCache: T[] | null = null
+  const matched = (): T[] => (appliedCache ??= applied())
+  /** Pass a setter's written value through, dropping the cached match set. */
+  const moved = <V>(v: V): V => {
+    appliedCache = null
+    return v
+  }
 
   const emit = (event: string, arg?: unknown): void =>
     (handlers[event] ?? []).slice().forEach((h) => h(arg))
@@ -160,27 +175,27 @@ export function monoArraySource<T = any>(
     /** Full backing array (unfiltered) — lets the grid derive header-filter values. */
     data: () => [...all],
     isLoading: () => false,
-    totalCount: () => applied().length,
-    isLastPage: () => (pageIndex + 1) * pageSize >= applied().length,
+    totalCount: () => matched().length,
+    isLastPage: () => (pageIndex + 1) * pageSize >= matched().length,
 
     paginate: (value) => (value === undefined ? paginate : (paginate = value)),
     pageSize: (value) => (value === undefined ? pageSize : (pageSize = value)),
     pageIndex: (value) => (value === undefined ? pageIndex : (pageIndex = value)),
 
     searchValue: (value) =>
-      value === undefined ? search : (search = (value as string) || null),
+      value === undefined ? search : moved((search = (value as string) || null)),
     searchExpr: (value) =>
-      value === undefined ? searchExpr : (searchExpr = (value as string | string[]) ?? null),
-    searchOperation: (op) => (op === undefined ? searchOperation : (searchOperation = op)),
+      value === undefined ? searchExpr : moved((searchExpr = (value as string | string[]) ?? null)),
+    searchOperation: (op) => (op === undefined ? searchOperation : moved((searchOperation = op))),
     filter: (value) =>
       value === undefined
         ? filter
-        : (filter = typeof value === 'function' ? (value as (row: T, i: number) => boolean) : null),
-    sort: (value) => (value === undefined ? sortList : (sortList = normalizeSortList(value))),
+        : moved((filter = typeof value === 'function' ? (value as (row: T, i: number) => boolean) : null)),
+    sort: (value) => (value === undefined ? sortList : moved((sortList = normalizeSortList(value)))),
 
     load: () => {
       emit('loadingChanged', true)
-      const rows = applied()
+      const rows = (appliedCache = applied())
       const start = pageIndex * pageSize
       page = paginate ? rows.slice(start, start + pageSize) : rows.slice()
       emit('changed')
@@ -192,6 +207,7 @@ export function monoArraySource<T = any>(
     /** Replace the backing array and reload from page 0. */
     setData: (next) => {
       all = normalizeInput(next, opts.group)
+      appliedCache = null
       pageIndex = 0
       return Promise.resolve(source.load())
     },
@@ -207,6 +223,7 @@ export function monoArraySource<T = any>(
         (row) => String((row as Record<string, unknown>)?.[keyExpr]) === String(key),
       )
       if (idx >= 0) all[idx] = mergePatch(all[idx], values as Record<string, unknown>)
+      appliedCache = null
       return Promise.resolve(source.load())
     },
   }

@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, html, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, html, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoTableSearchCore, type TableSearchIconName } from './mono-table-search-core.js'
@@ -19,7 +19,6 @@ import { monoHostChildren } from '../../composables/mono-skeleton'
  */
 @customElement('mono-table-search')
 export class MonoTableSearch extends MonoTableSearchCore(LitElement) {
-  static override styles = [unsafeCSS(tableCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

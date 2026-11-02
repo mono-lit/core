@@ -16,7 +16,6 @@ declare const MonoRichTextEditor_base: Constructor<MonoRichTextEditorCoreInterfa
  * `MonoRichTextEditorCore`.
  */
 export declare class MonoRichTextEditor extends MonoRichTextEditor_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotsCaptured;
   private _slotLabel;

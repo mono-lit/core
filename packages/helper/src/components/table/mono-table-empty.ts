@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, unsafeCSS } from 'lit'
+import { LitElement } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoTableEmptyCore } from './mono-table-empty-core.js'
@@ -36,7 +36,6 @@ const EMPTY_NAMED_SLOTS = ['body'] as const
  */
 @customElement('mono-table-empty')
 export class MonoTableEmpty extends MonoTableEmptyCore(LitElement) {
-  static override styles = [unsafeCSS(tableCss)]
 
   private _buckets: LightSlotBuckets = new Map()
   private _slotsCaptured = false

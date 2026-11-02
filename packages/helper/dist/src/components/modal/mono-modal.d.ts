@@ -17,7 +17,6 @@ declare const MonoModal_base: Constructor<MonoModalCoreInterface> & typeof LitEl
  * `mono-modal.shadow.ts`; all logic is shared via `MonoModalCore`.
  */
 export declare class MonoModal extends MonoModal_base {
-  static styles: import("lit").CSSResult[];
   private _portal;
   private _appliedPortalClasses;
   private _slotHead;

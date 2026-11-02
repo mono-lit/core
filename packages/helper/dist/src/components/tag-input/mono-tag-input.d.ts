@@ -14,7 +14,6 @@ declare const MonoTagInput_base: Constructor<MonoTagInputCoreInterface> & typeof
  * `MonoTagInputCore`; both register `mono-tag-input`, so a document loads one.
  */
 export declare class MonoTagInput extends MonoTagInput_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotsCaptured;
   private _slotLabel;

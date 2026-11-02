@@ -1,11 +1,10 @@
 // @unocss-include
 
-import { LitElement, unsafeCSS } from 'lit'
+import { LitElement } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoDateCore } from './date-core.js'
 
-import dateCss from './date.css?raw'
 
 /**
  * Light-DOM `mono-date` (default build, `@mono-lit/helper/ui/date`).
@@ -18,9 +17,7 @@ import dateCss from './date.css?raw'
  * `mono-date`, so a document loads one.
  */
 @customElement('mono-date')
-export class MonoDate extends MonoDateCore(LitElement) {
-  static override styles = [unsafeCSS(dateCss)] // inert in light DOM; kept for parity
-
+export class MonoDate extends MonoDateCore(LitElement) {
   protected override createRenderRoot(): HTMLElement {
     return this
   }

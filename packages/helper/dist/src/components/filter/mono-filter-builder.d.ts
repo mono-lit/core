@@ -11,7 +11,6 @@ declare const MonoFilterBuilder_base: Constructor<MonoFilterBuilderCoreInterface
  * the same global `dist/ui/index.css` — so no extra stylesheet is needed here.
  */
 export declare class MonoFilterBuilder extends MonoFilterBuilder_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   protected renderIcon(name: FilterIconName): TemplateResult;
 }

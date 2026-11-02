@@ -17,7 +17,6 @@ declare const MonoButtonDropdown_base: Constructor<MonoButtonDropdownCoreInterfa
  * build shares it and only swaps the embedded button's tag.
  */
 export declare class MonoButtonDropdown extends MonoButtonDropdown_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   /**
    * The panel is a STATIC element here, not something a helper returns.

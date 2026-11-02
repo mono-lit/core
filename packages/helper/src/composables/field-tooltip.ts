@@ -45,12 +45,10 @@ let _probe: Promise<ControlTooltipFn | null> | null = null
 function probeTooltip(): Promise<ControlTooltipFn | null> {
   _probe ??= (async () => {
     try {
-      const [{ loadFloatingUi }, { controlMonoTooltip }] = await Promise.all([
-        import('../components/tooltip/tooltip-loader'),
-        import('../components/tooltip/control-tooltip'),
-      ])
-      await loadFloatingUi()
-      return controlMonoTooltip
+      // One dedicated module, not `control-tooltip` + `tooltip-loader` directly — see
+      // `field-tooltip-addon.ts` for why that kept ~500KB of markdown in the root entry.
+      const { loadFieldTooltipAddon } = await import('../components/tooltip/field-tooltip-addon')
+      return await loadFieldTooltipAddon()
     } catch {
       return null
     }

@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, unsafeCSS } from 'lit'
+import { LitElement } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoTextareaCore } from './textarea-core.js'
@@ -21,7 +21,6 @@ import { monoHostChildNodes } from '../../composables/mono-skeleton'
  */
 @customElement('mono-textarea')
 export class MonoTextarea extends MonoTextareaCore(LitElement) {
-  static override styles = [unsafeCSS(textareaCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

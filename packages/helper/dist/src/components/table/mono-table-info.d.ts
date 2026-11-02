@@ -11,7 +11,6 @@ declare const MonoTableInfo_base: Constructor<MonoTableInfoCoreInterface> & type
  * so a document loads only one.
  */
 export declare class MonoTableInfo extends MonoTableInfo_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
 }
 declare global {

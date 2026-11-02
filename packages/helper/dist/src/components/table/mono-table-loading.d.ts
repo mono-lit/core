@@ -42,7 +42,6 @@ declare const MonoTableLoading_base: Constructor<MonoTableLoadingCoreInterface> 
  * </div>
  */
 export declare class MonoTableLoading extends MonoTableLoading_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
 }
 declare global {

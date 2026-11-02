@@ -22,7 +22,6 @@ declare const MonoButton_base: Constructor<MonoButtonCoreInterface> & typeof Lit
  * document loads only one.
  */
 export declare class MonoButton extends MonoButton_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _buckets;
   private _slotsCaptured;

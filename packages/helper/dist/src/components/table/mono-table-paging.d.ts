@@ -8,7 +8,6 @@ declare const MonoTablePaging_base: Constructor<MonoTablePagingCoreInterface> & 
  * All logic lives in `MonoTablePagingCore`; the shadow build shares the mixin.
  */
 export declare class MonoTablePaging extends MonoTablePaging_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
 }
 declare global {

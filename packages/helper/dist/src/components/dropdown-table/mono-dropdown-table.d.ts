@@ -30,7 +30,6 @@ declare const MonoDropdownTable_base: Constructor<MonoDropdownTableCoreInterface
  * </mono-dropdown-table>
  */
 export declare class MonoDropdownTable extends MonoDropdownTable_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotsCaptured;
   private _slotSearch;

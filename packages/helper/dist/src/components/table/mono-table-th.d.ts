@@ -23,7 +23,6 @@ declare const MonoTableTh_base: Constructor<MonoTableThCoreInterface> & typeof L
  *      :editable.prop="{ type: 'string', editor: 'input-text' }">Name</mono-table-th></th>
  */
 export declare class MonoTableTh extends MonoTableTh_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   /** The captured label nodes (the element's original light-DOM children). */
   private _buckets;

@@ -18,7 +18,6 @@ declare const MonoBreadcrumb_base: Constructor<MonoBreadcrumbCoreInterface> & ty
  * so a document loads only one.
  */
 export declare class MonoBreadcrumb extends MonoBreadcrumb_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotsCaptured;
   private _hasBodySlot;

@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, unsafeCSS } from 'lit'
+import { LitElement } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoDropdownTableCore } from './dropdown-table-core.js'
@@ -37,7 +37,6 @@ import { monoHostChildNodes } from '../../composables/mono-skeleton'
  */
 @customElement('mono-dropdown-table')
 export class MonoDropdownTable extends MonoDropdownTableCore(LitElement) {
-  static override styles = [unsafeCSS(dropdownTableCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

@@ -2,7 +2,7 @@ import { t as createNotifier } from "./notifier-BIrqUzRh.js";
 import { a as parseFieldPath, c as toODataClause, l as toODataSelector, n as isPath, o as projectFields, r as mergePatch, s as setFieldValue, t as getFieldValue } from "./field-path-BabiMrrA.js";
 import { C as resolveSearchEntries, D as compileFilterPredicate, E as andPredicates, O as joinFilters, S as plainSearchColumns, T as andFilters, f as mergeSearchFields, g as customRemoteClause, h as customPredicate, n as describeError, o as isCanceled, u as DEFAULT_SEARCH_FIELDS, v as hasCustomSearch, w as searchEntryFor, y as hasWildcardSearch } from "./normalize-error-BmLbgANw.js";
 import { a as buildGroups, c as isGroupNode, i as searchFilterOf, o as collectGroupPaths, r as readAllRows, s as flattenLeaves } from "./data-source-read-i6CYSUEl.js";
-import { a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, h as monoArraySource, i as normalizeSortList, l as summaryAliases, m as storeRows, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-Cz9fVLK8.js";
+import { a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, h as monoArraySource, i as normalizeSortList, l as summaryAliases, m as storeRows, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-BRBnaq7b.js";
 import { n as unwrapReactive } from "./reactive-Dtd-esHO.js";
 import { t as arrayToODataString } from "./filter-odata-Bi27XUpQ.js";
 import { t as monoFilterBuilder } from "./filter-builder-B6Y2mmbM.js";
@@ -1278,8 +1278,53 @@ function monoDataGrid(ds = null, opts = {}) {
 	function columns() {
 		return columnsHandle;
 	}
+	/**
+	* Row → index and row key → index over `ctrl.items`, built lazily per items ARRAY.
+	*
+	* `rowKey()` / `indexOfRowKey()` were linear scans, and they are per-row calls: every
+	* `<mono-table-checkbox>` asks `check.isChecked(row)` on every notify, so a tick on a grid
+	* holding N rows (infinity scroll and page-size "all" hold the whole set) cost O(N²).
+	*
+	* A HIT is always verified against the live array, and a MISS falls back to the scan
+	* (rebuilding when the scan finds the row) — so an in-place mutation of `ctrl.items`, or a
+	* key that moved, costs one rebuild and is never answered wrong.
+	*/
+	let indexFor = null;
+	let indexByRow = /* @__PURE__ */ new Map();
+	let keyIndexFor = null;
+	let indexByKey = /* @__PURE__ */ new Map();
+	function rebuildRowIndex(items) {
+		indexFor = items;
+		indexByRow = /* @__PURE__ */ new Map();
+		items.forEach((row, i) => {
+			if (!indexByRow.has(row)) indexByRow.set(row, i);
+		});
+	}
+	function indexOfRow(raw) {
+		const items = ctrl.items;
+		if (indexFor !== items) rebuildRowIndex(items);
+		const hit = indexByRow.get(raw);
+		if (hit !== void 0 && items[hit] === raw) return hit;
+		const i = items.indexOf(raw);
+		if (i >= 0) rebuildRowIndex(items);
+		return i;
+	}
+	function rebuildKeyIndex(items) {
+		keyIndexFor = items;
+		indexByKey = /* @__PURE__ */ new Map();
+		items.forEach((row, i) => {
+			const k = rowKeyOf(row, i);
+			if (!indexByKey.has(k)) indexByKey.set(k, i);
+		});
+	}
 	function indexOfRowKey(rowKey) {
-		return ctrl.items.findIndex((row, i) => rowKeyOf(row, i) === rowKey);
+		const items = ctrl.items;
+		if (keyIndexFor !== items) rebuildKeyIndex(items);
+		const hit = indexByKey.get(rowKey);
+		if (hit !== void 0 && hit < items.length && rowKeyOf(items[hit], hit) === rowKey) return hit;
+		const i = items.findIndex((row, j) => rowKeyOf(row, j) === rowKey);
+		if (i >= 0) rebuildKeyIndex(items);
+		return i;
 	}
 	function rowByKey(rowKey) {
 		const i = indexOfRowKey(rowKey);
@@ -2166,7 +2211,7 @@ function monoDataGrid(ds = null, opts = {}) {
 	*/
 	function rowKey(row) {
 		const raw = unwrapReactive(row);
-		const i = ctrl.items.indexOf(raw);
+		const i = indexOfRow(raw);
 		if (i >= 0) return rowKeyOf(raw, i);
 		const direct = rowKeyOf(raw, NaN);
 		if (direct !== "NaN") return direct;

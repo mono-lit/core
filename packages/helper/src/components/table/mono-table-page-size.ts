@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, unsafeCSS } from 'lit'
+import { LitElement } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoTablePageSizeCore } from './mono-table-page-size-core.js'
@@ -13,7 +13,6 @@ import tableCss from './table.css?raw'
  */
 @customElement('mono-table-page-size')
 export class MonoTablePageSize extends MonoTablePageSizeCore(LitElement) {
-  static override styles = [unsafeCSS(tableCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

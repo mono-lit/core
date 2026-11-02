@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, html, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, html, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoSelectCore } from './select-core.js'
@@ -22,7 +22,6 @@ import { monoHostChildNodes } from '../../composables/mono-skeleton'
  */
 @customElement('mono-select')
 export class MonoSelect extends MonoSelectCore(LitElement) {
-  static override styles = [unsafeCSS(selectCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

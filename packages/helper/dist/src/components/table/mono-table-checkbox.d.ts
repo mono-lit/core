@@ -26,7 +26,6 @@ declare const MonoTableCheckbox_base: Constructor<MonoTableCheckboxCoreInterface
  * table.check().getAll()   // [{ Id: 8 }, { Id: 12 }, … ]
  */
 export declare class MonoTableCheckbox extends MonoTableCheckbox_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
 }
 declare global {

@@ -21,7 +21,6 @@ declare const MonoChip_base: Constructor<MonoChipCoreInterface> & typeof LitElem
  * only one.
  */
 export declare class MonoChip extends MonoChip_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _buckets;
   private _slotsCaptured;

@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoChartCore } from './chart-core.js'
@@ -20,7 +20,6 @@ import chartCss from './chart.css?raw'
 /** `<mono-chart-bar>` — vertical bars. */
 @customElement('mono-chart-bar')
 export class MonoChartBar extends MonoChartCore(LitElement) {
-  static override styles = [unsafeCSS(chartCss)]
   protected override _presetType: MonoChartType = 'bar'
   protected override createRenderRoot(): HTMLElement {
     return this
@@ -33,7 +32,6 @@ export class MonoChartBar extends MonoChartCore(LitElement) {
 /** `<mono-chart-line>` — a line series. */
 @customElement('mono-chart-line')
 export class MonoChartLine extends MonoChartCore(LitElement) {
-  static override styles = [unsafeCSS(chartCss)]
   protected override _presetType: MonoChartType = 'line'
   protected override createRenderRoot(): HTMLElement {
     return this
@@ -46,7 +44,6 @@ export class MonoChartLine extends MonoChartCore(LitElement) {
 /** `<mono-chart-pie>` — pie slices. */
 @customElement('mono-chart-pie')
 export class MonoChartPie extends MonoChartCore(LitElement) {
-  static override styles = [unsafeCSS(chartCss)]
   protected override _presetType: MonoChartType = 'pie'
   protected override createRenderRoot(): HTMLElement {
     return this
@@ -59,7 +56,6 @@ export class MonoChartPie extends MonoChartCore(LitElement) {
 /** `<mono-chart-doughnut>` — a pie with a hole. */
 @customElement('mono-chart-doughnut')
 export class MonoChartDoughnut extends MonoChartCore(LitElement) {
-  static override styles = [unsafeCSS(chartCss)]
   protected override _presetType: MonoChartType = 'doughnut'
   protected override createRenderRoot(): HTMLElement {
     return this

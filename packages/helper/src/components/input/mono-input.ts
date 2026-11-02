@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, html, nothing, isServer, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, html, nothing, isServer, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 import { MonoInputCore, type InputIconName } from './input-core.js'
 
@@ -21,7 +21,6 @@ import { monoHostChildNodes } from '../../composables/mono-skeleton'
  */
 @customElement('mono-input')
 export class MonoInput extends MonoInputCore(LitElement) {
-  static override styles = [unsafeCSS(inputCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

@@ -20,7 +20,6 @@ declare const MonoTableError_base: Constructor<MonoTableErrorCoreInterface> & ty
  * which is exactly what a light build can use and a shadow one cannot.
  */
 export declare class MonoTableError extends MonoTableError_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
 }
 declare global {

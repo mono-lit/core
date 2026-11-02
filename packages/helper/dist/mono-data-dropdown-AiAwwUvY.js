@@ -1,4 +1,4 @@
-import { t as monoDataGrid } from "./mono-data-grid-8jmeIXUU.js";
+import { t as monoDataGrid } from "./mono-data-grid-BdVhuMZo.js";
 import { t as createNotifier } from "./notifier-BIrqUzRh.js";
 
 //#region src/components/dropdown-table/mono-data-dropdown.ts

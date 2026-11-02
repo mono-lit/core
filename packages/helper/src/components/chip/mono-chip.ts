@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, html, nothing, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, html, nothing, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 import { ifDefined } from 'lit/directives/if-defined.js'
 import { when } from 'lit/directives/when.js'
@@ -31,7 +31,6 @@ import chipCss from './chip.css?raw'
  */
 @customElement('mono-chip')
 export class MonoChip extends MonoChipCore(LitElement) {
-  static override styles = [unsafeCSS(chipCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, html, nothing, unsafeCSS } from 'lit'
+import { LitElement, html, nothing } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoAlertCore } from './alert-core.js'
@@ -33,7 +33,6 @@ const ALERT_NAMED_SLOTS = ['icon', 'title', 'subtitle', 'body'] as const
  */
 @customElement('mono-alert')
 export class MonoAlert extends MonoAlertCore(LitElement) {
-  static override styles = [unsafeCSS(alertCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

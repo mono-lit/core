@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, html, nothing, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, html, nothing, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 import { ifDefined } from 'lit/directives/if-defined.js'
 import { when } from 'lit/directives/when.js'
@@ -34,7 +34,6 @@ import buttonCss from './button.css?raw'
  */
 @customElement('mono-button')
 export class MonoButton extends MonoButtonCore(LitElement) {
-  static override styles = [unsafeCSS(buttonCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

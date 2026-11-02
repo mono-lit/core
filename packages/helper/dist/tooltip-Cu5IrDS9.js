@@ -1,5 +1,4 @@
-import { a as hasLiveDocument, i as destroyAllTooltipControllers, r as createTooltipController, u as setMonoTooltipGlobal } from "./control-tooltip-C3rA_nSH.js";
-import "./tooltip-loader-Dcp9AUZn.js";
+import { i as hasLiveDocument, n as createTooltipController, r as destroyAllTooltipControllers, u as setMonoTooltipGlobal } from "./control-tooltip-CoPD37_h.js";
 
 //#region src/components/tooltip/tooltip-declarative.ts
 /** The two text attributes — `message` is an alias of `content`. */

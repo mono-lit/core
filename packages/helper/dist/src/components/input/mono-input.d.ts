@@ -15,7 +15,6 @@ declare const MonoInput_base: Constructor<MonoInputCoreInterface> & typeof LitEl
  * `<slot>`. Both register `mono-input`, so a document loads only one.
  */
 export declare class MonoInput extends MonoInput_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotPrefix;
   private _slotSuffix;

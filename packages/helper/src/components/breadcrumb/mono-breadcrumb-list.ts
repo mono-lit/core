@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, html, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, html, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoBreadcrumbListCore } from './breadcrumb-list-core.js'
@@ -25,7 +25,6 @@ import breadcrumbCss from './breadcrumb.css?raw'
  */
 @customElement('mono-breadcrumb-list')
 export class MonoBreadcrumbList extends MonoBreadcrumbListCore(LitElement) {
-  static override styles = [unsafeCSS(breadcrumbCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

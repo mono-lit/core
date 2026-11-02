@@ -12,7 +12,6 @@ declare const MonoTablePagingGroup_base: Constructor<MonoTablePagingGroupCoreInt
  * <mono-table-paging-group :data-grid.prop="table" :group.prop="node" page-size="5" />
  */
 export declare class MonoTablePagingGroup extends MonoTablePagingGroup_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
 }
 declare global {

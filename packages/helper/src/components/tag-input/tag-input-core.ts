@@ -1446,8 +1446,30 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
   }
 
   private _isSelected(item: TagInputItem): boolean {
-    const value = this._resolveItemValue(item)
-    return this._selectedValues.some((v) => this._isSameValue(v, value))
+    return this._selectedSet.has(unwrapReactive(this._resolveItemValue(item)))
+  }
+
+  private _selectedSetFor: unknown = null
+  private _selectedSetLen = -1
+  private _selectedSetMemo = new Set<unknown>()
+
+  /**
+   * The selection as a Set of RAW values — `_isSameValue`'s rule (identity after
+   * `unwrapReactive`) as an O(1) lookup.
+   *
+   * `_isSelected` runs per row, from the option render, the list entries, the group
+   * headers and the "All" row — a `.some()` over the selection there made every render
+   * O(rows × selected), which after a select-all of a thousand rows is millions of
+   * comparisons per keystroke. Rebuilt when `value` is replaced (or resized in place).
+   */
+  private get _selectedSet(): Set<unknown> {
+    const values = this._selectedValues
+    if (values !== this._selectedSetFor || values.length !== this._selectedSetLen) {
+      this._selectedSetFor = values
+      this._selectedSetLen = values.length
+      this._selectedSetMemo = new Set(values.map((v) => unwrapReactive(v)))
+    }
+    return this._selectedSetMemo
   }
 
   private _searchTimer?: ReturnType<typeof setTimeout>
@@ -2071,10 +2093,39 @@ class MonoTagInputCoreClass extends MonoFormControlCore(superClass) {
 
   /** Look a value up in the currently loaded rows only. */
   private _findLoadedItem(value: TagInputValue): TagInputItem | undefined {
+    if (value == null) {
+      return this._leafItems.find((item) => this._isSameValue(this._resolveItemValue(item), value))
+    }
     // `_leafItems` flattens the tree when grouped, so selected values resolve.
-    return this._leafItems.find((item) =>
-      this._isSameValue(this._resolveItemValue(item), value),
-    )
+    return this._leafIndex.get(unwrapReactive(value))
+  }
+
+  private _leafIndexKey: unknown[] = []
+  private _leafIndexMemo = new Map<unknown, TagInputItem>()
+
+  /**
+   * Loaded leaf rows by RAW resolved value (first one wins, like the `.find()` it replaces).
+   *
+   * Every chip resolves its row through `_findLoadedItem` — `_resolvedValues` alone runs
+   * 4–5 times a render, plus a label lookup per chip — and each was a linear scan of the
+   * loaded rows: O(selected × loaded) per pass. Rebuilt when the source array, its length,
+   * or the key / grouping config changes.
+   */
+  private get _leafIndex(): Map<unknown, TagInputItem> {
+    const src = this._ds.sourceItems as unknown
+    const key = [src, Array.isArray(src) ? src.length : -1, this.keyValue, this._grouped, this.group, this.groupItems]
+    const stale =
+      key.length !== this._leafIndexKey.length || key.some((v, i) => !Object.is(v, this._leafIndexKey[i]))
+    if (stale) {
+      const map = new Map<unknown, TagInputItem>()
+      for (const item of this._leafItems) {
+        const v = unwrapReactive(this._resolveItemValue(item))
+        if (v != null && !map.has(v)) map.set(v, item)
+      }
+      this._leafIndexMemo = map
+      this._leafIndexKey = key
+    }
+    return this._leafIndexMemo
   }
 
   private _getItemByValue(value: TagInputValue): TagInputItem | undefined {

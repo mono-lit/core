@@ -20,7 +20,6 @@ declare const MonoTableSort_base: Constructor<MonoTableSortCoreInterface> & type
  * <th><mono-table-sort :data-grid.prop="table" field="Nama">Name</mono-table-sort></th>
  */
 export declare class MonoTableSort extends MonoTableSort_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   /** The captured label nodes (the element's original light-DOM children). */
   private _buckets;

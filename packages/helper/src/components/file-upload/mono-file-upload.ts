@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, unsafeCSS } from 'lit'
+import { LitElement } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoFileUploadCore } from './file-upload-core.js'
@@ -28,7 +28,6 @@ type FileUploadLightSlot = (typeof FILE_UPLOAD_LIGHT_SLOTS)[number]
  */
 @customElement('mono-file-upload')
 export class MonoFileUpload extends MonoFileUploadCore(LitElement) {
-  static override styles = [unsafeCSS(fileUploadCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

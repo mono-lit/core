@@ -106,9 +106,8 @@ let _probe = null;
 function probeTooltip() {
 	_probe ??= (async () => {
 		try {
-			const [{ loadFloatingUi }, { controlMonoTooltip }] = await Promise.all([import("./tooltip-loader-3U9FTOXj.js"), import("./control-tooltip-7vegYmq3.js")]);
-			await loadFloatingUi();
-			return controlMonoTooltip;
+			const { loadFieldTooltipAddon } = await import("./field-tooltip-addon-CWCp19mJ.js");
+			return await loadFieldTooltipAddon();
 		} catch {
 			return null;
 		}

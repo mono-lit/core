@@ -17,7 +17,6 @@ declare const MonoFileUpload_base: Constructor<MonoFileUploadCoreInterface> & ty
  * `mono-file-upload`, so a document loads only one.
  */
 export declare class MonoFileUpload extends MonoFileUpload_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotsCaptured;
   private _slots;

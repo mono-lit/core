@@ -17,7 +17,6 @@ declare const MonoCheckbox_base: Constructor<MonoCheckboxCoreInterface> & typeof
  * document loads only one.
  */
 export declare class MonoCheckbox extends MonoCheckbox_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotsCaptured;
   private _slotIcon;

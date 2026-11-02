@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, html, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, html, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 import { ref } from 'lit/directives/ref.js'
 
@@ -9,8 +9,6 @@ import { MonoButtonDropdownCore } from './button-dropdown-core.js'
 // entry the consumer loads, the embedded button is always defined.
 import './mono-button.js'
 
-import buttonCss from './button.css?raw'
-import buttonDropdownCss from './button-dropdown.css?raw'
 
 /**
  * Light-DOM `mono-button-dropdown` (default build,
@@ -27,9 +25,7 @@ import buttonDropdownCss from './button-dropdown.css?raw'
 @customElement('mono-button-dropdown')
 export class MonoButtonDropdown extends MonoButtonDropdownCore(LitElement) {
   // `button.css` too: the entries are `<mono-button>`s, and the row/menu rules
-  // here reach into their classes to square off and left-align menu rows.
-  static override styles = [unsafeCSS(buttonCss), unsafeCSS(buttonDropdownCss)]
-
+  // here reach into their classes to square off and left-align menu rows.
   protected override createRenderRoot(): HTMLElement {
     return this
   }

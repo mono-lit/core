@@ -1,4 +1,4 @@
-import { LitElement, unsafeCSS } from 'lit'
+import { LitElement } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoRichTextEditorCore } from './rich-text-editor-core.js'
@@ -21,7 +21,6 @@ import { monoHostChildNodes } from '../../composables/mono-skeleton'
  */
 @customElement('mono-rich-text-editor')
 export class MonoRichTextEditor extends MonoRichTextEditorCore(LitElement) {
-  static override styles = [unsafeCSS(richTextEditorCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

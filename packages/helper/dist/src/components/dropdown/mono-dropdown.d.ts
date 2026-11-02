@@ -15,7 +15,6 @@ declare const MonoDropdown_base: Constructor<MonoDropdownCoreInterface> & typeof
  * `<slot>`. Both register `mono-dropdown`, so a document loads only one.
  */
 export declare class MonoDropdown extends MonoDropdown_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _hasBodySlotState;
   private _slotsCaptured;

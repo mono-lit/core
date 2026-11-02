@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, html, isServer, nothing, unsafeCSS, type TemplateResult } from 'lit'
+import { LitElement, html, isServer, nothing, type TemplateResult } from 'lit'
 import { customElement } from '../../composables/mono-element'
 import { ref } from 'lit/directives/ref.js'
 
@@ -27,7 +27,6 @@ import { monoHostChildNodes } from '../../composables/mono-skeleton'
  */
 @customElement('mono-accordion')
 export class MonoAccordion extends MonoAccordionCore(LitElement) {
-  static override styles = [unsafeCSS(accordionCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this

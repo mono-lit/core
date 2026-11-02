@@ -12,7 +12,6 @@ declare const MonoSlider_base: Constructor<MonoSliderCoreInterface> & typeof Lit
  * `MonoSliderCore`; the shadow build (`mono-shadow-slider`) shares it with native `<slot>`s.
  */
 export declare class MonoSlider extends MonoSlider_base {
-  static styles: import("lit").CSSResult[];
   protected createRenderRoot(): HTMLElement;
   private _slotLabel;
   private _slotHelper;

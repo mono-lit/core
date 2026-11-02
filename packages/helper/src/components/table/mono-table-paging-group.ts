@@ -1,6 +1,6 @@
 // @unocss-include
 
-import { LitElement, unsafeCSS } from 'lit'
+import { LitElement } from 'lit'
 import { customElement } from '../../composables/mono-element'
 
 import { MonoTablePagingGroupCore } from './mono-table-paging-group-core.js'
@@ -17,7 +17,6 @@ import tableCss from './table.css?raw'
  */
 @customElement('mono-table-paging-group')
 export class MonoTablePagingGroup extends MonoTablePagingGroupCore(LitElement) {
-  static override styles = [unsafeCSS(tableCss)]
 
   protected override createRenderRoot(): HTMLElement {
     return this
