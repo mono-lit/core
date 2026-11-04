@@ -8,7 +8,7 @@ import { t as PopupPortalController } from "../../popup-portal-CINuVjNY.js";
 import { a as errorTitle, d as MonoSourceSearch, i as errorText, m as searchRowPredicate, n as describeError, p as resolveSearchFields } from "../../normalize-error-BmLbgANw.js";
 import { t as LateSlotWatcher } from "../../light-slots-_no0r2Z-.js";
 import { t as checkbox_css_raw_default } from "../../checkbox.css_raw-AYtSbUtY.js";
-import { r as readAllRows } from "../../data-source-read-DTJ_Mnez.js";
+import { r as readAllRows } from "../../data-source-read-HyBCRg1t.js";
 import { n as unwrapReactive, r as unwrapReactiveDeep } from "../../reactive-Dtd-esHO.js";
 import { n as resolveChipLimit, r as visibleChipCap, t as ChipStripController } from "../../chip-strip-bNfLn52Z.js";
 import { t as chip_css_raw_default } from "../../chip.css_raw-ChfRSHLO.js";

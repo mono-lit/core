@@ -32,6 +32,28 @@ export interface ReadableDataSource<T = any> {
   paginate?(value?: boolean): boolean
   pageIndex?(value?: number): number
   totalCount?(): number
+  /**
+   * devextreme's live `_storeLoadOptions`. Where `expand` / `customQueryParams` live — they
+   * have no accessor of their own, and the DataSource spreads them into every store request.
+   */
+  loadOptions?(): Record<string, unknown> | null | undefined
+}
+
+/**
+ * Store-level load options a DataSource sends on every request that have no accessor and are not
+ * composed by the drain itself (filter / search / sort / select are). Whitelisted, not copied
+ * wholesale: `_storeLoadOptions` also carries `group`, paging and total-count state, which would
+ * turn a flat chunked read into something else.
+ */
+const INHERITED_LOAD_OPTIONS = ['expand', 'customQueryParams'] as const
+
+/** The {@link INHERITED_LOAD_OPTIONS} the source currently carries. */
+function inheritedLoadOptionsOf(source: ReadableDataSource): Record<string, unknown> {
+  const lo = typeof source.loadOptions === 'function' ? source.loadOptions() : null
+  const out: Record<string, unknown> = {}
+  if (!lo || typeof lo !== 'object') return out
+  for (const k of INHERITED_LOAD_OPTIONS) if (lo[k] !== undefined && lo[k] !== null) out[k] = lo[k]
+  return out
 }
 
 /** The structural surface of a devextreme store. */
@@ -59,7 +81,11 @@ export interface ReadAllRowsOptions {
    * Remote sources only; an array source is filtered by what it holds.
    */
   filter?: unknown
-  /** Extra load options spread into every chunk request (`expand`, `customQueryParams`, …). */
+  /**
+   * Extra load options spread into every chunk request (`expand`, `customQueryParams`, …).
+   * A DataSource's own `expand` / `customQueryParams` are inherited automatically; keys given
+   * here override them.
+   */
   loadOptions?: Record<string, unknown>
 }
 
@@ -179,12 +205,17 @@ export async function readAllRows<T = any>(
       // every column on every chunk after the first. Same rule as the other two:
       // an explicit option wins, otherwise inherit what the source declares.
       const select = options.select ?? src.select?.() ?? null
+      // `expand` / `customQueryParams` follow the same inherit-unless-overridden rule. Without
+      // them a source built with `expand: ['Lines($select=Brand)']` drained every chunk with
+      // no `$expand`, so the nested collection the live grid showed was simply absent from an
+      // export. The caller's `loadOptions` win key by key.
+      const loadOptions = { ...inheritedLoadOptionsOf(src), ...(options.loadOptions ?? {}) }
       return drainStore<T>(store, {
         chunkSize,
         ...(select ? { select: select as string[] } : {}),
         ...(filter ? { filter } : {}),
         ...(sort ? { sort } : {}),
-        ...(options.loadOptions ? { loadOptions: options.loadOptions } : {}),
+        ...(Object.keys(loadOptions).length ? { loadOptions } : {}),
       })
     }
     return readArrayDataSource<T>(src)

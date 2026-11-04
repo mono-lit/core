@@ -1,8 +1,8 @@
 import { t as createNotifier } from "./notifier-BIrqUzRh.js";
 import { a as parseFieldPath, c as toODataClause, l as toODataSelector, n as isPath, o as projectFields, r as mergePatch, s as setFieldValue, t as getFieldValue } from "./field-path-BabiMrrA.js";
 import { C as resolveSearchEntries, D as compileFilterPredicate, E as andPredicates, O as joinFilters, S as plainSearchColumns, T as andFilters, f as mergeSearchFields, g as customRemoteClause, h as customPredicate, n as describeError, o as isCanceled, u as DEFAULT_SEARCH_FIELDS, v as hasCustomSearch, w as searchEntryFor, y as hasWildcardSearch } from "./normalize-error-BmLbgANw.js";
-import { a as buildGroups, c as isGroupNode, i as searchFilterOf, o as collectGroupPaths, r as readAllRows, s as flattenLeaves } from "./data-source-read-DTJ_Mnez.js";
-import { a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, h as monoArraySource, i as normalizeSortList, l as summaryAliases, m as storeRows, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-CS0w0wlO.js";
+import { a as buildGroups, c as isGroupNode, i as searchFilterOf, o as collectGroupPaths, r as readAllRows, s as flattenLeaves } from "./data-source-read-HyBCRg1t.js";
+import { a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, h as monoArraySource, i as normalizeSortList, l as summaryAliases, m as storeRows, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-BM4r4PRw.js";
 import { n as unwrapReactive } from "./reactive-Dtd-esHO.js";
 import { t as arrayToODataString } from "./filter-odata-Bi27XUpQ.js";
 import { t as monoFilterBuilder } from "./filter-builder-B6Y2mmbM.js";
@@ -3976,12 +3976,16 @@ function monoDataGrid(ds = null, opts = {}) {
 	async function getData() {
 		const s = bound;
 		if (!s) return [];
+		const loadOptions = {};
+		if (resolvedOpts.expand !== void 0) loadOptions.expand = resolvedOpts.expand;
+		if (resolvedOpts.customQueryParams !== void 0) loadOptions.customQueryParams = resolvedOpts.customQueryParams;
 		suppressSync = true;
 		try {
 			return await readAllRows(s, {
 				chunkSize,
 				select: opts.select ?? toList(resolvedOpts.select),
-				sort: mergedSort()
+				sort: mergedSort(),
+				...Object.keys(loadOptions).length ? { loadOptions } : {}
 			});
 		} finally {
 			suppressSync = false;
@@ -4015,7 +4019,7 @@ function monoDataGrid(ds = null, opts = {}) {
 		});
 	}
 	async function exportReport(options) {
-		const { exportTable } = await import("./export-D27RJa1w.js");
+		const { exportTable } = await import("./export-ixRdCS2y.js");
 		return exportTable(options);
 	}
 	function subscribe(cb) {

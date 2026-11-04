@@ -16,6 +16,11 @@ export interface ReadableDataSource<T = any> {
   paginate?(value?: boolean): boolean;
   pageIndex?(value?: number): number;
   totalCount?(): number;
+  /**
+   * devextreme's live `_storeLoadOptions`. Where `expand` / `customQueryParams` live — they
+   * have no accessor of their own, and the DataSource spreads them into every store request.
+   */
+  loadOptions?(): Record<string, unknown> | null | undefined;
 }
 /** The structural surface of a devextreme store. */
 export interface ReadableStore {
@@ -41,7 +46,11 @@ export interface ReadAllRowsOptions {
    * Remote sources only; an array source is filtered by what it holds.
    */
   filter?: unknown;
-  /** Extra load options spread into every chunk request (`expand`, `customQueryParams`, …). */
+  /**
+   * Extra load options spread into every chunk request (`expand`, `customQueryParams`, …).
+   * A DataSource's own `expand` / `customQueryParams` are inherited automatically; keys given
+   * here override them.
+   */
   loadOptions?: Record<string, unknown>;
 }
 /** A devextreme DataSource: it both loads and holds a current page. */

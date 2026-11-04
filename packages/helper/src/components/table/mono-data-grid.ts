@@ -6597,6 +6597,13 @@ export function monoDataGrid<T = any>(
   async function getData(): Promise<T[]> {
     const s = bound
     if (!s) return []
+    // Same request as the live grid, minus paging: the table's own `expand` /
+    // `customQueryParams` (from `dataSourceOptions` / `odataOptions`) ride along as
+    // they do in `serverCtx`; anything set on the DataSource itself is inherited by
+    // `readAllRows`. These win over the source's, as they do on screen.
+    const loadOptions: Record<string, unknown> = {}
+    if (resolvedOpts.expand !== undefined) loadOptions.expand = resolvedOpts.expand
+    if (resolvedOpts.customQueryParams !== undefined) loadOptions.customQueryParams = resolvedOpts.customQueryParams
     suppressSync = true
     try {
       return await readAllRows<T>(s, {
@@ -6606,6 +6613,7 @@ export function monoDataGrid<T = any>(
         // the sort onto the source, so `source.sort()` would be empty and the
         // export would come back unordered.
         sort: mergedSort(),
+        ...(Object.keys(loadOptions).length ? { loadOptions } : {}),
       })
     } finally {
       suppressSync = false

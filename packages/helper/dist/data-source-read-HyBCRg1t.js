@@ -98,6 +98,21 @@ function collectGroupPaths(nodes) {
 * the same DataSource is usually bound to a live grid, so paging state must
 * either be left alone (the store path) or restored exactly (the array path).
 */
+/**
+* Store-level load options a DataSource sends on every request that have no accessor and are not
+* composed by the drain itself (filter / search / sort / select are). Whitelisted, not copied
+* wholesale: `_storeLoadOptions` also carries `group`, paging and total-count state, which would
+* turn a flat chunked read into something else.
+*/
+const INHERITED_LOAD_OPTIONS = ["expand", "customQueryParams"];
+/** The {@link INHERITED_LOAD_OPTIONS} the source currently carries. */
+function inheritedLoadOptionsOf(source) {
+	const lo = typeof source.loadOptions === "function" ? source.loadOptions() : null;
+	const out = {};
+	if (!lo || typeof lo !== "object") return out;
+	for (const k of INHERITED_LOAD_OPTIONS) if (lo[k] !== void 0 && lo[k] !== null) out[k] = lo[k];
+	return out;
+}
 /** Stop runaway loops if a backend keeps returning full chunks forever. */
 const MAX_SKIP = 1e7;
 /** A devextreme DataSource: it both loads and holds a current page. */
@@ -162,12 +177,16 @@ async function readAllRows(source, options = {}) {
 			const filter = andFilters(andFilters(src.filter?.() ?? null, searchFilterOf(src) ?? null), options.filter ?? null);
 			const sort = options.sort ?? src.sort?.() ?? null;
 			const select = options.select ?? src.select?.() ?? null;
+			const loadOptions = {
+				...inheritedLoadOptionsOf(src),
+				...options.loadOptions ?? {}
+			};
 			return drainStore(store, {
 				chunkSize,
 				...select ? { select } : {},
 				...filter ? { filter } : {},
 				...sort ? { sort } : {},
-				...options.loadOptions ? { loadOptions: options.loadOptions } : {}
+				...Object.keys(loadOptions).length ? { loadOptions } : {}
 			});
 		}
 		return readArrayDataSource(src);

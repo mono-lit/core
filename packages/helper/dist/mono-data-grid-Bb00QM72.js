@@ -1,8 +1,8 @@
 import { a as parseFieldPath, c as toODataClause, l as toODataSelector, n as isPath, o as projectFields, r as mergePatch, s as setFieldValue, t as getFieldValue } from "./field-path-BabiMrrA.js";
-import { a as buildGroups, c as isGroupNode, i as searchFilterOf, o as collectGroupPaths, r as readAllRows, s as flattenLeaves } from "./data-source-read-Cp_h7NIf.js";
+import { a as buildGroups, c as isGroupNode, i as searchFilterOf, o as collectGroupPaths, r as readAllRows, s as flattenLeaves } from "./data-source-read-BL266IW0.js";
 import { i as joinFilters, n as andPredicates, r as compileFilterPredicate, t as andFilters } from "./filter-eval-ChDSaAUH.js";
 import { A as resolveSearchEntries, C as customRemoteClause, E as hasWildcardSearch, S as customPredicate, T as hasCustomSearch, h as mergeSearchFields, j as searchEntryFor, k as plainSearchColumns, n as describeError, o as isCanceled, u as DEFAULT_SEARCH_FIELDS } from "./normalize-error-D93O4q8g.js";
-import { a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, h as monoArraySource, i as normalizeSortList, l as summaryAliases, m as storeRows, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-lDR-g9Eb.js";
+import { a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, h as monoArraySource, i as normalizeSortList, l as summaryAliases, m as storeRows, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-fxT5QIX4.js";
 import { n as unwrapReactive } from "./reactive-Dtd-esHO.js";
 import { t as arrayToODataString } from "./filter-odata-Bi27XUpQ.js";
 import { t as createNotifier } from "./notifier-BIrqUzRh.js";
@@ -3977,12 +3977,16 @@ function monoDataGrid(ds = null, opts = {}) {
 	async function getData() {
 		const s = bound;
 		if (!s) return [];
+		const loadOptions = {};
+		if (resolvedOpts.expand !== void 0) loadOptions.expand = resolvedOpts.expand;
+		if (resolvedOpts.customQueryParams !== void 0) loadOptions.customQueryParams = resolvedOpts.customQueryParams;
 		suppressSync = true;
 		try {
 			return await readAllRows(s, {
 				chunkSize,
 				select: opts.select ?? toList(resolvedOpts.select),
-				sort: mergedSort()
+				sort: mergedSort(),
+				...Object.keys(loadOptions).length ? { loadOptions } : {}
 			});
 		} finally {
 			suppressSync = false;
