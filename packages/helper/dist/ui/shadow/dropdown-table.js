@@ -7,7 +7,7 @@ import { n as FieldTooltipController, t as field_tooltip_css_raw_default } from 
 import { n as label_position_css_raw_default, r as FieldValidationController, t as field_validation_css_raw_default } from "../../field-validation.css_raw-Cx6SGrfP.js";
 import { n as applyPopupPlacement, r as computePopupPlacement, t as PopupPortalController } from "../../popup-portal-CINuVjNY.js";
 import { t as createNotifier } from "../../notifier-BIrqUzRh.js";
-import { t as monoDataGrid } from "../../mono-data-grid-Bkr-e1-i.js";
+import { t as monoDataGrid } from "../../mono-data-grid-e9ZVBlNN.js";
 import { n as resolveChipLimit, r as visibleChipCap, t as ChipStripController } from "../../chip-strip-bNfLn52Z.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { property } from "lit/decorators.js";

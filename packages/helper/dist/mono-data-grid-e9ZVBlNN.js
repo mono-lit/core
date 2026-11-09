@@ -444,6 +444,9 @@ function monoDataGrid(ds = null, opts = {}) {
 	const chunkSize = Math.max(1, opts.chunkSize ?? 100);
 	let suppressSync = false;
 	let allRows = [];
+	let browserRows = null;
+	let browserPageIndex = 0;
+	let browserPageSize = 0;
 	let scrollMode = "off";
 	let accumulated = [];
 	let scrollNextPage = 0;
@@ -2147,16 +2150,21 @@ function monoDataGrid(ds = null, opts = {}) {
 	* column sort follows — applied to the group field itself if it is one.
 	*/
 	function effectiveSort() {
-		const keys = ctrl.sorts.map((s) => ({
-			selector: s.field,
+		const keys = ctrl.sorts.filter((s) => !isBrowserSortKey(s.field)).map((s) => ({
+			field: s.field,
+			selector: declaredSortSelector(s.field) ?? s.field,
 			desc: s.order === "desc"
 		}));
-		if (!groupFields.length) return keys.length ? keys : null;
+		const entry = (k) => ({
+			selector: k.selector,
+			desc: k.desc
+		});
+		if (!groupFields.length) return keys.length ? keys.map(entry) : null;
 		const list = groupFields.map((f) => ({
 			selector: f,
-			desc: keys.find((k) => k.selector === f)?.desc ?? false
+			desc: keys.find((k) => k.field === f)?.desc ?? false
 		}));
-		for (const k of keys) if (!groupFields.includes(k.selector)) list.push(k);
+		for (const k of keys) if (!groupFields.includes(k.field)) list.push(entry(k));
 		return list;
 	}
 	/**
@@ -2571,6 +2579,10 @@ function monoDataGrid(ds = null, opts = {}) {
 			syncScroll();
 			return;
 		}
+		if (browserRows && browserSortActive()) {
+			syncBrowser();
+			return;
+		}
 		if (pageSizeAll) {
 			ctrl.grouped = false;
 			ctrl.items = allRows;
@@ -2734,6 +2746,11 @@ function monoDataGrid(ds = null, opts = {}) {
 			await loadScrollPage(true);
 			return;
 		}
+		if (browserSortActive()) {
+			await loadBrowserSorted();
+			return;
+		}
+		browserRows = null;
 		if (pageSizeAll && !isGrouped()) {
 			await loadAllChunked();
 			return;
@@ -2755,6 +2772,11 @@ function monoDataGrid(ds = null, opts = {}) {
 			await loadScrollPage(true);
 			return;
 		}
+		if (browserSortActive()) {
+			await loadBrowserSorted();
+			return;
+		}
+		browserRows = null;
 		if (pageSizeAll && !isGrouped()) {
 			await loadAllChunked();
 			return;
@@ -2791,6 +2813,11 @@ function monoDataGrid(ds = null, opts = {}) {
 			if (serverMode()) await fetchVisibleRows();
 			return;
 		}
+		if (browserRows && browserSortActive()) {
+			browserPageIndex = Math.max(0, pageIndex);
+			syncBrowser();
+			return;
+		}
 		const s = bound;
 		if (!s) return;
 		s.pageIndex?.(Math.max(0, pageIndex));
@@ -2808,6 +2835,15 @@ function monoDataGrid(ds = null, opts = {}) {
 		}
 		const s = bound;
 		if (!s) return;
+		if (browserRows && browserSortActive()) {
+			if (!all) {
+				browserPageSize = Math.max(1, pageSize);
+				s.pageSize?.(browserPageSize);
+			}
+			browserPageIndex = 0;
+			syncBrowser();
+			return;
+		}
 		if (all) {
 			await loadAllChunked();
 			return;
@@ -2853,6 +2889,127 @@ function monoDataGrid(ds = null, opts = {}) {
 		allRows = acc;
 		ctrl.loading = bound?.isLoading?.() ?? false;
 		sync();
+	}
+	const BROWSER_SORT_MAX_ROWS = 5e3;
+	/** The active sort keys when ANY of them sorts in the browser, else `null`. */
+	function browserSortKeys() {
+		if (!ctrl.sorts.some((s) => isBrowserSortKey(s.field))) return null;
+		return ctrl.sorts.map((s) => {
+			const browser = isBrowserSortKey(s.field);
+			return {
+				field: s.field,
+				selector: declaredSortSelector(s.field) ?? s.field,
+				desc: s.order === "desc",
+				aggregate: browser ? declaredSortConfig(s.field).aggregate ?? "sum" : null
+			};
+		});
+	}
+	/** Browser sort applies: a browser-sorted column is active on a flat, paged, bound table. */
+	function browserSortActive() {
+		return !!bound && !isGrouped() && !serverMode() && !scrollActive() && !!browserSortKeys();
+	}
+	/** The smallest `maxRows` any active browser-sorted column declares (default 5000). */
+	function browserSortCap() {
+		const caps = ctrl.sorts.filter((s) => isBrowserSortKey(s.field)).map((s) => Number(declaredSortConfig(s.field).maxRows)).filter((n) => Number.isFinite(n) && n > 0);
+		return caps.length ? Math.min(...caps) : BROWSER_SORT_MAX_ROWS;
+	}
+	/** A row's matches for `selector` reduced to one sortable value. */
+	function browserSortValue(row, selector, aggregate) {
+		const raw = getFieldValue(row, selector);
+		if (!aggregate) return raw;
+		const list = Array.isArray(raw) ? raw : raw == null ? [] : [raw];
+		if (aggregate === "count") return list.length;
+		const nums = list.map(Number).filter((n) => Number.isFinite(n));
+		if (!nums.length) return aggregate === "sum" ? 0 : null;
+		if (aggregate === "min") return Math.min(...nums);
+		if (aggregate === "max") return Math.max(...nums);
+		const sum = nums.reduce((a, b) => a + b, 0);
+		return aggregate === "avg" ? sum / nums.length : sum;
+	}
+	/** Empties last in either direction; numbers numerically; text numeric-aware. */
+	function compareBrowserValues(a, b) {
+		const ea = a == null || a === "";
+		const eb = b == null || b === "";
+		if (ea || eb) return ea === eb ? 0 : ea ? 1 : -1;
+		if (typeof a === "number" && typeof b === "number") return a - b;
+		if (a instanceof Date && b instanceof Date) return a.getTime() - b.getTime();
+		return String(a).localeCompare(String(b), void 0, { numeric: true });
+	}
+	/** Every matching row, sorted by the active keys (stable). */
+	function sortBrowserRows(rows) {
+		const keys = browserSortKeys() ?? [];
+		const decorated = rows.map((row, i) => ({
+			row,
+			i,
+			v: keys.map((k) => browserSortValue(row, k.selector, k.aggregate))
+		}));
+		decorated.sort((x, y) => {
+			for (let k = 0; k < keys.length; k++) {
+				const ex = x.v[k] == null || x.v[k] === "";
+				const ey = y.v[k] == null || y.v[k] === "";
+				const c = compareBrowserValues(x.v[k], y.v[k]);
+				if (c) return ex || ey ? c : keys[k].desc ? -c : c;
+			}
+			return x.i - y.i;
+		});
+		return decorated.map((d) => d.row);
+	}
+	/** Too many rows to sort in the browser: drop those keys, warn, load normally. */
+	async function refuseBrowserSort(count, cap) {
+		const fields = ctrl.sorts.filter((s) => isBrowserSortKey(s.field)).map((s) => s.field);
+		console.warn(`[monoDataGrid] sort: "${fields.join("\", \"")}" sorts in the browser and needs every row, but ${count} match (maxRows ${cap}) — sort cleared.`);
+		ctrl.sorts = ctrl.sorts.filter((s) => !isBrowserSortKey(s.field));
+		syncPrimarySort();
+		browserRows = null;
+		applySourceSort();
+		notify();
+		await load();
+	}
+	/** Read every matching row, sort it in memory, show the first page. */
+	async function loadBrowserSorted() {
+		const s = bound;
+		if (!s) return;
+		const cap = browserSortCap();
+		const known = s.totalCount?.();
+		if (typeof known === "number" && known > cap) {
+			await refuseBrowserSort(known, cap);
+			return;
+		}
+		if (!browserPageSize) browserPageSize = Math.max(1, s.pageSize?.() || ctrl.pageSize || 20);
+		ctrl.loading = true;
+		notify();
+		let rows = [];
+		try {
+			await runLoad(async () => {
+				rows = await readAllFromSource();
+			});
+		} finally {
+			ctrl.loading = false;
+		}
+		if (rows.length > cap) {
+			await refuseBrowserSort(rows.length, cap);
+			return;
+		}
+		browserRows = sortBrowserRows(rows);
+		browserPageIndex = 0;
+		sync();
+		recomputeSummaries();
+	}
+	/** Map the in-memory sorted rows (current page, or all) onto `ctrl`. */
+	function syncBrowser() {
+		const rows = browserRows ?? [];
+		const size = pageSizeAll ? Math.max(1, rows.length) : Math.max(1, browserPageSize);
+		const pageCount = Math.max(1, Math.ceil(rows.length / size));
+		browserPageIndex = Math.min(Math.max(0, browserPageIndex), pageCount - 1);
+		const start = browserPageIndex * size;
+		ctrl.grouped = false;
+		ctrl.items = rows.slice(start, start + size);
+		ctrl.pageIndex = browserPageIndex;
+		ctrl.pageSize = size;
+		ctrl.pageSizeAll = pageSizeAll;
+		ctrl.totalCount = rows.length;
+		ctrl.pageCount = pageCount;
+		render();
 	}
 	/** Scroll modes only apply to a flat (ungrouped, non-server) grid. */
 	function scrollActive() {
@@ -3786,6 +3943,41 @@ function monoDataGrid(ds = null, opts = {}) {
 		});
 		ctrl.sorts = marked.map((m) => m.s);
 	}
+	/**
+	* The source selector a column DECLARED via `sort.selector`, if any — what the
+	* DataSource / array source orders by in place of the field. Resolved like
+	* `declaredSortIndex`: central `props.th` config first, then the element's own
+	* `:sort.prop`. A blank string counts as not declared.
+	*/
+	function declaredSortSelector(field) {
+		const sel = declaredSortConfig(field).selector;
+		return typeof sel === "string" && sel.trim() ? sel.trim() : void 0;
+	}
+	/**
+	* A column's declared sort OBJECT — the element's `:sort.prop` with central
+	* `props.th` config merged over it (props win key by key, as everywhere). `{}`
+	* for `sort: true` / no config.
+	*/
+	function declaredSortConfig(field) {
+		const asObj = (sort) => typeof sort === "object" && sort ? sort : {};
+		let fromEl = {};
+		for (const el of columnEls) if (el.field === field && typeof el.sort === "object" && el.sort) {
+			fromEl = asObj(el.sort);
+			break;
+		}
+		return {
+			...fromEl,
+			...asObj((elementProps.th ?? []).find((c) => c?.field === field)?.sort)
+		};
+	}
+	/**
+	* Whether a sorted column is sorted IN THE BROWSER — its selector fans out over a
+	* collection (`[*]`, which no source can order by) or it declares an `aggregate`.
+	*/
+	function isBrowserSortKey(field) {
+		const sel = declaredSortSelector(field);
+		return !!sel && parseFieldPath(sel).hasWildcard || !!declaredSortConfig(field).aggregate;
+	}
 	/** Keep the single-value mirrors pointing at the primary key. */
 	function syncPrimarySort() {
 		ctrl.sortField = ctrl.sorts[0]?.field ?? null;
@@ -3974,6 +4166,11 @@ function monoDataGrid(ds = null, opts = {}) {
 	* see the intermediate full-list state.
 	*/
 	async function getData() {
+		if (browserRows && browserSortActive()) return [...browserRows];
+		return readAllFromSource();
+	}
+	/** `getData`'s read — every matching row from the source, in its own order. */
+	async function readAllFromSource() {
 		const s = bound;
 		if (!s) return [];
 		const loadOptions = {};

@@ -110,6 +110,8 @@ export interface MonoSetSortOptions {
    */
   sticky?: boolean;
 }
+/** How a browser-sorted column reduces a row's `[*]` matches — see `MonoColumnSort.aggregate`. */
+export type MonoSortAggregate = 'sum' | 'min' | 'max' | 'avg' | 'count';
 export interface MonoColumnSort {
   /**
    * Whether the column is sortable at all. Defaults to `true` when a `sort` object
@@ -138,6 +140,40 @@ export interface MonoColumnSort {
   index?: number;
   /** Cycle `asc ↔ desc` only (never clears). */
   noClear?: boolean;
+  /**
+   * What the SOURCE sorts by when this column is sorted — instead of the column's
+   * `field`. The column keeps its identity (`field`: the arrow, precedence badge,
+   * `sorts`, `setSort(field)` and the header menu all still name it); only the
+   * selector handed to the DataSource / array source changes.
+   *
+   * For a column whose `field` is not a property the server knows — a value
+   * derived in the browser (`_Total`), or one whose display field differs from
+   * the one to order by — point it at one that is: a plain property
+   * (`'TotalBudget'`) or a navigation path (`'Brand.Nama'` → `$orderby=Brand/Nama`
+   * on a remote source, resolved per row on an array source).
+   *
+   * A plain selector must be something the source can order by. A selector with a
+   * `[*]` WILDCARD — `'Lines.[*].Amount'` — is the one OData cannot (no `$orderby`
+   * over a child collection), so it is sorted IN THE BROWSER instead: while such a
+   * column is sorted, the grid reads every row the current filter / search matches
+   * (with the source's `expand`), reduces each row's matches with `aggregate`
+   * (default `'sum'`), sorts, and pages in memory — see `aggregate` / `maxRows`.
+   * Flat paged tables only (not grouped, not scroll modes).
+   */
+  selector?: string;
+  /**
+   * How a browser-sorted column (a `[*]` `selector`, or any `selector` when this
+   * is set) reduces a row's matches to the value it sorts by. Default `'sum'`.
+   * Non-numeric matches are skipped by `sum` / `min` / `max` / `avg`; `count`
+   * counts every match.
+   */
+  aggregate?: MonoSortAggregate;
+  /**
+   * Browser-sorted columns only: the most rows the grid will read to sort. Above
+   * it the sort is refused (cleared, with a console warning) instead of pulling
+   * the whole table. Default `5000`.
+   */
+  maxRows?: number;
   /** Sortable UI is shown but inert. */
   disabled?: boolean;
   /**
