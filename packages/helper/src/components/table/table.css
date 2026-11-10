@@ -295,10 +295,18 @@ mono-shadow-table-search {
   outline: none !important;
 }
 
-/* A `type="search"` input shows a native clear affordance; make it feel clickable
-   (mono-input's own `clearable` button is styled by input.css). */
-:is([mono-table-search],.mono-table-search) .mono-input-native[type='search']::-webkit-search-cancel-button {
-  cursor: pointer;
+/* A `type="search"` input gets a native clear (x) from WebKit/Blink — a second,
+   browser-blue "x" beside mono-input's own `clearable` button (styled by
+   input.css), shown on hover/typing. Hide it: the mono button is the only clear.
+   `::-ms-clear` is old Edge/IE's equivalent. */
+:is([mono-table-search],.mono-table-search) .mono-input-native[type='search']::-webkit-search-cancel-button,
+:is([mono-table-search],.mono-table-search) .mono-input-native[type='search']::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+:is([mono-table-search],.mono-table-search) .mono-input-native[type='search']::-ms-clear {
+  display: none;
 }
 
 /* ── multi-context chips (inside the field, before the input) ─────────────── */
