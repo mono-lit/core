@@ -1,13 +1,13 @@
 import { MonoEventProps } from "../../composables/element-props.js";
 import { CheckboxEvents, CheckboxProps } from "../checkbox/checkbox-types.js";
-import { DateEvents, DateProps } from "../date/date-types.js";
-import { DropdownTableEvents, DropdownTableProps } from "../dropdown-table/dropdown-table-types.js";
-import { FileUploadEvents, FileUploadProps } from "../file-upload/file-upload-types.js";
 import { InputEvents, InputProps } from "../input/input-types.js";
 import { SelectEvents, SelectProps } from "../select/select-types.js";
 import { TextareaEvents, TextareaProps } from "../textarea/textarea-types.js";
 import { RichTextEditorEvents, RichTextEditorProps } from "../rich-text-editor/rich-text-editor-types.js";
+import { DateEvents, DateProps } from "../date/date-types.js";
 import { TagInputEvents, TagInputProps } from "../tag-input/tag-input-types.js";
+import { FileUploadEvents, FileUploadProps } from "../file-upload/file-upload-types.js";
+import { DropdownTableEvents, DropdownTableProps } from "../dropdown-table/dropdown-table-types.js";
 import { RadioEvents, RadioProps } from "../radio/radio-types.js";
 import { SwitchEvents, SwitchProps } from "../switch/switch-types.js";
 import { SliderEvents, SliderProps } from "../slider/slider-types.js";
@@ -320,6 +320,12 @@ export interface MonoFormController {
   _reportList(key: string, entries: MonoFormListEntry[]): void;
   /** @internal The props an element should currently apply (`inputs[key].props` wins). */
   _propsFor(key: string): Record<string, unknown>;
+  /**
+   * @internal The elements currently registered under `key` — how a table's filter
+   * suggestion reads the bound control's option source (`dataSource` / `items` /
+   * `keyValue`) and whether it is `readonly` / `disabled`.
+   */
+  _elements(key: string): unknown[];
 }
 //#endregion
 export {};

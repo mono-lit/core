@@ -14,6 +14,12 @@ export interface MonoEventOptions {
    * emits no plain event at all.
    */
   alias?: string | false;
+  /**
+   * Dispatch every event of the family as `cancelable`, so a listener can veto the
+   * component's default action with `preventDefault()`. The return value of
+   * {@link dispatchMonoEvent} reports it.
+   */
+  cancelable?: boolean;
 }
 /**
  * Device-originated event names — decorated when native, never synthesized.
@@ -53,5 +59,5 @@ export declare function decorateEvent<T>(event: Event, detail: T): void;
  *   dispatchMonoEvent(this, 'click', detail, { alias: 'toggle' })      // toggle + mno-click + mnoClick
  *   dispatchMonoEvent(this, 'loading-change', detail)                  // loading-change + loadingChange + mno-loading-change + mnoLoadingChange
  */
-export declare function dispatchMonoEvent<T>(target: EventTarget, name: string, detail: T, options?: MonoEventOptions): void;
+export declare function dispatchMonoEvent<T>(target: EventTarget, name: string, detail: T, options?: MonoEventOptions): boolean;
 //#endregion

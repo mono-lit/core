@@ -1,5 +1,5 @@
 import { a as __decorate, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration, u as numberStringConverter } from "../../hydration-flush-BaE9gN3C.js";
-import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
+import { t as dispatchMonoEvent } from "../../mono-event-CAZf0F_k.js";
 import { n as cssPart, r as defineCssClassAliases, t as applyCssClass } from "../../css-class-B6Tc_MAx.js";
 import { n as releaseLayoutVar, t as claimLayoutVar } from "../../layout-var-BSBKY49k.js";
 import { a as validateColorProp, i as isThemeColorToken, n as colorClassToken, r as customColorStyle, t as CUSTOM_COLOR_CLASS } from "../../color-CEYYtRX-.js";

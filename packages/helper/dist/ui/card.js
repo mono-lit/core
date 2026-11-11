@@ -1,7 +1,7 @@
 import { d as buildSizeStyle } from "../mono-ui-kvLVIf1V.js";
 import { t as customElement } from "../mono-element-CKcT0rwv.js";
 import { a as defineHybridPropAliases, i as defineHybridPropAlias, r as booleanStringConverter, t as __decorate } from "../decorate-DbYFpi8R.js";
-import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
+import { t as dispatchMonoEvent } from "../mono-event-CAZf0F_k.js";
 import { a as parkDetachedNodes, n as bucketHasContent, o as placeLightSlots, r as captureLightSlots } from "../light-slots-B5Ck0t_E.js";
 import { LitElement, html, nothing } from "lit";
 import { property, query, state } from "lit/decorators.js";

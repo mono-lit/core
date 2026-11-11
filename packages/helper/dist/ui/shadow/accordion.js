@@ -1,5 +1,5 @@
 import { a as __decorate, c as defineHybridPropAlias, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, n as adoptIconStyles, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration } from "../../hydration-flush-BaE9gN3C.js";
-import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
+import { t as dispatchMonoEvent } from "../../mono-event-CAZf0F_k.js";
 import { n as mdiGlyph, t as isIconifyClass } from "../../icon-BM9N-jOt.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { ref } from "lit/directives/ref.js";

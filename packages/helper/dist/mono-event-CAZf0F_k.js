@@ -99,31 +99,36 @@ function decorateEvent(event, detail) {
 *   dispatchMonoEvent(this, 'loading-change', detail)                  // loading-change + loadingChange + mno-loading-change + mnoLoadingChange
 */
 function dispatchMonoEvent(target, name, detail, options = {}) {
+	const cancelable = !!options.cancelable;
 	const init = {
 		detail,
 		bubbles: true,
-		composed: true
+		composed: true,
+		cancelable
 	};
+	let allowed = true;
 	const camel = toCamelEventName(`mno-${name}`);
-	target.dispatchEvent(new CustomEvent(`mno-${name}`, init));
-	target.dispatchEvent(new CustomEvent(camel, init));
+	allowed = target.dispatchEvent(new CustomEvent(`mno-${name}`, init)) && allowed;
+	allowed = target.dispatchEvent(new CustomEvent(camel, init)) && allowed;
 	const alias = options.alias === false ? null : options.alias ?? name;
-	if (!alias) return;
+	if (!alias) return allowed;
 	const fromDetail = detail?.sourceEvent;
 	const source = options.sourceEvent !== void 0 ? options.sourceEvent : fromDetail instanceof Event ? fromDetail : null;
 	if (source && source.type === alias && reachesHost(source, target)) {
 		decorateEvent(source, detail);
-		return;
+		return allowed;
 	}
-	if (MONO_DEVICE_EVENTS.has(alias)) return;
+	if (MONO_DEVICE_EVENTS.has(alias)) return allowed;
 	const plainInit = {
 		detail,
 		bubbles: !MONO_NON_BUBBLING_ALIASES.has(alias),
-		composed: true
+		composed: true,
+		cancelable
 	};
-	target.dispatchEvent(new CustomEvent(alias, plainInit));
+	allowed = target.dispatchEvent(new CustomEvent(alias, plainInit)) && allowed;
 	const plainCamel = toCamelEventName(alias);
-	if (plainCamel !== alias) target.dispatchEvent(new CustomEvent(plainCamel, plainInit));
+	if (plainCamel !== alias) allowed = target.dispatchEvent(new CustomEvent(plainCamel, plainInit)) && allowed;
+	return allowed;
 }
 
 //#endregion

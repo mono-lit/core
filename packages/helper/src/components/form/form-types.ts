@@ -333,4 +333,10 @@ export interface MonoFormController {
   _reportList(key: string, entries: MonoFormListEntry[]): void
   /** @internal The props an element should currently apply (`inputs[key].props` wins). */
   _propsFor(key: string): Record<string, unknown>
+  /**
+   * @internal The elements currently registered under `key` — how a table's filter
+   * suggestion reads the bound control's option source (`dataSource` / `items` /
+   * `keyValue`) and whether it is `readonly` / `disabled`.
+   */
+  _elements(key: string): unknown[]
 }

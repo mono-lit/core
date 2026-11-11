@@ -1,8 +1,8 @@
 import { Constructor } from "../../composables/hybird-prop.js";
 import { CssSizeValue } from "../../composables/css-size.js";
 import { MonoSearchValue } from "../../search/data-search.js";
-import { FieldTooltipController, FieldTooltipValue } from "../../composables/field-tooltip.js";
 import { SelectColor, SelectCssClass, SelectDataSource, SelectDisplayGroup, SelectDisplayValue, SelectDropdownOptions, SelectItem, SelectLoadMore, SelectSize, SelectValidationState, SelectValue, SelectVariant } from "./select-types.js";
+import { FieldTooltipController, FieldTooltipValue } from "../../composables/field-tooltip.js";
 import { LateSlotWatcher } from "../../composables/light-slots.js";
 import { LitElement, TemplateResult } from "lit";
 //#region src/components/select/select-core.d.ts

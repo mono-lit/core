@@ -7,12 +7,13 @@ import { MonoExportOptions, MonoExportResult } from "../../export/types.js";
 import { MonoImportOptions, MonoImportResult } from "../../import/types.js";
 import { TableDetailEvents } from "./mono-table-detail-core.js";
 import { TableCheckboxEvents } from "./mono-table-checkbox-core.js";
-import { TableEmptyEvents } from "./mono-table-empty-core.js";
-import { TableErrorEvents } from "./mono-table-error-core.js";
 import { MaybeReactive } from "../../composables/reactive.js";
-import { MonoDataSourceOptions, MonoOdataOptions, MonoSourceSortEntry } from "../../utils/data-source-options.js";
 import { MonoSearchExprEntry } from "../../search/search-expr.js";
 import { MonoSearchFieldsAliases, MonoSearchValue } from "../../search/data-search.js";
+import { MonoFilterSuggestion } from "./filter-suggestion.js";
+import { TableEmptyEvents } from "./mono-table-empty-core.js";
+import { TableErrorEvents } from "./mono-table-error-core.js";
+import { MonoDataSourceOptions, MonoOdataOptions, MonoSourceSortEntry } from "../../utils/data-source-options.js";
 import { MonoFilterBuilderOptions, MonoFilterController } from "../filter/filter-types.js";
 //#region src/components/table/mono-data-grid.d.ts
 /**
@@ -1423,6 +1424,15 @@ export interface MonoTableController<T = any> {
   searchExpr(): MonoSearchExprEntry[] | undefined;
   /** The live search terms (empty when unsearched). */
   searchTerms: MonoSearchTerm[];
+  /**
+   * "N rows match this search under a different filter value" — published by
+   * `<mono-table-search :suggestion-filter>` after a search came back empty, and
+   * rendered by `<mono-table-empty>` as an **Adjust Filter** offer. `null` when
+   * there is nothing to suggest. Cleared by every new search.
+   */
+  filterSuggestion: MonoFilterSuggestion | null;
+  /** Publish (or clear, with `null`) {@link filterSuggestion}. Notifies on change only. */
+  setFilterSuggestion(next: MonoFilterSuggestion | null): void;
   /**
    * An explicit filter of the grid's own — what the slotted filter builder
    * writes. One LAYER of the query, not the whole of it: it is AND-ed with the

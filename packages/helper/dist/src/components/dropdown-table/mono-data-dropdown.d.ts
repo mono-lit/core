@@ -1,6 +1,6 @@
 import { MonoEventProps } from "../../composables/element-props.js";
-import { MonoCheckLimits, MonoDataGridOptions, MonoGridSource, MonoTableController, MonoTableProps } from "../table/mono-data-grid.js";
 import { DropdownTableEvents } from "./dropdown-table-types.js";
+import { MonoCheckLimits, MonoDataGridOptions, MonoGridSource, MonoTableController, MonoTableProps } from "../table/mono-data-grid.js";
 //#region src/components/dropdown-table/mono-data-dropdown.d.ts
 /** One resolved selection (key + display text + the row it came from). */
 export interface MonoDropdownItem<T = any> {

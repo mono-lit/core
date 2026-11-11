@@ -78,6 +78,7 @@ import type { TableCheckboxEvents } from './src/components/table/mono-table-chec
 import type { TableDetailEvents } from './src/components/table/mono-table-detail-core.js'
 import type { TableEmptyEvents } from './src/components/table/mono-table-empty-core.js'
 import type { TableErrorEvents } from './src/components/table/mono-table-error-core.js'
+import type { TableSearchEvents } from './src/components/table/table-types.js'
 import type { TabsEvents } from './src/components/tabs/tabs-types.js'
 import type { TagInputEvents } from './src/components/tag-input/tag-input-types.js'
 import type { TextareaEvents } from './src/components/textarea/textarea-types.js'
@@ -202,7 +203,7 @@ declare module 'vue' {
     'mono-shadow-table-page-size': MonoElement<TablePageSizeProps>
     'mono-shadow-table-paging': MonoElement<TablePagingProps>
     'mono-shadow-table-paging-group': MonoElement<TablePagingGroupProps>
-    'mono-shadow-table-search': MonoElement<TableSearchProps>
+    'mono-shadow-table-search': MonoElement<TableSearchProps, TableSearchEvents>
     'mono-shadow-table-sort': MonoElement<TableSortProps>
     'mono-shadow-table-summary': MonoElement<TableSummaryProps>
     'mono-shadow-table-th': MonoElement<TableThProps>
@@ -221,7 +222,7 @@ declare module 'vue' {
     'mono-table-page-size': MonoElement<TablePageSizeProps>
     'mono-table-paging': MonoElement<TablePagingProps>
     'mono-table-paging-group': MonoElement<TablePagingGroupProps>
-    'mono-table-search': MonoElement<TableSearchProps>
+    'mono-table-search': MonoElement<TableSearchProps, TableSearchEvents>
     'mono-table-sort': MonoElement<TableSortProps>
     'mono-table-summary': MonoElement<TableSummaryProps>
     'mono-table-th': MonoElement<TableThProps>

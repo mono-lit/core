@@ -1,7 +1,7 @@
 import { Constructor } from "../../composables/hybird-prop.js";
 import { CssSizeValue } from "../../composables/css-size.js";
-import { FieldTooltipController, FieldTooltipValue } from "../../composables/field-tooltip.js";
 import { OtpColor, OtpCssClass, OtpGroups, OtpLabelPosition, OtpSize, OtpType, OtpValidationPosition, OtpValidationState, OtpVariant } from "./otp-types.js";
+import { FieldTooltipController, FieldTooltipValue } from "../../composables/field-tooltip.js";
 import { FieldValidationController } from "../../composables/field-validation.js";
 import { LitElement, TemplateResult, nothing } from "lit";
 //#region src/components/otp/otp-core.d.ts

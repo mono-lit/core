@@ -1,8 +1,8 @@
 import { Constructor } from "../../composables/hybird-prop.js";
 import { CssSizeValue, buildSizeStyle } from "../../composables/css-size.js";
-import { FieldTooltipController, FieldTooltipValue } from "../../composables/field-tooltip.js";
 import { InputFormat, InputFormatOn } from "./input-format.js";
 import { InputColor, InputCssClass, InputModelValue, InputSize, InputType, InputValidationState, InputVariant } from "./input-types.js";
+import { FieldTooltipController, FieldTooltipValue } from "../../composables/field-tooltip.js";
 import { FieldValidationController } from "../../composables/field-validation.js";
 import { LitElement, TemplateResult, nothing } from "lit";
 //#region src/components/input/input-core.d.ts

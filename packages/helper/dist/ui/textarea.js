@@ -1,7 +1,7 @@
 import { d as buildSizeStyle, g as monoHostChildNodes } from "../mono-ui-kvLVIf1V.js";
 import { t as customElement } from "../mono-element-CKcT0rwv.js";
 import { a as defineHybridPropAliases, r as booleanStringConverter, t as __decorate } from "../decorate-DbYFpi8R.js";
-import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
+import { t as dispatchMonoEvent } from "../mono-event-CAZf0F_k.js";
 import { s as placeSlotNode } from "../light-slots-B5Ck0t_E.js";
 import { t as MonoFormControlCore } from "../form-control-core-CRZPZ1ru.js";
 import { t as FieldTooltipController } from "../field-tooltip-Csk4s2ve.js";

@@ -1,8 +1,8 @@
 import { Constructor } from "../../composables/hybird-prop.js";
 import { CssSizeValue } from "../../composables/css-size.js";
-import { FieldTooltipController, FieldTooltipValue } from "../../composables/field-tooltip.js";
 import { InputFormat } from "../input/input-format.js";
 import { SliderColor, SliderCssClass, SliderFill, SliderSize, SliderType, SliderValidationState, SliderValue, SliderValueTooltip } from "./slider-types.js";
+import { FieldTooltipController, FieldTooltipValue } from "../../composables/field-tooltip.js";
 import { LitElement, TemplateResult, nothing } from "lit";
 //#region src/components/slider/slider-core.d.ts
 export type SliderSlotName = 'label' | 'helper';

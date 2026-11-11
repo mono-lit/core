@@ -2,9 +2,9 @@ import { PanelSizeProps } from "../../composables/css-size.js";
 import { DescribedError } from "../../utils/normalize-error.js";
 import { LoadMoreMode, MonoDataSource } from "../../composables/data-source-controller.js";
 import { VisibilityProps } from "../../composables/visibility.js";
+import { MonoTooltipOptions } from "../tooltip/tooltip-types.js";
 import { MonoSearchValue } from "../../search/data-search.js";
 import { ChipBehaviour, ChipColor, ChipCssClass, ChipRounded, ChipSize, ChipVariant } from "../chip/chip-types.js";
-import { MonoTooltipOptions } from "../tooltip/tooltip-types.js";
 import { ChipLimitProps } from "../../composables/chip-limits.js";
 //#region src/components/tag-input/tag-input-types.d.ts
 export type TagInputSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';

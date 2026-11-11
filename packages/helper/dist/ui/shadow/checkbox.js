@@ -1,5 +1,5 @@
 import { a as __decorate, c as defineHybridPropAlias, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration } from "../../hydration-flush-BaE9gN3C.js";
-import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
+import { t as dispatchMonoEvent } from "../../mono-event-CAZf0F_k.js";
 import { t as MonoFormControlCore } from "../../form-control-core-BbiACMtL.js";
 import { t as checkbox_css_raw_default } from "../../checkbox.css_raw-AYtSbUtY.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";

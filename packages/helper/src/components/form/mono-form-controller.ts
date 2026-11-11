@@ -412,6 +412,7 @@ export function monoForm(options: MonoFormOptions): MonoFormController {
     _report,
     _reportList,
     _propsFor: propsFor,
+    _elements: (key: string) => [...(elements[key] ?? [])],
   }
 
   return controller

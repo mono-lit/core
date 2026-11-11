@@ -1,5 +1,7 @@
 import { Constructor } from "../../composables/hybird-prop.js";
 import { MonoTableControllerCoreInterface } from "./table-controller-core.js";
+import { MonoFormController } from "../form/form-types.js";
+import { MonoFilterSuggestion } from "./filter-suggestion.js";
 import { MonoTableController } from "./mono-data-grid.js";
 import { LitElement, TemplateResult, nothing } from "lit";
 //#region src/components/table/mono-table-empty-core.d.ts
@@ -8,11 +10,34 @@ export interface TableEmptyReloadEventDetail {
   grid: MonoTableController;
 }
 export type TableEmptyReloadEvent = CustomEvent<TableEmptyReloadEventDetail>;
+/**
+ * `detail` of the `adjust` event — the **Adjust Filter** button was pressed and
+ * `values` have ALREADY been written into the form. The event is cancelable:
+ * its default action is `grid.refresh()`; call `preventDefault()` to run your own
+ * query instead (a page that builds its `$filter` by hand from the form).
+ */
+export interface TableEmptyAdjustEventDetail extends MonoFilterSuggestion {
+  form: MonoFormController;
+  grid: MonoTableController;
+}
+export type TableEmptyAdjustEvent = CustomEvent<TableEmptyAdjustEventDetail>;
 /** Events emitted by `<mono-table-empty>` (feeds the generated Vue types). */
 export interface TableEmptyEvents {
   reload: TableEmptyReloadEvent;
+  adjust: TableEmptyAdjustEvent;
   'mno-reload': TableEmptyReloadEvent;
   mnoReload: TableEmptyReloadEvent;
+  'mno-adjust': TableEmptyAdjustEvent;
+  mnoAdjust: TableEmptyAdjustEvent;
+}
+/** `<mono-table-empty :suggestion-filter.prop="…">` — how a filter suggestion is presented. */
+export interface MonoEmptySuggestionOptions {
+  /**
+   * The line that REPLACES the subtitle while a suggestion is shown. A function
+   * receives the row count and the whole suggestion; a string substitutes
+   * `{count}`, `{value}`, `{key}` and `{field}`.
+   */
+  message?: string | ((count: number, suggestion: MonoFilterSuggestion) => string);
 }
 /** Public surface added by the empty-state core mixin. */
 export declare class MonoTableEmptyCoreInterface extends MonoTableControllerCoreInterface {
@@ -21,6 +46,13 @@ export declare class MonoTableEmptyCoreInterface extends MonoTableControllerCore
   subtitle: string;
   reload: boolean;
   reloadLabel: string;
+  /** The filter form an **Adjust Filter** writes into. */
+  dataForm?: MonoFormController;
+  /** Alias of {@link dataForm}. */
+  controlForm?: MonoFormController;
+  /** Presentation of the filter suggestion — `{ message }`. */
+  suggestionFilter?: MonoEmptySuggestionOptions | null;
+  adjustLabel: string;
   height?: string;
   minHeight?: string;
   maxHeight?: string;

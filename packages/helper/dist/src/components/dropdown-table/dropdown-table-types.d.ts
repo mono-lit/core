@@ -1,8 +1,8 @@
 import { CssSizeValue, PanelSizeProps } from "../../composables/css-size.js";
 import { DropdownPlacement } from "../dropdown/dropdown-types.js";
 import { VisibilityProps } from "../../composables/visibility.js";
-import { ChipBehaviour, ChipColor, ChipCssClass, ChipRounded, ChipSize, ChipVariant } from "../chip/chip-types.js";
 import { MonoTooltipOptions } from "../tooltip/tooltip-types.js";
+import { ChipBehaviour, ChipColor, ChipCssClass, ChipRounded, ChipSize, ChipVariant } from "../chip/chip-types.js";
 import { ChipLimitProps } from "../../composables/chip-limits.js";
 import { MonoDropdownController, MonoDropdownItem } from "./mono-data-dropdown.js";
 //#region src/components/dropdown-table/dropdown-table-types.d.ts

@@ -68,6 +68,20 @@ A `mono-color="…"` attribute on the table (or on its scroll wrapper) recolours
 <DemoSingle name="table" id="search" />
 </ClientOnly>
 
+### Manual search (`model-value`)
+
+Pass `model-value` and the box stops searching for you. It becomes a controlled field, just like [`mono-input`](./input). Every keystroke emits `input` right away, and it also emits `change` on commit and `clear` from the ✕. Each event carries the same `$event.detail.modelValue` / `oldValue` that `mono-input` sends. The grid's search is **never** called, even with `:control-table` bound, so `search-value`, `suggestion` and `multi-context` have no effect. You run the search yourself, for example by filtering your own array or calling your own API (debounce it yourself if you need to).
+
+```vue
+<mono-table-search :model-value="q" clearable @input="q = $event.detail.modelValue" @clear="q = ''" />
+```
+
+Even an empty string opts in. Leave `model-value` off to keep the grid-driven behaviour. `input` / `change` / `clear` fire in grid mode too, so a listener works either way.
+
+<ClientOnly>
+<DemoSingle name="table" id="search-manual" />
+</ClientOnly>
+
 ### Naming the searched fields
 
 **You don't have to.** With no `searchValue`, a grid searches `'*'` — every top-level field — so search works out of the box. Set it to narrow that down.
@@ -112,6 +126,14 @@ The default also steps aside when it shouldn't apply: if the **DataSource itself
 
 <ClientOnly>
 <DemoSingle name="table" id="search-context" />
+</ClientOnly>
+
+### Filter suggestion (Adjust Filter)
+
+Bind the filter form to both elements and map row fields to form keys: `:suggestion-filter.prop="{ keys: { ShipCountry: 'Country' } }"`. When a search finds nothing, `mono-table-empty` shows how many rows match under another value the user can pick, with an **Adjust Filter** button that switches the form to it.
+
+<ClientOnly>
+<DemoSingle name="table" id="search-filter-suggestion" />
 </ClientOnly>
 
 ### Filter builder
@@ -934,3 +956,6 @@ Every row colour is **opaque** by design: a pinned column and a frozen head pain
   display: table-cell;
 }
 </style>
+### Filter suggestion (Adjust Filter)
+
+Bind the filter form to both elements and map row fields to form keys — `:suggestion-filter.prop="{ keys: { ShipCountry: 'Country' } }"`. When a search finds nothing, `mono-table-empty` shows how many rows match under another value the user can pick, with an **Adjust Filter** button that switches the form to it.

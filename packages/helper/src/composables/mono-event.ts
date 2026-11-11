@@ -52,6 +52,12 @@ export interface MonoEventOptions {
    * emits no plain event at all.
    */
   alias?: string | false
+  /**
+   * Dispatch every event of the family as `cancelable`, so a listener can veto the
+   * component's default action with `preventDefault()`. The return value of
+   * {@link dispatchMonoEvent} reports it.
+   */
+  cancelable?: boolean
 }
 
 /**
@@ -166,17 +172,21 @@ export function dispatchMonoEvent<T>(
   name: string,
   detail: T,
   options: MonoEventOptions = {},
-): void {
-  const init: CustomEventInit<T> = { detail, bubbles: true, composed: true }
+): boolean {
+  const cancelable = !!options.cancelable
+  const init: CustomEventInit<T> = { detail, bubbles: true, composed: true, cancelable }
+  // `dispatchEvent` returns false when a cancelable event was prevented; one veto
+  // on ANY name of the family vetoes the default action.
+  let allowed = true
 
   // 1. The prefixed pair — unchanged from the day the components were written.
   const camel = toCamelEventName(`mno-${name}`)
-  target.dispatchEvent(new CustomEvent(`mno-${name}`, init))
-  target.dispatchEvent(new CustomEvent(camel, init))
+  allowed = target.dispatchEvent(new CustomEvent(`mno-${name}`, init)) && allowed
+  allowed = target.dispatchEvent(new CustomEvent(camel, init)) && allowed
 
   // 2. The plain name.
   const alias = options.alias === false ? null : (options.alias ?? name)
-  if (!alias) return
+  if (!alias) return allowed
 
   const fromDetail = (detail as { sourceEvent?: unknown } | null)?.sourceEvent
   const source =
@@ -188,17 +198,21 @@ export function dispatchMonoEvent<T>(
 
   if (source && source.type === alias && reachesHost(source, target)) {
     decorateEvent(source, detail)
-    return
+    return allowed
   }
 
-  if (MONO_DEVICE_EVENTS.has(alias)) return
+  if (MONO_DEVICE_EVENTS.has(alias)) return allowed
 
   const plainInit: CustomEventInit<T> = {
     detail,
     bubbles: !MONO_NON_BUBBLING_ALIASES.has(alias),
     composed: true,
+    cancelable,
   }
-  target.dispatchEvent(new CustomEvent(alias, plainInit))
+  allowed = target.dispatchEvent(new CustomEvent(alias, plainInit)) && allowed
   const plainCamel = toCamelEventName(alias)
-  if (plainCamel !== alias) target.dispatchEvent(new CustomEvent(plainCamel, plainInit))
+  if (plainCamel !== alias) {
+    allowed = target.dispatchEvent(new CustomEvent(plainCamel, plainInit)) && allowed
+  }
+  return allowed
 }

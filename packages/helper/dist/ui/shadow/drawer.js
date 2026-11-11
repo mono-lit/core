@@ -1,5 +1,5 @@
 import { a as __decorate, d as optionalNumberConverter, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration } from "../../hydration-flush-BaE9gN3C.js";
-import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
+import { t as dispatchMonoEvent } from "../../mono-event-CAZf0F_k.js";
 import { n as isBelowBreakpoint, r as resolveAutoFullscreen, t as autoFullscreenConverter } from "../../breakpoints-DllybT82.js";
 import { i as registerPopupLayer, o as unregisterPopupLayer, r as refreshPopupStack, t as getOpenPopupLayers } from "../../popup-stack-C64WCuXq.js";
 import { i as pathOwnedBy } from "../../popup-portal-CINuVjNY.js";

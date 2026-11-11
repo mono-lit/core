@@ -1,8 +1,10 @@
 import { Constructor } from "../../composables/hybird-prop.js";
 import { CssSizeValue } from "../../composables/css-size.js";
 import { MonoTableControllerCoreInterface } from "./table-controller-core.js";
-import { MonoSearchValue } from "../../search/data-search.js";
 import { InputColor, InputCssClass, InputSize, InputValidationState, InputVariant } from "../input/input-types.js";
+import { MonoSearchValue } from "../../search/data-search.js";
+import { MonoFormController } from "../form/form-types.js";
+import { MonoSuggestionFilter } from "./filter-suggestion.js";
 import { LitElement, TemplateResult } from "lit";
 //#region src/components/table/mono-table-search-core.d.ts
 /** Per-build icon hooks the search core delegates to. */
@@ -13,6 +15,14 @@ export declare class MonoTableSearchCoreInterface extends MonoTableControllerCor
   searchValue: MonoSearchValue;
   /** Alias of {@link searchValue}, under the grid option's older name. */
   searchExpr: MonoSearchValue;
+  /** Passing it (even `''`) switches the box to MANUAL mode — see the class docs. */
+  modelValue?: string | null;
+  /** The filter form (`controlMonoForm`) a {@link suggestionFilter} reads and relaxes. */
+  dataForm?: MonoFormController;
+  /** Alias of {@link dataForm}. */
+  controlForm?: MonoFormController;
+  /** Map row fields onto form keys to offer "N rows under a different filter". */
+  suggestionFilter?: MonoSuggestionFilter | null;
   placeholder: string;
   disabled: boolean;
   debounce: number;
@@ -66,8 +76,17 @@ export declare class MonoTableSearchCoreInterface extends MonoTableControllerCor
  *
  * Deliberately NOT taken from `InputProps`: `type` (pinned to `search`),
  * `required` / `pattern` / `min` / `max` / `step` (form-submit constraints with no
- * meaning for a filter), and `value` / `modelValue` — the debounce below plus the
- * controller own the search term.
+ * meaning for a filter), and `value`.
+ *
+ * **Two modes, picked by `modelValue`:**
+ * - *grid* (no `model-value`) — the debounce below plus the controller own the
+ *   search term, exactly as before;
+ * - *manual* (`model-value` passed, even `''`) — a controlled field: it emits
+ *   `mono-input`'s `input` / `change` / `clear` (same detail shape) immediately and
+ *   NEVER touches the grid's search (`search-value`, `suggestion` and
+ *   `multi-context` go inert). The consumer runs the search itself.
+ *
+ * `input` / `change` / `clear` fire in grid mode too, so a listener works either way.
  *
  * The magnifier and clear glyphs are delegated to `renderIcon()` (light: UnoCSS
  * `.mono-icon i-mdi-*`; shadow: inline SVG) so the chrome is otherwise identical.

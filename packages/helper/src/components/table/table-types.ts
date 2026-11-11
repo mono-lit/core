@@ -45,11 +45,21 @@ import type {
   MonoSearchExprEntry,
 } from '../../search/search-expr.js'
 import type { MonoSearchValue, MonoSearchFieldsAliases } from '../../search/data-search.js'
+import type { MonoFormController } from '../form/form-types.js'
+import type { MonoSuggestionFilter } from './filter-suggestion.js'
+import type { MonoEmptySuggestionOptions } from './mono-table-empty-core.js'
+export type { MonoEmptySuggestionOptions } from './mono-table-empty-core.js'
+export type {
+  MonoSuggestionFilter,
+  MonoFilterSuggestion,
+  MonoSuggestionValueSource,
+} from './filter-suggestion.js'
 // `mono-table-search` mirrors `mono-input`'s appearance surface — reuse its types
 // rather than declaring parallel unions that could drift.
 import type {
   InputCssClass,
   InputColor,
+  InputModelEvent,
   InputSize,
   InputValidationState,
   InputVariant,
@@ -103,9 +113,39 @@ interface TableControlBase {
  * appearance / sizing / state props — a search box and a `<mono-input>` beside it
  * in a toolbar look identical. Not included (no meaning for a filter): `type`
  * (pinned to `search`), `required` / `pattern` / `min` / `max` / `step`, and
- * `value` / `modelValue` (the debounce + the controller own the search term).
+ * `value`.
+ *
+ * Without `modelValue` the debounce + the controller own the search term; passing
+ * it switches to MANUAL mode (see {@link TableSearchProps.modelValue}).
  */
 export interface TableSearchProps extends TableControlBase {
+  /**
+   * The search text. **Passing it (even `''`) switches the box to manual mode**:
+   * typing emits `input` / `change` / `clear` like `mono-input` (read
+   * `$event.detail.modelValue`) immediately, and the grid's search is NEVER
+   * called — `searchValue`, `suggestion` and `multiContext` go inert. The
+   * consumer filters / fetches on its own (and debounces it, if it wants to).
+   */
+  modelValue?: string | null
+  'model-value'?: string | null
+  modelvalue?: string | null
+
+  /**
+   * The filter form (`controlMonoForm`) behind the grid's query — read by
+   * {@link TableSearchProps.suggestionFilter}. Bind with `.prop`.
+   */
+  controlForm?: MonoFormController
+  'control-form'?: MonoFormController
+  dataForm?: MonoFormController
+  /**
+   * When a search comes back empty, probe the form's OTHER values and offer
+   * "N rows under a different filter" in `<mono-table-empty>`:
+   * `{ keys: { CodeDept: 'Dept' }, sources?, source?, searchValue?, filter? }`.
+   * Values the user can't pick (the bound control's own option source decides)
+   * are never offered, and a `readonly` / `disabled` control is never relaxed.
+   */
+  suggestionFilter?: MonoSuggestionFilter | null
+  'suggestion-filter'?: MonoSuggestionFilter | null
   placeholder?: string
   disabled?: boolean
   debounce?: number
@@ -243,6 +283,25 @@ export interface TableSearchProps extends TableControlBase {
   cssClass?: InputCssClass
   /** Root class only. */
   'css-class'?: string
+}
+
+/**
+ * `mono-table-search`'s events — the same names and detail as `mono-input`'s, so a
+ * listener is portable between the two. They fire in both modes; in manual mode
+ * (`model-value` passed) they are the ONLY effect of typing.
+ */
+export interface TableSearchEvents {
+  // The plain names — what a template listens to (`@input`, `@change`, …).
+  input: InputModelEvent
+  change: InputModelEvent
+  clear: InputModelEvent
+  // Kept as aliases for existing code: the `mno-` prefix and its camel twin.
+  'mno-input': InputModelEvent
+  mnoInput: InputModelEvent
+  'mno-change': InputModelEvent
+  mnoChange: InputModelEvent
+  'mno-clear': InputModelEvent
+  mnoClear: InputModelEvent
 }
 
 export interface TablePagingProps extends TableControlBase {
@@ -553,6 +612,26 @@ export interface TableEmptyProps extends TableControlBase {
   /** Label on that button (default `'Reload'`). */
   reloadLabel?: string
   'reload-label'?: string
+  /**
+   * The filter form (`controlMonoForm`). With it bound, a filter suggestion
+   * published by `<mono-table-search :suggestion-filter>` renders under the
+   * subtitle with an **Adjust Filter** button that writes into this form, then
+   * emits a cancelable `adjust` (default action: `grid.refresh()`).
+   */
+  controlForm?: MonoFormController
+  'control-form'?: MonoFormController
+  dataForm?: MonoFormController
+  /**
+   * How a filter suggestion is presented. Its `message` REPLACES the subtitle while
+   * a suggestion is shown — a function `(count, suggestion) => string`, or a
+   * template where `{count}`, `{value}`, `{key}`, `{field}` are substituted.
+   * Default `'There is {count} data available but in different filter, do you want to change the filter?'`.
+   */
+  suggestionFilter?: MonoEmptySuggestionOptions | null
+  'suggestion-filter'?: MonoEmptySuggestionOptions | null
+  /** Label on the Adjust button (default `'Adjust Filter'`). */
+  adjustLabel?: string
+  'adjust-label'?: string
   /**
    * Fixed height for the reserved area — any CSS length. Wins over `minHeight`,
    * `maxHeight` and the auto-grow.

@@ -1,8 +1,8 @@
 import { Constructor } from "../../composables/hybird-prop.js";
 import { CssSizeValue } from "../../composables/css-size.js";
 import { MonoSearchValue } from "../../search/data-search.js";
-import { FieldTooltipController, FieldTooltipValue } from "../../composables/field-tooltip.js";
 import { TagInputChipProps, TagInputColor, TagInputCssClass, TagInputDataSource, TagInputDisplayGroup, TagInputDisplayValue, TagInputDropdownOptions, TagInputItem, TagInputLoadMore, TagInputSize, TagInputValidationState, TagInputValue, TagInputVariant } from "./tag-input-types.js";
+import { FieldTooltipController, FieldTooltipValue } from "../../composables/field-tooltip.js";
 import { LateSlotWatcher } from "../../composables/light-slots.js";
 import { LitElement, TemplateResult } from "lit";
 //#region src/components/tag-input/tag-input-core.d.ts

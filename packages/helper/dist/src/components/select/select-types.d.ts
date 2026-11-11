@@ -2,8 +2,8 @@ import { PanelSizeProps } from "../../composables/css-size.js";
 import { DescribedError } from "../../utils/normalize-error.js";
 import { LoadMoreMode, MonoDataSource } from "../../composables/data-source-controller.js";
 import { VisibilityProps } from "../../composables/visibility.js";
-import { MonoSearchValue } from "../../search/data-search.js";
 import { MonoTooltipOptions } from "../tooltip/tooltip-types.js";
+import { MonoSearchValue } from "../../search/data-search.js";
 //#region src/components/select/select-types.d.ts
 /**
  * Sizes the popup PANEL only, independent of the field — the same object

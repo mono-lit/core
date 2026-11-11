@@ -2755,6 +2755,51 @@ mono-shadow-table-empty[data-mono-empty] {
   outline: 2px solid color-mix(in srgb, var(--_mono-table-accent) 45%, transparent);
   outline-offset: 1px;
 }
+
+/* Filter suggestion — "N rows under a different filter". Its message REPLACES the
+   subtitle and reuses `[mono-empty-sub]` as is (no tint of its own); the buttons
+   share one row, Reload left and Adjust Filter right, in the same quiet style. */
+:is([mono-empty-actions],.mono-table-empty-actions) {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* Inside the row the row carries the spacing — the button's own top margin would
+   push it out of line with its neighbour. */
+:is([mono-empty-actions],.mono-table-empty-actions) > * {
+  margin-top: 0;
+}
+
+:is([mono-empty-adjust],.mono-table-empty-adjust) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.32rem 0.7rem;
+  border: 1px solid var(--_mono-table-border);
+  border-radius: var(--theme-radius-sm, 0.375rem);
+  background: var(--_mono-table-surface);
+  color: var(--_mono-table-accent);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition:
+    background-color var(--theme-duration-fast, 0.12s) var(--mono-ease, ease),
+    border-color var(--theme-duration-fast, 0.12s) var(--mono-ease, ease);
+}
+
+:is([mono-empty-adjust],.mono-table-empty-adjust):hover {
+  border-color: var(--_mono-table-accent);
+  background: color-mix(in srgb, var(--_mono-table-accent) 8%, var(--_mono-table-surface));
+}
+
+:is([mono-empty-adjust],.mono-table-empty-adjust):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--_mono-table-accent) 45%, transparent);
+  outline-offset: 1px;
+}
 /* ── Row detail (mono-table-detail) ──────────────────────────────────────────
    Two pieces that live in DIFFERENT places:
 

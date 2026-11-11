@@ -22,6 +22,7 @@ import {
 import { andFilters, readAllRows, searchFilterOf, type ReadableDataSource } from '../../utils/data-source-read'
 import { inRange, isDateRange, parseDateValue, type MonoDateLevel, type MonoDateRange } from './date-filter-tree'
 import { createApplyGate, isRolledUp, loadApply, storeRows } from '../../utils/data-source-apply'
+import { countValues, groupCountViaApply } from '../../utils/group-count'
 import {
   buildSummaryApply,
   composeSummaryApply,
@@ -37,6 +38,7 @@ import type { TableDetailEvents } from './mono-table-detail-core'
 import type { TableCheckboxEvents } from './mono-table-checkbox-core'
 import type { TableEmptyEvents } from './mono-table-empty-core'
 import type { TableErrorEvents } from './mono-table-error-core'
+import type { MonoFilterSuggestion } from './filter-suggestion'
 import { unwrapReactive, type MaybeReactive } from '../../composables/reactive'
 import { monoFilterBuilder } from '../filter/filter-builder'
 import {
@@ -1556,6 +1558,15 @@ export interface MonoTableController<T = any> {
   /** The live search terms (empty when unsearched). */
   searchTerms: MonoSearchTerm[]
   /**
+   * "N rows match this search under a different filter value" — published by
+   * `<mono-table-search :suggestion-filter>` after a search came back empty, and
+   * rendered by `<mono-table-empty>` as an **Adjust Filter** offer. `null` when
+   * there is nothing to suggest. Cleared by every new search.
+   */
+  filterSuggestion: MonoFilterSuggestion | null
+  /** Publish (or clear, with `null`) {@link filterSuggestion}. Notifies on change only. */
+  setFilterSuggestion(next: MonoFilterSuggestion | null): void
+  /**
    * An explicit filter of the grid's own — what the slotted filter builder
    * writes. One LAYER of the query, not the whole of it: it is AND-ed with the
    * base (`dataSourceOptions.filter` + whatever the consumer set on the source),
@@ -2158,6 +2169,8 @@ export function monoDataGrid<T = any>(
     pageSizeAll: false,
     pageCount: 0,
     searchTerms: [],
+    filterSuggestion: null,
+    setFilterSuggestion,
     sorts: [],
     sortField: null,
     sortOrder: null,
@@ -5793,8 +5806,27 @@ export function monoDataGrid<T = any>(
     await setSearchTerms(ctrl.searchTerms)
   }
 
+  /** Equality-guarded so a re-published identical offer costs no notify (no re-render loop). */
+  function setFilterSuggestion(next: MonoFilterSuggestion | null): void {
+    const prev = ctrl.filterSuggestion
+    if (prev === next) return
+    if (
+      prev &&
+      next &&
+      prev.key === next.key &&
+      prev.count === next.count &&
+      JSON.stringify(prev.values) === JSON.stringify(next.values)
+    ) {
+      return
+    }
+    ctrl.filterSuggestion = next
+    notify()
+  }
+
   async function setSearchTerms(terms: MonoSearchTerm[]): Promise<void> {
     ctrl.searchTerms = (terms ?? []).filter((t) => t && String(t.value ?? '') !== '')
+    // An offer belongs to the search that produced it.
+    ctrl.filterSuggestion = null
     groupPageIndex = 0 // jump back to the first group page on a new search
     bumpSummary('search') // search narrows the row set
 
@@ -6367,57 +6399,15 @@ export function monoDataGrid<T = any>(
     field: string,
     options: MonoHeaderFilterLoadOptions | undefined,
   ): Promise<MonoColumnValue[] | null> {
-    if (applyGate.skip) return null
-    if (parseFieldPath(field).hasWildcard) return null
-    const selector = isPath(field) ? toODataSelector(field) : field
-    if (!selector) return null
-
-    const apply = `groupby((${selector}),aggregate($count as count))`
-    const odataFilter = options?.filter != null ? summaryODataFilter(options.filter) : ''
-    const clause = odataFilter ? `filter(${odataFilter})/${apply}` : apply
     const top = typeof options?.take === 'number' && options.take >= 0 ? options.take : undefined
-
-    let rows: Array<Record<string, unknown>> | null
-    try {
-      rows = await loadApply(store, clause, { top })
-    } catch (err) {
-      applyGate.reject(err)
-      return null
-    }
-    if (!rows) return null
-    if (!rows.length) return []
-    // Grouped rows are the key plus a numeric `count` and nothing else; entities
-    // carry the rest of the record — a server either honoured `$apply` or it did not.
-    const first = rows[0]
-    if (!first || typeof first !== 'object' || typeof first.count !== 'number') return null
-    if (!isRolledUp(rows, [field, 'count'])) return null
-
-    const path = isPath(field)
-    return sortColumnValues(
-      rows.map((r) => ({
-        value: path ? getFieldValue(r, field) : r[field],
-        count: Number(r.count) || 0,
-      })),
-    )
+    // Shared with the table search's filter suggestion — see `utils/group-count.ts`.
+    const rows = await groupCountViaApply(store, field, options?.filter ?? null, applyGate, { top })
+    return rows ? sortColumnValues(rows) : null
   }
 
   /** Count occurrences of `field` across `rows` into a sorted `{value,count}[]`. */
   function distinctFromRows(rows: Array<Record<string, unknown>>, field: string): MonoColumnValue[] {
-    const counts = new Map<unknown, number>()
-    const bump = (v: unknown): void => {
-      counts.set(v, (counts.get(v) ?? 0) + 1)
-    }
-    const path = isPath(field)
-    for (const r of rows) {
-      if (path) {
-        const v = getFieldValue(r, field)
-        if (Array.isArray(v)) v.forEach(bump) // wildcard path → flatten each element
-        else bump(v)
-      } else {
-        bump(r?.[field])
-      }
-    }
-    return sortColumnValues([...counts.entries()].map(([value, count]) => ({ value, count })))
+    return sortColumnValues(countValues(rows, field))
   }
 
   async function distinctValues(

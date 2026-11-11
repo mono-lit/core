@@ -1,4 +1,4 @@
-import { r as MonoButtonCore, t as MonoButtonShadow } from "../../mono-button.shadow-DqZMpcqY.js";
+import { r as MonoButtonCore, t as MonoButtonShadow } from "../../mono-button.shadow-DAad5yhH.js";
 
 //#region src/components/button/button-utils.ts
 /**

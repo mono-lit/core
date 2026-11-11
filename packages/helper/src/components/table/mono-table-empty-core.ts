@@ -15,10 +15,16 @@ import {
   type RowHost,
 } from './table-overlay.js'
 import { isIconifyClass } from '../../composables/icon.js'
-import type { Constructor } from '../../composables/hybird-prop'
+import {
+  defineHybridPropAlias,
+  defineHybridPropAliases,
+  type Constructor,
+} from '../../composables/hybird-prop'
 import { monoPendingActive } from '../../composables/mono-skeleton'
 import { dispatchMonoEvent } from '../../composables/mono-event'
 import type { MonoTableController } from './mono-data-grid.js'
+import type { MonoFormController } from '../form/form-types.js'
+import type { MonoFilterSuggestion } from './filter-suggestion.js'
 
 /** `detail` of the `reload` event `<mono-table-empty>` emits when its button is pressed. */
 export interface TableEmptyReloadEventDetail {
@@ -27,14 +33,43 @@ export interface TableEmptyReloadEventDetail {
 
 export type TableEmptyReloadEvent = CustomEvent<TableEmptyReloadEventDetail>
 
+/**
+ * `detail` of the `adjust` event — the **Adjust Filter** button was pressed and
+ * `values` have ALREADY been written into the form. The event is cancelable:
+ * its default action is `grid.refresh()`; call `preventDefault()` to run your own
+ * query instead (a page that builds its `$filter` by hand from the form).
+ */
+export interface TableEmptyAdjustEventDetail extends MonoFilterSuggestion {
+  form: MonoFormController
+  grid: MonoTableController
+}
+
+export type TableEmptyAdjustEvent = CustomEvent<TableEmptyAdjustEventDetail>
+
 /** Events emitted by `<mono-table-empty>` (feeds the generated Vue types). */
 export interface TableEmptyEvents {
-  // The plain name — what a template listens to.
+  // The plain names — what a template listens to.
   reload: TableEmptyReloadEvent
+  adjust: TableEmptyAdjustEvent
   // Kept as aliases for existing code: the `mno-` prefix and its camel twin.
   'mno-reload': TableEmptyReloadEvent
   mnoReload: TableEmptyReloadEvent
+  'mno-adjust': TableEmptyAdjustEvent
+  mnoAdjust: TableEmptyAdjustEvent
 }
+
+/** `<mono-table-empty :suggestion-filter.prop="…">` — how a filter suggestion is presented. */
+export interface MonoEmptySuggestionOptions {
+  /**
+   * The line that REPLACES the subtitle while a suggestion is shown. A function
+   * receives the row count and the whole suggestion; a string substitutes
+   * `{count}`, `{value}`, `{key}` and `{field}`.
+   */
+  message?: string | ((count: number, suggestion: MonoFilterSuggestion) => string)
+}
+
+const DEFAULT_SUGGESTION_TEXT =
+  'There is {count} data available but in different filter, do you want to change the filter?'
 
 /** Public surface added by the empty-state core mixin. */
 export declare class MonoTableEmptyCoreInterface extends MonoTableControllerCoreInterface {
@@ -43,6 +78,13 @@ export declare class MonoTableEmptyCoreInterface extends MonoTableControllerCore
   subtitle: string
   reload: boolean
   reloadLabel: string
+  /** The filter form an **Adjust Filter** writes into. */
+  dataForm?: MonoFormController
+  /** Alias of {@link dataForm}. */
+  controlForm?: MonoFormController
+  /** Presentation of the filter suggestion — `{ message }`. */
+  suggestionFilter?: MonoEmptySuggestionOptions | null
+  adjustLabel: string
   height?: string
   minHeight?: string
   maxHeight?: string
@@ -103,6 +145,45 @@ export const MonoTableEmptyCore = <T extends Constructor<LitElement>>(superClass
   class MonoTableEmptyCoreClass extends MonoTableControllerCore(superClass) {
     /** Reads `monoDataGrid({ props: { empty } })`. */
     protected override _propsSlot = 'empty' as const
+
+    constructor(...args: any[]) {
+      super(...args)
+      // camelCase names ONLY — an already-lowercase name self-aliases and recurses.
+      defineHybridPropAliases(this, ['dataForm', 'suggestionFilter', 'adjustLabel'])
+      defineHybridPropAlias(this, 'controlForm', 'dataForm')
+    }
+
+    /**
+     * The filter form (`controlMonoForm`). With it bound, a filter suggestion the
+     * grid carries (published by `<mono-table-search :suggestion-filter>`) REPLACES
+     * the subtitle, and an **Adjust Filter** button beside Reload writes the
+     * suggested value into this form. `:control-form.prop="form"`.
+     */
+    @property({ attribute: false })
+    dataForm?: MonoFormController
+
+    /**
+     * How the suggestion is presented. `message` is a function
+     * `(count, suggestion) => string`, or a template string where `{count}`,
+     * `{value}` (the suggested value's caption), `{key}` and `{field}` are
+     * substituted. Default: `'There is {count} data available but in different
+     * filter, do you want to change the filter?'`.
+     *
+     * ```vue
+     * <mono-table-empty :suggestion-filter.prop="{
+     *   message: (count) => `Ada ${count} Pencarian lain di filter yang berbeda, ingin meng-Adjust Filter?`,
+     * }" />
+     * ```
+     */
+    @property({ attribute: false })
+    suggestionFilter?: MonoEmptySuggestionOptions | null
+
+    /** Label on the Adjust button. */
+    @property({ type: String, attribute: 'adjust-label' })
+    adjustLabel = 'Adjust Filter'
+
+    /** The suggestion last rendered — a notify re-renders only when it changes. */
+    private _shownSuggestion: MonoFilterSuggestion | null = null
 
     /**
      * The glyph above the title. Either an iconify utility class
@@ -213,6 +294,8 @@ export const MonoTableEmptyCore = <T extends Constructor<LitElement>>(superClass
         // The empty state is attribute-driven, but the automatic skeleton (`pending`) is
         // resolved in the update cycle — a notify may be the "first load done" it waits for.
         if (monoPendingActive(this)) this.requestUpdate()
+        // The filter offer IS rendered content — a new or withdrawn one needs a render.
+        if ((this.dataGrid?.filterSuggestion ?? null) !== this._shownSuggestion) this.requestUpdate()
       })
       if (!isServer) this._sync()
     }
@@ -328,6 +411,72 @@ export const MonoTableEmptyCore = <T extends Constructor<LitElement>>(superClass
       void grid.reload().catch(() => {})
     }
 
+    /**
+     * **Adjust Filter**: write the suggested values into the form (its watchers run
+     * — a cascade, a dependent field being cleared), then let the page veto the
+     * default re-query with `preventDefault()` on `adjust`, else `grid.refresh()`.
+     * The search text stays, so the grid re-searches under the new filter.
+     */
+    protected _onAdjust(): void {
+      const grid = this.dataGrid
+      const form = this.dataForm
+      const suggestion = grid?.filterSuggestion
+      if (!grid || !form || !suggestion) return
+      form.setValues(suggestion.values)
+      grid.setFilterSuggestion(null)
+      const proceed = dispatchMonoEvent(
+        this,
+        'adjust',
+        { ...suggestion, form, grid } satisfies TableEmptyAdjustEventDetail,
+        { cancelable: true },
+      )
+      if (proceed) void grid.refresh().catch(() => {})
+    }
+
+    /**
+     * The suggestion line: `suggestionFilter.message` as a function `(count, s)`, or a
+     * template with `{count}` / `{value}` / `{key}` / `{field}` substituted.
+     */
+    protected _suggestionMessage(s: MonoFilterSuggestion): string {
+      const message = this.suggestionFilter?.message
+      if (typeof message === 'function') {
+        try {
+          return String(message(s.count, s) ?? '')
+        } catch {
+          // A consumer formatter that throws must not blank the empty state.
+          return ''
+        }
+      }
+      const map: Record<string, string> = {
+        count: String(s.count),
+        value: s.caption || String(s.value ?? ''),
+        key: s.key,
+        field: s.field,
+      }
+      return (message || DEFAULT_SUGGESTION_TEXT).replace(
+        /\{(count|value|key|field)\}/g,
+        (_, k: string) => map[k] ?? '',
+      )
+    }
+
+    /** The suggestion to present — only with a form to write into. Records it for the notify diff. */
+    protected _activeSuggestion(): MonoFilterSuggestion | null {
+      const s = this.dataGrid?.filterSuggestion ?? null
+      this._shownSuggestion = s
+      return s && this.dataForm ? s : null
+    }
+
+    protected _renderAdjust(): TemplateResult {
+      return html`<button
+        type="button"
+        class="mono-table-empty-adjust" mono-empty-adjust
+        part="adjust"
+        @click=${() => this._onAdjust()}
+      >
+        ${this.adjustLabel}
+      </button>`
+    }
+
     protected _reloadIcon(): TemplateResult {
       return html`<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
         <path
@@ -370,9 +519,42 @@ export const MonoTableEmptyCore = <T extends Constructor<LitElement>>(superClass
       return html`<div class="mono-table-empty-body" mono-empty-body data-mono-slot="body"></div>`
     }
 
-    /** Icon, title, subtitle, reload — in that order, each omitted when unset. */
+    /**
+     * Icon, title, subtitle, reload — in that order, each omitted when unset.
+     *
+     * While a filter suggestion is offered, its message takes the SUBTITLE's place
+     * (same element, same look — it is the better advice for this empty state), and
+     * the buttons share one row: Reload left, Adjust Filter right. Without one the
+     * markup is exactly what it always was.
+     */
     protected _renderProps(): TemplateResult {
       const showReload = this.reload && !!this.dataGrid
+      const suggestion = this._activeSuggestion()
+      const reloadButton = showReload
+        ? html`<button
+            type="button"
+            class="mono-table-empty-reload" mono-empty-reload
+            part="reload"
+            @click=${() => this._onReload()}
+          >
+            ${this._reloadIcon()}${this.reloadLabel}
+          </button>`
+        : nothing
+
+      if (suggestion) {
+        return html`
+          ${this._renderIcon()}
+          ${this.title
+            ? html`<div class="mono-table-empty-title" mono-empty-title>${this.title}</div>`
+            : nothing}
+          <div class="mono-table-empty-sub" mono-empty-sub mono-empty-suggest part="suggest">
+            ${this._suggestionMessage(suggestion)}
+          </div>
+          <div class="mono-table-empty-actions" mono-empty-actions>
+            ${reloadButton}${this._renderAdjust()}
+          </div>
+        `
+      }
 
       return html`
         ${this._renderIcon()}
@@ -382,16 +564,7 @@ export const MonoTableEmptyCore = <T extends Constructor<LitElement>>(superClass
         ${this.subtitle
           ? html`<div class="mono-table-empty-sub" mono-empty-sub>${this.subtitle}</div>`
           : nothing}
-        ${showReload
-          ? html`<button
-              type="button"
-              class="mono-table-empty-reload" mono-empty-reload
-              part="reload"
-              @click=${() => this._onReload()}
-            >
-              ${this._reloadIcon()}${this.reloadLabel}
-            </button>`
-          : nothing}
+        ${reloadButton}
       `
     }
 

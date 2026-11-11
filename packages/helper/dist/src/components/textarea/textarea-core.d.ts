@@ -1,7 +1,7 @@
 import { Constructor } from "../../composables/hybird-prop.js";
 import { CssSizeValue } from "../../composables/css-size.js";
-import { FieldTooltipController, FieldTooltipValue } from "../../composables/field-tooltip.js";
 import { TextareaColor, TextareaCssClass, TextareaSize, TextareaValidationState, TextareaVariant } from "./textarea-types.js";
+import { FieldTooltipController, FieldTooltipValue } from "../../composables/field-tooltip.js";
 import { LitElement, TemplateResult } from "lit";
 //#region src/components/textarea/textarea-core.d.ts
 /** Named slots projected by `mono-textarea` (light: captured; shadow: native). */

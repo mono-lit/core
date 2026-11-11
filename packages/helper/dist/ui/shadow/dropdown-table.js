@@ -1,5 +1,5 @@
 import { C as monoPendingGrace, _ as buildSizeStyle, a as __decorate, c as defineHybridPropAlias, d as optionalNumberConverter, f as customElement, i as withShadowUtilityStyles, l as defineHybridPropAliases, r as toShadowCss, s as booleanStringConverter, t as flushSsrHydration, u as numberStringConverter, v as toCssSize } from "../../hydration-flush-BaE9gN3C.js";
-import { t as dispatchMonoEvent } from "../../mono-event-BPku9HpS.js";
+import { t as dispatchMonoEvent } from "../../mono-event-CAZf0F_k.js";
 import { n as detachEventHandlers, t as applyProps } from "../../element-props-xvw0EB7H.js";
 import { t as MonoFormControlCore } from "../../form-control-core-BbiACMtL.js";
 import { a as closeIcon, i as chevronIcon, n as caretIcon } from "../../field-icons-t8rXRCKs.js";
@@ -7,7 +7,7 @@ import { n as FieldTooltipController, t as field_tooltip_css_raw_default } from 
 import { n as label_position_css_raw_default, r as FieldValidationController, t as field_validation_css_raw_default } from "../../field-validation.css_raw-Cx6SGrfP.js";
 import { n as applyPopupPlacement, r as computePopupPlacement, t as PopupPortalController } from "../../popup-portal-CINuVjNY.js";
 import { t as createNotifier } from "../../notifier-BIrqUzRh.js";
-import { t as monoDataGrid } from "../../mono-data-grid-e9ZVBlNN.js";
+import { t as monoDataGrid } from "../../mono-data-grid-BBcMLIFC.js";
 import { n as resolveChipLimit, r as visibleChipCap, t as ChipStripController } from "../../chip-strip-bNfLn52Z.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { property } from "lit/decorators.js";

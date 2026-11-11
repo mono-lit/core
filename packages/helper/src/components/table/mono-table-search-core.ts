@@ -15,18 +15,24 @@ import { PopupPortalController } from '../../composables/popup-portal.js'
 import type {
   InputCssClass,
   InputColor,
+  InputModelEventDetail,
   InputSize,
   InputValidationState,
   InputVariant,
 } from '../input/input-types.js'
+import { dispatchMonoEvent } from '../../composables/mono-event'
 import { buildSizeStyle, type CssSizeValue } from '../../composables/css-size'
 import { cssPart } from '../../composables/css-class'
 import {
   booleanStringConverter,
   numberStringConverter,
+  defineHybridPropAlias,
   defineHybridPropAliases,
   type Constructor,
 } from '../../composables/hybird-prop'
+import type { MonoFormController } from '../form/form-types.js'
+import { createApplyGate } from '../../utils/data-source-apply'
+import { probeFilterSuggestion, type MonoSuggestionFilter } from './filter-suggestion.js'
 
 /** Per-build icon hooks the search core delegates to. */
 export type TableSearchIconName = 'search' | 'close' | 'chevron'
@@ -37,6 +43,14 @@ export declare class MonoTableSearchCoreInterface extends MonoTableControllerCor
   searchValue: MonoSearchValue
   /** Alias of {@link searchValue}, under the grid option's older name. */
   searchExpr: MonoSearchValue
+  /** Passing it (even `''`) switches the box to MANUAL mode — see the class docs. */
+  modelValue?: string | null
+  /** The filter form (`controlMonoForm`) a {@link suggestionFilter} reads and relaxes. */
+  dataForm?: MonoFormController
+  /** Alias of {@link dataForm}. */
+  controlForm?: MonoFormController
+  /** Map row fields onto form keys to offer "N rows under a different filter". */
+  suggestionFilter?: MonoSuggestionFilter | null
   placeholder: string
   disabled: boolean
   debounce: number
@@ -94,8 +108,17 @@ export declare class MonoTableSearchCoreInterface extends MonoTableControllerCor
  *
  * Deliberately NOT taken from `InputProps`: `type` (pinned to `search`),
  * `required` / `pattern` / `min` / `max` / `step` (form-submit constraints with no
- * meaning for a filter), and `value` / `modelValue` — the debounce below plus the
- * controller own the search term.
+ * meaning for a filter), and `value`.
+ *
+ * **Two modes, picked by `modelValue`:**
+ * - *grid* (no `model-value`) — the debounce below plus the controller own the
+ *   search term, exactly as before;
+ * - *manual* (`model-value` passed, even `''`) — a controlled field: it emits
+ *   `mono-input`'s `input` / `change` / `clear` (same detail shape) immediately and
+ *   NEVER touches the grid's search (`search-value`, `suggestion` and
+ *   `multi-context` go inert). The consumer runs the search itself.
+ *
+ * `input` / `change` / `clear` fire in grid mode too, so a listener works either way.
  *
  * The magnifier and clear glyphs are delegated to `renderIcon()` (light: UnoCSS
  * `.mono-icon i-mdi-*`; shadow: inline SVG) so the chrome is otherwise identical.
@@ -111,6 +134,9 @@ export const MonoTableSearchCore = <T extends Constructor<LitElement>>(superClas
       defineHybridPropAliases(this, [
         'searchValue',
         'searchExpr',
+        'modelValue',
+        'dataForm',
+        'suggestionFilter',
         'multiContext',
         'suggestionTemplate',
         'allFieldsLabel',
@@ -131,6 +157,97 @@ export const MonoTableSearchCore = <T extends Constructor<LitElement>>(superClas
         'maxHeight',
         'cssClass',
       ])
+      // `:control-form` / `:controlForm` alias the canonical `dataForm`, exactly as
+      // on the form controls themselves.
+      defineHybridPropAlias(this, 'controlForm', 'dataForm')
+    }
+
+    /**
+     * The filter form (`controlMonoForm`) behind the grid's query. With
+     * {@link suggestionFilter}, an empty search probes the form's OTHER values.
+     * Bind with `.prop`: `:control-form.prop="form"`.
+     */
+    @property({ attribute: false })
+    dataForm?: MonoFormController
+
+    /**
+     * Offer "N rows match under a different filter value" when a search comes back
+     * empty — published on the grid and rendered by `<mono-table-empty>`.
+     *
+     * ```vue
+     * <mono-table-search :control-form.prop="form"
+     *   :suggestion-filter.prop="{ keys: { CodeDept: 'Dept' } }" />
+     * ```
+     *
+     * `keys` maps row fields to form keys; `sources` overrides where a field's
+     * ALLOWED values come from (default: the bound control's own options);
+     * `source` / `searchValue` / `filter` point the count at another source. See
+     * `MonoSuggestionFilter`. Inert in manual mode (`model-value`).
+     */
+    @property({ attribute: false })
+    suggestionFilter?: MonoSuggestionFilter | null
+
+    /** Remembers a backend that rejected `$apply`, so later probes go straight to the scan. */
+    private _probeGate = createApplyGate(true)
+    /** What the last probe was for — terms + form values — so a re-render doesn't re-probe. */
+    private _probeKey?: string
+    private _probeSeq = 0
+    private _probeTimer?: ReturnType<typeof setTimeout>
+
+    override updated(changed: Map<string, unknown>): void {
+      // @ts-ignore — the generic mixin base may not declare it, LitElement does.
+      super.updated?.(changed)
+      this._maybeProbe()
+    }
+
+    /**
+     * Runs after every render — and the base re-renders on every grid notify — so
+     * this sees each load settle. Probes once per (search, form values) while the
+     * grid sits loaded-and-empty; anything else drops a stale offer.
+     */
+    private _maybeProbe(): void {
+      // No `isServer` guard: `updated()` never runs during SSR, so this is client-only
+      // already (and a guard would also switch it off under test runners that resolve
+      // lit's node build).
+      const grid = this.dataGrid
+      if (!grid) return
+      const cfg = this.suggestionFilter
+      const form = this.dataForm
+      const terms = grid.searchTerms ?? []
+      const emptySearch =
+        !!cfg && !!form && !this._manual &&
+        grid.hasLoaded && !grid.loading && !grid.error &&
+        (grid.items?.length ?? 0) === 0 && terms.length > 0
+
+      if (!emptySearch) {
+        if (this._probeKey !== undefined) {
+          this._probeKey = undefined
+          this._probeSeq++ // a probe still in flight must not land
+          if (this._probeTimer) clearTimeout(this._probeTimer)
+          if (grid.filterSuggestion) grid.setFilterSuggestion?.(null)
+        }
+        return
+      }
+
+      let key: string
+      try {
+        key = JSON.stringify([terms, form!.values()])
+      } catch {
+        key = String(Math.random()) // unserialisable form value — just probe
+      }
+      if (key === this._probeKey) return
+      this._probeKey = key
+      const seq = ++this._probeSeq
+      if (this._probeTimer) clearTimeout(this._probeTimer)
+      this._probeTimer = setTimeout(() => {
+        void probeFilterSuggestion(cfg!, { grid, form: form!, gate: this._probeGate })
+          .then((found) => {
+            if (seq === this._probeSeq) grid.setFilterSuggestion?.(found)
+          })
+          .catch(() => {
+            if (seq === this._probeSeq) grid.setFilterSuggestion?.(null)
+          })
+      }, 120)
     }
 
     /**
@@ -156,6 +273,25 @@ export const MonoTableSearchCore = <T extends Constructor<LitElement>>(superClas
     /** Alias of {@link searchValue}, matching `monoDataGrid({ searchExpr })`. */
     @property({ attribute: 'search-expr' })
     searchExpr: MonoSearchValue = ''
+
+    /**
+     * The search text, `mono-input`-style. **Passing it at all switches the box to
+     * manual mode**: it stays `undefined` until bound, so `:model-value="q"` with an
+     * empty `q` still opts in. In manual mode typing emits `input` / `change` /
+     * `clear` (read `$event.detail.modelValue`) and the grid's search is never
+     * called — the consumer filters / fetches on its own.
+     *
+     * ```vue
+     * <mono-table-search :model-value="q" @mno-input="q = $event.detail.modelValue" />
+     * ```
+     */
+    @property({ attribute: 'model-value' })
+    modelValue?: string | null
+
+    /** Manual mode — `model-value` was passed. */
+    protected get _manual(): boolean {
+      return this.modelValue !== undefined
+    }
 
     @property({ type: String })
     placeholder = 'Search…'
@@ -342,6 +478,9 @@ export const MonoTableSearchCore = <T extends Constructor<LitElement>>(superClas
 
     override disconnectedCallback(): void {
       if (this._timer) clearTimeout(this._timer)
+      if (this._probeTimer) clearTimeout(this._probeTimer)
+      this._probeSeq++
+      this._probeKey = undefined
       this._teardownDocListener()
       this._teardownMoreDocListener()
       this._teardownFilterDocListener()
@@ -355,6 +494,15 @@ export const MonoTableSearchCore = <T extends Constructor<LitElement>>(superClas
     override willUpdate(changed: Map<string, unknown>): void {
       // Chain: the base mixin re-subscribes here when `dataGrid` changes.
       super.willUpdate(changed)
+      // Manual mode: a value arriving from OUTSIDE (the consumer's ref) is what the
+      // field shows. Our own keystroke writes `modelValue` = `_value`, so it no-ops.
+      if (changed.has('modelValue') && this._manual) {
+        const next = String(this.modelValue ?? '')
+        if (next !== this._value) {
+          this._value = next
+          if (!next) this._closePanel()
+        }
+      }
       if (
         changed.has('searchValue') ||
         changed.has('searchExpr') ||
@@ -374,6 +522,8 @@ export const MonoTableSearchCore = <T extends Constructor<LitElement>>(superClas
      * live query: without it, searching would loop.
      */
     private _pushSearchFields(): void {
+      // Manual mode owns the search — the grid's field list is not ours to touch.
+      if (this._manual) return
       const grid = this.dataGrid
       // `setSearchValue` is the canonical name; `setSearchExpr` is its alias and
       // is what an older controller object would carry.
@@ -413,7 +563,7 @@ export const MonoTableSearchCore = <T extends Constructor<LitElement>>(superClas
 
     private _push(value: string): void {
       const grid = this.dataGrid
-      if (!grid) return
+      if (!grid || this._manual) return
       // With chips the live text is only a draft — it searches once committed.
       if (this.multiContext) {
         void grid.setSearchTerms?.(this._chips)
@@ -442,7 +592,7 @@ export const MonoTableSearchCore = <T extends Constructor<LitElement>>(superClas
     }
 
     private get _canSuggest(): boolean {
-      return this.suggestion && !this.disabled && !this.readonly && !!this._value
+      return this.suggestion && !this._manual && !this.disabled && !this.readonly && !!this._value
     }
 
     private _openPanel(): void {
@@ -582,9 +732,42 @@ export const MonoTableSearchCore = <T extends Constructor<LitElement>>(superClas
       this._chipsSwallow = null
     }
 
+    // ── mono-input events ────────────────────────────────────────────────────
+    /** `mono-input`'s event detail shape, so a listener is portable between the two. */
+    private _detail(next: string, old: string, sourceEvent?: Event): InputModelEventDetail {
+      return {
+        modelValue: next,
+        currentValue: next,
+        oldValue: old,
+        value: next,
+        displayValue: next,
+        name: this.name,
+        sourceEvent,
+      }
+    }
+
+    /**
+     * Manual mode writes the typed text back to `modelValue`, like `mono-input`, so
+     * a one-way `:model-value` binding doesn't snap the field back on re-render.
+     */
+    private _commitModel(next: string): void {
+      if (this._manual) this.modelValue = next
+    }
+
+    private _handleChange(event: Event): void {
+      if (this.disabled || this.readonly) return
+      const value = (event.currentTarget as HTMLInputElement).value
+      dispatchMonoEvent(this, 'change', this._detail(value, value, event))
+    }
+
     private _handleInput(event: Event): void {
       const value = (event.currentTarget as HTMLInputElement).value
+      const old = this._value
       this._value = value
+      this._commitModel(value)
+      dispatchMonoEvent(this, 'input', this._detail(value, old, event))
+      // Manual: the consumer runs the search — no panel, no debounce, no grid push.
+      if (this._manual) return
       if (value && this.suggestion) this._openPanel()
       else if (!value) this._closePanel()
       if (this._timer) clearTimeout(this._timer)
@@ -710,10 +893,16 @@ export const MonoTableSearchCore = <T extends Constructor<LitElement>>(superClas
     private _handleClear(): void {
       if (this.disabled || this.readonly) return
       if (this._timer) clearTimeout(this._timer)
+      const old = this._value
       this._value = ''
+      this._commitModel('')
       if (this._inputEl) this._inputEl.value = ''
-      this._push('')
+      this._push('') // no-op in manual mode
       this._inputEl?.focus()
+      // Same pair `mono-input`'s clear emits.
+      const detail = this._detail('', old)
+      dispatchMonoEvent(this, 'input', detail)
+      dispatchMonoEvent(this, 'clear', detail)
     }
 
     /** Mirrors `input-core`'s resolution: an explicit state wins, else error/success. */
@@ -1191,6 +1380,7 @@ export const MonoTableSearchCore = <T extends Constructor<LitElement>>(superClas
               aria-label=${ifDefined(this.ariaLabelText || this.label || this.placeholder || undefined)}
               aria-invalid=${this._resolvedValidationState === 'invalid' ? 'true' : 'false'}
               @input=${this._handleInput}
+              @change=${this._handleChange}
             />
             ${this._renderClear()}
             ${this._renderFilterToggle()}

@@ -430,7 +430,8 @@ function monoForm(options) {
 		_register,
 		_report,
 		_reportList,
-		_propsFor: propsFor
+		_propsFor: propsFor,
+		_elements: (key) => [...elements[key] ?? []]
 	};
 }
 

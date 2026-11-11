@@ -1,6 +1,6 @@
 import { VisibilityProps } from "../../composables/visibility.js";
-import { MonoTooltipOptions } from "../tooltip/tooltip-types.js";
 import { InputFormat, InputFormatCtx, InputFormatOn } from "./input-format.js";
+import { MonoTooltipOptions } from "../tooltip/tooltip-types.js";
 //#region src/components/input/input-types.d.ts
 export type InputType = 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'date' | 'time' | 'month' | 'week' | 'search' | 'file' | 'range';
 export type InputSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';

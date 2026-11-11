@@ -1,6 +1,6 @@
 import { VisibilityProps } from "../../composables/visibility.js";
-import { MonoTooltipOptions } from "../tooltip/tooltip-types.js";
 import { InputFormat, InputFormatCtx } from "../input/input-format.js";
+import { MonoTooltipOptions } from "../tooltip/tooltip-types.js";
 //#region src/components/slider/slider-types.d.ts
 export type SliderSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 export type SliderColor = 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'info' | 'teal' | 'purple' | 'neutral' | 'dark';

@@ -1,12 +1,93 @@
-import { t as createNotifier } from "./notifier-BIrqUzRh.js";
 import { a as parseFieldPath, c as toODataClause, l as toODataSelector, n as isPath, o as projectFields, r as mergePatch, s as setFieldValue, t as getFieldValue } from "./field-path-BabiMrrA.js";
-import { C as resolveSearchEntries, D as compileFilterPredicate, E as andPredicates, O as joinFilters, S as plainSearchColumns, T as andFilters, f as mergeSearchFields, g as customRemoteClause, h as customPredicate, n as describeError, o as isCanceled, u as DEFAULT_SEARCH_FIELDS, v as hasCustomSearch, w as searchEntryFor, y as hasWildcardSearch } from "./normalize-error-BmLbgANw.js";
-import { a as buildGroups, c as isGroupNode, i as searchFilterOf, o as collectGroupPaths, r as readAllRows, s as flattenLeaves } from "./data-source-read-HyBCRg1t.js";
-import { a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, h as monoArraySource, i as normalizeSortList, l as summaryAliases, m as storeRows, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-BM4r4PRw.js";
+import { a as buildGroups, c as isGroupNode, i as searchFilterOf, o as collectGroupPaths, r as readAllRows, s as flattenLeaves } from "./data-source-read-BL266IW0.js";
+import { i as joinFilters, n as andPredicates, r as compileFilterPredicate, t as andFilters } from "./filter-eval-ChDSaAUH.js";
+import { A as resolveSearchEntries, C as customRemoteClause, E as hasWildcardSearch, S as customPredicate, T as hasCustomSearch, h as mergeSearchFields, j as searchEntryFor, k as plainSearchColumns, n as describeError, o as isCanceled, u as DEFAULT_SEARCH_FIELDS } from "./normalize-error-D93O4q8g.js";
+import { a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, h as monoArraySource, i as normalizeSortList, l as summaryAliases, m as storeRows, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-fxT5QIX4.js";
 import { n as unwrapReactive } from "./reactive-Dtd-esHO.js";
 import { t as arrayToODataString } from "./filter-odata-Bi27XUpQ.js";
-import { t as monoFilterBuilder } from "./filter-builder-B6Y2mmbM.js";
+import { t as createNotifier } from "./notifier-BIrqUzRh.js";
+import { t as monoFilterBuilder } from "./filter-builder-C0T3pMx2.js";
 
+//#region src/components/table/store-group-source.ts
+/**
+* Build a {@link MonoServerGroupSource} that drives **server-side** group paging
+* straight from a devextreme `DataSource`'s store — no extra fetcher, no custom
+* callbacks. `loadGroups` issues one cheap grouped query (group keys + counts +
+* optional summaries, no rows); `loadRows` fetches a single group's page with
+* `$filter` + `$skip`/`$top`. Returns `null` if the source has no usable store
+* (e.g. a plain in-memory array), so the caller can fall back to client grouping.
+*/
+function storeGroupSource(source, config) {
+	const store = source.store?.();
+	if (!store || typeof store.load !== "function") return null;
+	const { groupField, select, searchExpr, searchOperation, groupSummary } = config;
+	const summaryDesc = groupSummary ? Object.entries(groupSummary).map(([selector, summaryType]) => ({
+		selector,
+		summaryType
+	})) : void 0;
+	/**
+	* Build a devextreme filter expression for the active search (or undefined).
+	* Delegates to the shared builder, which takes the search state off a source;
+	* here the search arrives per-call via `ctx`, so a minimal stand-in carries it.
+	*/
+	function searchFilter(search) {
+		if (!search || !searchExpr) return void 0;
+		return searchFilterOf({
+			load: () => [],
+			items: () => [],
+			searchValue: () => search,
+			searchExpr: () => searchExpr,
+			searchOperation: () => searchOperation ?? "contains"
+		});
+	}
+	/** devextreme `store.load` returns either an array or `{ data, … }`. */
+	const rows = (res) => Array.isArray(res) ? res : res?.data ?? [];
+	return {
+		async loadGroups(ctx) {
+			const filter = joinFilters([ctx.filter, searchFilter(ctx.search)], "and");
+			const res = await store.load({
+				group: [{
+					selector: groupField,
+					isExpanded: false
+				}],
+				...summaryDesc ? { groupSummary: summaryDesc } : {},
+				requireGroupCount: true,
+				...filter ? { filter } : {},
+				sort: ctx.sort ?? [{ selector: groupField }],
+				...ctx.loadOptions ?? {}
+			});
+			return rows(res).map((g) => ({
+				key: g.key,
+				count: Number(g.count ?? (Array.isArray(g.items) ? g.items.length : 0)) || 0,
+				aggregates: summaryDesc && Array.isArray(g.summary) ? Object.fromEntries(summaryDesc.map((s, i) => [s.selector, Number(g.summary[i]) || 0])) : void 0
+			}));
+		},
+		async loadRows(key, ctx) {
+			const groupFilter = [
+				groupField,
+				"=",
+				key
+			];
+			const rowSelect = select ?? ctx.select;
+			const res = await store.load({
+				filter: joinFilters([
+					groupFilter,
+					ctx.filter,
+					searchFilter(ctx.search)
+				], "and"),
+				...rowSelect ? { select: rowSelect } : {},
+				...ctx.sort ? { sort: ctx.sort } : {},
+				skip: ctx.skip,
+				take: ctx.take,
+				requireTotalCount: false,
+				...ctx.loadOptions ?? {}
+			});
+			return rows(res);
+		}
+	};
+}
+
+//#endregion
 //#region src/components/table/date-filter-tree.ts
 const DATE_LEVELS = [
 	"year",
@@ -297,83 +378,70 @@ function inRange(d, r) {
 }
 
 //#endregion
-//#region src/components/table/store-group-source.ts
+//#region src/utils/group-count.ts
 /**
-* Build a {@link MonoServerGroupSource} that drives **server-side** group paging
-* straight from a devextreme `DataSource`'s store — no extra fetcher, no custom
-* callbacks. `loadGroups` issues one cheap grouped query (group keys + counts +
-* optional summaries, no rows); `loadRows` fetches a single group's page with
-* `$filter` + `$skip`/`$top`. Returns `null` if the source has no usable store
-* (e.g. a plain in-memory array), so the caller can fall back to client grouping.
+* Per-value row counts for ONE field, as `{ value, count }` rows.
+*
+* Two consumers share this: the grid's header filter (`distinctValues`) and the
+* table search's filter suggestion (`components/table/filter-suggestion.ts`),
+* which asks "how many rows match this search under each OTHER value of Dept".
+*
+* Remote: one `$apply=filter(…)/groupby((field),aggregate($count as count))`
+* through the store (see `data-source-apply.ts` for why it rides `urlOverride`).
+* Array: a plain tally over the rows.
 */
-function storeGroupSource(source, config) {
-	const store = source.store?.();
-	if (!store || typeof store.load !== "function") return null;
-	const { groupField, select, searchExpr, searchOperation, groupSummary } = config;
-	const summaryDesc = groupSummary ? Object.entries(groupSummary).map(([selector, summaryType]) => ({
-		selector,
-		summaryType
-	})) : void 0;
-	/**
-	* Build a devextreme filter expression for the active search (or undefined).
-	* Delegates to the shared builder, which takes the search state off a source;
-	* here the search arrives per-call via `ctx`, so a minimal stand-in carries it.
-	*/
-	function searchFilter(search) {
-		if (!search || !searchExpr) return void 0;
-		return searchFilterOf({
-			load: () => [],
-			items: () => [],
-			searchValue: () => search,
-			searchExpr: () => searchExpr,
-			searchOperation: () => searchOperation ?? "contains"
-		});
+/**
+* Group-count `field` through `store` with ONE `$apply`, or `null` when that path
+* is not available — the gate is off, a wildcard path (nothing to group by), a
+* store that cannot carry an `$apply` (a CustomStore), a failed request (reported
+* to the gate), or a response that is not rolled up (a server that ignored the
+* clause). An EMPTY grouped result is a real answer and comes back as `[]`.
+*
+* The rows are returned in server order — the caller sorts.
+*/
+async function groupCountViaApply(store, field, filter, gate, options = {}) {
+	if (gate.skip) return null;
+	if (parseFieldPath(field).hasWildcard) return null;
+	const selector = isPath(field) ? toODataSelector(field) : field;
+	if (!selector) return null;
+	const apply = `groupby((${selector}),aggregate($count as count))`;
+	const odataFilter = filter != null ? arrayToODataString(filter) : "";
+	const clause = odataFilter ? `filter(${odataFilter})/${apply}` : apply;
+	const top = typeof options.top === "number" && options.top >= 0 ? options.top : void 0;
+	let rows;
+	try {
+		rows = await loadApply(store, clause, { top });
+	} catch (err) {
+		gate.reject(err);
+		return null;
 	}
-	/** devextreme `store.load` returns either an array or `{ data, … }`. */
-	const rows = (res) => Array.isArray(res) ? res : res?.data ?? [];
-	return {
-		async loadGroups(ctx) {
-			const filter = joinFilters([ctx.filter, searchFilter(ctx.search)], "and");
-			const res = await store.load({
-				group: [{
-					selector: groupField,
-					isExpanded: false
-				}],
-				...summaryDesc ? { groupSummary: summaryDesc } : {},
-				requireGroupCount: true,
-				...filter ? { filter } : {},
-				sort: ctx.sort ?? [{ selector: groupField }],
-				...ctx.loadOptions ?? {}
-			});
-			return rows(res).map((g) => ({
-				key: g.key,
-				count: Number(g.count ?? (Array.isArray(g.items) ? g.items.length : 0)) || 0,
-				aggregates: summaryDesc && Array.isArray(g.summary) ? Object.fromEntries(summaryDesc.map((s, i) => [s.selector, Number(g.summary[i]) || 0])) : void 0
-			}));
-		},
-		async loadRows(key, ctx) {
-			const groupFilter = [
-				groupField,
-				"=",
-				key
-			];
-			const rowSelect = select ?? ctx.select;
-			const res = await store.load({
-				filter: joinFilters([
-					groupFilter,
-					ctx.filter,
-					searchFilter(ctx.search)
-				], "and"),
-				...rowSelect ? { select: rowSelect } : {},
-				...ctx.sort ? { sort: ctx.sort } : {},
-				skip: ctx.skip,
-				take: ctx.take,
-				requireTotalCount: false,
-				...ctx.loadOptions ?? {}
-			});
-			return rows(res);
-		}
+	if (!rows) return null;
+	if (!rows.length) return [];
+	const first = rows[0];
+	if (!first || typeof first !== "object" || typeof first.count !== "number") return null;
+	if (!isRolledUp(rows, [field, "count"])) return null;
+	const path = isPath(field);
+	return rows.map((r) => ({
+		value: path ? getFieldValue(r, field) : r[field],
+		count: Number(r.count) || 0
+	}));
+}
+/** Count occurrences of `field` across `rows` (path-aware; a wildcard path flattens). */
+function countValues(rows, field) {
+	const counts = /* @__PURE__ */ new Map();
+	const bump = (v) => {
+		counts.set(v, (counts.get(v) ?? 0) + 1);
 	};
+	const path = isPath(field);
+	for (const r of rows) if (path) {
+		const v = getFieldValue(r, field);
+		if (Array.isArray(v)) v.forEach(bump);
+		else bump(v);
+	} else bump(r?.[field]);
+	return [...counts.entries()].map(([value, count]) => ({
+		value,
+		count
+	}));
 }
 
 //#endregion
@@ -506,6 +574,8 @@ function monoDataGrid(ds = null, opts = {}) {
 		pageSizeAll: false,
 		pageCount: 0,
 		searchTerms: [],
+		filterSuggestion: null,
+		setFilterSuggestion,
 		sorts: [],
 		sortField: null,
 		sortOrder: null,
@@ -3348,8 +3418,17 @@ function monoDataGrid(ds = null, opts = {}) {
 		}
 		await setSearchTerms(ctrl.searchTerms);
 	}
+	/** Equality-guarded so a re-published identical offer costs no notify (no re-render loop). */
+	function setFilterSuggestion(next) {
+		const prev = ctrl.filterSuggestion;
+		if (prev === next) return;
+		if (prev && next && prev.key === next.key && prev.count === next.count && JSON.stringify(prev.values) === JSON.stringify(next.values)) return;
+		ctrl.filterSuggestion = next;
+		notify();
+	}
 	async function setSearchTerms(terms) {
 		ctrl.searchTerms = (terms ?? []).filter((t) => t && String(t.value ?? "") !== "");
+		ctrl.filterSuggestion = null;
 		groupPageIndex = 0;
 		bumpSummary("search");
 		if (serverMode()) {
@@ -3789,48 +3868,13 @@ function monoDataGrid(ds = null, opts = {}) {
 	* exactly as every other request does.
 	*/
 	async function distinctViaApply(store, field, options) {
-		if (applyGate.skip) return null;
-		if (parseFieldPath(field).hasWildcard) return null;
-		const selector = isPath(field) ? toODataSelector(field) : field;
-		if (!selector) return null;
-		const apply = `groupby((${selector}),aggregate($count as count))`;
-		const odataFilter = options?.filter != null ? arrayToODataString(options.filter) : "";
-		const clause = odataFilter ? `filter(${odataFilter})/${apply}` : apply;
 		const top = typeof options?.take === "number" && options.take >= 0 ? options.take : void 0;
-		let rows;
-		try {
-			rows = await loadApply(store, clause, { top });
-		} catch (err) {
-			applyGate.reject(err);
-			return null;
-		}
-		if (!rows) return null;
-		if (!rows.length) return [];
-		const first = rows[0];
-		if (!first || typeof first !== "object" || typeof first.count !== "number") return null;
-		if (!isRolledUp(rows, [field, "count"])) return null;
-		const path = isPath(field);
-		return sortColumnValues(rows.map((r) => ({
-			value: path ? getFieldValue(r, field) : r[field],
-			count: Number(r.count) || 0
-		})));
+		const rows = await groupCountViaApply(store, field, options?.filter ?? null, applyGate, { top });
+		return rows ? sortColumnValues(rows) : null;
 	}
 	/** Count occurrences of `field` across `rows` into a sorted `{value,count}[]`. */
 	function distinctFromRows(rows, field) {
-		const counts = /* @__PURE__ */ new Map();
-		const bump = (v) => {
-			counts.set(v, (counts.get(v) ?? 0) + 1);
-		};
-		const path = isPath(field);
-		for (const r of rows) if (path) {
-			const v = getFieldValue(r, field);
-			if (Array.isArray(v)) v.forEach(bump);
-			else bump(v);
-		} else bump(r?.[field]);
-		return sortColumnValues([...counts.entries()].map(([value, count]) => ({
-			value,
-			count
-		})));
+		return sortColumnValues(countValues(rows, field));
 	}
 	async function distinctValues(field, options) {
 		if (!field) return [];
@@ -4199,7 +4243,7 @@ function monoDataGrid(ds = null, opts = {}) {
 		return buildGroups(source, groupFields);
 	}
 	async function importSheet(options) {
-		const { importTable } = await import("./import-Dc4eXC02.js");
+		const { importTable } = await import("./import.js");
 		return importTable(options, {
 			getData,
 			rowKeyOf,
@@ -4216,7 +4260,7 @@ function monoDataGrid(ds = null, opts = {}) {
 		});
 	}
 	async function exportReport(options) {
-		const { exportTable } = await import("./export-ixRdCS2y.js");
+		const { exportTable } = await import("./export.js");
 		return exportTable(options);
 	}
 	function subscribe(cb) {
@@ -4237,4 +4281,4 @@ function monoDataGrid(ds = null, opts = {}) {
 }
 
 //#endregion
-export { seedFromRanges as a, minimize as i, buildDateTree as n, setAllChecked as o, checkState as r, setChecked as s, monoDataGrid as t };
+export { checkState as a, setAllChecked as c, buildDateTree as i, setChecked as l, countValues as n, minimize as o, groupCountViaApply as r, seedFromRanges as s, monoDataGrid as t };

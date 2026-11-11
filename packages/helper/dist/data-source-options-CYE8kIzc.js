@@ -1,168 +1,9 @@
 import { n as isPath, r as mergePatch, t as getFieldValue } from "./field-path-BabiMrrA.js";
-import { D as compileFilterPredicate, E as andPredicates, T as andFilters, f as mergeSearchFields } from "./normalize-error-BmLbgANw.js";
-import { i as searchFilterOf, s as flattenLeaves, t as isDataSourceLike } from "./data-source-read-HyBCRg1t.js";
+import { D as andFilters, O as andPredicates, k as compileFilterPredicate, p as mergeSearchFields } from "./normalize-error-DskZc9H1.js";
 import { t as resolveMaybeReactive } from "./reactive-Dtd-esHO.js";
+import { i as searchFilterOf, s as flattenLeaves, t as isDataSourceLike } from "./data-source-read-DHxA7Cq_.js";
 import { s as odataStringToArray, t as arrayToODataString } from "./filter-odata-Bi27XUpQ.js";
 
-//#region src/components/table/array-source.ts
-/** Normalise a possibly-grouped input array to flat leaf rows when grouping. */
-function normalizeInput(data, group) {
-	return (Array.isArray(group) ? group.length > 0 : !!group) ? flattenLeaves(data) : [...data];
-}
-/**
-* Wrap a plain array in the structural {@link MonoGridSource} shape so
-* {@link monoDataGrid} can drive it with no devextreme DataSource — paging,
-* search and filtering all run client-side, in memory.
-*
-* @example
-* const source = monoArraySource(rows, { pageSize: 10, searchValue: ['name'] })
-* const table = monoDataGrid(source)
-* await table.load()
-* // later: source.setData(nextRows)  // swap the underlying array
-*/
-function monoArraySource(data = [], opts = {}) {
-	const handlers = {
-		changed: [],
-		loadingChanged: [],
-		loadError: []
-	};
-	let all = normalizeInput(data, opts.group);
-	let pageIndex = 0;
-	let pageSize = opts.pageSize ?? 10;
-	let paginate = true;
-	let search = null;
-	let searchExpr = mergeSearchFields(opts)?.filter((e) => typeof e === "string") ?? null;
-	let searchOperation = "contains";
-	let filter = null;
-	let sortList = [];
-	let page = [];
-	/**
-	* `applied()` as of the last `load()`, or null once a query setter has written since.
-	*
-	* `totalCount()` / `isLastPage()` re-ran the whole filter + search + SORT per call, and the
-	* grid asks them on every sync — every virtual-scroll window shift, ~3 times per chunk of a
-	* chunked "all" load. `load()` always recomputes (so an in-place edit of the data shows on the
-	* next load) and stores it here; every setter that WRITES clears it.
-	*/
-	let appliedCache = null;
-	const matched = () => appliedCache ??= applied();
-	/** Pass a setter's written value through, dropping the cached match set. */
-	const moved = (v) => {
-		appliedCache = null;
-		return v;
-	};
-	const emit = (event, arg) => (handlers[event] ?? []).slice().forEach((h) => h(arg));
-	/** Normalise a single devextreme sort entry into `{ selector, desc }`. */
-	function normalizeSortEntry(value) {
-		if (!value) return null;
-		if (typeof value === "string") return {
-			selector: value,
-			desc: false
-		};
-		const o = value;
-		return o.selector ? {
-			selector: o.selector,
-			desc: !!o.desc
-		} : null;
-	}
-	/** Normalise the devextreme sort forms into an ordered multi-key list. */
-	function normalizeSortList(value) {
-		return (Array.isArray(value) ? value : value == null ? [] : [value]).map(normalizeSortEntry).filter((e) => !!e);
-	}
-	/** Read a sort/compare value; a wildcard path sorts best-effort by its first match. */
-	function sortValue(row, selector) {
-		if (!isPath(selector)) return row[selector];
-		const v = getFieldValue(row, selector);
-		return Array.isArray(v) ? v[0] : v;
-	}
-	/** Compare two rows by one selector (numeric when both sides parse). */
-	function compareBy(a, b, selector, desc) {
-		const av = sortValue(a, selector);
-		const bv = sortValue(b, selector);
-		const dir = desc ? -1 : 1;
-		if (av == null && bv == null) return 0;
-		if (av == null) return -dir;
-		if (bv == null) return dir;
-		const an = Number(av);
-		const bn = Number(bv);
-		const cmp = !Number.isNaN(an) && !Number.isNaN(bn) ? an - bn : String(av).localeCompare(String(bv));
-		return cmp === 0 ? 0 : (cmp < 0 ? -1 : 1) * dir;
-	}
-	/** Apply filter + search + sort, returning the matching rows. */
-	function applied() {
-		let rows = all;
-		if (typeof filter === "function") rows = rows.filter(filter);
-		const cols = searchExpr == null ? [] : Array.isArray(searchExpr) ? searchExpr : [searchExpr];
-		if (search && cols.length) {
-			const needle = String(search).toLowerCase();
-			const matches = (row, c) => {
-				const raw = isPath(c) ? getFieldValue(row, c) : row[c];
-				return (Array.isArray(raw) ? raw : [raw]).some((v) => String(v ?? "").toLowerCase().includes(needle));
-			};
-			rows = rows.filter((row) => cols.some((c) => matches(row, c)));
-		}
-		if (sortList.length) rows = [...rows].sort((a, b) => {
-			for (const { selector, desc } of sortList) {
-				const cmp = compareBy(a, b, selector, desc);
-				if (cmp !== 0) return cmp;
-			}
-			return 0;
-		});
-		return rows;
-	}
-	const source = {
-		on: (event, handler) => void (handlers[event] ??= []).push(handler),
-		off: (event, handler) => {
-			handlers[event] = (handlers[event] ?? []).filter((h) => h !== handler);
-		},
-		items: () => page,
-		/** Full backing array (unfiltered) — lets the grid derive header-filter values. */
-		data: () => [...all],
-		isLoading: () => false,
-		totalCount: () => matched().length,
-		isLastPage: () => (pageIndex + 1) * pageSize >= matched().length,
-		paginate: (value) => value === void 0 ? paginate : paginate = value,
-		pageSize: (value) => value === void 0 ? pageSize : pageSize = value,
-		pageIndex: (value) => value === void 0 ? pageIndex : pageIndex = value,
-		searchValue: (value) => value === void 0 ? search : moved(search = value || null),
-		searchExpr: (value) => value === void 0 ? searchExpr : moved(searchExpr = value ?? null),
-		searchOperation: (op) => op === void 0 ? searchOperation : moved(searchOperation = op),
-		filter: (value) => value === void 0 ? filter : moved(filter = typeof value === "function" ? value : null),
-		sort: (value) => value === void 0 ? sortList : moved(sortList = normalizeSortList(value)),
-		load: () => {
-			emit("loadingChanged", true);
-			const rows = appliedCache = applied();
-			const start = pageIndex * pageSize;
-			page = paginate ? rows.slice(start, start + pageSize) : rows.slice();
-			emit("changed");
-			emit("loadingChanged", false);
-			return Promise.resolve(page);
-		},
-		reload: () => source.load(),
-		/** Replace the backing array and reload from page 0. */
-		setData: (next) => {
-			all = normalizeInput(next, opts.group);
-			appliedCache = null;
-			pageIndex = 0;
-			return Promise.resolve(source.load());
-		},
-		/**
-		* Merge `values` into the row whose `keyExpr` field equals `key`, then reload
-		* — the per-row write path used by `monoDataGrid.saveChanges()` for an
-		* array-backed table (correct across pages, unlike a whole-array `setData`).
-		*/
-		update: (key, values) => {
-			const keyExpr = opts.keyExpr ?? "Id";
-			const idx = all.findIndex((row) => String(row?.[keyExpr]) === String(key));
-			if (idx >= 0) all[idx] = mergePatch(all[idx], values);
-			appliedCache = null;
-			return Promise.resolve(source.load());
-		}
-	};
-	return source;
-}
-
-//#endregion
 //#region src/utils/data-source-apply.ts
 /** The store's OData version, or `null` for anything that is not an OData store. */
 function odataStoreVersion(store) {
@@ -383,6 +224,165 @@ function summaryFilterOf(source) {
 }
 
 //#endregion
+//#region src/components/table/array-source.ts
+/** Normalise a possibly-grouped input array to flat leaf rows when grouping. */
+function normalizeInput(data, group) {
+	return (Array.isArray(group) ? group.length > 0 : !!group) ? flattenLeaves(data) : [...data];
+}
+/**
+* Wrap a plain array in the structural {@link MonoGridSource} shape so
+* {@link monoDataGrid} can drive it with no devextreme DataSource — paging,
+* search and filtering all run client-side, in memory.
+*
+* @example
+* const source = monoArraySource(rows, { pageSize: 10, searchValue: ['name'] })
+* const table = monoDataGrid(source)
+* await table.load()
+* // later: source.setData(nextRows)  // swap the underlying array
+*/
+function monoArraySource(data = [], opts = {}) {
+	const handlers = {
+		changed: [],
+		loadingChanged: [],
+		loadError: []
+	};
+	let all = normalizeInput(data, opts.group);
+	let pageIndex = 0;
+	let pageSize = opts.pageSize ?? 10;
+	let paginate = true;
+	let search = null;
+	let searchExpr = mergeSearchFields(opts)?.filter((e) => typeof e === "string") ?? null;
+	let searchOperation = "contains";
+	let filter = null;
+	let sortList = [];
+	let page = [];
+	/**
+	* `applied()` as of the last `load()`, or null once a query setter has written since.
+	*
+	* `totalCount()` / `isLastPage()` re-ran the whole filter + search + SORT per call, and the
+	* grid asks them on every sync — every virtual-scroll window shift, ~3 times per chunk of a
+	* chunked "all" load. `load()` always recomputes (so an in-place edit of the data shows on the
+	* next load) and stores it here; every setter that WRITES clears it.
+	*/
+	let appliedCache = null;
+	const matched = () => appliedCache ??= applied();
+	/** Pass a setter's written value through, dropping the cached match set. */
+	const moved = (v) => {
+		appliedCache = null;
+		return v;
+	};
+	const emit = (event, arg) => (handlers[event] ?? []).slice().forEach((h) => h(arg));
+	/** Normalise a single devextreme sort entry into `{ selector, desc }`. */
+	function normalizeSortEntry(value) {
+		if (!value) return null;
+		if (typeof value === "string") return {
+			selector: value,
+			desc: false
+		};
+		const o = value;
+		return o.selector ? {
+			selector: o.selector,
+			desc: !!o.desc
+		} : null;
+	}
+	/** Normalise the devextreme sort forms into an ordered multi-key list. */
+	function normalizeSortList(value) {
+		return (Array.isArray(value) ? value : value == null ? [] : [value]).map(normalizeSortEntry).filter((e) => !!e);
+	}
+	/** Read a sort/compare value; a wildcard path sorts best-effort by its first match. */
+	function sortValue(row, selector) {
+		if (!isPath(selector)) return row[selector];
+		const v = getFieldValue(row, selector);
+		return Array.isArray(v) ? v[0] : v;
+	}
+	/** Compare two rows by one selector (numeric when both sides parse). */
+	function compareBy(a, b, selector, desc) {
+		const av = sortValue(a, selector);
+		const bv = sortValue(b, selector);
+		const dir = desc ? -1 : 1;
+		if (av == null && bv == null) return 0;
+		if (av == null) return -dir;
+		if (bv == null) return dir;
+		const an = Number(av);
+		const bn = Number(bv);
+		const cmp = !Number.isNaN(an) && !Number.isNaN(bn) ? an - bn : String(av).localeCompare(String(bv));
+		return cmp === 0 ? 0 : (cmp < 0 ? -1 : 1) * dir;
+	}
+	/** Apply filter + search + sort, returning the matching rows. */
+	function applied() {
+		let rows = all;
+		if (typeof filter === "function") rows = rows.filter(filter);
+		const cols = searchExpr == null ? [] : Array.isArray(searchExpr) ? searchExpr : [searchExpr];
+		if (search && cols.length) {
+			const needle = String(search).toLowerCase();
+			const matches = (row, c) => {
+				const raw = isPath(c) ? getFieldValue(row, c) : row[c];
+				return (Array.isArray(raw) ? raw : [raw]).some((v) => String(v ?? "").toLowerCase().includes(needle));
+			};
+			rows = rows.filter((row) => cols.some((c) => matches(row, c)));
+		}
+		if (sortList.length) rows = [...rows].sort((a, b) => {
+			for (const { selector, desc } of sortList) {
+				const cmp = compareBy(a, b, selector, desc);
+				if (cmp !== 0) return cmp;
+			}
+			return 0;
+		});
+		return rows;
+	}
+	const source = {
+		on: (event, handler) => void (handlers[event] ??= []).push(handler),
+		off: (event, handler) => {
+			handlers[event] = (handlers[event] ?? []).filter((h) => h !== handler);
+		},
+		items: () => page,
+		/** Full backing array (unfiltered) — lets the grid derive header-filter values. */
+		data: () => [...all],
+		isLoading: () => false,
+		totalCount: () => matched().length,
+		isLastPage: () => (pageIndex + 1) * pageSize >= matched().length,
+		paginate: (value) => value === void 0 ? paginate : paginate = value,
+		pageSize: (value) => value === void 0 ? pageSize : pageSize = value,
+		pageIndex: (value) => value === void 0 ? pageIndex : pageIndex = value,
+		searchValue: (value) => value === void 0 ? search : moved(search = value || null),
+		searchExpr: (value) => value === void 0 ? searchExpr : moved(searchExpr = value ?? null),
+		searchOperation: (op) => op === void 0 ? searchOperation : moved(searchOperation = op),
+		filter: (value) => value === void 0 ? filter : moved(filter = typeof value === "function" ? value : null),
+		sort: (value) => value === void 0 ? sortList : moved(sortList = normalizeSortList(value)),
+		load: () => {
+			emit("loadingChanged", true);
+			const rows = appliedCache = applied();
+			const start = pageIndex * pageSize;
+			page = paginate ? rows.slice(start, start + pageSize) : rows.slice();
+			emit("changed");
+			emit("loadingChanged", false);
+			return Promise.resolve(page);
+		},
+		reload: () => source.load(),
+		/** Replace the backing array and reload from page 0. */
+		setData: (next) => {
+			all = normalizeInput(next, opts.group);
+			appliedCache = null;
+			pageIndex = 0;
+			return Promise.resolve(source.load());
+		},
+		/**
+		* Merge `values` into the row whose `keyExpr` field equals `key`, then reload
+		* — the per-row write path used by `monoDataGrid.saveChanges()` for an
+		* array-backed table (correct across pages, unlike a whole-array `setData`).
+		*/
+		update: (key, values) => {
+			const keyExpr = opts.keyExpr ?? "Id";
+			const idx = all.findIndex((row) => String(row?.[keyExpr]) === String(key));
+			if (idx >= 0) all[idx] = mergePatch(all[idx], values);
+			appliedCache = null;
+			return Promise.resolve(source.load());
+		}
+	};
+	return source;
+}
+
+//#endregion
 //#region src/utils/data-source-options.ts
 /** The knobs with a meaning of their own; anything else is passed through as a load option. */
 const DATA_SOURCE_KNOBS = /* @__PURE__ */ new Set([
@@ -555,4 +555,4 @@ function extraLoadOptions(o) {
 }
 
 //#endregion
-export { resolveDataSourceOptions as a, composeSummaryApply as c, createApplyGate as d, isRolledUp as f, monoArraySource as h, normalizeSortList as i, summaryAliases as l, storeRows as m, extraLoadOptions as n, toList as o, loadApply as p, mergeDataSourceOptions as r, buildSummaryApply as s, dataSourceOptionsKey as t, summaryFilterOf as u };
+export { resolveDataSourceOptions as a, buildSummaryApply as c, summaryFilterOf as d, createApplyGate as f, storeRows as h, normalizeSortList as i, composeSummaryApply as l, loadApply as m, extraLoadOptions as n, toList as o, isRolledUp as p, mergeDataSourceOptions as r, monoArraySource as s, dataSourceOptionsKey as t, summaryAliases as u };

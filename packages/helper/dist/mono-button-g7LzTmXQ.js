@@ -1,7 +1,7 @@
 import { d as buildSizeStyle } from "./mono-ui-kvLVIf1V.js";
 import { t as customElement } from "./mono-element-CKcT0rwv.js";
 import { a as defineHybridPropAliases, r as booleanStringConverter, t as __decorate } from "./decorate-DbYFpi8R.js";
-import { t as dispatchMonoEvent } from "./mono-event-BPku9HpS.js";
+import { t as dispatchMonoEvent } from "./mono-event-CAZf0F_k.js";
 import { n as bucketHasContent, r as captureLightSlots, s as placeSlotNode, t as LateSlotWatcher } from "./light-slots-B5Ck0t_E.js";
 import { a as rateLimitHasChanged, i as rateLimitConverter, n as normalizeDebounce, r as normalizeThrottle, t as createRateLimiter } from "./rate-limit-e9Jlpl5l.js";
 import { LitElement, html, nothing } from "lit";

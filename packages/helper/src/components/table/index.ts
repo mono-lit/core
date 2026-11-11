@@ -42,7 +42,15 @@ export type {
   TableEmptyEvents,
   TableEmptyReloadEvent,
   TableEmptyReloadEventDetail,
+  TableEmptyAdjustEvent,
+  TableEmptyAdjustEventDetail,
+  MonoEmptySuggestionOptions,
 } from './mono-table-empty-core.js'
+export type {
+  MonoSuggestionFilter,
+  MonoFilterSuggestion,
+  MonoSuggestionValueSource,
+} from './filter-suggestion.js'
 export { MonoTableError } from './mono-table-error.js'
 export type {
   TableErrorEvents,
@@ -137,6 +145,7 @@ export type {
   MonoOdataOptions,
   MonoDistinctValuesContext,
   TableSearchProps,
+  TableSearchEvents,
   TablePagingProps,
   TablePageSizeProps,
   TableInfoProps,

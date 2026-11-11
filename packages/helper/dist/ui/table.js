@@ -1,13 +1,14 @@
 import { a as parseFieldPath, c as toODataClause, l as toODataSelector, n as isPath, r as mergePatch, s as setFieldValue, t as getFieldValue } from "../field-path-BabiMrrA.js";
 import { a as buildGroups, c as isGroupNode, o as collectGroupPaths, s as flattenLeaves } from "../data-source-read-BL266IW0.js";
-import { A as resolveSearchEntries, D as isWildcardPattern, O as normalizeSearchExpr, c as resolveErrorMessages, h as mergeSearchFields, k as plainSearchColumns, l as setErrorMessages, n as describeError, r as errorStatus, s as normalizeError, t as DEFAULT_ERROR_MESSAGES, w as expandWildcard } from "../normalize-error-D93O4q8g.js";
-import { h as monoArraySource } from "../data-source-options-fxT5QIX4.js";
-import { a as seedFromRanges, i as minimize, n as buildDateTree, o as setAllChecked, r as checkState, s as setChecked, t as monoDataGrid } from "../mono-data-grid-llJCX9MC.js";
+import { i as joinFilters, n as andPredicates, r as compileFilterPredicate, t as andFilters } from "../filter-eval-ChDSaAUH.js";
+import { A as resolveSearchEntries, C as customRemoteClause, D as isWildcardPattern, E as hasWildcardSearch, O as normalizeSearchExpr, c as resolveErrorMessages, d as DEFAULT_SEARCH_OPERATION, g as parseSearchValue, h as mergeSearchFields, j as searchEntryFor, k as plainSearchColumns, l as setErrorMessages, n as describeError, r as errorStatus, s as normalizeError, t as DEFAULT_ERROR_MESSAGES, w as expandWildcard, x as searchRowPredicate, y as resolveSearchFields } from "../normalize-error-D93O4q8g.js";
+import { d as createApplyGate, h as monoArraySource, m as storeRows } from "../data-source-options-fxT5QIX4.js";
+import { a as checkState, c as setAllChecked, i as buildDateTree, l as setChecked, n as countValues, o as minimize, r as groupCountViaApply, s as seedFromRanges, t as monoDataGrid } from "../mono-data-grid-C-cLT0uY.js";
 import { _ as monoHostChildren, b as monoPhantomOptions, d as buildSizeStyle, h as monoApplyPhantomOptions, l as ColumnAutoSize, s as startMonoSizeAttributes, u as cssLengthToPx, v as monoPendingActive, y as monoPendingGrace } from "../mono-ui-kvLVIf1V.js";
 import { n as detachEventHandlers, t as applyProps } from "../element-props-xvw0EB7H.js";
 import { t as customElement } from "../mono-element-CKcT0rwv.js";
 import { a as defineHybridPropAliases, i as defineHybridPropAlias, o as numberStringConverter, r as booleanStringConverter, t as __decorate } from "../decorate-DbYFpi8R.js";
-import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
+import { t as dispatchMonoEvent } from "../mono-event-CAZf0F_k.js";
 import { t as isIconifyClass } from "../icon-ClxnYhBG.js";
 import { n as bucketHasContent, o as placeLightSlots, r as captureLightSlots, s as placeSlotNode } from "../light-slots-B5Ck0t_E.js";
 import { t as PopupPortalController } from "../popup-portal-CINuVjNY.js";
@@ -163,6 +164,271 @@ const MonoTableControllerCore = (superClass) => {
 };
 
 //#endregion
+//#region src/components/table/filter-suggestion.ts
+/** Most candidates verified against an option source in one request (keeps the URL sane). */
+const MAX_CANDIDATES = 50;
+const isEmptyValue = (v) => v == null || v === "" || Array.isArray(v) && v.length === 0;
+const sameValue = (a, b) => a === b || String(a) === String(b);
+function asDataSource(x) {
+	return x && typeof x.store === "function" ? x : null;
+}
+function asStore(x) {
+	return x && typeof x.load === "function" ? x : null;
+}
+/** `field = v`, or an OR of them for several values. */
+function equalsAny(field, values) {
+	return joinFilters(values.map((v) => [
+		field,
+		"=",
+		v
+	]), "or");
+}
+/** A filter value or a zero-arg getter → its value. */
+function resolveBase(filter) {
+	if (typeof filter === "function" && filter.length === 0) return filter();
+	return filter ?? null;
+}
+/** Group search terms by field — OR within a field, AND across (the grid's own shape). */
+function groupTerms(terms) {
+	const order = [];
+	const by = /* @__PURE__ */ new Map();
+	for (const t of terms ?? []) {
+		const v = String(t?.value ?? "").trim();
+		if (!v) continue;
+		const key = t.field || void 0;
+		if (!by.has(key)) {
+			by.set(key, []);
+			order.push(key);
+		}
+		by.get(key).push(v);
+	}
+	return order.map((field) => ({
+		field,
+		values: by.get(field)
+	}));
+}
+/** The search as a devextreme filter array (remote) — `null` when there is nothing to search. */
+function searchFilterFor(terms, entries, operation = DEFAULT_SEARCH_OPERATION) {
+	const groups = groupTerms(terms);
+	if (!groups.length || !entries.length) return null;
+	const perGroup = groups.map((g) => {
+		const list = g.field ? [searchEntryFor(entries, g.field) ?? g.field] : entries;
+		const perValue = g.values.map((value) => joinFilters(list.map((e) => typeof e === "string" ? toODataClause(e, operation, value) : customRemoteClause(e, value, operation)), "or"));
+		return joinFilters(perValue, "or");
+	});
+	return joinFilters(perGroup, "and");
+}
+/** The search as a row predicate (array) — `null` when there is nothing to search. */
+function searchPredicateFor(terms, entries, operation = DEFAULT_SEARCH_OPERATION) {
+	const groups = groupTerms(terms);
+	if (!groups.length || !entries.length) return null;
+	const perGroup = groups.map((g) => {
+		const list = g.field ? [searchEntryFor(entries, g.field) ?? g.field] : entries;
+		const preds = g.values.map((v) => searchRowPredicate(list, v, operation)).filter((p) => !!p);
+		return preds.length ? ((row) => preds.some((p) => p(row))) : null;
+	});
+	return andPredicates(...perGroup);
+}
+/**
+* The probe filter for relaxing `field`: every OTHER mapped field pinned to its
+* current form value (an empty value means "all" and pins nothing), ANDed with
+* the search and the fixed base. `field` itself stays free.
+*/
+function buildProbeFilter(field, keys, values, search, base) {
+	const pins = Object.entries(keys).filter(([f]) => f !== field).map(([f, key]) => {
+		const v = values[key];
+		if (isEmptyValue(v)) return null;
+		return equalsAny(f, Array.isArray(v) ? v : [v]);
+	});
+	return joinFilters([
+		search,
+		...pins,
+		base
+	], "and");
+}
+function countTarget(source) {
+	if (Array.isArray(source)) return {
+		kind: "array",
+		rows: source
+	};
+	const ds = asDataSource(source);
+	if (ds) {
+		const store = asStore(ds.store());
+		if (store) return {
+			kind: "store",
+			store
+		};
+	}
+	const data = source?.data;
+	if (typeof data === "function") {
+		const rows = data.call(source);
+		if (Array.isArray(rows)) return {
+			kind: "array",
+			rows
+		};
+	}
+	const store = asStore(source);
+	return store ? {
+		kind: "store",
+		store
+	} : null;
+}
+async function countByField(target, field, filter, predicate, gate) {
+	if (target.kind === "array") {
+		const rows = predicate ? target.rows.filter((r, i) => predicate(r, i)) : target.rows;
+		return countValues(rows, field);
+	}
+	const grouped = await groupCountViaApply(target.store, field, filter, gate);
+	if (grouped) return grouped;
+	const res = await target.store.load({
+		filter: filter ?? void 0,
+		select: [field]
+	});
+	return countValues(storeRows(res), field);
+}
+function controlOf(form, key) {
+	return (typeof form._elements === "function" ? form._elements(key) : [])[0] ?? null;
+}
+function captionOf(row, display, fallback) {
+	if (row != null && typeof row === "object") {
+		if (typeof display === "function") try {
+			return String(display(row) ?? fallback);
+		} catch {}
+		if (typeof display === "string" && display) {
+			const v = row[display];
+			if (v != null) return String(v);
+		}
+	}
+	return String(fallback ?? "");
+}
+/**
+* Which `candidates` the field allows, each with its caption. `null` when there is
+* NO source to check against (nothing bound, nothing configured) — the caller
+* then trusts the counts.
+*/
+async function allowedValues(spec, control, field, candidates) {
+	const explicit = spec && typeof spec === "object" && !Array.isArray(spec) && "source" in spec ? spec : null;
+	const source = explicit ? explicit.source : spec ?? control?.dataSource ?? control?.items ?? null;
+	if (source == null) return null;
+	const keyValue = explicit?.keyValue || control?.keyValue || field;
+	const display = control?.displayValue;
+	const out = /* @__PURE__ */ new Map();
+	const take = (row) => {
+		const v = row != null && typeof row === "object" ? row[keyValue] : row;
+		const hit = candidates.find((c) => sameValue(c, v));
+		if (hit === void 0 || out.has(String(hit))) return;
+		out.set(String(hit), {
+			value: v,
+			caption: captionOf(row, display, v)
+		});
+	};
+	if (Array.isArray(source)) {
+		source.forEach(take);
+		return out;
+	}
+	const ds = asDataSource(source);
+	const store = ds ? asStore(ds.store()) : asStore(source);
+	if (!store) return null;
+	const base = ds?.filter?.() ?? null;
+	const filter = andFilters(base, equalsAny(keyValue, candidates));
+	try {
+		const res = await store.load({ filter });
+		storeRows(res).forEach(take);
+	} catch {
+		return out;
+	}
+	return out;
+}
+/** Rows to expand a `*` search pattern against. */
+async function sampleRows(target) {
+	if (target.kind === "array") return target.rows.slice(0, 20);
+	try {
+		return storeRows(await target.store.load({ take: 20 }));
+	} catch {
+		return [];
+	}
+}
+/**
+* Probe every mapped field and return the best single-field adjustment, or `null`
+* when nothing allowed would bring rows back.
+*/
+async function probeFilterSuggestion(cfg, ctx) {
+	const keys = cfg?.keys ?? {};
+	if (!Object.keys(keys).length) return null;
+	const terms = ctx.grid.searchTerms ?? [];
+	if (!terms.some((t) => String(t?.value ?? "").trim())) return null;
+	const target = countTarget(cfg.source ?? ctx.grid.dataSource);
+	if (!target) return null;
+	const op = cfg.searchOperation ?? "contains";
+	let entries = cfg.searchValue != null ? parseSearchValue(cfg.searchValue) : [...ctx.grid.searchValue() ?? []];
+	if (hasWildcardSearch(entries)) entries = resolveSearchFields({
+		searchValue: entries,
+		rows: await sampleRows(target),
+		remote: target.kind === "store"
+	});
+	if (!entries.length) return null;
+	const remote = target.kind === "store";
+	const search = remote ? searchFilterFor(terms, entries, op) : null;
+	const searchPred = remote ? null : searchPredicateFor(terms, entries, op);
+	const base = resolveBase(cfg.filter);
+	const values = ctx.form.values();
+	let best = null;
+	for (const [field, key] of Object.entries(keys)) {
+		const control = controlOf(ctx.form, key);
+		if (control?.readonly || control?.disabled) continue;
+		const current = values[key];
+		if (isEmptyValue(current)) continue;
+		const filter = buildProbeFilter(field, keys, values, search, remote ? base : null);
+		let predicate = null;
+		if (!remote) {
+			const pins = buildProbeFilter(field, keys, values, null, null);
+			const basePred = typeof base === "function" ? base : compileFilterPredicate(base);
+			predicate = andPredicates(searchPred, compileFilterPredicate(pins), basePred);
+		}
+		let counts;
+		try {
+			counts = await countByField(target, field, filter, predicate, ctx.gate);
+		} catch {
+			continue;
+		}
+		const currentList = Array.isArray(current) ? current : [current];
+		const candidates = counts.filter((c) => c.count > 0 && !isEmptyValue(c.value) && !currentList.some((v) => sameValue(v, c.value))).sort((a, b) => b.count - a.count).slice(0, MAX_CANDIDATES);
+		if (!candidates.length) continue;
+		const allowed = await allowedValues(cfg.sources?.[field], control, field, candidates.map((c) => c.value));
+		const kept = allowed ? candidates.filter((c) => allowed.has(String(c.value))) : candidates;
+		if (!kept.length) continue;
+		let found;
+		if (Array.isArray(current)) {
+			const add = kept.map((c) => allowed?.get(String(c.value))?.value ?? c.value);
+			found = {
+				key,
+				field,
+				value: add,
+				caption: kept.map((c) => allowed?.get(String(c.value))?.caption ?? String(c.value)).join(", "),
+				count: kept.reduce((n, c) => n + c.count, 0),
+				current,
+				values: { [key]: [...current, ...add] }
+			};
+		} else {
+			const top = kept[0];
+			const hit = allowed?.get(String(top.value));
+			const value = hit?.value ?? top.value;
+			found = {
+				key,
+				field,
+				value,
+				caption: hit?.caption ?? String(top.value),
+				count: top.count,
+				current,
+				values: { [key]: value }
+			};
+		}
+		if (!best || found.count > best.count) best = found;
+	}
+	return best;
+}
+
+//#endregion
 //#region src/components/table/mono-table-search-core.ts
 /**
 * `MonoTableSearchCore` — render-mode-agnostic logic for `mono-table-search`: a
@@ -177,8 +443,17 @@ const MonoTableControllerCore = (superClass) => {
 *
 * Deliberately NOT taken from `InputProps`: `type` (pinned to `search`),
 * `required` / `pattern` / `min` / `max` / `step` (form-submit constraints with no
-* meaning for a filter), and `value` / `modelValue` — the debounce below plus the
-* controller own the search term.
+* meaning for a filter), and `value`.
+*
+* **Two modes, picked by `modelValue`:**
+* - *grid* (no `model-value`) — the debounce below plus the controller own the
+*   search term, exactly as before;
+* - *manual* (`model-value` passed, even `''`) — a controlled field: it emits
+*   `mono-input`'s `input` / `change` / `clear` (same detail shape) immediately and
+*   NEVER touches the grid's search (`search-value`, `suggestion` and
+*   `multi-context` go inert). The consumer runs the search itself.
+*
+* `input` / `change` / `clear` fire in grid mode too, so a listener works either way.
 *
 * The magnifier and clear glyphs are delegated to `renderIcon()` (light: UnoCSS
 * `.mono-icon i-mdi-*`; shadow: inline SVG) so the chrome is otherwise identical.
@@ -188,6 +463,8 @@ const MonoTableSearchCore = (superClass) => {
 		constructor(...args) {
 			super(...args);
 			this._propsSlot = "search";
+			this._probeGate = createApplyGate(true);
+			this._probeSeq = 0;
 			this.searchValue = "";
 			this.searchExpr = "";
 			this.placeholder = "Search…";
@@ -344,6 +621,9 @@ const MonoTableSearchCore = (superClass) => {
 			defineHybridPropAliases(this, [
 				"searchValue",
 				"searchExpr",
+				"modelValue",
+				"dataForm",
+				"suggestionFilter",
 				"multiContext",
 				"suggestionTemplate",
 				"allFieldsLabel",
@@ -364,9 +644,63 @@ const MonoTableSearchCore = (superClass) => {
 				"maxHeight",
 				"cssClass"
 			]);
+			defineHybridPropAlias(this, "controlForm", "dataForm");
+		}
+		updated(changed) {
+			super.updated?.(changed);
+			this._maybeProbe();
+		}
+		/**
+		* Runs after every render — and the base re-renders on every grid notify — so
+		* this sees each load settle. Probes once per (search, form values) while the
+		* grid sits loaded-and-empty; anything else drops a stale offer.
+		*/
+		_maybeProbe() {
+			const grid = this.dataGrid;
+			if (!grid) return;
+			const cfg = this.suggestionFilter;
+			const form = this.dataForm;
+			const terms = grid.searchTerms ?? [];
+			if (!(!!cfg && !!form && !this._manual && grid.hasLoaded && !grid.loading && !grid.error && (grid.items?.length ?? 0) === 0 && terms.length > 0)) {
+				if (this._probeKey !== void 0) {
+					this._probeKey = void 0;
+					this._probeSeq++;
+					if (this._probeTimer) clearTimeout(this._probeTimer);
+					if (grid.filterSuggestion) grid.setFilterSuggestion?.(null);
+				}
+				return;
+			}
+			let key;
+			try {
+				key = JSON.stringify([terms, form.values()]);
+			} catch {
+				key = String(Math.random());
+			}
+			if (key === this._probeKey) return;
+			this._probeKey = key;
+			const seq = ++this._probeSeq;
+			if (this._probeTimer) clearTimeout(this._probeTimer);
+			this._probeTimer = setTimeout(() => {
+				probeFilterSuggestion(cfg, {
+					grid,
+					form,
+					gate: this._probeGate
+				}).then((found) => {
+					if (seq === this._probeSeq) grid.setFilterSuggestion?.(found);
+				}).catch(() => {
+					if (seq === this._probeSeq) grid.setFilterSuggestion?.(null);
+				});
+			}, 120);
+		}
+		/** Manual mode — `model-value` was passed. */
+		get _manual() {
+			return this.modelValue !== void 0;
 		}
 		disconnectedCallback() {
 			if (this._timer) clearTimeout(this._timer);
+			if (this._probeTimer) clearTimeout(this._probeTimer);
+			this._probeSeq++;
+			this._probeKey = void 0;
 			this._teardownDocListener();
 			this._teardownMoreDocListener();
 			this._teardownFilterDocListener();
@@ -375,6 +709,13 @@ const MonoTableSearchCore = (superClass) => {
 		}
 		willUpdate(changed) {
 			super.willUpdate(changed);
+			if (changed.has("modelValue") && this._manual) {
+				const next = String(this.modelValue ?? "");
+				if (next !== this._value) {
+					this._value = next;
+					if (!next) this._closePanel();
+				}
+			}
 			if (changed.has("searchValue") || changed.has("searchExpr") || changed.has("dataGrid")) this._pushSearchFields();
 		}
 		/**
@@ -387,6 +728,7 @@ const MonoTableSearchCore = (superClass) => {
 		* live query: without it, searching would loop.
 		*/
 		_pushSearchFields() {
+			if (this._manual) return;
 			const grid = this.dataGrid;
 			const setFields = grid?.setSearchValue ?? grid?.setSearchExpr;
 			if (!grid || typeof setFields !== "function") return;
@@ -419,7 +761,7 @@ const MonoTableSearchCore = (superClass) => {
 		}
 		_push(value) {
 			const grid = this.dataGrid;
-			if (!grid) return;
+			if (!grid || this._manual) return;
 			if (this.multiContext) {
 				grid.setSearchTerms?.(this._chips);
 				return;
@@ -442,7 +784,7 @@ const MonoTableSearchCore = (superClass) => {
 			return this.suggestionTemplate.replace("{caption}", s.caption).replace("{term}", this._value);
 		}
 		get _canSuggest() {
-			return this.suggestion && !this.disabled && !this.readonly && !!this._value;
+			return this.suggestion && !this._manual && !this.disabled && !this.readonly && !!this._value;
 		}
 		_openPanel() {
 			if (isServer || !this._canSuggest) return;
@@ -492,9 +834,37 @@ const MonoTableSearchCore = (superClass) => {
 			this._chipsSwallow.strip.removeEventListener("click", this._chipsSwallow.fn, true);
 			this._chipsSwallow = null;
 		}
+		/** `mono-input`'s event detail shape, so a listener is portable between the two. */
+		_detail(next, old, sourceEvent) {
+			return {
+				modelValue: next,
+				currentValue: next,
+				oldValue: old,
+				value: next,
+				displayValue: next,
+				name: this.name,
+				sourceEvent
+			};
+		}
+		/**
+		* Manual mode writes the typed text back to `modelValue`, like `mono-input`, so
+		* a one-way `:model-value` binding doesn't snap the field back on re-render.
+		*/
+		_commitModel(next) {
+			if (this._manual) this.modelValue = next;
+		}
+		_handleChange(event) {
+			if (this.disabled || this.readonly) return;
+			const value = event.currentTarget.value;
+			dispatchMonoEvent(this, "change", this._detail(value, value, event));
+		}
 		_handleInput(event) {
 			const value = event.currentTarget.value;
+			const old = this._value;
 			this._value = value;
+			this._commitModel(value);
+			dispatchMonoEvent(this, "input", this._detail(value, old, event));
+			if (this._manual) return;
 			if (value && this.suggestion) this._openPanel();
 			else if (!value) this._closePanel();
 			if (this._timer) clearTimeout(this._timer);
@@ -536,10 +906,15 @@ const MonoTableSearchCore = (superClass) => {
 		_handleClear() {
 			if (this.disabled || this.readonly) return;
 			if (this._timer) clearTimeout(this._timer);
+			const old = this._value;
 			this._value = "";
+			this._commitModel("");
 			if (this._inputEl) this._inputEl.value = "";
 			this._push("");
 			this._inputEl?.focus();
+			const detail = this._detail("", old);
+			dispatchMonoEvent(this, "input", detail);
+			dispatchMonoEvent(this, "clear", detail);
 		}
 		/** Mirrors `input-core`'s resolution: an explicit state wins, else error/success. */
 		get _resolvedValidationState() {
@@ -952,6 +1327,7 @@ const MonoTableSearchCore = (superClass) => {
               aria-label=${ifDefined(this.ariaLabelText || this.label || this.placeholder || void 0)}
               aria-invalid=${this._resolvedValidationState === "invalid" ? "true" : "false"}
               @input=${this._handleInput}
+              @change=${this._handleChange}
             />
             ${this._renderClear()}
             ${this._renderFilterToggle()}
@@ -961,8 +1337,11 @@ const MonoTableSearchCore = (superClass) => {
       `;
 		}
 	}
+	__decorate([property({ attribute: false })], MonoTableSearchCoreClass.prototype, "dataForm", void 0);
+	__decorate([property({ attribute: false })], MonoTableSearchCoreClass.prototype, "suggestionFilter", void 0);
 	__decorate([property({ attribute: "search-value" })], MonoTableSearchCoreClass.prototype, "searchValue", void 0);
 	__decorate([property({ attribute: "search-expr" })], MonoTableSearchCoreClass.prototype, "searchExpr", void 0);
+	__decorate([property({ attribute: "model-value" })], MonoTableSearchCoreClass.prototype, "modelValue", void 0);
 	__decorate([property({ type: String })], MonoTableSearchCoreClass.prototype, "placeholder", void 0);
 	__decorate([property({
 		reflect: true,
@@ -3293,6 +3672,7 @@ function applyOverlayHost(el, on, opts) {
 
 //#endregion
 //#region src/components/table/mono-table-empty-core.ts
+const DEFAULT_SUGGESTION_TEXT = "There is {count} data available but in different filter, do you want to change the filter?";
 /**
 * Defaults, so the element says something sensible with no props at all.
 *
@@ -3337,9 +3717,11 @@ const TAIL_GAP = 16;
 */
 const MonoTableEmptyCore = (superClass) => {
 	class MonoTableEmptyCoreClass extends MonoTableControllerCore(superClass) {
-		constructor(..._args) {
-			super(..._args);
+		constructor(...args) {
+			super(...args);
 			this._propsSlot = "empty";
+			this.adjustLabel = "Adjust Filter";
+			this._shownSuggestion = null;
 			this.icon = DEFAULT_ICON;
 			this.title = DEFAULT_TITLE;
 			this.subtitle = DEFAULT_SUBTITLE;
@@ -3347,6 +3729,12 @@ const MonoTableEmptyCore = (superClass) => {
 			this.reloadLabel = "Reload";
 			this._hasBodySlot = false;
 			this._visible = false;
+			defineHybridPropAliases(this, [
+				"dataForm",
+				"suggestionFilter",
+				"adjustLabel"
+			]);
+			defineHybridPropAlias(this, "controlForm", "dataForm");
 		}
 		connectedCallback() {
 			super.connectedCallback();
@@ -3373,6 +3761,7 @@ const MonoTableEmptyCore = (superClass) => {
 			this._off = this.dataGrid?.subscribe(() => {
 				this._sync();
 				if (monoPendingActive(this)) this.requestUpdate();
+				if ((this.dataGrid?.filterSuggestion ?? null) !== this._shownSuggestion) this.requestUpdate();
 			});
 			if (!isServer) this._sync();
 		}
@@ -3446,6 +3835,60 @@ const MonoTableEmptyCore = (superClass) => {
 			dispatchMonoEvent(this, "reload", { grid });
 			grid.reload().catch(() => {});
 		}
+		/**
+		* **Adjust Filter**: write the suggested values into the form (its watchers run
+		* — a cascade, a dependent field being cleared), then let the page veto the
+		* default re-query with `preventDefault()` on `adjust`, else `grid.refresh()`.
+		* The search text stays, so the grid re-searches under the new filter.
+		*/
+		_onAdjust() {
+			const grid = this.dataGrid;
+			const form = this.dataForm;
+			const suggestion = grid?.filterSuggestion;
+			if (!grid || !form || !suggestion) return;
+			form.setValues(suggestion.values);
+			grid.setFilterSuggestion(null);
+			if (dispatchMonoEvent(this, "adjust", {
+				...suggestion,
+				form,
+				grid
+			}, { cancelable: true })) grid.refresh().catch(() => {});
+		}
+		/**
+		* The suggestion line: `suggestionFilter.message` as a function `(count, s)`, or a
+		* template with `{count}` / `{value}` / `{key}` / `{field}` substituted.
+		*/
+		_suggestionMessage(s) {
+			const message = this.suggestionFilter?.message;
+			if (typeof message === "function") try {
+				return String(message(s.count, s) ?? "");
+			} catch {
+				return "";
+			}
+			const map = {
+				count: String(s.count),
+				value: s.caption || String(s.value ?? ""),
+				key: s.key,
+				field: s.field
+			};
+			return (message || DEFAULT_SUGGESTION_TEXT).replace(/\{(count|value|key|field)\}/g, (_, k) => map[k] ?? "");
+		}
+		/** The suggestion to present — only with a form to write into. Records it for the notify diff. */
+		_activeSuggestion() {
+			const s = this.dataGrid?.filterSuggestion ?? null;
+			this._shownSuggestion = s;
+			return s && this.dataForm ? s : null;
+		}
+		_renderAdjust() {
+			return html`<button
+        type="button"
+        class="mono-table-empty-adjust" mono-empty-adjust
+        part="adjust"
+        @click=${() => this._onAdjust()}
+      >
+        ${this.adjustLabel}
+      </button>`;
+		}
 		_reloadIcon() {
 			return html`<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
         <path
@@ -3482,21 +3925,40 @@ const MonoTableEmptyCore = (superClass) => {
 		_renderBodySlot() {
 			return html`<div class="mono-table-empty-body" mono-empty-body data-mono-slot="body"></div>`;
 		}
-		/** Icon, title, subtitle, reload — in that order, each omitted when unset. */
+		/**
+		* Icon, title, subtitle, reload — in that order, each omitted when unset.
+		*
+		* While a filter suggestion is offered, its message takes the SUBTITLE's place
+		* (same element, same look — it is the better advice for this empty state), and
+		* the buttons share one row: Reload left, Adjust Filter right. Without one the
+		* markup is exactly what it always was.
+		*/
 		_renderProps() {
 			const showReload = this.reload && !!this.dataGrid;
+			const suggestion = this._activeSuggestion();
+			const reloadButton = showReload ? html`<button
+            type="button"
+            class="mono-table-empty-reload" mono-empty-reload
+            part="reload"
+            @click=${() => this._onReload()}
+          >
+            ${this._reloadIcon()}${this.reloadLabel}
+          </button>` : nothing;
+			if (suggestion) return html`
+          ${this._renderIcon()}
+          ${this.title ? html`<div class="mono-table-empty-title" mono-empty-title>${this.title}</div>` : nothing}
+          <div class="mono-table-empty-sub" mono-empty-sub mono-empty-suggest part="suggest">
+            ${this._suggestionMessage(suggestion)}
+          </div>
+          <div class="mono-table-empty-actions" mono-empty-actions>
+            ${reloadButton}${this._renderAdjust()}
+          </div>
+        `;
 			return html`
         ${this._renderIcon()}
         ${this.title ? html`<div class="mono-table-empty-title" mono-empty-title>${this.title}</div>` : nothing}
         ${this.subtitle ? html`<div class="mono-table-empty-sub" mono-empty-sub>${this.subtitle}</div>` : nothing}
-        ${showReload ? html`<button
-              type="button"
-              class="mono-table-empty-reload" mono-empty-reload
-              part="reload"
-              @click=${() => this._onReload()}
-            >
-              ${this._reloadIcon()}${this.reloadLabel}
-            </button>` : nothing}
+        ${reloadButton}
       `;
 		}
 		/**
@@ -3514,6 +3976,12 @@ const MonoTableEmptyCore = (superClass) => {
       </div>`;
 		}
 	}
+	__decorate([property({ attribute: false })], MonoTableEmptyCoreClass.prototype, "dataForm", void 0);
+	__decorate([property({ attribute: false })], MonoTableEmptyCoreClass.prototype, "suggestionFilter", void 0);
+	__decorate([property({
+		type: String,
+		attribute: "adjust-label"
+	})], MonoTableEmptyCoreClass.prototype, "adjustLabel", void 0);
 	__decorate([property({ type: String })], MonoTableEmptyCoreClass.prototype, "icon", void 0);
 	__decorate([property({ type: String })], MonoTableEmptyCoreClass.prototype, "title", void 0);
 	__decorate([property({ type: String })], MonoTableEmptyCoreClass.prototype, "subtitle", void 0);

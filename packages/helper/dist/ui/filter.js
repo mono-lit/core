@@ -4,7 +4,7 @@ import { d as buildSizeStyle } from "../mono-ui-kvLVIf1V.js";
 import { n as detachEventHandlers, t as applyProps } from "../element-props-xvw0EB7H.js";
 import { t as customElement } from "../mono-element-CKcT0rwv.js";
 import { a as defineHybridPropAliases, i as defineHybridPropAlias, t as __decorate } from "../decorate-DbYFpi8R.js";
-import { t as dispatchMonoEvent } from "../mono-event-BPku9HpS.js";
+import { t as dispatchMonoEvent } from "../mono-event-CAZf0F_k.js";
 import { LitElement, html, isServer, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { styleMap } from "lit/directives/style-map.js";
