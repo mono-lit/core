@@ -659,8 +659,10 @@ const MonoTableSearchCore = (superClass) => {
 			if (!grid) return;
 			const cfg = this.suggestionFilter;
 			const form = this.dataForm;
-			const terms = grid.searchTerms ?? [];
-			if (!(!!cfg && !!form && !this._manual && grid.hasLoaded && !grid.loading && !grid.error && (grid.items?.length ?? 0) === 0 && terms.length > 0)) {
+			const gridTerms = grid.searchTerms ?? [];
+			const text = this._value.trim();
+			const terms = gridTerms.length || !this._manual ? gridTerms : text ? [{ value: text }] : [];
+			if (!(!!cfg && !!form && grid.hasLoaded && !grid.loading && !grid.error && (grid.items?.length ?? 0) === 0 && terms.length > 0)) {
 				if (this._probeKey !== void 0) {
 					this._probeKey = void 0;
 					this._probeSeq++;
@@ -680,8 +682,13 @@ const MonoTableSearchCore = (superClass) => {
 			const seq = ++this._probeSeq;
 			if (this._probeTimer) clearTimeout(this._probeTimer);
 			this._probeTimer = setTimeout(() => {
+				const view = {
+					searchTerms: terms,
+					dataSource: grid.dataSource,
+					searchValue: () => grid.searchValue()
+				};
 				probeFilterSuggestion(cfg, {
-					grid,
+					grid: view,
 					form,
 					gate: this._probeGate
 				}).then((found) => {

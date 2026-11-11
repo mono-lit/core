@@ -182,7 +182,11 @@ export const MonoTableSearchCore = <T extends Constructor<LitElement>>(superClas
      * `keys` maps row fields to form keys; `sources` overrides where a field's
      * ALLOWED values come from (default: the bound control's own options);
      * `source` / `searchValue` / `filter` point the count at another source. See
-     * `MonoSuggestionFilter`. Inert in manual mode (`model-value`).
+     * `MonoSuggestionFilter`.
+     *
+     * Works in manual mode (`model-value`) too: the grid's search is yours there,
+     * so the probe searches the box's own text. Pass `searchValue` with the fields
+     * YOUR search covers, so the count matches what the grid was asked.
      */
     @property({ attribute: false })
     suggestionFilter?: MonoSuggestionFilter | null
@@ -213,9 +217,15 @@ export const MonoTableSearchCore = <T extends Constructor<LitElement>>(superClas
       if (!grid) return
       const cfg = this.suggestionFilter
       const form = this.dataForm
-      const terms = grid.searchTerms ?? []
+      // The search being probed. Grid mode: the grid's own terms. Manual mode: the
+      // consumer runs the search, often through a filter the grid can't read back,
+      // so the box's own text is the term — unless they DID hand it to the grid.
+      const gridTerms = grid.searchTerms ?? []
+      const text = this._value.trim()
+      const terms: MonoSearchTerm[] =
+        gridTerms.length || !this._manual ? gridTerms : text ? [{ value: text }] : []
       const emptySearch =
-        !!cfg && !!form && !this._manual &&
+        !!cfg && !!form &&
         grid.hasLoaded && !grid.loading && !grid.error &&
         (grid.items?.length ?? 0) === 0 && terms.length > 0
 
@@ -240,7 +250,14 @@ export const MonoTableSearchCore = <T extends Constructor<LitElement>>(superClas
       const seq = ++this._probeSeq
       if (this._probeTimer) clearTimeout(this._probeTimer)
       this._probeTimer = setTimeout(() => {
-        void probeFilterSuggestion(cfg!, { grid, form: form!, gate: this._probeGate })
+        // The probe reads the grid through a view, so manual mode can hand it the
+        // box's text as the term without touching the grid's own search state.
+        const view = {
+          searchTerms: terms,
+          dataSource: grid.dataSource,
+          searchValue: () => grid.searchValue(),
+        }
+        void probeFilterSuggestion(cfg!, { grid: view, form: form!, gate: this._probeGate })
           .then((found) => {
             if (seq === this._probeSeq) grid.setFilterSuggestion?.(found)
           })

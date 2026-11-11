@@ -136,6 +136,12 @@ Bind the filter form to both elements and map row fields to form keys: `:suggest
 <DemoSingle name="table" id="search-filter-suggestion" />
 </ClientOnly>
 
+With a manual search (`:model-value` + `@input`), the suggestion probes the typed text; pass `searchValue` with the fields your search covers.
+
+<ClientOnly>
+<DemoSingle name="table" id="search-filter-suggestion-manual" />
+</ClientOnly>
+
 ### Filter builder
 
 Slot a `<mono-filter-builder slot="filter-builder">` into the search — a chevron reveals it and its **Apply** drives the grid. Let the grid own the controller: `controlMonoTable({ filterBuilder })` exposes `table.filterBuilder` to bind (the field list is derived from the `<mono-table-th>` columns). With `multi-context`, Apply renders one removable **Filter** chip (`filter-label`); without it, the grid just filters. The chevron, suggestion list and chips panel are mutually exclusive; each closes on `Esc` / outside-click.

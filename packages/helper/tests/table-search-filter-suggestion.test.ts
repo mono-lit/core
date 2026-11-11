@@ -145,6 +145,34 @@ describe('<mono-table-search> filter suggestion → <mono-table-empty> Adjust Fi
     expect(adjustButton(empty)).toBeNull()
   })
 
+  it('manual mode (model-value + @input): probes the typed text the page searched with', async () => {
+    const { grid, search, empty } = await setup()
+    // The page owns the search: it filters through the grid's explicit layer, which
+    // the grid can't read back as search terms.
+    search.modelValue = ''
+    search.suggestionFilter = { keys: { CodeDept: 'Dept' }, searchValue: ['Nama'] }
+    search.addEventListener('input', (e: CustomEvent) => {
+      const v = e.detail.modelValue as string
+      void grid.setFilter(v ? ['Nama', 'contains', v] : null)
+    })
+    await tick()
+
+    const input = search.querySelector('.mono-input-native') as HTMLInputElement
+    input.value = 'andy'
+    input.dispatchEvent(new Event('input', { bubbles: true, composed: true }))
+
+    await until(() => grid.filterSuggestion)
+    expect(grid.searchTerms).toHaveLength(0) // the grid's own search was never used
+    expect(grid.filterSuggestion).toMatchObject({ key: 'Dept', value: 'HR', count: 3 })
+    await until(() => adjustButton(empty))
+
+    // Clearing the text withdraws it.
+    input.value = ''
+    input.dispatchEvent(new Event('input', { bubbles: true, composed: true }))
+    await tick(300)
+    expect(grid.filterSuggestion).toBeNull()
+  })
+
   it('rows coming back withdraw the offer', async () => {
     const { grid } = await setup()
     await grid.setSearch('andy')
