@@ -34,12 +34,38 @@ export async function groupCountViaApply(
   gate: ApplyGate,
   options: { top?: number } = {},
 ): Promise<MonoValueCount[] | null> {
-  if (gate.skip) return null
-  if (parseFieldPath(field).hasWildcard) return null
-  const selector = isPath(field) ? toODataSelector(field) : field
-  if (!selector) return null
+  const rows = await groupCountsViaApply(store, [field], filter, gate, options)
+  return rows ? rows.map((r) => ({ value: r.values[field], count: r.count })) : null
+}
 
-  const apply = `groupby((${selector}),aggregate($count as count))`
+/** One row of a multi-field group count: the value of each grouped field, and how many rows. */
+export interface MonoTupleCount {
+  values: Record<string, unknown>
+  count: number
+}
+
+/**
+ * {@link groupCountViaApply} over SEVERAL fields at once — one
+ * `groupby((A,B),aggregate($count as count))` request, one row per combination
+ * that exists. Same `null` contract.
+ */
+export async function groupCountsViaApply(
+  store: unknown,
+  fields: readonly string[],
+  filter: unknown,
+  gate: ApplyGate,
+  options: { top?: number } = {},
+): Promise<MonoTupleCount[] | null> {
+  if (gate.skip || !fields.length) return null
+  const selectors: string[] = []
+  for (const field of fields) {
+    if (parseFieldPath(field).hasWildcard) return null
+    const selector = isPath(field) ? toODataSelector(field) : field
+    if (!selector) return null
+    selectors.push(selector)
+  }
+
+  const apply = `groupby((${selectors.join(',')}),aggregate($count as count))`
   const odataFilter = filter != null ? summaryODataFilter(filter) : ''
   const clause = odataFilter ? `filter(${odataFilter})/${apply}` : apply
   const top = typeof options.top === 'number' && options.top >= 0 ? options.top : undefined
@@ -53,17 +79,43 @@ export async function groupCountViaApply(
   }
   if (!rows) return null
   if (!rows.length) return []
-  // Grouped rows are the key plus a numeric `count` and nothing else; entities
+  // Grouped rows are the key(s) plus a numeric `count` and nothing else; entities
   // carry the rest of the record — a server either honoured `$apply` or it did not.
+  // The count may arrive as a numeric STRING (an Int64 / Decimal aggregate under
+  // ASP.NET OData's IEEE754-compatible serialisation), which is still a count.
   const first = rows[0]
-  if (!first || typeof first !== 'object' || typeof first.count !== 'number') return null
-  if (!isRolledUp(rows, [field, 'count'])) return null
+  if (!first || typeof first !== 'object' || !isCount(first.count)) return null
+  if (!isRolledUp(rows, [...fields, 'count'])) return null
 
-  const path = isPath(field)
-  return rows.map((r) => ({
-    value: path ? getFieldValue(r, field) : r[field],
-    count: Number(r.count) || 0,
-  }))
+  return rows.map((r) => ({ values: pickValues(r, fields), count: Number(r.count) || 0 }))
+}
+
+/** Each field's value off a row, path-aware. */
+function pickValues(row: unknown, fields: readonly string[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const f of fields) {
+    out[f] = isPath(f) ? getFieldValue(row, f) : (row as Record<string, unknown> | null)?.[f]
+  }
+  return out
+}
+
+/** {@link countValues} over several fields: one tuple per combination, with its row count. */
+export function countTuples(rows: readonly unknown[], fields: readonly string[]): MonoTupleCount[] {
+  const by = new Map<string, MonoTupleCount>()
+  for (const r of rows) {
+    const values = pickValues(r, fields)
+    const key = JSON.stringify(fields.map((f) => values[f] ?? null))
+    const hit = by.get(key)
+    if (hit) hit.count++
+    else by.set(key, { values, count: 1 })
+  }
+  return [...by.values()]
+}
+
+/** A number, or a string that is one (`"12"`). */
+function isCount(v: unknown): boolean {
+  if (typeof v === 'number') return Number.isFinite(v)
+  return typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))
 }
 
 /** Count occurrences of `field` across `rows` (path-aware; a wildcard path flattens). */

@@ -16,6 +16,21 @@ export interface MonoValueCount {
 export declare function groupCountViaApply(store: unknown, field: string, filter: unknown, gate: ApplyGate, options?: {
   top?: number;
 }): Promise<MonoValueCount[] | null>;
+/** One row of a multi-field group count: the value of each grouped field, and how many rows. */
+export interface MonoTupleCount {
+  values: Record<string, unknown>;
+  count: number;
+}
+/**
+ * {@link groupCountViaApply} over SEVERAL fields at once — one
+ * `groupby((A,B),aggregate($count as count))` request, one row per combination
+ * that exists. Same `null` contract.
+ */
+export declare function groupCountsViaApply(store: unknown, fields: readonly string[], filter: unknown, gate: ApplyGate, options?: {
+  top?: number;
+}): Promise<MonoTupleCount[] | null>;
+/** {@link countValues} over several fields: one tuple per combination, with its row count. */
+export declare function countTuples(rows: readonly unknown[], fields: readonly string[]): MonoTupleCount[];
 /** Count occurrences of `field` across `rows` (path-aware; a wildcard path flattens). */
 export declare function countValues(rows: readonly unknown[], field: string): MonoValueCount[];
 //#endregion

@@ -1,12 +1,12 @@
-import { a as parseFieldPath, c as toODataClause, l as toODataSelector, n as isPath, o as projectFields, r as mergePatch, s as setFieldValue, t as getFieldValue } from "./field-path-BabiMrrA.js";
-import { a as buildGroups, c as isGroupNode, i as searchFilterOf, o as collectGroupPaths, r as readAllRows, s as flattenLeaves } from "./data-source-read-BL266IW0.js";
-import { i as joinFilters, n as andPredicates, r as compileFilterPredicate, t as andFilters } from "./filter-eval-ChDSaAUH.js";
-import { A as resolveSearchEntries, C as customRemoteClause, E as hasWildcardSearch, S as customPredicate, T as hasCustomSearch, h as mergeSearchFields, j as searchEntryFor, k as plainSearchColumns, n as describeError, o as isCanceled, u as DEFAULT_SEARCH_FIELDS } from "./normalize-error-D93O4q8g.js";
-import { a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, h as monoArraySource, i as normalizeSortList, l as summaryAliases, m as storeRows, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-fxT5QIX4.js";
+import { a as parseFieldPath, c as toODataClause, l as toODataSelector, n as isPath, o as projectFields, r as mergePatch, s as setFieldValue, t as getFieldValue } from "./field-path-DK2VBWHl.js";
+import { a as buildGroups, c as isGroupNode, i as searchFilterOf, o as collectGroupPaths, r as readAllRows, s as flattenLeaves } from "./data-source-read-uKJpRAzx.js";
+import { i as joinFilters, n as andPredicates, r as compileFilterPredicate, t as andFilters } from "./filter-eval-CqeBnMYh.js";
+import { A as resolveSearchEntries, C as customRemoteClause, E as hasWildcardSearch, S as customPredicate, T as hasCustomSearch, h as mergeSearchFields, j as searchEntryFor, k as plainSearchColumns, n as describeError, o as isCanceled, u as DEFAULT_SEARCH_FIELDS } from "./normalize-error-BEcd1tmS.js";
+import { _ as monoArraySource, a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, g as storeRows, i as normalizeSortList, l as summaryAliases, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-DJUNU26C.js";
 import { n as unwrapReactive } from "./reactive-Dtd-esHO.js";
-import { t as arrayToODataString } from "./filter-odata-Bi27XUpQ.js";
+import { t as arrayToODataString } from "./filter-odata-GsczYKNC.js";
 import { t as createNotifier } from "./notifier-BIrqUzRh.js";
-import { t as monoFilterBuilder } from "./filter-builder-C0T3pMx2.js";
+import { t as monoFilterBuilder } from "./filter-builder-vbqIuPhX.js";
 
 //#region src/components/table/store-group-source.ts
 /**
@@ -400,11 +400,27 @@ function inRange(d, r) {
 * The rows are returned in server order — the caller sorts.
 */
 async function groupCountViaApply(store, field, filter, gate, options = {}) {
-	if (gate.skip) return null;
-	if (parseFieldPath(field).hasWildcard) return null;
-	const selector = isPath(field) ? toODataSelector(field) : field;
-	if (!selector) return null;
-	const apply = `groupby((${selector}),aggregate($count as count))`;
+	const rows = await groupCountsViaApply(store, [field], filter, gate, options);
+	return rows ? rows.map((r) => ({
+		value: r.values[field],
+		count: r.count
+	})) : null;
+}
+/**
+* {@link groupCountViaApply} over SEVERAL fields at once — one
+* `groupby((A,B),aggregate($count as count))` request, one row per combination
+* that exists. Same `null` contract.
+*/
+async function groupCountsViaApply(store, fields, filter, gate, options = {}) {
+	if (gate.skip || !fields.length) return null;
+	const selectors = [];
+	for (const field of fields) {
+		if (parseFieldPath(field).hasWildcard) return null;
+		const selector = isPath(field) ? toODataSelector(field) : field;
+		if (!selector) return null;
+		selectors.push(selector);
+	}
+	const apply = `groupby((${selectors.join(",")}),aggregate($count as count))`;
 	const odataFilter = filter != null ? arrayToODataString(filter) : "";
 	const clause = odataFilter ? `filter(${odataFilter})/${apply}` : apply;
 	const top = typeof options.top === "number" && options.top >= 0 ? options.top : void 0;
@@ -418,13 +434,38 @@ async function groupCountViaApply(store, field, filter, gate, options = {}) {
 	if (!rows) return null;
 	if (!rows.length) return [];
 	const first = rows[0];
-	if (!first || typeof first !== "object" || typeof first.count !== "number") return null;
-	if (!isRolledUp(rows, [field, "count"])) return null;
-	const path = isPath(field);
+	if (!first || typeof first !== "object" || !isCount(first.count)) return null;
+	if (!isRolledUp(rows, [...fields, "count"])) return null;
 	return rows.map((r) => ({
-		value: path ? getFieldValue(r, field) : r[field],
+		values: pickValues(r, fields),
 		count: Number(r.count) || 0
 	}));
+}
+/** Each field's value off a row, path-aware. */
+function pickValues(row, fields) {
+	const out = {};
+	for (const f of fields) out[f] = isPath(f) ? getFieldValue(row, f) : row?.[f];
+	return out;
+}
+/** {@link countValues} over several fields: one tuple per combination, with its row count. */
+function countTuples(rows, fields) {
+	const by = /* @__PURE__ */ new Map();
+	for (const r of rows) {
+		const values = pickValues(r, fields);
+		const key = JSON.stringify(fields.map((f) => values[f] ?? null));
+		const hit = by.get(key);
+		if (hit) hit.count++;
+		else by.set(key, {
+			values,
+			count: 1
+		});
+	}
+	return [...by.values()];
+}
+/** A number, or a string that is one (`"12"`). */
+function isCount(v) {
+	if (typeof v === "number") return Number.isFinite(v);
+	return typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v));
 }
 /** Count occurrences of `field` across `rows` (path-aware; a wildcard path flattens). */
 function countValues(rows, field) {
@@ -4281,4 +4322,4 @@ function monoDataGrid(ds = null, opts = {}) {
 }
 
 //#endregion
-export { checkState as a, setAllChecked as c, buildDateTree as i, setChecked as l, countValues as n, minimize as o, groupCountViaApply as r, seedFromRanges as s, monoDataGrid as t };
+export { checkState as a, setAllChecked as c, buildDateTree as i, setChecked as l, countTuples as n, minimize as o, groupCountsViaApply as r, seedFromRanges as s, monoDataGrid as t };

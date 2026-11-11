@@ -1,9 +1,9 @@
-import { n as isPath, r as mergePatch, t as getFieldValue } from "./field-path-BabiMrrA.js";
-import { i as searchFilterOf, s as flattenLeaves, t as isDataSourceLike } from "./data-source-read-BL266IW0.js";
-import { n as andPredicates, r as compileFilterPredicate, t as andFilters } from "./filter-eval-ChDSaAUH.js";
-import { h as mergeSearchFields } from "./normalize-error-D93O4q8g.js";
+import { n as isPath, r as mergePatch, t as getFieldValue } from "./field-path-DK2VBWHl.js";
+import { i as searchFilterOf, s as flattenLeaves, t as isDataSourceLike } from "./data-source-read-uKJpRAzx.js";
+import { n as andPredicates, r as compileFilterPredicate, t as andFilters } from "./filter-eval-CqeBnMYh.js";
+import { h as mergeSearchFields } from "./normalize-error-BEcd1tmS.js";
 import { t as resolveMaybeReactive } from "./reactive-Dtd-esHO.js";
-import { s as odataStringToArray, t as arrayToODataString } from "./filter-odata-Bi27XUpQ.js";
+import { s as odataStringToArray, t as arrayToODataString } from "./filter-odata-GsczYKNC.js";
 
 //#region src/components/table/array-source.ts
 /** Normalise a possibly-grouped input array to flat leaf rows when grouping. */
@@ -556,4 +556,4 @@ function extraLoadOptions(o) {
 }
 
 //#endregion
-export { resolveDataSourceOptions as a, composeSummaryApply as c, createApplyGate as d, isRolledUp as f, monoArraySource as h, normalizeSortList as i, summaryAliases as l, storeRows as m, extraLoadOptions as n, toList as o, loadApply as p, mergeDataSourceOptions as r, buildSummaryApply as s, dataSourceOptionsKey as t, summaryFilterOf as u };
+export { monoArraySource as _, resolveDataSourceOptions as a, composeSummaryApply as c, createApplyGate as d, isRolledUp as f, storeRows as g, odataStoreVersion as h, normalizeSortList as i, summaryAliases as l, odataStoreUrl as m, extraLoadOptions as n, toList as o, loadApply as p, mergeDataSourceOptions as r, buildSummaryApply as s, dataSourceOptionsKey as t, summaryFilterOf as u };

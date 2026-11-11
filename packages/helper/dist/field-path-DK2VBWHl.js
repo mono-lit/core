@@ -236,7 +236,7 @@ function toODataClause(field, op, value) {
 	const inner = "d/" + after.map((s) => s.name).join("/");
 	const lit = odataLiteral(value);
 	let body;
-	if (op === "contains" || op === "startswith" || op === "endswith") body = `${op}(${inner},${lit})`;
+	if (op === "contains" || op === "startswith" || op === "endswith") body = `${op}(tolower(${inner}),${odataLiteral(String(value ?? "").toLowerCase())})`;
 	else {
 		const cmp = odataComparison(op);
 		if (!cmp) {

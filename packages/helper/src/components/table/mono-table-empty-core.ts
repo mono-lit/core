@@ -63,7 +63,7 @@ export interface MonoEmptySuggestionOptions {
   /**
    * The line that REPLACES the subtitle while a suggestion is shown. A function
    * receives the row count and the whole suggestion; a string substitutes
-   * `{count}`, `{value}`, `{key}` and `{field}`.
+   * `{count}`, `{value}`, `{label}`, `{key}` and `{field}`.
    */
   message?: string | ((count: number, suggestion: MonoFilterSuggestion) => string)
 }
@@ -165,8 +165,8 @@ export const MonoTableEmptyCore = <T extends Constructor<LitElement>>(superClass
     /**
      * How the suggestion is presented. `message` is a function
      * `(count, suggestion) => string`, or a template string where `{count}`,
-     * `{value}` (the suggested value's caption), `{key}` and `{field}` are
-     * substituted. Default: `'There is {count} data available but in different
+     * `{value}` (the suggested value's caption), `{label}` (the field's label from
+     * `controlMonoForm`), `{key}` and `{field}` are substituted. Default: `'There is {count} data available but in different
      * filter, do you want to change the filter?'`.
      *
      * ```vue
@@ -435,7 +435,7 @@ export const MonoTableEmptyCore = <T extends Constructor<LitElement>>(superClass
 
     /**
      * The suggestion line: `suggestionFilter.message` as a function `(count, s)`, or a
-     * template with `{count}` / `{value}` / `{key}` / `{field}` substituted.
+     * template with `{count}` / `{value}` / `{label}` / `{key}` / `{field}` substituted.
      */
     protected _suggestionMessage(s: MonoFilterSuggestion): string {
       const message = this.suggestionFilter?.message
@@ -452,9 +452,10 @@ export const MonoTableEmptyCore = <T extends Constructor<LitElement>>(superClass
         value: s.caption || String(s.value ?? ''),
         key: s.key,
         field: s.field,
+        label: s.label || s.key,
       }
       return (message || DEFAULT_SUGGESTION_TEXT).replace(
-        /\{(count|value|key|field)\}/g,
+        /\{(count|value|label|key|field)\}/g,
         (_, k: string) => map[k] ?? '',
       )
     }

@@ -94,12 +94,14 @@ onBeforeUnmount(() => { offTable(); offForm(); table.dispose() })
         <mono-select :control-form.prop="form" key-form="Country" label="Ship country" />
         <!-- Try "hanari" (Brazil: offered) and "ernst" (Austria: not in COUNTRIES, so
              never offered — see the note above COUNTRIES).
-             Northwind rejects $apply, so the count falls back to one $select=ShipCountry
-             scan (the first probe's 400 is remembered and not retried). -->
+             requestType: 'count' — Northwind rejects $apply, so instead of the default
+             one-$apply count this sends one `$top=0&$count=true` per allowed country
+             (4 small requests, no rows downloaded, no failed request). -->
+
         <mono-table-search
           :control-table.prop="table"
           :control-form.prop="form"
-          :suggestion-filter.prop="{ keys: { ShipCountry: 'Country' } }"
+          :suggestion-filter.prop="{ keys: { ShipCountry: 'Country' }, requestType: 'count' }"
           clearable
           label="Search ship name or city"
           placeholder="Try “hanari”, then “ernst”…"

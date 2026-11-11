@@ -152,7 +152,177 @@ describe('filter suggestion — probe', () => {
     const form = formWith({ Dept: 'MKT' }, { Dept: deptSelect() })
     const g = { ...grid(), dataSource: { store: () => ({ load }) } }
     const s = await probeFilterSuggestion(cfg, { grid: g, form, gate: createApplyGate(true) })
-    expect(load.mock.calls[0][0].filter).toEqual(['Nama', 'contains', 'andy'])
+    // Case-insensitive, written out (the probe's filter never goes through devextreme's tolower).
+    expect(load.mock.calls[0][0].filter).toEqual(["contains(tolower(Nama),'andy')"])
     expect(s).toMatchObject({ value: 'HR', count: 3 })
+  })
+
+  it('an OData store: $apply first (case-insensitive), then a url scan when it is rejected', async () => {
+    const urls: string[] = []
+    const store = {
+      version: () => 4,
+      _url: 'https://x.test/odata/Orders',
+      load: vi.fn(async (opts: { urlOverride?: string }) => {
+        urls.push(decodeURIComponent(opts.urlOverride ?? ''))
+        if (opts.urlOverride?.includes('$apply')) throw Object.assign(new Error('400'), { httpStatus: 400 })
+        return [{ CodeDept: 'HR' }, { CodeDept: 'HR' }, { CodeDept: 'FIN' }]
+      }),
+    }
+    const form = formWith({ Dept: 'MKT' }, { Dept: deptSelect() })
+    const g = { ...grid('Andy.K'), dataSource: { store: () => store } }
+    const s = await probeFilterSuggestion(cfg, { grid: g, form, gate: createApplyGate(true) })
+
+    expect(urls[0]).toContain('$apply=filter(')
+    expect(urls[0]).toContain("contains(tolower(Nama),'andy.k')")
+    expect(urls[0]).toContain('/groupby((CodeDept),aggregate($count as count))')
+    // The scan carries the filter as text — the "." in the term survives (devextreme's own
+    // compiler would have turned it into "/").
+    expect(urls[1]).toContain('$filter=')
+    expect(urls[1]).toContain("contains(tolower(Nama),'andy.k')")
+    expect(urls[1]).toContain('$select=CodeDept')
+    expect(s).toMatchObject({ value: 'HR', count: 2 })
+  })
+
+  it('accepts a grouped count that arrives as a numeric string', async () => {
+    const store = {
+      version: () => 4,
+      _url: 'https://x.test/odata/Orders',
+      load: vi.fn(async () => [{ CodeDept: 'HR', count: '7' }]),
+    }
+    const form = formWith({ Dept: 'MKT' }, { Dept: deptSelect() })
+    const g = { ...grid(), dataSource: { store: () => store } }
+    const s = await probeFilterSuggestion(cfg, { grid: g, form, gate: createApplyGate(true) })
+    expect(store.load).toHaveBeenCalledTimes(1) // no fallback scan
+    expect(s).toMatchObject({ value: 'HR', count: 7 })
+  })
+})
+
+describe('filter suggestion — one request for several keys', () => {
+  it('groups by every relaxed key in ONE $apply and slices each key out of the combinations', async () => {
+    const urls: string[] = []
+    const store = {
+      version: () => 4,
+      _url: 'https://x.test/odata/Budget',
+      load: vi.fn(async (opts: { urlOverride?: string }) => {
+        urls.push(decodeURIComponent(opts.urlOverride ?? ''))
+        // Combinations matching the search: (dept, company) → rows.
+        return [
+          { CodeDept: 'MKT', CompanyId: 1, count: 1 }, // the current combo (the grid shows it's empty after other filters)
+          { CodeDept: 'HR', CompanyId: 1, count: 2 }, //  other dept, same company   → Dept offer: HR (2)
+          { CodeDept: 'MKT', CompanyId: 2, count: 5 }, // same dept, other company   → Company offer: 2 (5)
+          { CodeDept: 'FIN', CompanyId: 2, count: 9 }, // BOTH differ                  → neither single offer
+        ]
+      }),
+    }
+    const form = monoForm({
+      inputs: {
+        Dept: { value: 'MKT', props: { label: 'Departemen' } },
+        Company: { value: 1, props: { label: 'Perusahaan' } },
+      },
+    })
+    form._register('Dept', deptSelect())
+    form._register('Company', { items: [{ Id: 1, Name: 'EJI' }, { Id: 2, Name: 'IEG' }], keyValue: 'Id', displayValue: 'Name' })
+
+    const g = { ...grid(), dataSource: { store: () => store } }
+    const s = await probeFilterSuggestion(
+      { keys: { CodeDept: 'Dept', CompanyId: 'Company' } },
+      { grid: g, form, gate: createApplyGate(true) },
+    )
+
+    expect(store.load).toHaveBeenCalledTimes(1) // not one per key
+    expect(urls[0]).toContain('groupby((CodeDept,CompanyId),aggregate($count as count))')
+    // Neither key is pinned in the filter — each is freed by grouping, not by a second request.
+    expect(urls[0]).not.toContain('CodeDept eq')
+    expect(urls[0]).not.toContain('CompanyId eq')
+    expect(s).toMatchObject({ key: 'Company', value: 2, count: 5, caption: 'IEG', label: 'Perusahaan', values: { Company: 2 } })
+  })
+
+  it('a locked key is pinned in the filter instead of grouped', async () => {
+    const urls: string[] = []
+    const store = {
+      version: () => 4,
+      _url: 'https://x.test/odata/Budget',
+      load: vi.fn(async (opts: { urlOverride?: string }) => {
+        urls.push(decodeURIComponent(opts.urlOverride ?? ''))
+        return [{ CodeDept: 'HR', count: 2 }]
+      }),
+    }
+    const form = monoForm({ inputs: { Dept: { value: 'MKT' }, Company: { value: 1 } } })
+    form._register('Dept', deptSelect())
+    form._register('Company', { readonly: true, items: [{ Id: 1 }], keyValue: 'Id' })
+    const g = { ...grid(), dataSource: { store: () => store } }
+    const s = await probeFilterSuggestion(
+      { keys: { CodeDept: 'Dept', CompanyId: 'Company' } },
+      { grid: g, form, gate: createApplyGate(true) },
+    )
+    expect(urls[0]).toContain('CompanyId eq 1')
+    expect(urls[0]).toContain('groupby((CodeDept),')
+    expect(s).toMatchObject({ key: 'Dept', value: 'HR', count: 2, label: 'Dept' })
+  })
+})
+
+describe("filter suggestion — requestType: 'count'", () => {
+  /** An OData store stub answering `$count` by the dept pinned in the url. */
+  function countingStore(byDept: Record<string, number>) {
+    const urls: string[] = []
+    return {
+      urls,
+      version: () => 4,
+      _url: 'https://x.test/odata/Budget',
+      load: vi.fn(async () => {
+        throw new Error('load must not run in count mode')
+      }),
+      totalCount: vi.fn(async (opts: { urlOverride?: string }) => {
+        const u = decodeURIComponent(opts.urlOverride ?? '')
+        urls.push(u)
+        const dept = /CodeDept eq '([^']+)'/.exec(u)?.[1] ?? ''
+        return byDept[dept] ?? 0
+      }),
+    }
+  }
+
+  it('one $count per allowed option (not the current one); no $apply, no rows', async () => {
+    const store = countingStore({ HR: 3, FIN: 1 })
+    const form = formWith({ Dept: 'MKT' }, { Dept: deptSelect() }) // options: MKT, HR, FIN
+    const g = { ...grid(), dataSource: { store: () => store } }
+    const s = await probeFilterSuggestion(
+      { keys: { CodeDept: 'Dept' }, requestType: 'count' },
+      { grid: g, form, gate: createApplyGate(true) },
+    )
+    expect(store.load).not.toHaveBeenCalled()
+    expect(store.totalCount).toHaveBeenCalledTimes(2) // HR, FIN — never MKT
+    expect(store.urls.every((u) => u.includes("contains(tolower(Nama),'andy')"))).toBe(true)
+    expect(s).toMatchObject({ value: 'HR', count: 3, caption: 'Human Resources (HR)' })
+  })
+
+  it('maxCountRequests caps the requests per field', async () => {
+    const store = countingStore({ HR: 3 })
+    const form = formWith({ Dept: 'MKT' }, { Dept: deptSelect() })
+    const g = { ...grid(), dataSource: { store: () => store } }
+    await probeFilterSuggestion(
+      { keys: { CodeDept: 'Dept' }, requestType: 'count', maxCountRequests: 1 },
+      { grid: g, form, gate: createApplyGate(true) },
+    )
+    expect(store.totalCount).toHaveBeenCalledTimes(1)
+  })
+
+  it('falls back to counting the rows when the source is not an OData store', async () => {
+    const form = formWith({ Dept: 'MKT' }, { Dept: deptSelect() })
+    const s = await probeFilterSuggestion(
+      { keys: { CodeDept: 'Dept' }, requestType: 'count' },
+      { grid: grid(), form, gate: createApplyGate(true) }, // array source
+    )
+    expect(s).toMatchObject({ value: 'HR', count: 3 })
+  })
+})
+
+describe('filter suggestion — case-insensitive clauses', () => {
+  it('wraps a plain field and a collection path in tolower, value lowercased', async () => {
+    const { lowerSearchClause } = await import('../src/components/table/filter-suggestion')
+    expect(lowerSearchClause('CompanyName', 'contains', 'Shopee')).toEqual(["contains(tolower(CompanyName),'shopee')"])
+    expect(lowerSearchClause('Details.[*].NamaPostBudget', 'contains', 'Shopee')).toEqual([
+      "Details/any(d: contains(tolower(d/NamaPostBudget),'shopee'))",
+    ])
+    expect(lowerSearchClause('Name', 'notcontains', "O'Neil")).toEqual(["not contains(tolower(Name),'o''neil')"])
   })
 })

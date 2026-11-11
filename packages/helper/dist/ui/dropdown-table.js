@@ -1,6 +1,6 @@
 import { d as buildSizeStyle, f as toCssSize, g as monoHostChildNodes, y as monoPendingGrace } from "../mono-ui-kvLVIf1V.js";
 import { n as detachEventHandlers, t as applyProps } from "../element-props-xvw0EB7H.js";
-import { t as monoDataDropdown } from "../mono-data-dropdown-C3FEP-bd.js";
+import { t as monoDataDropdown } from "../mono-data-dropdown-Cm_3aFYY.js";
 import { t as customElement } from "../mono-element-CKcT0rwv.js";
 import { a as defineHybridPropAliases, i as defineHybridPropAlias, o as numberStringConverter, r as booleanStringConverter, s as optionalNumberConverter, t as __decorate } from "../decorate-DbYFpi8R.js";
 import { t as dispatchMonoEvent } from "../mono-event-CAZf0F_k.js";

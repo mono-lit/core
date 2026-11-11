@@ -1,8 +1,8 @@
-import { n as isPath, r as mergePatch, t as getFieldValue } from "./field-path-BabiMrrA.js";
-import { D as andFilters, O as andPredicates, k as compileFilterPredicate, p as mergeSearchFields } from "./normalize-error-DskZc9H1.js";
+import { n as isPath, r as mergePatch, t as getFieldValue } from "./field-path-DK2VBWHl.js";
+import { D as andFilters, O as andPredicates, k as compileFilterPredicate, p as mergeSearchFields } from "./normalize-error-Cds97ny2.js";
 import { t as resolveMaybeReactive } from "./reactive-Dtd-esHO.js";
-import { i as searchFilterOf, s as flattenLeaves, t as isDataSourceLike } from "./data-source-read-DHxA7Cq_.js";
-import { s as odataStringToArray, t as arrayToODataString } from "./filter-odata-Bi27XUpQ.js";
+import { i as searchFilterOf, s as flattenLeaves, t as isDataSourceLike } from "./data-source-read-CwabG6G8.js";
+import { s as odataStringToArray, t as arrayToODataString } from "./filter-odata-GsczYKNC.js";
 
 //#region src/utils/data-source-apply.ts
 /** The store's OData version, or `null` for anything that is not an OData store. */
@@ -555,4 +555,4 @@ function extraLoadOptions(o) {
 }
 
 //#endregion
-export { resolveDataSourceOptions as a, buildSummaryApply as c, summaryFilterOf as d, createApplyGate as f, storeRows as h, normalizeSortList as i, composeSummaryApply as l, loadApply as m, extraLoadOptions as n, toList as o, isRolledUp as p, mergeDataSourceOptions as r, monoArraySource as s, dataSourceOptionsKey as t, summaryAliases as u };
+export { storeRows as _, resolveDataSourceOptions as a, buildSummaryApply as c, summaryFilterOf as d, createApplyGate as f, odataStoreVersion as g, odataStoreUrl as h, normalizeSortList as i, composeSummaryApply as l, loadApply as m, extraLoadOptions as n, toList as o, isRolledUp as p, mergeDataSourceOptions as r, monoArraySource as s, dataSourceOptionsKey as t, summaryAliases as u };

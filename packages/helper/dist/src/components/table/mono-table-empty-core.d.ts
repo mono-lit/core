@@ -35,7 +35,7 @@ export interface MonoEmptySuggestionOptions {
   /**
    * The line that REPLACES the subtitle while a suggestion is shown. A function
    * receives the row count and the whole suggestion; a string substitutes
-   * `{count}`, `{value}`, `{key}` and `{field}`.
+   * `{count}`, `{value}`, `{label}`, `{key}` and `{field}`.
    */
   message?: string | ((count: number, suggestion: MonoFilterSuggestion) => string);
 }

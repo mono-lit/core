@@ -5,11 +5,12 @@ import { n as cssPart } from "../../css-class-B6Tc_MAx.js";
 import { n as detachEventHandlers, t as applyProps } from "../../element-props-xvw0EB7H.js";
 import { t as input_css_raw_default } from "../../input.css_raw-Br-T8RWv.js";
 import { t as PopupPortalController } from "../../popup-portal-CINuVjNY.js";
-import { c as toODataClause } from "../../field-path-BabiMrrA.js";
-import { A as joinFilters, C as normalizeSearchExpr, D as andFilters, E as searchEntryFor, O as andPredicates, S as isWildcardPattern, T as resolveSearchEntries, c as resolveErrorMessages, d as DEFAULT_SEARCH_OPERATION, g as searchRowPredicate, h as resolveSearchFields, k as compileFilterPredicate, l as setErrorMessages, m as parseSearchValue, n as describeError, p as mergeSearchFields, r as errorStatus, s as normalizeError, t as DEFAULT_ERROR_MESSAGES, v as customRemoteClause, w as plainSearchColumns, x as hasWildcardSearch, y as expandWildcard } from "../../normalize-error-DskZc9H1.js";
-import { f as createApplyGate, h as storeRows, s as monoArraySource } from "../../data-source-options-CYE8kIzc.js";
-import { a as buildGroups, c as isGroupNode, o as collectGroupPaths, s as flattenLeaves } from "../../data-source-read-DHxA7Cq_.js";
-import { a as seedFromRanges, c as countValues, i as minimize, l as groupCountViaApply, n as buildDateTree, o as setAllChecked, r as checkState, s as setChecked, t as monoDataGrid } from "../../mono-data-grid-BBcMLIFC.js";
+import { c as toODataClause, i as odataLiteral, l as toODataSelector, n as isPath } from "../../field-path-DK2VBWHl.js";
+import { A as joinFilters, C as normalizeSearchExpr, D as andFilters, E as searchEntryFor, O as andPredicates, S as isWildcardPattern, T as resolveSearchEntries, c as resolveErrorMessages, d as DEFAULT_SEARCH_OPERATION, g as searchRowPredicate, h as resolveSearchFields, k as compileFilterPredicate, l as setErrorMessages, m as parseSearchValue, n as describeError, p as mergeSearchFields, r as errorStatus, s as normalizeError, t as DEFAULT_ERROR_MESSAGES, v as customRemoteClause, w as plainSearchColumns, x as hasWildcardSearch, y as expandWildcard } from "../../normalize-error-Cds97ny2.js";
+import { _ as storeRows, f as createApplyGate, g as odataStoreVersion, h as odataStoreUrl, s as monoArraySource } from "../../data-source-options-BiEbZFXT.js";
+import { a as buildGroups, c as isGroupNode, o as collectGroupPaths, s as flattenLeaves } from "../../data-source-read-CwabG6G8.js";
+import { t as arrayToODataString } from "../../filter-odata-GsczYKNC.js";
+import { a as seedFromRanges, c as countTuples, i as minimize, l as groupCountsViaApply, n as buildDateTree, o as setAllChecked, r as checkState, s as setChecked, t as monoDataGrid } from "../../mono-data-grid-Qyd3AqwK.js";
 import { n as captureLightSlots, r as placeLightSlots } from "../../light-slots-_no0r2Z-.js";
 import { t as checkbox_css_raw_default } from "../../checkbox.css_raw-AYtSbUtY.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
@@ -206,13 +207,39 @@ function groupTerms(terms) {
 		values: by.get(field)
 	}));
 }
-/** The search as a devextreme filter array (remote) — `null` when there is nothing to search. */
+const STRING_OPS = /* @__PURE__ */ new Set([
+	"contains",
+	"notcontains",
+	"startswith",
+	"endswith"
+]);
+/**
+* One case-insensitive search clause for a plain / path field.
+*
+* The probe's filter reaches the server as TEXT — inside an `$apply`, or a `$filter`
+* written into the url — never through devextreme's compiler, so its usual
+* `tolower` (`oDataFilterToLower`) never happens. It is written here instead:
+* `contains(tolower(CompanyName),'shopee')`, as a raw one-element clause.
+* A wildcard path comes back from `toODataClause` as an `any()` lambda that is
+* already lowercased.
+*/
+function lowerSearchClause(field, op, value) {
+	const v = String(value ?? "").toLowerCase();
+	const clause = toODataClause(field, op === "notcontains" ? "contains" : op, v);
+	if (!clause) return null;
+	if (Array.isArray(clause) && clause.length === 1) return op === "notcontains" ? [`not (${clause[0]})`] : clause;
+	if (!STRING_OPS.has(op)) return clause;
+	const selector = isPath(field) ? toODataSelector(field) ?? field : field;
+	const call = `${op === "notcontains" ? "contains" : op}(tolower(${selector}),${odataLiteral(v)})`;
+	return [op === "notcontains" ? `not ${call}` : call];
+}
+/** The search as a filter array (remote) — `null` when there is nothing to search. */
 function searchFilterFor(terms, entries, operation = DEFAULT_SEARCH_OPERATION) {
 	const groups = groupTerms(terms);
 	if (!groups.length || !entries.length) return null;
 	const perGroup = groups.map((g) => {
 		const list = g.field ? [searchEntryFor(entries, g.field) ?? g.field] : entries;
-		const perValue = g.values.map((value) => joinFilters(list.map((e) => typeof e === "string" ? toODataClause(e, operation, value) : customRemoteClause(e, value, operation)), "or"));
+		const perValue = g.values.map((value) => joinFilters(list.map((e) => typeof e === "string" ? lowerSearchClause(e, operation, value) : customRemoteClause(e, value, operation)), "or"));
 		return joinFilters(perValue, "or");
 	});
 	return joinFilters(perGroup, "and");
@@ -227,23 +254,6 @@ function searchPredicateFor(terms, entries, operation = DEFAULT_SEARCH_OPERATION
 		return preds.length ? ((row) => preds.some((p) => p(row))) : null;
 	});
 	return andPredicates(...perGroup);
-}
-/**
-* The probe filter for relaxing `field`: every OTHER mapped field pinned to its
-* current form value (an empty value means "all" and pins nothing), ANDed with
-* the search and the fixed base. `field` itself stays free.
-*/
-function buildProbeFilter(field, keys, values, search, base) {
-	const pins = Object.entries(keys).filter(([f]) => f !== field).map(([f, key]) => {
-		const v = values[key];
-		if (isEmptyValue(v)) return null;
-		return equalsAny(f, Array.isArray(v) ? v : [v]);
-	});
-	return joinFilters([
-		search,
-		...pins,
-		base
-	], "and");
 }
 function countTarget(source) {
 	if (Array.isArray(source)) return {
@@ -272,21 +282,115 @@ function countTarget(source) {
 		store
 	} : null;
 }
-async function countByField(target, field, filter, predicate, gate) {
+/**
+* ONE count over every relaxed field at once: `groupby((A,B))` → a row per
+* combination that exists. The caller slices it per field. Falls back to one
+* `$select=A,B` scan (and to a tally of the rows for an array source).
+*/
+async function countCombos(target, fields, filter, predicate, gate, log) {
 	if (target.kind === "array") {
 		const rows = predicate ? target.rows.filter((r, i) => predicate(r, i)) : target.rows;
-		return countValues(rows, field);
+		return countTuples(rows, fields);
 	}
-	const grouped = await groupCountViaApply(target.store, field, filter, gate);
-	if (grouped) return grouped;
-	const res = await target.store.load({
+	const grouped = await groupCountsViaApply(target.store, fields, filter, gate);
+	if (grouped) {
+		log?.("counted with $apply", grouped);
+		return grouped;
+	}
+	const url = odataStoreVersion(target.store) != null ? odataStoreUrl(target.store) : null;
+	let res;
+	if (url) {
+		const odata = filter != null ? arrayToODataString(filter) : "";
+		const selectors = fields.every((f) => !isPath(f)) ? fields.join(",") : "";
+		const params = [odata ? `$filter=${encodeURIComponent(odata)}` : "", selectors ? `$select=${encodeURIComponent(selectors)}` : ""].filter(Boolean);
+		const urlOverride = params.length ? `${url}${url.includes("?") ? "&" : "?"}${params.join("&")}` : url;
+		log?.("$apply unavailable — scanning", urlOverride);
+		res = await target.store.load({
+			urlOverride,
+			requireTotalCount: false
+		});
+	} else res = await target.store.load({
 		filter: filter ?? void 0,
-		select: [field]
+		...fields.every((f) => !isPath(f)) ? { select: [...fields] } : {}
 	});
-	return countValues(storeRows(res), field);
+	const counted = countTuples(storeRows(res), fields);
+	log?.("counted by scan", counted);
+	return counted;
+}
+/** Does a row's `value` match the form's `current` (a scalar, or any of an array)? */
+function matchesCurrent(value, current) {
+	if (isEmptyValue(current)) return true;
+	return (Array.isArray(current) ? current : [current]).some((c) => sameValue(c, value));
+}
+/**
+* Per-value counts for relaxing `field` alone: the combos where every OTHER relaxed
+* field still equals its form value, summed by `field`'s value.
+*/
+function sliceForField(combos, field, others) {
+	const by = /* @__PURE__ */ new Map();
+	for (const c of combos) {
+		if (!others.every((o) => matchesCurrent(c.values[o.field], o.current))) continue;
+		const v = c.values[field];
+		const k = JSON.stringify(v ?? null);
+		const hit = by.get(k);
+		if (hit) hit.count += c.count;
+		else by.set(k, {
+			value: v,
+			count: c.count
+		});
+	}
+	return [...by.values()];
+}
+/** Per-field cap on `$count` requests when the option list is long. */
+const DEFAULT_MAX_COUNT_REQUESTS = 30;
+/** How many `$count` requests run at once. */
+const COUNT_CONCURRENCY = 4;
+/**
+* Rows matching `filter`, as ONE `…?$filter=<text>&$top=0&$count=true` through the
+* store (its url, `beforeSend` and auth). The filter goes as url TEXT for the same
+* reason the scan does — devextreme's compiler would mangle a raw clause. A failed
+* count counts as 0 (logged), so one bad value can't sink the rest.
+*/
+async function countWhere(store, url, filter, log) {
+	const odata = filter != null ? arrayToODataString(filter) : "";
+	const urlOverride = odata ? `${url}${url.includes("?") ? "&" : "?"}$filter=${encodeURIComponent(odata)}` : url;
+	try {
+		const n = await store.totalCount({ urlOverride });
+		return Number(n) || 0;
+	} catch (err) {
+		log?.("a $count request failed — counted as 0", err);
+		return 0;
+	}
+}
+/** `Promise.all` over `items`, at most `limit` in flight at a time, results in input order. */
+async function mapLimit(items, limit, fn) {
+	const out = new Array(items.length);
+	let next = 0;
+	const worker = async () => {
+		while (next < items.length) {
+			const i = next++;
+			out[i] = await fn(items[i]);
+		}
+	};
+	await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+	return out;
 }
 function controlOf(form, key) {
 	return (typeof form._elements === "function" ? form._elements(key) : [])[0] ?? null;
+}
+/**
+* The field's human name: `controlMonoForm({ inputs: { [key]: { props: { label } } } })`
+* first (the form's own declaration), then the rendered control's `label`, then the key.
+*/
+function labelOf(form, key, control) {
+	let declared;
+	try {
+		declared = typeof form._propsFor === "function" ? form._propsFor(key)?.label : void 0;
+	} catch {
+		declared = void 0;
+	}
+	const label = typeof declared === "string" && declared || control?.label || key;
+	return String(label);
 }
 function captionOf(row, display, fallback) {
 	if (row != null && typeof row === "object") {
@@ -305,7 +409,7 @@ function captionOf(row, display, fallback) {
 * NO source to check against (nothing bound, nothing configured) — the caller
 * then trusts the counts.
 */
-async function allowedValues(spec, control, field, candidates) {
+async function allowedValues(spec, control, field, candidates, log) {
 	const explicit = spec && typeof spec === "object" && !Array.isArray(spec) && "source" in spec ? spec : null;
 	const source = explicit ? explicit.source : spec ?? control?.dataSource ?? control?.items ?? null;
 	if (source == null) return null;
@@ -333,8 +437,45 @@ async function allowedValues(spec, control, field, candidates) {
 	try {
 		const res = await store.load({ filter });
 		storeRows(res).forEach(take);
-	} catch {
+	} catch (err) {
+		log?.(`the allowed-values request for ${field} failed — nothing is offered`, err);
 		return out;
+	}
+	return out;
+}
+/**
+* EVERY option the field offers (keyed by `String(value)`, with its caption) — the
+* candidate list for `requestType: 'count'`. Same source resolution as
+* {@link allowedValues}; a DataSource is read with its own `filter()`, so the
+* per-user restriction applies. `null` when there is no option source at all.
+*/
+async function optionValues(spec, control, field, log) {
+	const explicit = spec && typeof spec === "object" && !Array.isArray(spec) && "source" in spec ? spec : null;
+	const source = explicit ? explicit.source : spec ?? control?.dataSource ?? control?.items ?? null;
+	if (source == null) return null;
+	const keyValue = explicit?.keyValue || control?.keyValue || field;
+	const display = control?.displayValue;
+	const out = /* @__PURE__ */ new Map();
+	const take = (row) => {
+		const v = row != null && typeof row === "object" ? row[keyValue] : row;
+		if (isEmptyValue(v) || out.has(String(v))) return;
+		out.set(String(v), {
+			value: v,
+			caption: captionOf(row, display, v)
+		});
+	};
+	if (Array.isArray(source)) {
+		source.forEach(take);
+		return out;
+	}
+	const ds = asDataSource(source);
+	const store = ds ? asStore(ds.store()) : asStore(source);
+	if (!store) return null;
+	try {
+		const filter = ds?.filter?.() ?? null;
+		storeRows(await store.load(filter != null ? { filter } : {})).forEach(take);
+	} catch (err) {
+		log?.(`the option list for ${field} failed to load — nothing is offered`, err);
 	}
 	return out;
 }
@@ -352,12 +493,22 @@ async function sampleRows(target) {
 * when nothing allowed would bring rows back.
 */
 async function probeFilterSuggestion(cfg, ctx) {
+	const log = cfg?.debug ? (step, data) => console.info(`[mono-table-search suggestion] ${step}`, ...data === void 0 ? [] : [data]) : void 0;
 	const keys = cfg?.keys ?? {};
-	if (!Object.keys(keys).length) return null;
+	if (!Object.keys(keys).length) {
+		log?.("stop: no `keys`");
+		return null;
+	}
 	const terms = ctx.grid.searchTerms ?? [];
-	if (!terms.some((t) => String(t?.value ?? "").trim())) return null;
+	if (!terms.some((t) => String(t?.value ?? "").trim())) {
+		log?.("stop: no search term");
+		return null;
+	}
 	const target = countTarget(cfg.source ?? ctx.grid.dataSource);
-	if (!target) return null;
+	if (!target) {
+		log?.("stop: no source to count on (set `source`)");
+		return null;
+	}
 	const op = cfg.searchOperation ?? "contains";
 	let entries = cfg.searchValue != null ? parseSearchValue(cfg.searchValue) : [...ctx.grid.searchValue() ?? []];
 	if (hasWildcardSearch(entries)) entries = resolveSearchFields({
@@ -365,37 +516,113 @@ async function probeFilterSuggestion(cfg, ctx) {
 		rows: await sampleRows(target),
 		remote: target.kind === "store"
 	});
-	if (!entries.length) return null;
+	if (!entries.length) {
+		log?.("stop: no search fields (set `searchValue`)");
+		return null;
+	}
 	const remote = target.kind === "store";
 	const search = remote ? searchFilterFor(terms, entries, op) : null;
 	const searchPred = remote ? null : searchPredicateFor(terms, entries, op);
 	const base = resolveBase(cfg.filter);
 	const values = ctx.form.values();
-	let best = null;
-	for (const [field, key] of Object.entries(keys)) {
+	log?.("start", {
+		terms,
+		fields: entries,
+		target: target.kind,
+		formValues: values
+	});
+	const mapped = Object.entries(keys).map(([field, key]) => {
 		const control = controlOf(ctx.form, key);
-		if (control?.readonly || control?.disabled) continue;
-		const current = values[key];
-		if (isEmptyValue(current)) continue;
-		const filter = buildProbeFilter(field, keys, values, search, remote ? base : null);
-		let predicate = null;
-		if (!remote) {
-			const pins = buildProbeFilter(field, keys, values, null, null);
-			const basePred = typeof base === "function" ? base : compileFilterPredicate(base);
-			predicate = andPredicates(searchPred, compileFilterPredicate(pins), basePred);
-		}
+		return {
+			field,
+			key,
+			control,
+			current: values[key],
+			label: labelOf(ctx.form, key, control)
+		};
+	});
+	const relaxed = [];
+	const pinned = [];
+	for (const m of mapped) if (isEmptyValue(m.current)) log?.(`skip ${m.field} (form "${m.key}"): empty = already every value`);
+	else if (m.control?.readonly || m.control?.disabled) {
+		log?.(`skip ${m.field} (form "${m.key}"): its control is readonly/disabled — held at ${JSON.stringify(m.current)}`);
+		pinned.push(m);
+	} else relaxed.push(m);
+	if (!relaxed.length) {
+		log?.("nothing to suggest: no field the user can change");
+		return null;
+	}
+	const pinClauses = pinned.map((m) => equalsAny(m.field, Array.isArray(m.current) ? m.current : [m.current]));
+	const filter = remote ? joinFilters([
+		search,
+		...pinClauses,
+		base
+	], "and") : null;
+	let predicate = null;
+	if (!remote) {
+		const basePred = typeof base === "function" ? base : compileFilterPredicate(base);
+		predicate = andPredicates(searchPred, compileFilterPredicate(joinFilters(pinClauses, "and")), basePred);
+	}
+	const countStore = target.kind === "store" ? target.store : null;
+	const countUrl = countStore && typeof countStore.totalCount === "function" && odataStoreVersion(countStore) != null ? odataStoreUrl(countStore) : null;
+	const byCount = cfg.requestType === "count" && !!countUrl;
+	if (cfg.requestType === "count" && !byCount) log?.("requestType \"count\" needs an OData store — counting with $apply / a scan instead");
+	let combos = [];
+	if (!byCount) try {
+		combos = await countCombos(target, relaxed.map((m) => m.field), filter, predicate, ctx.gate, log);
+	} catch (err) {
+		log?.("stop: the count request failed", err);
+		return null;
+	}
+	let best = null;
+	for (const { field, key, control, current, label } of relaxed) {
+		const currentList = Array.isArray(current) ? current : [current];
 		let counts;
-		try {
-			counts = await countByField(target, field, filter, predicate, ctx.gate);
-		} catch {
+		let allowed = null;
+		if (byCount) {
+			allowed = await optionValues(cfg.sources?.[field], control, field, log);
+			if (!allowed) {
+				log?.(`skip ${field}: requestType "count" needs the field's option list (a control or \`sources\`)`);
+				continue;
+			}
+			const limit = Math.max(1, Math.floor(Number(cfg.maxCountRequests ?? DEFAULT_MAX_COUNT_REQUESTS)));
+			const options = [...allowed.values()].filter((o) => !currentList.some((c) => sameValue(c, o.value)));
+			if (options.length > limit) log?.(`${field}: ${options.length} options, counting only the first ${limit} (maxCountRequests)`);
+			const others = relaxed.filter((o) => o.field !== field).map((o) => equalsAny(o.field, Array.isArray(o.current) ? o.current : [o.current]));
+			counts = await mapLimit(options.slice(0, limit), COUNT_CONCURRENCY, async (o) => ({
+				value: o.value,
+				count: await countWhere(countStore, countUrl, joinFilters([
+					search,
+					...pinClauses,
+					...others,
+					base,
+					[
+						field,
+						"=",
+						o.value
+					]
+				], "and"), log)
+			}));
+			log?.(`${field} counted with $count`, counts.map((c) => `${String(c.value)} (${c.count})`));
+		} else counts = sliceForField(combos, field, relaxed.filter((o) => o.field !== field).map((o) => ({
+			field: o.field,
+			current: o.current
+		})));
+		const candidates = counts.filter((c) => c.count > 0 && !isEmptyValue(c.value) && !currentList.some((v) => sameValue(v, c.value))).sort((a, b) => b.count - a.count).slice(0, MAX_CANDIDATES);
+		if (!candidates.length) {
+			log?.(`skip ${field}: no matches under any OTHER value than ${JSON.stringify(current)}`);
 			continue;
 		}
-		const currentList = Array.isArray(current) ? current : [current];
-		const candidates = counts.filter((c) => c.count > 0 && !isEmptyValue(c.value) && !currentList.some((v) => sameValue(v, c.value))).sort((a, b) => b.count - a.count).slice(0, MAX_CANDIDATES);
-		if (!candidates.length) continue;
-		const allowed = await allowedValues(cfg.sources?.[field], control, field, candidates.map((c) => c.value));
+		if (!byCount) allowed = await allowedValues(cfg.sources?.[field], control, field, candidates.map((c) => c.value), log);
 		const kept = allowed ? candidates.filter((c) => allowed.has(String(c.value))) : candidates;
-		if (!kept.length) continue;
+		log?.(`${field} candidates → allowed`, {
+			candidates: candidates.map((c) => `${String(c.value)} (${c.count})`),
+			allowed: allowed ? [...allowed.keys()] : "(no option source to check — all kept)"
+		});
+		if (!kept.length) {
+			log?.(`skip ${field}: none of the candidates are in the user's options for "${key}"`);
+			continue;
+		}
 		let found;
 		if (Array.isArray(current)) {
 			const add = kept.map((c) => allowed?.get(String(c.value))?.value ?? c.value);
@@ -404,6 +631,7 @@ async function probeFilterSuggestion(cfg, ctx) {
 				field,
 				value: add,
 				caption: kept.map((c) => allowed?.get(String(c.value))?.caption ?? String(c.value)).join(", "),
+				label,
 				count: kept.reduce((n, c) => n + c.count, 0),
 				current,
 				values: { [key]: [...current, ...add] }
@@ -417,6 +645,7 @@ async function probeFilterSuggestion(cfg, ctx) {
 				field,
 				value,
 				caption: hit?.caption ?? String(top.value),
+				label,
 				count: top.count,
 				current,
 				values: { [key]: value }
@@ -424,6 +653,7 @@ async function probeFilterSuggestion(cfg, ctx) {
 		}
 		if (!best || found.count > best.count) best = found;
 	}
+	log?.(best ? "suggest" : "nothing to suggest", best ?? void 0);
 	return best;
 }
 
@@ -3878,7 +4108,7 @@ const MonoTableEmptyCore = (superClass) => {
 		}
 		/**
 		* The suggestion line: `suggestionFilter.message` as a function `(count, s)`, or a
-		* template with `{count}` / `{value}` / `{key}` / `{field}` substituted.
+		* template with `{count}` / `{value}` / `{label}` / `{key}` / `{field}` substituted.
 		*/
 		_suggestionMessage(s) {
 			const message = this.suggestionFilter?.message;
@@ -3891,9 +4121,10 @@ const MonoTableEmptyCore = (superClass) => {
 				count: String(s.count),
 				value: s.caption || String(s.value ?? ""),
 				key: s.key,
-				field: s.field
+				field: s.field,
+				label: s.label || s.key
 			};
-			return (message || DEFAULT_SUGGESTION_TEXT).replace(/\{(count|value|key|field)\}/g, (_, k) => map[k] ?? "");
+			return (message || DEFAULT_SUGGESTION_TEXT).replace(/\{(count|value|label|key|field)\}/g, (_, k) => map[k] ?? "");
 		}
 		/** The suggestion to present — only with a form to write into. Records it for the notify diff. */
 		_activeSuggestion() {

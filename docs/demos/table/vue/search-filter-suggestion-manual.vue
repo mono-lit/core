@@ -15,7 +15,8 @@ type OrderRow = { OrderID: number; ShipName: string; ShipCity: string; ShipCount
 //
 // The filter suggestion still works: in manual mode it probes the box's own text.
 // Give it `searchValue` = the fields YOUR search covers, so its count matches the
-// query you actually sent.
+// query you actually sent. `requestType: 'count'` because Northwind rejects $apply:
+// one `$top=0&$count=true` per allowed country instead.
 //
 // The countries THIS user may pick. Only these are ever suggested:
 //   • "hanari" → its orders ship to Brazil, which IS listed → "Adjust Filter" offered.
@@ -121,7 +122,7 @@ onBeforeUnmount(() => { clearTimeout(timer); offTable(); offForm(); table.dispos
           :model-value="q"
           :control-table.prop="table"
           :control-form.prop="form"
-          :suggestion-filter.prop="{ keys: { ShipCountry: 'Country' }, searchValue: SEARCH_FIELDS }"
+          :suggestion-filter.prop="{ keys: { ShipCountry: 'Country' }, searchValue: SEARCH_FIELDS, requestType: 'count' }"
           clearable
           label="Search ship name or city"
           placeholder="Try “hanari”, then “ernst”…"

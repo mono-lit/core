@@ -300,7 +300,10 @@ export function toODataClause(field: string, op: string, value: unknown): ODataC
   const lit = odataLiteral(value)
   let body: string
   if (op === 'contains' || op === 'startswith' || op === 'endswith') {
-    body = `${op}(${inner},${lit})`
+    // Case-insensitive, like every plain-field string filter devextreme compiles
+    // (`oDataFilterToLower`, on by default): a lambda is a raw clause devextreme
+    // never rewrites, so the `tolower` has to be written here.
+    body = `${op}(tolower(${inner}),${odataLiteral(String(value ?? '').toLowerCase())})`
   } else {
     const cmp = odataComparison(op)
     if (!cmp) {

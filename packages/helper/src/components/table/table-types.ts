@@ -624,7 +624,7 @@ export interface TableEmptyProps extends TableControlBase {
   /**
    * How a filter suggestion is presented. Its `message` REPLACES the subtitle while
    * a suggestion is shown — a function `(count, suggestion) => string`, or a
-   * template where `{count}`, `{value}`, `{key}`, `{field}` are substituted.
+   * template where `{count}`, `{value}`, `{label}`, `{key}`, `{field}` are substituted.
    * Default `'There is {count} data available but in different filter, do you want to change the filter?'`.
    */
   suggestionFilter?: MonoEmptySuggestionOptions | null

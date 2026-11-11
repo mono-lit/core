@@ -3,6 +3,7 @@ import { MonoSearchValue } from "../../search/data-search.js";
 import { MonoFormController } from "../form/form-types.js";
 import { RowPredicate } from "../../search/filter-eval.js";
 import { ApplyGate } from "../../utils/data-source-apply.js";
+import { MonoTupleCount, MonoValueCount } from "../../utils/group-count.js";
 //#region src/components/table/filter-suggestion.d.ts
 /** Where a field's ALLOWED values come from — a DataSource, a store, an array, or with an explicit key. */
 export type MonoSuggestionValueSource = unknown | {
@@ -35,6 +36,24 @@ export interface MonoSuggestionFilter {
   filter?: unknown;
   /** Search operation (default `contains`). */
   searchOperation?: string;
+  /**
+   * How the rows are counted on a remote source.
+   * - `'apply'` (default): ONE `$apply=groupby((…),aggregate($count as count))` request
+   *   for every field — every value that has matches comes back with its count. Falls
+   *   back to a `$select` scan when the server rejects `$apply`.
+   * - `'count'`: one `$count` request PER allowed option of each field (`$top=0&$count=true`,
+   *   a bare number back). For servers without `$apply` and short option lists — no rows
+   *   are downloaded. Needs an OData store; capped by {@link maxCountRequests}.
+   */
+  requestType?: 'apply' | 'count';
+  /** `requestType: 'count'` only — most `$count` requests per field (default 30). */
+  maxCountRequests?: number;
+  /**
+   * Log every probe step to the console — the search sent, the per-value counts,
+   * which candidates the field allows — and the reason when nothing is offered
+   * (a readonly field, an empty "all values" field, no candidates, none allowed).
+   */
+  debug?: boolean;
 }
 /** What a probe found — published on the grid, rendered by `<mono-table-empty>`. */
 export interface MonoFilterSuggestion {
@@ -46,6 +65,11 @@ export interface MonoFilterSuggestion {
   value: unknown;
   /** Display text for {@link value}, from the control's `displayValue` when known. */
   caption: string;
+  /**
+   * The field's label — `inputs[key].props.label` from `controlMonoForm`, else the
+   * bound control's `label`, else the form key. For wording: "… in another {label}".
+   */
+  label: string;
   /** Rows that would match the search after adjusting. */
   count: number;
   /** The form value right now. */
@@ -70,7 +94,18 @@ export interface ProbeContext {
 }
 /** `field = v`, or an OR of them for several values. */
 export declare function equalsAny(field: string, values: readonly unknown[]): unknown;
-/** The search as a devextreme filter array (remote) — `null` when there is nothing to search. */
+/**
+ * One case-insensitive search clause for a plain / path field.
+ *
+ * The probe's filter reaches the server as TEXT — inside an `$apply`, or a `$filter`
+ * written into the url — never through devextreme's compiler, so its usual
+ * `tolower` (`oDataFilterToLower`) never happens. It is written here instead:
+ * `contains(tolower(CompanyName),'shopee')`, as a raw one-element clause.
+ * A wildcard path comes back from `toODataClause` as an `any()` lambda that is
+ * already lowercased.
+ */
+export declare function lowerSearchClause(field: string, op: string, value: string): unknown;
+/** The search as a filter array (remote) — `null` when there is nothing to search. */
 export declare function searchFilterFor(terms: ProbeGrid['searchTerms'], entries: readonly MonoSearchExprEntry[], operation?: string): unknown;
 /** The search as a row predicate (array) — `null` when there is nothing to search. */
 export declare function searchPredicateFor(terms: ProbeGrid['searchTerms'], entries: readonly MonoSearchExprEntry[], operation?: string): RowPredicate | null;
@@ -80,6 +115,15 @@ export declare function searchPredicateFor(terms: ProbeGrid['searchTerms'], entr
  * the search and the fixed base. `field` itself stays free.
  */
 export declare function buildProbeFilter(field: string, keys: Record<string, string>, values: Record<string, unknown>, search: unknown, base: unknown): unknown;
+type ProbeLog = ((step: string, data?: unknown) => void) | undefined;
+/**
+ * Per-value counts for relaxing `field` alone: the combos where every OTHER relaxed
+ * field still equals its form value, summed by `field`'s value.
+ */
+export declare function sliceForField(combos: readonly MonoTupleCount[], field: string, others: ReadonlyArray<{
+  field: string;
+  current: unknown;
+}>): MonoValueCount[];
 /** The bound form control's surface the probe reads (select / tag-input / dropdown-table). */
 interface FormControlLike {
   readonly?: boolean;
@@ -88,13 +132,24 @@ interface FormControlLike {
   items?: unknown[];
   keyValue?: string;
   displayValue?: string | ((item: any) => string);
+  label?: string;
 }
 /**
  * Which `candidates` the field allows, each with its caption. `null` when there is
  * NO source to check against (nothing bound, nothing configured) — the caller
  * then trusts the counts.
  */
-export declare function allowedValues(spec: MonoSuggestionValueSource | undefined, control: FormControlLike | null, field: string, candidates: readonly unknown[]): Promise<Map<string, {
+export declare function allowedValues(spec: MonoSuggestionValueSource | undefined, control: FormControlLike | null, field: string, candidates: readonly unknown[], log?: ProbeLog): Promise<Map<string, {
+  value: unknown;
+  caption: string;
+}> | null>;
+/**
+ * EVERY option the field offers (keyed by `String(value)`, with its caption) — the
+ * candidate list for `requestType: 'count'`. Same source resolution as
+ * {@link allowedValues}; a DataSource is read with its own `filter()`, so the
+ * per-user restriction applies. `null` when there is no option source at all.
+ */
+export declare function optionValues(spec: MonoSuggestionValueSource | undefined, control: FormControlLike | null, field: string, log?: ProbeLog): Promise<Map<string, {
   value: unknown;
   caption: string;
 }> | null>;
