@@ -1,5 +1,5 @@
 import { defineConfig, type UserConfig } from 'tsdown'
-import type { Plugin } from 'rolldown'
+import type { OutputChunk, Plugin } from 'rolldown'
 import { fileURLToPath, URL } from 'node:url'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -125,12 +125,17 @@ function unocss(cssFileName: string): Plugin {
         const file = id.replace(/^\0raw:/, '')
         return include.test(file) && !cssId.test(file)
     }
-    const tokens = new Set<string>()
+    // Authored source of every scannable module, keyed by id. Extraction waits for the
+    // chunk graph (generateBundle) because the shadow entries share this build: ui/index.css
+    // must only carry utilities of modules the LIGHT entries reach. A shadow-only module's
+    // classes live inside its shadow root (its `?raw` sheet), and scanning them would add
+    // ~17 KB of utilities to the global stylesheet every app loads.
+    const sources = new Map<string, string>()
     const generator = createGenerator(unoConfig)
     return {
         name: 'mono-unocss',
         buildStart() {
-            tokens.clear()
+            sources.clear()
         },
         resolveId(source) {
             return source === 'virtual:uno.css' ? VIRTUAL : null
@@ -138,12 +143,11 @@ function unocss(cssFileName: string): Plugin {
         load(id) {
             return id === VIRTUAL ? { code: '', moduleType: 'js' } : null
         },
-        // `pre`, like the Vite plugin: scan the authored source, before any transform.
+        // `pre`, like the Vite plugin: capture the authored source, before any transform.
         transform: {
             order: 'pre',
-            async handler(code, id) {
-                if (!filter(code, id)) return null
-                await (await generator).applyExtractors(code.replace(skipped, ''), id, tokens)
+            handler(code, id) {
+                if (filter(code, id)) sources.set(id, code.replace(skipped, ''))
                 return null
             },
         },
@@ -151,7 +155,27 @@ function unocss(cssFileName: string): Plugin {
         generateBundle: {
             order: 'post',
             async handler(_options, bundle) {
-                const { css } = await (await generator).generate(tokens, { minify: true })
+                // Chunks reachable (static + dynamic imports) from a non-shadow entry.
+                const chunks = new Map<string, OutputChunk>()
+                for (const out of Object.values(bundle)) if (out.type === 'chunk') chunks.set(out.fileName, out)
+                const queue = [...chunks.values()].filter((c) => c.isEntry && !c.name.startsWith('ui/shadow/')).map((c) => c.fileName)
+                const reached = new Set<string>()
+                while (queue.length) {
+                    const file = queue.pop()!
+                    if (reached.has(file)) continue
+                    reached.add(file)
+                    const chunk = chunks.get(file)
+                    if (chunk) queue.push(...chunk.imports, ...chunk.dynamicImports)
+                }
+                const tokens = new Set<string>()
+                const uno = await generator
+                for (const file of reached) {
+                    for (const id of chunks.get(file)?.moduleIds ?? []) {
+                        const code = sources.get(id)
+                        if (code !== undefined) await uno.applyExtractors(code, id, tokens)
+                    }
+                }
+                const { css } = await uno.generate(tokens, { minify: true })
                 const asset = bundle[cssFileName]
                 if (asset?.type === 'asset') {
                     asset.source = css + '\n' + String(asset.source)
@@ -216,6 +240,50 @@ function emitFlavorThemes(): Plugin {
 
 const CSS_FILE = 'ui/index.css'
 
+// Shadow-DOM / SSR entries (`@mono-lit/helper/ui/shadow/*`). Built in the SAME rolldown
+// graph as the light entries, so the cores both builds share (form-control, light-slots,
+// icon, chip-strip, the data grid, the export/import engines …) become ONE chunk. An app
+// that uses both builds (e.g. a shadow shell around light pages) no longer ships every
+// shared core twice, and dist/ no longer holds two copies of each.
+// lit stays external, so the consuming app still resolves it per export condition — on
+// the server that's lit's `node` build (SSR-safe tree-walker stub, `HTMLElement` from
+// `@lit-labs/ssr-dom-shim`), so the element is importable on the server (for
+// `@lit-labs/ssr` / `nuxt-ssr-lit`) WITHOUT a global DOM shim. The per-component shadow
+// stylesheet is inlined via `?raw` into `static styles`; rawImports() turns it into JS,
+// so it never reaches the ui/index.css pipeline.
+const SHADOW_ENTRIES = {
+    'ui/shadow/accordion': './src/components/accordion/index.shadow.ts',
+    'ui/shadow/breadcrumb': './src/components/breadcrumb/index.shadow.ts',
+    'ui/shadow/nav': './src/components/nav/index.shadow.ts',
+    'ui/shadow/input': './src/components/input/index.shadow.ts',
+    'ui/shadow/drawer': './src/components/drawer/index.shadow.ts',
+    'ui/shadow/dropdown': './src/components/dropdown/index.shadow.ts',
+    'ui/shadow/sidebar': './src/components/sidebar/index.shadow.ts',
+    'ui/shadow/menu': './src/components/menu/index.shadow.ts',
+    'ui/shadow/modal': './src/components/modal/index.shadow.ts',
+    'ui/shadow/table': './src/components/table/index.shadow.ts',
+    'ui/shadow/dropdown-table': './src/components/dropdown-table/index.shadow.ts',
+    'ui/shadow/filter': './src/components/filter/index.shadow.ts',
+    'ui/shadow/alert': './src/components/alert/index.shadow.ts',
+    'ui/shadow/card': './src/components/card/index.shadow.ts',
+    'ui/shadow/chart': './src/components/chart/index.shadow.ts',
+    'ui/shadow/button': './src/components/button/index.shadow.ts',
+    'ui/shadow/button-dropdown': './src/components/button/index.button-dropdown.shadow.ts',
+    'ui/shadow/chip': './src/components/chip/index.shadow.ts',
+    'ui/shadow/tabs': './src/components/tabs/index.shadow.ts',
+    'ui/shadow/checkbox': './src/components/checkbox/index.shadow.ts',
+    'ui/shadow/file-upload': './src/components/file-upload/index.shadow.ts',
+    'ui/shadow/radio': './src/components/radio/index.shadow.ts',
+    'ui/shadow/select': './src/components/select/index.shadow.ts',
+    'ui/shadow/switch': './src/components/switch/index.shadow.ts',
+    'ui/shadow/slider': './src/components/slider/index.shadow.ts',
+    'ui/shadow/otp': './src/components/otp/index.shadow.ts',
+    'ui/shadow/tag-input': './src/components/tag-input/index.shadow.ts',
+    'ui/shadow/textarea': './src/components/textarea/index.shadow.ts',
+    'ui/shadow/rich-text-editor': './src/components/rich-text-editor/index.shadow.ts',
+    'ui/shadow/date': './src/components/date/index.shadow.ts',
+}
+
 const shared = {
     format: ['es'],
     platform: 'neutral',
@@ -256,8 +324,8 @@ const shared = {
 } satisfies UserConfig
 
 export default defineConfig([
-    // Light DOM build — every `@mono-lit/helper` entry except `ui/shadow/*`, plus
-    // the global stylesheet (dist/ui/index.css) and the opt-in theme/font sheets.
+    // Every runtime entry — light, plus `ui/shadow/*` (SHADOW_ENTRIES, one shared
+    // graph) — and the global stylesheet (dist/ui/index.css) and the opt-in theme/font sheets.
     {
         ...shared,
         clean: true,
@@ -318,56 +386,12 @@ export default defineConfig([
             'vite': './src/vite/index.ts',
             // Nuxt module entry: `@mono-lit/helper/nuxt`.
             'nuxt': './src/nuxt/index.ts',
+            ...SHADOW_ENTRIES,
         },
         // The Lit SSR bridge's runtime (vendored from nuxt-ssr-lit, see src/nuxt/ssr-lit)
         // ships verbatim: plugins and `.vue` components the app's Nuxt build compiles.
         copy: [{ from: './src/nuxt/ssr-lit/runtime', to: './dist/ssr-lit' }],
         plugins: [rawImports(), unocss(CSS_FILE), emitFlavorThemes()],
-    },
-    // Shadow-DOM / SSR build (`@mono-lit/helper/ui/shadow/*`). Its own chunk graph,
-    // as it always had: the consuming app resolves the external `lit` per export
-    // condition — on the server that's lit's `node` build, whose lit-html uses an
-    // SSR-safe tree-walker stub and whose reactive-element gets `HTMLElement` from
-    // `@lit-labs/ssr-dom-shim` — so the element is importable on the server (for
-    // `@lit-labs/ssr` / `nuxt-ssr-lit`) WITHOUT a global DOM shim. The per-component
-    // shadow stylesheet is inlined via `?raw` into `static styles`.
-    {
-        ...shared,
-        clean: false, // shares dist/ with the light build
-        dts: false,
-        entry: {
-            'ui/shadow/accordion': './src/components/accordion/index.shadow.ts',
-            'ui/shadow/breadcrumb': './src/components/breadcrumb/index.shadow.ts',
-            'ui/shadow/nav': './src/components/nav/index.shadow.ts',
-            'ui/shadow/input': './src/components/input/index.shadow.ts',
-            'ui/shadow/drawer': './src/components/drawer/index.shadow.ts',
-            'ui/shadow/dropdown': './src/components/dropdown/index.shadow.ts',
-            'ui/shadow/sidebar': './src/components/sidebar/index.shadow.ts',
-            'ui/shadow/menu': './src/components/menu/index.shadow.ts',
-            'ui/shadow/modal': './src/components/modal/index.shadow.ts',
-            'ui/shadow/table': './src/components/table/index.shadow.ts',
-            'ui/shadow/dropdown-table': './src/components/dropdown-table/index.shadow.ts',
-            'ui/shadow/filter': './src/components/filter/index.shadow.ts',
-            'ui/shadow/alert': './src/components/alert/index.shadow.ts',
-            'ui/shadow/card': './src/components/card/index.shadow.ts',
-            'ui/shadow/chart': './src/components/chart/index.shadow.ts',
-            'ui/shadow/button': './src/components/button/index.shadow.ts',
-            'ui/shadow/button-dropdown': './src/components/button/index.button-dropdown.shadow.ts',
-            'ui/shadow/chip': './src/components/chip/index.shadow.ts',
-            'ui/shadow/tabs': './src/components/tabs/index.shadow.ts',
-            'ui/shadow/checkbox': './src/components/checkbox/index.shadow.ts',
-            'ui/shadow/file-upload': './src/components/file-upload/index.shadow.ts',
-            'ui/shadow/radio': './src/components/radio/index.shadow.ts',
-            'ui/shadow/select': './src/components/select/index.shadow.ts',
-            'ui/shadow/switch': './src/components/switch/index.shadow.ts',
-            'ui/shadow/slider': './src/components/slider/index.shadow.ts',
-            'ui/shadow/otp': './src/components/otp/index.shadow.ts',
-            'ui/shadow/tag-input': './src/components/tag-input/index.shadow.ts',
-            'ui/shadow/textarea': './src/components/textarea/index.shadow.ts',
-            'ui/shadow/rich-text-editor': './src/components/rich-text-editor/index.shadow.ts',
-            'ui/shadow/date': './src/components/date/index.shadow.ts',
-        },
-        plugins: [rawImports()],
     },
     // Declarations — one `.d.ts` per source module under dist/src/**, mirroring
     // src/. Not bundled per entry on purpose: dist/vue.d.ts (scripts/gen-vue-types.mjs)
