@@ -626,6 +626,8 @@ export interface TableEmptyProps extends TableControlBase {
    * a suggestion is shown — a function `(count, suggestion) => string`, or a
    * template where `{count}`, `{value}`, `{label}`, `{key}`, `{field}` are substituted.
    * Default `'There is {count} data available but in different filter, do you want to change the filter?'`.
+   * With several offers, Adjust Filter applies the biggest and a ▾ beside it lists
+   * each one; `option` words those rows the same way (default `'Adjust {label} to "{value}"'`).
    */
   suggestionFilter?: MonoEmptySuggestionOptions | null
   'suggestion-filter'?: MonoEmptySuggestionOptions | null

@@ -88,7 +88,32 @@ describe('<mono-table-search> filter suggestion → <mono-table-empty> Adjust Fi
     expect(empty.textContent).not.toContain('Try adjusting your search')
     // Reload left, Adjust Filter right, in one row.
     const row = empty.querySelector('[mono-empty-actions]')!
-    expect([...row.children].map((b) => (b as HTMLElement).hasAttribute('mono-empty-adjust'))).toEqual([false, true])
+    expect([...row.children].map((b) => (b as HTMLElement).hasAttribute('mono-empty-adjust-group'))).toEqual([false, true])
+    // One offer only → no dropdown toggle.
+    expect(empty.querySelector('[mono-empty-adjust-toggle]')).toBeNull()
+  })
+
+  it('several offers: the main button takes the biggest, the dropdown lists each', async () => {
+    // OPS allowed too → two offers: HR (3 rows) and OPS (1 row).
+    const { form, grid, empty } = await setup({ items: [{ Code: 'MKT' }, { Code: 'HR' }, { Code: 'OPS' }] })
+    await grid.setSearch('andy')
+    await until(() => grid.filterSuggestions.length === 2)
+    expect(grid.filterSuggestions.map((s: any) => [s.value, s.count])).toEqual([['HR', 3], ['OPS', 1]])
+    expect(grid.filterSuggestion.value).toBe('HR')
+
+    await until(() => empty.querySelector('[mono-empty-adjust-toggle]'))
+    expect(empty.querySelector('[mono-empty-adjust-menu]')).toBeNull()
+    ;(empty.querySelector('[mono-empty-adjust-toggle]') as HTMLButtonElement).click()
+    await until(() => empty.querySelector('[mono-empty-adjust-menu]'))
+
+    const options = [...empty.querySelectorAll('[mono-empty-adjust-option]')] as HTMLButtonElement[]
+    expect(options.map((o) => o.querySelector('[mono-empty-adjust-option-text]')!.textContent)).toEqual([
+      'Adjust Dept to "HR"',
+      'Adjust Dept to "OPS"',
+    ])
+    // Picking the SECOND row applies that one, not the biggest.
+    options[1].click()
+    expect(form.values().Dept).toBe('OPS')
   })
 
   it('suggestion-filter.message formats the line; the subtitle comes back once rows do', async () => {

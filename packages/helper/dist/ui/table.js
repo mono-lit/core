@@ -3,7 +3,7 @@ import { a as buildGroups, c as isGroupNode, o as collectGroupPaths, s as flatte
 import { i as joinFilters, n as andPredicates, r as compileFilterPredicate, t as andFilters } from "../filter-eval-CqeBnMYh.js";
 import { A as resolveSearchEntries, C as customRemoteClause, D as isWildcardPattern, E as hasWildcardSearch, O as normalizeSearchExpr, c as resolveErrorMessages, d as DEFAULT_SEARCH_OPERATION, g as parseSearchValue, h as mergeSearchFields, j as searchEntryFor, k as plainSearchColumns, l as setErrorMessages, n as describeError, r as errorStatus, s as normalizeError, t as DEFAULT_ERROR_MESSAGES, w as expandWildcard, x as searchRowPredicate, y as resolveSearchFields } from "../normalize-error-BEcd1tmS.js";
 import { _ as monoArraySource, d as createApplyGate, g as storeRows, h as odataStoreVersion, m as odataStoreUrl } from "../data-source-options-DJUNU26C.js";
-import { a as checkState, c as setAllChecked, i as buildDateTree, l as setChecked, n as countTuples, o as minimize, r as groupCountsViaApply, s as seedFromRanges, t as monoDataGrid } from "../mono-data-grid-C5VmlphN.js";
+import { a as checkState, c as setAllChecked, i as buildDateTree, l as setChecked, n as countTuples, o as minimize, r as groupCountsViaApply, s as seedFromRanges, t as monoDataGrid } from "../mono-data-grid-DJkp96N-.js";
 import { t as arrayToODataString } from "../filter-odata-GsczYKNC.js";
 import { _ as monoHostChildren, b as monoPhantomOptions, d as buildSizeStyle, h as monoApplyPhantomOptions, l as ColumnAutoSize, s as startMonoSizeAttributes, u as cssLengthToPx, v as monoPendingActive, y as monoPendingGrace } from "../mono-ui-kvLVIf1V.js";
 import { n as detachEventHandlers, t as applyProps } from "../element-props-xvw0EB7H.js";
@@ -489,26 +489,29 @@ async function sampleRows(target) {
 		return [];
 	}
 }
+/** Most offers returned (and listed under the Adjust Filter dropdown). */
+const DEFAULT_MAX_OFFERS = 10;
 /**
-* Probe every mapped field and return the best single-field adjustment, or `null`
-* when nothing allowed would bring rows back.
+* Probe every mapped field and return EVERY single-field adjustment that would bring
+* rows back and that the user may pick — largest count first, so `[0]` is the best.
+* Empty when there is nothing to offer.
 */
-async function probeFilterSuggestion(cfg, ctx) {
+async function probeFilterSuggestions(cfg, ctx) {
 	const log = cfg?.debug ? (step, data) => console.info(`[mono-table-search suggestion] ${step}`, ...data === void 0 ? [] : [data]) : void 0;
 	const keys = cfg?.keys ?? {};
 	if (!Object.keys(keys).length) {
 		log?.("stop: no `keys`");
-		return null;
+		return [];
 	}
 	const terms = ctx.grid.searchTerms ?? [];
 	if (!terms.some((t) => String(t?.value ?? "").trim())) {
 		log?.("stop: no search term");
-		return null;
+		return [];
 	}
 	const target = countTarget(cfg.source ?? ctx.grid.dataSource);
 	if (!target) {
 		log?.("stop: no source to count on (set `source`)");
-		return null;
+		return [];
 	}
 	const op = cfg.searchOperation ?? "contains";
 	let entries = cfg.searchValue != null ? parseSearchValue(cfg.searchValue) : [...ctx.grid.searchValue() ?? []];
@@ -519,7 +522,7 @@ async function probeFilterSuggestion(cfg, ctx) {
 	});
 	if (!entries.length) {
 		log?.("stop: no search fields (set `searchValue`)");
-		return null;
+		return [];
 	}
 	const remote = target.kind === "store";
 	const search = remote ? searchFilterFor(terms, entries, op) : null;
@@ -551,7 +554,7 @@ async function probeFilterSuggestion(cfg, ctx) {
 	} else relaxed.push(m);
 	if (!relaxed.length) {
 		log?.("nothing to suggest: no field the user can change");
-		return null;
+		return [];
 	}
 	const pinClauses = pinned.map((m) => equalsAny(m.field, Array.isArray(m.current) ? m.current : [m.current]));
 	const filter = remote ? joinFilters([
@@ -573,9 +576,9 @@ async function probeFilterSuggestion(cfg, ctx) {
 		combos = await countCombos(target, relaxed.map((m) => m.field), filter, predicate, ctx.gate, log);
 	} catch (err) {
 		log?.("stop: the count request failed", err);
-		return null;
+		return [];
 	}
-	let best = null;
+	const offers = [];
 	for (const { field, key, control, current, label } of relaxed) {
 		const currentList = Array.isArray(current) ? current : [current];
 		let counts;
@@ -624,10 +627,9 @@ async function probeFilterSuggestion(cfg, ctx) {
 			log?.(`skip ${field}: none of the candidates are in the user's options for "${key}"`);
 			continue;
 		}
-		let found;
 		if (Array.isArray(current)) {
 			const add = kept.map((c) => allowed?.get(String(c.value))?.value ?? c.value);
-			found = {
+			offers.push({
 				key,
 				field,
 				value: add,
@@ -636,26 +638,28 @@ async function probeFilterSuggestion(cfg, ctx) {
 				count: kept.reduce((n, c) => n + c.count, 0),
 				current,
 				values: { [key]: [...current, ...add] }
-			};
-		} else {
-			const top = kept[0];
-			const hit = allowed?.get(String(top.value));
-			const value = hit?.value ?? top.value;
-			found = {
+			});
+		} else for (const c of kept) {
+			const hit = allowed?.get(String(c.value));
+			const value = hit?.value ?? c.value;
+			offers.push({
 				key,
 				field,
 				value,
-				caption: hit?.caption ?? String(top.value),
+				caption: hit?.caption ?? String(c.value),
 				label,
-				count: top.count,
+				count: c.count,
 				current,
 				values: { [key]: value }
-			};
+			});
 		}
-		if (!best || found.count > best.count) best = found;
 	}
-	log?.(best ? "suggest" : "nothing to suggest", best ?? void 0);
-	return best;
+	const sorted = offers.map((o, i) => ({
+		o,
+		i
+	})).sort((a, b) => b.o.count - a.o.count || a.i - b.i).map(({ o }) => o).slice(0, Math.max(1, Math.floor(Number(cfg.maxOffers ?? DEFAULT_MAX_OFFERS))));
+	log?.(sorted.length ? "suggest" : "nothing to suggest", sorted.length ? sorted : void 0);
+	return sorted;
 }
 
 //#endregion
@@ -918,7 +922,7 @@ const MonoTableSearchCore = (superClass) => {
 					dataSource: grid.dataSource,
 					searchValue: () => grid.searchValue()
 				};
-				probeFilterSuggestion(cfg, {
+				probeFilterSuggestions(cfg, {
 					grid: view,
 					form,
 					gate: this._probeGate
@@ -3910,6 +3914,7 @@ function applyOverlayHost(el, on, opts) {
 //#endregion
 //#region src/components/table/mono-table-empty-core.ts
 const DEFAULT_SUGGESTION_TEXT = "There is {count} data available but in different filter, do you want to change the filter?";
+const DEFAULT_OPTION_TEXT = "Adjust {label} to \"{value}\"";
 /**
 * Defaults, so the element says something sensible with no props at all.
 *
@@ -3958,7 +3963,8 @@ const MonoTableEmptyCore = (superClass) => {
 			super(...args);
 			this._propsSlot = "empty";
 			this.adjustLabel = "Adjust Filter";
-			this._shownSuggestion = null;
+			this._shownSuggestions = [];
+			this._adjustMenuOpen = false;
 			this.icon = DEFAULT_ICON;
 			this.title = DEFAULT_TITLE;
 			this.subtitle = DEFAULT_SUBTITLE;
@@ -3998,7 +4004,10 @@ const MonoTableEmptyCore = (superClass) => {
 			this._off = this.dataGrid?.subscribe(() => {
 				this._sync();
 				if (monoPendingActive(this)) this.requestUpdate();
-				if ((this.dataGrid?.filterSuggestion ?? null) !== this._shownSuggestion) this.requestUpdate();
+				if ((this.dataGrid?.filterSuggestions ?? []) !== this._shownSuggestions) {
+					this._adjustMenuOpen = false;
+					this.requestUpdate();
+				}
 			});
 			if (!isServer) this._sync();
 		}
@@ -4078,11 +4087,12 @@ const MonoTableEmptyCore = (superClass) => {
 		* default re-query with `preventDefault()` on `adjust`, else `grid.refresh()`.
 		* The search text stays, so the grid re-searches under the new filter.
 		*/
-		_onAdjust() {
+		_onAdjust(chosen) {
 			const grid = this.dataGrid;
 			const form = this.dataForm;
-			const suggestion = grid?.filterSuggestion;
+			const suggestion = chosen ?? grid?.filterSuggestion;
 			if (!grid || !form || !suggestion) return;
+			this._adjustMenuOpen = false;
 			form.setValues(suggestion.values);
 			grid.setFilterSuggestion(null);
 			if (dispatchMonoEvent(this, "adjust", {
@@ -4096,9 +4106,16 @@ const MonoTableEmptyCore = (superClass) => {
 		* template with `{count}` / `{value}` / `{label}` / `{key}` / `{field}` substituted.
 		*/
 		_suggestionMessage(s) {
-			const message = this.suggestionFilter?.message;
-			if (typeof message === "function") try {
-				return String(message(s.count, s) ?? "");
+			return this._formatOffer(this.suggestionFilter?.message, DEFAULT_SUGGESTION_TEXT, s);
+		}
+		/** One dropdown row's text — `suggestionFilter.option`, default `Adjust {label} to "{value}"`. */
+		_optionText(s) {
+			return this._formatOffer(this.suggestionFilter?.option, DEFAULT_OPTION_TEXT, s);
+		}
+		/** A `(count, s) => string` formatter, or a template with `{count}`/`{value}`/`{label}`/`{key}`/`{field}`. */
+		_formatOffer(format, fallback, s) {
+			if (typeof format === "function") try {
+				return String(format(s.count, s) ?? "");
 			} catch {
 				return "";
 			}
@@ -4109,23 +4126,79 @@ const MonoTableEmptyCore = (superClass) => {
 				field: s.field,
 				label: s.label || s.key
 			};
-			return (message || DEFAULT_SUGGESTION_TEXT).replace(/\{(count|value|label|key|field)\}/g, (_, k) => map[k] ?? "");
+			return (format || fallback).replace(/\{(count|value|label|key|field)\}/g, (_, k) => map[k] ?? "");
 		}
-		/** The suggestion to present — only with a form to write into. Records it for the notify diff. */
-		_activeSuggestion() {
-			const s = this.dataGrid?.filterSuggestion ?? null;
-			this._shownSuggestion = s;
-			return s && this.dataForm ? s : null;
+		/**
+		* The offers to present, largest first — only with a form to write into. Records the
+		* list for the notify diff.
+		*/
+		_activeSuggestions() {
+			const list = this.dataGrid?.filterSuggestions ?? [];
+			this._shownSuggestions = list;
+			return this.dataForm ? list : [];
 		}
-		_renderAdjust() {
-			return html`<button
-        type="button"
-        class="mono-table-empty-adjust" mono-empty-adjust
-        part="adjust"
-        @click=${() => this._onAdjust()}
+		/**
+		* Adjust Filter as a split button: the main half applies the offer with the most
+		* rows; the ▾ half (only with 2+ offers) opens the list of every offer.
+		*/
+		_renderAdjust(offers) {
+			const more = offers.length > 1;
+			return html`<span class="mono-table-empty-adjust-group" mono-empty-adjust-group>
+        <button
+          type="button"
+          class="mono-table-empty-adjust" mono-empty-adjust
+          part="adjust"
+          title=${this._optionText(offers[0])}
+          @click=${() => this._onAdjust()}
+        >
+          ${this.adjustLabel}
+        </button>
+        ${more ? html`<button
+              type="button"
+              class="mono-table-empty-adjust-toggle" mono-empty-adjust-toggle
+              part="adjust-toggle"
+              aria-haspopup="menu"
+              aria-expanded=${this._adjustMenuOpen ? "true" : "false"}
+              aria-label="More filter suggestions"
+              ?mono-open=${this._adjustMenuOpen}
+              @click=${() => this._adjustMenuOpen = !this._adjustMenuOpen}
+            >
+              ${this._chevronIcon()}
+            </button>` : nothing}
+      </span>`;
+		}
+		/**
+		* The dropdown: every offer, largest first, one row each — `Adjust Perusahaan to
+		* "IEG"` and its row count. Rendered INLINE under the buttons (not floated): the
+		* empty state sits inside the table's scroll box, where a floating panel would be
+		* clipped, and the box re-measures its reserved height after every render.
+		*/
+		_renderAdjustMenu(offers) {
+			if (!this._adjustMenuOpen || offers.length < 2) return nothing;
+			return html`<div
+        class="mono-table-empty-adjust-menu" mono-empty-adjust-menu
+        part="adjust-menu"
+        role="menu"
+        @keydown=${(e) => {
+				if (e.key === "Escape") this._adjustMenuOpen = false;
+			}}
       >
-        ${this.adjustLabel}
-      </button>`;
+        ${offers.map((s) => html`<button
+            type="button"
+            role="menuitem"
+            class="mono-table-empty-adjust-option" mono-empty-adjust-option
+            data-key=${s.key}
+            @click=${() => this._onAdjust(s)}
+          >
+            <span mono-empty-adjust-option-text>${this._optionText(s)}</span>
+            <span mono-empty-adjust-option-count>${s.count}</span>
+          </button>`)}
+      </div>`;
+		}
+		_chevronIcon() {
+			return html`<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+        <path d="M7.41 8.58 12 13.17l4.59-4.59L18 10l-6 6-6-6z" />
+      </svg>`;
 		}
 		_reloadIcon() {
 			return html`<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
@@ -4168,12 +4241,15 @@ const MonoTableEmptyCore = (superClass) => {
 		*
 		* While a filter suggestion is offered, its message takes the SUBTITLE's place
 		* (same element, same look — it is the better advice for this empty state), and
-		* the buttons share one row: Reload left, Adjust Filter right. Without one the
-		* markup is exactly what it always was.
+		* the buttons share one row: Reload left, Adjust Filter right — a split button
+		* whose ▾ lists every offer when there is more than one. The message speaks for
+		* the FIRST offer (the most rows), which is what the main button applies. Without
+		* an offer the markup is exactly what it always was.
 		*/
 		_renderProps() {
 			const showReload = this.reload && !!this.dataGrid;
-			const suggestion = this._activeSuggestion();
+			const offers = this._activeSuggestions();
+			const suggestion = offers[0];
 			const reloadButton = showReload ? html`<button
             type="button"
             class="mono-table-empty-reload" mono-empty-reload
@@ -4189,8 +4265,9 @@ const MonoTableEmptyCore = (superClass) => {
             ${this._suggestionMessage(suggestion)}
           </div>
           <div class="mono-table-empty-actions" mono-empty-actions>
-            ${reloadButton}${this._renderAdjust()}
+            ${reloadButton}${this._renderAdjust(offers)}
           </div>
+          ${this._renderAdjustMenu(offers)}
         `;
 			return html`
         ${this._renderIcon()}
@@ -4220,6 +4297,7 @@ const MonoTableEmptyCore = (superClass) => {
 		type: String,
 		attribute: "adjust-label"
 	})], MonoTableEmptyCoreClass.prototype, "adjustLabel", void 0);
+	__decorate([state()], MonoTableEmptyCoreClass.prototype, "_adjustMenuOpen", void 0);
 	__decorate([property({ type: String })], MonoTableEmptyCoreClass.prototype, "icon", void 0);
 	__decorate([property({ type: String })], MonoTableEmptyCoreClass.prototype, "title", void 0);
 	__decorate([property({ type: String })], MonoTableEmptyCoreClass.prototype, "subtitle", void 0);

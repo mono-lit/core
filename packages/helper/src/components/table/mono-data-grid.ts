@@ -1564,8 +1564,17 @@ export interface MonoTableController<T = any> {
    * there is nothing to suggest. Cleared by every new search.
    */
   filterSuggestion: MonoFilterSuggestion | null
-  /** Publish (or clear, with `null`) {@link filterSuggestion}. Notifies on change only. */
-  setFilterSuggestion(next: MonoFilterSuggestion | null): void
+  /**
+   * EVERY offer the probe found, largest count first — `filterSuggestion` is `[0]`.
+   * `<mono-table-empty>` lists them in the dropdown beside Adjust Filter. Empty when
+   * there is nothing to suggest.
+   */
+  filterSuggestions: MonoFilterSuggestion[]
+  /**
+   * Publish the offers (a list, largest first, or a single one) — or clear them with
+   * `null` / `[]`. Notifies on change only.
+   */
+  setFilterSuggestion(next: MonoFilterSuggestion | MonoFilterSuggestion[] | null): void
   /**
    * An explicit filter of the grid's own — what the slotted filter builder
    * writes. One LAYER of the query, not the whole of it: it is AND-ed with the
@@ -2170,6 +2179,7 @@ export function monoDataGrid<T = any>(
     pageCount: 0,
     searchTerms: [],
     filterSuggestion: null,
+    filterSuggestions: [],
     setFilterSuggestion,
     sorts: [],
     sortField: null,
@@ -5806,20 +5816,21 @@ export function monoDataGrid<T = any>(
     await setSearchTerms(ctrl.searchTerms)
   }
 
-  /** Equality-guarded so a re-published identical offer costs no notify (no re-render loop). */
-  function setFilterSuggestion(next: MonoFilterSuggestion | null): void {
-    const prev = ctrl.filterSuggestion
-    if (prev === next) return
-    if (
-      prev &&
-      next &&
-      prev.key === next.key &&
-      prev.count === next.count &&
-      JSON.stringify(prev.values) === JSON.stringify(next.values)
-    ) {
-      return
+  /** What identifies an offer for the change check — a re-published identical list is a no-op. */
+  const offerKey = (list: readonly MonoFilterSuggestion[]): string => {
+    try {
+      return JSON.stringify(list.map((s) => [s.key, s.count, s.values]))
+    } catch {
+      return String(Math.random()) // an unserialisable value: treat as changed
     }
-    ctrl.filterSuggestion = next
+  }
+
+  /** Equality-guarded so a re-published identical list costs no notify (no re-render loop). */
+  function setFilterSuggestion(next: MonoFilterSuggestion | MonoFilterSuggestion[] | null): void {
+    const list = next == null ? [] : Array.isArray(next) ? next.filter(Boolean) : [next]
+    if (offerKey(list) === offerKey(ctrl.filterSuggestions)) return
+    ctrl.filterSuggestions = list
+    ctrl.filterSuggestion = list[0] ?? null
     notify()
   }
 
@@ -5827,6 +5838,7 @@ export function monoDataGrid<T = any>(
     ctrl.searchTerms = (terms ?? []).filter((t) => t && String(t.value ?? '') !== '')
     // An offer belongs to the search that produced it.
     ctrl.filterSuggestion = null
+    ctrl.filterSuggestions = []
     groupPageIndex = 0 // jump back to the first group page on a new search
     bumpSummary('search') // search narrows the row set
 

@@ -66,10 +66,17 @@ export interface MonoEmptySuggestionOptions {
    * `{count}`, `{value}`, `{label}`, `{key}` and `{field}`.
    */
   message?: string | ((count: number, suggestion: MonoFilterSuggestion) => string)
+  /**
+   * Each row of the dropdown beside Adjust Filter (shown when there is more than one
+   * offer). Same forms as {@link message}. Default `'Adjust {label} to "{value}"'`.
+   */
+  option?: string | ((count: number, suggestion: MonoFilterSuggestion) => string)
 }
 
 const DEFAULT_SUGGESTION_TEXT =
   'There is {count} data available but in different filter, do you want to change the filter?'
+
+const DEFAULT_OPTION_TEXT = 'Adjust {label} to "{value}"'
 
 /** Public surface added by the empty-state core mixin. */
 export declare class MonoTableEmptyCoreInterface extends MonoTableControllerCoreInterface {
@@ -182,8 +189,12 @@ export const MonoTableEmptyCore = <T extends Constructor<LitElement>>(superClass
     @property({ type: String, attribute: 'adjust-label' })
     adjustLabel = 'Adjust Filter'
 
-    /** The suggestion last rendered — a notify re-renders only when it changes. */
-    private _shownSuggestion: MonoFilterSuggestion | null = null
+    /** The offer list last rendered — a notify re-renders only when it changes. */
+    private _shownSuggestions: readonly MonoFilterSuggestion[] = []
+
+    /** Whether the dropdown of every offer (beside Adjust Filter) is open. */
+    @state()
+    protected _adjustMenuOpen = false
 
     /**
      * The glyph above the title. Either an iconify utility class
@@ -294,8 +305,12 @@ export const MonoTableEmptyCore = <T extends Constructor<LitElement>>(superClass
         // The empty state is attribute-driven, but the automatic skeleton (`pending`) is
         // resolved in the update cycle — a notify may be the "first load done" it waits for.
         if (monoPendingActive(this)) this.requestUpdate()
-        // The filter offer IS rendered content — a new or withdrawn one needs a render.
-        if ((this.dataGrid?.filterSuggestion ?? null) !== this._shownSuggestion) this.requestUpdate()
+        // The filter offers ARE rendered content — a new or withdrawn list needs a render,
+        // and a dropdown left open over the previous list would offer stale choices.
+        if ((this.dataGrid?.filterSuggestions ?? []) !== this._shownSuggestions) {
+          this._adjustMenuOpen = false
+          this.requestUpdate()
+        }
       })
       if (!isServer) this._sync()
     }
@@ -417,11 +432,13 @@ export const MonoTableEmptyCore = <T extends Constructor<LitElement>>(superClass
      * default re-query with `preventDefault()` on `adjust`, else `grid.refresh()`.
      * The search text stays, so the grid re-searches under the new filter.
      */
-    protected _onAdjust(): void {
+    protected _onAdjust(chosen?: MonoFilterSuggestion): void {
       const grid = this.dataGrid
       const form = this.dataForm
-      const suggestion = grid?.filterSuggestion
+      // The main button takes the offer with the most rows; a dropdown row passes its own.
+      const suggestion = chosen ?? grid?.filterSuggestion
       if (!grid || !form || !suggestion) return
+      this._adjustMenuOpen = false
       form.setValues(suggestion.values)
       grid.setFilterSuggestion(null)
       const proceed = dispatchMonoEvent(
@@ -438,10 +455,23 @@ export const MonoTableEmptyCore = <T extends Constructor<LitElement>>(superClass
      * template with `{count}` / `{value}` / `{label}` / `{key}` / `{field}` substituted.
      */
     protected _suggestionMessage(s: MonoFilterSuggestion): string {
-      const message = this.suggestionFilter?.message
-      if (typeof message === 'function') {
+      return this._formatOffer(this.suggestionFilter?.message, DEFAULT_SUGGESTION_TEXT, s)
+    }
+
+    /** One dropdown row's text — `suggestionFilter.option`, default `Adjust {label} to "{value}"`. */
+    protected _optionText(s: MonoFilterSuggestion): string {
+      return this._formatOffer(this.suggestionFilter?.option, DEFAULT_OPTION_TEXT, s)
+    }
+
+    /** A `(count, s) => string` formatter, or a template with `{count}`/`{value}`/`{label}`/`{key}`/`{field}`. */
+    private _formatOffer(
+      format: MonoEmptySuggestionOptions['message'],
+      fallback: string,
+      s: MonoFilterSuggestion,
+    ): string {
+      if (typeof format === 'function') {
         try {
-          return String(message(s.count, s) ?? '')
+          return String(format(s.count, s) ?? '')
         } catch {
           // A consumer formatter that throws must not blank the empty state.
           return ''
@@ -454,28 +484,87 @@ export const MonoTableEmptyCore = <T extends Constructor<LitElement>>(superClass
         field: s.field,
         label: s.label || s.key,
       }
-      return (message || DEFAULT_SUGGESTION_TEXT).replace(
-        /\{(count|value|label|key|field)\}/g,
-        (_, k: string) => map[k] ?? '',
-      )
+      return (format || fallback).replace(/\{(count|value|label|key|field)\}/g, (_, k: string) => map[k] ?? '')
     }
 
-    /** The suggestion to present — only with a form to write into. Records it for the notify diff. */
-    protected _activeSuggestion(): MonoFilterSuggestion | null {
-      const s = this.dataGrid?.filterSuggestion ?? null
-      this._shownSuggestion = s
-      return s && this.dataForm ? s : null
+    /**
+     * The offers to present, largest first — only with a form to write into. Records the
+     * list for the notify diff.
+     */
+    protected _activeSuggestions(): readonly MonoFilterSuggestion[] {
+      const list = this.dataGrid?.filterSuggestions ?? []
+      this._shownSuggestions = list
+      return this.dataForm ? list : []
     }
 
-    protected _renderAdjust(): TemplateResult {
-      return html`<button
-        type="button"
-        class="mono-table-empty-adjust" mono-empty-adjust
-        part="adjust"
-        @click=${() => this._onAdjust()}
+    /**
+     * Adjust Filter as a split button: the main half applies the offer with the most
+     * rows; the ▾ half (only with 2+ offers) opens the list of every offer.
+     */
+    protected _renderAdjust(offers: readonly MonoFilterSuggestion[]): TemplateResult {
+      const more = offers.length > 1
+      return html`<span class="mono-table-empty-adjust-group" mono-empty-adjust-group>
+        <button
+          type="button"
+          class="mono-table-empty-adjust" mono-empty-adjust
+          part="adjust"
+          title=${this._optionText(offers[0])}
+          @click=${() => this._onAdjust()}
+        >
+          ${this.adjustLabel}
+        </button>
+        ${more
+          ? html`<button
+              type="button"
+              class="mono-table-empty-adjust-toggle" mono-empty-adjust-toggle
+              part="adjust-toggle"
+              aria-haspopup="menu"
+              aria-expanded=${this._adjustMenuOpen ? 'true' : 'false'}
+              aria-label="More filter suggestions"
+              ?mono-open=${this._adjustMenuOpen}
+              @click=${() => (this._adjustMenuOpen = !this._adjustMenuOpen)}
+            >
+              ${this._chevronIcon()}
+            </button>`
+          : nothing}
+      </span>`
+    }
+
+    /**
+     * The dropdown: every offer, largest first, one row each — `Adjust Perusahaan to
+     * "IEG"` and its row count. Rendered INLINE under the buttons (not floated): the
+     * empty state sits inside the table's scroll box, where a floating panel would be
+     * clipped, and the box re-measures its reserved height after every render.
+     */
+    protected _renderAdjustMenu(offers: readonly MonoFilterSuggestion[]): TemplateResult | typeof nothing {
+      if (!this._adjustMenuOpen || offers.length < 2) return nothing
+      return html`<div
+        class="mono-table-empty-adjust-menu" mono-empty-adjust-menu
+        part="adjust-menu"
+        role="menu"
+        @keydown=${(e: KeyboardEvent) => {
+          if (e.key === 'Escape') this._adjustMenuOpen = false
+        }}
       >
-        ${this.adjustLabel}
-      </button>`
+        ${offers.map(
+          (s) => html`<button
+            type="button"
+            role="menuitem"
+            class="mono-table-empty-adjust-option" mono-empty-adjust-option
+            data-key=${s.key}
+            @click=${() => this._onAdjust(s)}
+          >
+            <span mono-empty-adjust-option-text>${this._optionText(s)}</span>
+            <span mono-empty-adjust-option-count>${s.count}</span>
+          </button>`,
+        )}
+      </div>`
+    }
+
+    protected _chevronIcon(): TemplateResult {
+      return html`<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+        <path d="M7.41 8.58 12 13.17l4.59-4.59L18 10l-6 6-6-6z" />
+      </svg>`
     }
 
     protected _reloadIcon(): TemplateResult {
@@ -525,12 +614,15 @@ export const MonoTableEmptyCore = <T extends Constructor<LitElement>>(superClass
      *
      * While a filter suggestion is offered, its message takes the SUBTITLE's place
      * (same element, same look — it is the better advice for this empty state), and
-     * the buttons share one row: Reload left, Adjust Filter right. Without one the
-     * markup is exactly what it always was.
+     * the buttons share one row: Reload left, Adjust Filter right — a split button
+     * whose ▾ lists every offer when there is more than one. The message speaks for
+     * the FIRST offer (the most rows), which is what the main button applies. Without
+     * an offer the markup is exactly what it always was.
      */
     protected _renderProps(): TemplateResult {
       const showReload = this.reload && !!this.dataGrid
-      const suggestion = this._activeSuggestion()
+      const offers = this._activeSuggestions()
+      const suggestion = offers[0]
       const reloadButton = showReload
         ? html`<button
             type="button"
@@ -552,8 +644,9 @@ export const MonoTableEmptyCore = <T extends Constructor<LitElement>>(superClass
             ${this._suggestionMessage(suggestion)}
           </div>
           <div class="mono-table-empty-actions" mono-empty-actions>
-            ${reloadButton}${this._renderAdjust()}
+            ${reloadButton}${this._renderAdjust(offers)}
           </div>
+          ${this._renderAdjustMenu(offers)}
         `
       }
 

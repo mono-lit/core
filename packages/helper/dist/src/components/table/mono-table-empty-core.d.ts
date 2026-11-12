@@ -38,6 +38,11 @@ export interface MonoEmptySuggestionOptions {
    * `{count}`, `{value}`, `{label}`, `{key}` and `{field}`.
    */
   message?: string | ((count: number, suggestion: MonoFilterSuggestion) => string);
+  /**
+   * Each row of the dropdown beside Adjust Filter (shown when there is more than one
+   * offer). Same forms as {@link message}. Default `'Adjust {label} to "{value}"'`.
+   */
+  option?: string | ((count: number, suggestion: MonoFilterSuggestion) => string);
 }
 /** Public surface added by the empty-state core mixin. */
 export declare class MonoTableEmptyCoreInterface extends MonoTableControllerCoreInterface {

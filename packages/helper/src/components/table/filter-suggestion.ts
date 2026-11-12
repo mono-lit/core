@@ -106,6 +106,12 @@ export interface MonoSuggestionFilter {
   /** `requestType: 'count'` only — most `$count` requests per field (default 30). */
   maxCountRequests?: number
   /**
+   * Most offers kept, largest count first (default 10). The first is what
+   * `<mono-table-empty>`'s Adjust Filter button applies; all of them are listed in
+   * the dropdown beside it.
+   */
+  maxOffers?: number
+  /**
    * Log every probe step to the console — the search sent, the per-value counts,
    * which candidates the field allows — and the reason when nothing is offered
    * (a readonly field, an empty "all values" field, no candidates, none allowed).
@@ -600,32 +606,36 @@ async function sampleRows(target: CountTarget): Promise<unknown[]> {
   }
 }
 
+/** Most offers returned (and listed under the Adjust Filter dropdown). */
+const DEFAULT_MAX_OFFERS = 10
+
 /**
- * Probe every mapped field and return the best single-field adjustment, or `null`
- * when nothing allowed would bring rows back.
+ * Probe every mapped field and return EVERY single-field adjustment that would bring
+ * rows back and that the user may pick — largest count first, so `[0]` is the best.
+ * Empty when there is nothing to offer.
  */
-export async function probeFilterSuggestion(
+export async function probeFilterSuggestions(
   cfg: MonoSuggestionFilter,
   ctx: ProbeContext,
-): Promise<MonoFilterSuggestion | null> {
+): Promise<MonoFilterSuggestion[]> {
   const log: ProbeLog = cfg?.debug
     ? (step, data) => console.info(`[mono-table-search suggestion] ${step}`, ...(data === undefined ? [] : [data]))
     : undefined
   const keys = cfg?.keys ?? {}
   if (!Object.keys(keys).length) {
     log?.('stop: no `keys`')
-    return null
+    return []
   }
   const terms = ctx.grid.searchTerms ?? []
   if (!terms.some((t) => String(t?.value ?? '').trim())) {
     log?.('stop: no search term')
-    return null
+    return []
   }
 
   const target = countTarget(cfg.source ?? ctx.grid.dataSource)
   if (!target) {
     log?.('stop: no source to count on (set `source`)')
-    return null
+    return []
   }
 
   const op = cfg.searchOperation ?? DEFAULT_SEARCH_OPERATION
@@ -641,7 +651,7 @@ export async function probeFilterSuggestion(
   }
   if (!entries.length) {
     log?.('stop: no search fields (set `searchValue`)')
-    return null
+    return []
   }
 
   const remote = target.kind === 'store'
@@ -672,7 +682,7 @@ export async function probeFilterSuggestion(
   }
   if (!relaxed.length) {
     log?.('nothing to suggest: no field the user can change')
-    return null
+    return []
   }
 
   // ONE request for every relaxed field: no pin on any of them, grouped by all of them
@@ -704,11 +714,11 @@ export async function probeFilterSuggestion(
       combos = await countCombos(target, relaxed.map((m) => m.field), filter, predicate, ctx.gate, log)
     } catch (err) {
       log?.('stop: the count request failed', err)
-      return null
+      return []
     }
   }
 
-  let best: MonoFilterSuggestion | null = null
+  const offers: MonoFilterSuggestion[] = []
   for (const { field, key, control, current, label } of relaxed) {
     const currentList = Array.isArray(current) ? current : [current]
     let counts: MonoValueCount[]
@@ -780,11 +790,11 @@ export async function probeFilterSuggestion(
       continue
     }
 
-    let found: MonoFilterSuggestion
     if (Array.isArray(current)) {
-      // Multi-value field: ADD every allowed value — all of their rows come back.
+      // Multi-value field: ONE offer that ADDS every allowed value — all of their rows
+      // come back in a single click.
       const add = kept.map((c) => allowed?.get(String(c.value))?.value ?? c.value)
-      found = {
+      offers.push({
         key,
         field,
         value: add,
@@ -793,25 +803,41 @@ export async function probeFilterSuggestion(
         count: kept.reduce((n, c) => n + c.count, 0),
         current,
         values: { [key]: [...current, ...add] },
-      }
+      })
     } else {
-      // Single-value field: switch to the value with the most rows.
-      const top = kept[0]
-      const hit = allowed?.get(String(top.value))
-      const value = hit?.value ?? top.value
-      found = {
-        key,
-        field,
-        value,
-        caption: hit?.caption ?? String(top.value),
-        label,
-        count: top.count,
-        current,
-        values: { [key]: value },
+      // Single-value field: one offer PER allowed value (HR, FIN, …) — the empty state
+      // lists them all, and its main button takes the one with the most rows.
+      for (const c of kept) {
+        const hit = allowed?.get(String(c.value))
+        const value = hit?.value ?? c.value
+        offers.push({
+          key,
+          field,
+          value,
+          caption: hit?.caption ?? String(c.value),
+          label,
+          count: c.count,
+          current,
+          values: { [key]: value },
+        })
       }
     }
-    if (!best || found.count > best.count) best = found
   }
-  log?.(best ? 'suggest' : 'nothing to suggest', best ?? undefined)
-  return best
+  // Largest first, so `[0]` is what the main Adjust Filter button applies. Stable on
+  // ties — the order of `keys` decides.
+  const sorted = offers
+    .map((o, i) => ({ o, i }))
+    .sort((a, b) => b.o.count - a.o.count || a.i - b.i)
+    .map(({ o }) => o)
+    .slice(0, Math.max(1, Math.floor(Number(cfg.maxOffers ?? DEFAULT_MAX_OFFERS))))
+  log?.(sorted.length ? 'suggest' : 'nothing to suggest', sorted.length ? sorted : undefined)
+  return sorted
+}
+
+/** The single best offer — {@link probeFilterSuggestions}`[0]`, or `null`. */
+export async function probeFilterSuggestion(
+  cfg: MonoSuggestionFilter,
+  ctx: ProbeContext,
+): Promise<MonoFilterSuggestion | null> {
+  return (await probeFilterSuggestions(cfg, ctx))[0] ?? null
 }

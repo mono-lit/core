@@ -49,6 +49,12 @@ export interface MonoSuggestionFilter {
   /** `requestType: 'count'` only — most `$count` requests per field (default 30). */
   maxCountRequests?: number;
   /**
+   * Most offers kept, largest count first (default 10). The first is what
+   * `<mono-table-empty>`'s Adjust Filter button applies; all of them are listed in
+   * the dropdown beside it.
+   */
+  maxOffers?: number;
+  /**
    * Log every probe step to the console — the search sent, the per-value counts,
    * which candidates the field allows — and the reason when nothing is offered
    * (a readonly field, an empty "all values" field, no candidates, none allowed).
@@ -154,9 +160,12 @@ export declare function optionValues(spec: MonoSuggestionValueSource | undefined
   caption: string;
 }> | null>;
 /**
- * Probe every mapped field and return the best single-field adjustment, or `null`
- * when nothing allowed would bring rows back.
+ * Probe every mapped field and return EVERY single-field adjustment that would bring
+ * rows back and that the user may pick — largest count first, so `[0]` is the best.
+ * Empty when there is nothing to offer.
  */
+export declare function probeFilterSuggestions(cfg: MonoSuggestionFilter, ctx: ProbeContext): Promise<MonoFilterSuggestion[]>;
+/** The single best offer — {@link probeFilterSuggestions}`[0]`, or `null`. */
 export declare function probeFilterSuggestion(cfg: MonoSuggestionFilter, ctx: ProbeContext): Promise<MonoFilterSuggestion | null>;
 //#endregion
 export {};

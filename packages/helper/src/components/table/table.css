@@ -2800,6 +2800,98 @@ mono-shadow-table-empty[data-mono-empty] {
   outline: 2px solid color-mix(in srgb, var(--_mono-table-accent) 45%, transparent);
   outline-offset: 1px;
 }
+
+/* Adjust Filter as a split button: the main half applies the biggest offer, the ▾
+   half opens the list of every offer. The two halves share one border. */
+:is([mono-empty-adjust-group],.mono-table-empty-adjust-group) {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+:is([mono-empty-adjust-group],.mono-table-empty-adjust-group)
+  > :is([mono-empty-adjust],.mono-table-empty-adjust):not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+:is([mono-empty-adjust-toggle],.mono-table-empty-adjust-toggle) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: -1px;
+  padding: 0 0.35rem;
+  border: 1px solid var(--_mono-table-border);
+  border-radius: 0 var(--theme-radius-sm, 0.375rem) var(--theme-radius-sm, 0.375rem) 0;
+  background: var(--_mono-table-surface);
+  color: var(--_mono-table-accent);
+  cursor: pointer;
+  transition:
+    background-color var(--theme-duration-fast, 0.12s) var(--mono-ease, ease),
+    border-color var(--theme-duration-fast, 0.12s) var(--mono-ease, ease);
+}
+
+:is([mono-empty-adjust-toggle],.mono-table-empty-adjust-toggle) svg {
+  transition: transform var(--theme-duration-fast, 0.12s) var(--mono-ease, ease);
+}
+
+:is([mono-empty-adjust-toggle],.mono-table-empty-adjust-toggle)[mono-open] svg {
+  transform: rotate(180deg);
+}
+
+:is([mono-empty-adjust-toggle],.mono-table-empty-adjust-toggle):hover,
+:is([mono-empty-adjust-toggle],.mono-table-empty-adjust-toggle)[mono-open] {
+  border-color: var(--_mono-table-accent);
+  background: color-mix(in srgb, var(--_mono-table-accent) 8%, var(--_mono-table-surface));
+}
+
+:is([mono-empty-adjust-toggle],.mono-table-empty-adjust-toggle):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--_mono-table-accent) 45%, transparent);
+  outline-offset: 1px;
+}
+
+/* The list of every offer — inline under the buttons (a floating panel would be
+   clipped by the table's scroll box), one row per "Adjust {label} to {value}". */
+:is([mono-empty-adjust-menu],.mono-table-empty-adjust-menu) {
+  display: flex;
+  flex-direction: column;
+  min-width: min(18rem, 100%);
+  max-width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.25rem;
+  border: 1px solid var(--_mono-table-border);
+  border-radius: var(--theme-radius-sm, 0.375rem);
+  background: var(--_mono-table-surface);
+  text-align: left;
+}
+
+:is([mono-empty-adjust-option],.mono-table-empty-adjust-option) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.35rem 0.55rem;
+  border: 0;
+  border-radius: calc(var(--theme-radius-sm, 0.375rem) - 2px);
+  background: transparent;
+  color: var(--_mono-table-text);
+  font: inherit;
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+:is([mono-empty-adjust-option],.mono-table-empty-adjust-option):hover,
+:is([mono-empty-adjust-option],.mono-table-empty-adjust-option):focus-visible {
+  outline: none;
+  background: color-mix(in srgb, var(--_mono-table-accent) 8%, var(--_mono-table-surface));
+}
+
+[mono-empty-adjust-option-count] {
+  flex: none;
+  color: var(--_mono-table-faint);
+  font-variant-numeric: tabular-nums;
+}
 /* ── Row detail (mono-table-detail) ──────────────────────────────────────────
    Two pieces that live in DIFFERENT places:
 

@@ -1431,8 +1431,17 @@ export interface MonoTableController<T = any> {
    * there is nothing to suggest. Cleared by every new search.
    */
   filterSuggestion: MonoFilterSuggestion | null;
-  /** Publish (or clear, with `null`) {@link filterSuggestion}. Notifies on change only. */
-  setFilterSuggestion(next: MonoFilterSuggestion | null): void;
+  /**
+   * EVERY offer the probe found, largest count first — `filterSuggestion` is `[0]`.
+   * `<mono-table-empty>` lists them in the dropdown beside Adjust Filter. Empty when
+   * there is nothing to suggest.
+   */
+  filterSuggestions: MonoFilterSuggestion[];
+  /**
+   * Publish the offers (a list, largest first, or a single one) — or clear them with
+   * `null` / `[]`. Notifies on change only.
+   */
+  setFilterSuggestion(next: MonoFilterSuggestion | MonoFilterSuggestion[] | null): void;
   /**
    * An explicit filter of the grid's own — what the slotted filter builder
    * writes. One LAYER of the query, not the whole of it: it is AND-ed with the

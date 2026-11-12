@@ -32,7 +32,7 @@ import {
 } from '../../composables/hybird-prop'
 import type { MonoFormController } from '../form/form-types.js'
 import { createApplyGate } from '../../utils/data-source-apply'
-import { probeFilterSuggestion, type MonoSuggestionFilter } from './filter-suggestion.js'
+import { probeFilterSuggestions, type MonoSuggestionFilter } from './filter-suggestion.js'
 
 /** Per-build icon hooks the search core delegates to. */
 export type TableSearchIconName = 'search' | 'close' | 'chevron'
@@ -257,7 +257,7 @@ export const MonoTableSearchCore = <T extends Constructor<LitElement>>(superClas
           dataSource: grid.dataSource,
           searchValue: () => grid.searchValue(),
         }
-        void probeFilterSuggestion(cfg!, { grid: view, form: form!, gate: this._probeGate })
+        void probeFilterSuggestions(cfg!, { grid: view, form: form!, gate: this._probeGate })
           .then((found) => {
             if (seq === this._probeSeq) grid.setFilterSuggestion?.(found)
           })
