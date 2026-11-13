@@ -1,5 +1,4 @@
-import { NodeTypes, parse } from "@vue/compiler-dom";
-import { parse as parse$1 } from "@vue/compiler-sfc";
+import { parse } from "vue/compiler-sfc";
 import MagicString from "magic-string";
 
 //#region src/vite/shadow-manifest.ts
@@ -74,6 +73,13 @@ function shadowTagsFromScript(script) {
 
 //#endregion
 //#region src/vite/mono-client-only.ts
+const NodeTypes = {
+	ELEMENT: 1,
+	TEXT: 2,
+	COMMENT: 3,
+	ATTRIBUTE: 6,
+	DIRECTIVE: 7
+};
 const LIT_DIRECTIVES_TO_MOVE = [
 	"v-for",
 	":key",
@@ -121,18 +127,19 @@ function monoClientOnlyPlugin(options = {}) {
 			if (!filename.endsWith(".vue")) return null;
 			if (filename.includes("/node_modules/") || filename.includes("\\node_modules\\")) return null;
 			if (!source.toLowerCase().includes(`<${normalizedPrefix}`)) return null;
-			const { descriptor, errors } = parse$1(source, { filename });
-			if (errors.length > 0 || !descriptor.template) return null;
+			const { descriptor, errors } = parse(source, {
+				filename,
+				templateParseOptions: { comments: true }
+			});
+			if (errors.length > 0 || !descriptor.template?.ast) return null;
 			const fileShadowTags = /* @__PURE__ */ new Set();
 			if (litWrapper) {
 				for (const tag of shadowOverride) fileShadowTags.add(tag);
 				const script = `${descriptor.scriptSetup?.content ?? ""}\n${descriptor.script?.content ?? ""}`;
 				for (const tag of shadowTagsFromScript(script)) fileShadowTags.add(tag);
 			}
-			const template = descriptor.template;
-			const ast = parse(template.content, { comments: true });
+			const ast = descriptor.template.ast;
 			const magicString = new MagicString(source);
-			const templateOffset = template.loc.start.offset;
 			let changed = false;
 			/** A `mono-*` element whose shadow build this file imports → SSR-wrapped. */
 			function isShadowElement(node) {
@@ -154,8 +161,8 @@ function monoClientOnlyPlugin(options = {}) {
 			* No skeleton fallback — the element is server-rendered to DSD.
 			*/
 			function wrapLit(node) {
-				const start = templateOffset + node.loc.start.offset;
-				const end = templateOffset + node.loc.end.offset;
+				const start = node.loc.start.offset;
+				const end = node.loc.end.offset;
 				const moved = node.props.filter((prop) => prop.type === NodeTypes.DIRECTIVE && !!prop.rawName && LIT_DIRECTIVES_TO_MOVE.includes(prop.rawName));
 				const directivesToAdd = moved.length ? ` ${moved.map((prop) => prop.loc.source).join(" ")}` : "";
 				const startTag = `<${litWrapperComponent}${directivesToAdd}>`;
@@ -165,7 +172,7 @@ function monoClientOnlyPlugin(options = {}) {
 					magicString.overwrite(start, end, `${startTag}${stripped}${endTag}`);
 				} else {
 					const lastProp = node.props.length ? node.props[node.props.length - 1] : void 0;
-					const contentStart = lastProp ? templateOffset + lastProp.loc.end.offset : start + node.tag.length + 2;
+					const contentStart = lastProp ? lastProp.loc.end.offset : start + node.tag.length + 2;
 					const stripped = source.slice(start, contentStart).replace(litDirectivesRegex, "").trim();
 					magicString.overwrite(start, contentStart, stripped);
 					magicString.prependLeft(start, startTag);
@@ -174,13 +181,13 @@ function monoClientOnlyPlugin(options = {}) {
 				changed = true;
 			}
 			function wrapRange(firstNode, lastNode) {
-				const start = templateOffset + firstNode.loc.start.offset;
-				const end = templateOffset + lastNode.loc.end.offset;
+				const start = firstNode.loc.start.offset;
+				const end = lastNode.loc.end.offset;
 				function extractAndRemoveStaticAttr(name) {
 					const attribute = getStaticAttribute(firstNode, name);
 					if (!attribute) return "";
-					const attributeStart = templateOffset + attribute.loc.start.offset;
-					const attributeEnd = templateOffset + attribute.loc.end.offset;
+					const attributeStart = attribute.loc.start.offset;
+					const attributeEnd = attribute.loc.end.offset;
 					let removalStart = attributeStart;
 					while (removalStart > start && /\s/.test(source[removalStart - 1] ?? "")) removalStart--;
 					magicString.remove(removalStart, attributeEnd);

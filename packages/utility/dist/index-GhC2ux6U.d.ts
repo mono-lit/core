@@ -3,7 +3,6 @@ import { NotivueItem, PushOptions } from "notivue";
 import { RouteLocationNormalizedLoadedGeneric, Router } from "vue-router";
 import DataSource, { DataSourceOptions } from "devextreme/data/data_source";
 import CustomStore, { CustomStoreOptions } from "devextreme/data/custom_store";
-import { FetchRequestConfig } from "@odata2ts/http-client-fetch";
 import ODataStore, { ODataStoreOptions } from "devextreme/data/odata/store";
 import { DxColumn, DxDataGrid, DxDataGridTypes } from "devextreme-vue/data-grid";
 import * as yup from "yup";
@@ -43,6 +42,18 @@ type Result<T> = {
   };
 };
 declare function createStaticDatasource<T extends AnyObj>(opts: UseOdataStaticOpts<T>): Promise<Result<T>>;
+//#endregion
+//#region ../../node_modules/.pnpm/@odata2ts+http-client-fetch@0.9.0/node_modules/@odata2ts/http-client-fetch/lib/FetchRequestConfig.d.ts
+/**
+ * Available config options for end user when making a given request.
+ */
+interface FetchRequestConfig extends Partial<Pick<RequestInit, "credentials" | "cache" | "mode" | "redirect" | "referrerPolicy" | "signal">> {
+  headers?: Record<string, string> | Headers;
+  /**
+   * Add query params.
+   */
+  params?: Record<string, string | number | boolean | Array<string | number | boolean>>;
+}
 //#endregion
 //#region src/core/types/notif-action.d.ts
 /** Relaxed button descriptor — no Vuetify dependency. */

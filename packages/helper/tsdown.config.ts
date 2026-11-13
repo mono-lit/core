@@ -45,7 +45,8 @@ const NO_DOM_ENTITY_DECODER = createRequire(import.meta.url).resolve(
 //  - `@mono-lit/utility`: an optional peer used only by the chart's `odata` path;
 //    inlining it would drag the whole fetching stack (devextreme included) into
 //    `dist/ui/chart.js`.
-//  - `vite`, `magic-string`, `@vue/*`, `@nuxt/*`, `node:*`: tooling used only by
+//  - `vite`, `magic-string`, `vue/*` (the plugin's `vue/compiler-sfc`, so it follows
+//    the app's vue), `@vue/*`, `@nuxt/*`, `node:*`: tooling used only by
 //    the `vite` / `nuxt` entries.
 const NEVER_BUNDLE: (string | RegExp)[] = [
     /^exceljs(\/|$)/,
@@ -62,6 +63,7 @@ const NEVER_BUNDLE: (string | RegExp)[] = [
     /^@mono-lit\/utility(\/|$)/,
     /^vite$/,
     /^magic-string$/,
+    /^vue(\/|$)/,
     /^@vue\//,
     /^@nuxt\//,
     /^node:/,

@@ -1,4 +1,4 @@
-import { t as monoSsr } from "./vite-CivRCJaf.js";
+import { t as monoSsr } from "./vite-CfW7z2wn.js";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { addComponent, addPlugin, addPluginTemplate, addVitePlugin, createResolver, defineNuxtModule, extendViteConfig, hasNuxtModule, tryResolveModule, useLogger } from "@nuxt/kit";

@@ -1,20 +1,31 @@
 // src/vite/mono-client-only.ts
-import {
-  NodeTypes,
-  parse as parseTemplate,
-} from '@vue/compiler-dom'
-import { parse as parseSfc } from '@vue/compiler-sfc'
+// The SFC compiler comes from the app's own `vue` (`vue/compiler-sfc` re-exports
+// @vue/compiler-sfc), so it always matches the app's vue version — @mono-lit/helper
+// pins no @vue/compiler-* of its own. The AST types below are type-only (erased).
+import { parse as parseSfc } from 'vue/compiler-sfc'
 import type {
   AttributeNode,
   DirectiveNode,
   ElementNode,
-  RootNode,
+  NodeTypes as VueNodeTypes,
   TemplateChildNode,
 } from '@vue/compiler-dom'
 import MagicString from 'magic-string'
 import type { Plugin } from 'vite'
 
 import { shadowTagsFromScript } from './shadow-manifest'
+
+// The `NodeTypes` values this plugin reads. The enum lives in @vue/compiler-core,
+// which `vue/compiler-sfc` doesn't re-export as a value; these numbers are part of
+// Vue's AST contract (tests/vite-client-only-chain.test.ts checks them). Not exported:
+// an exported const would put a `@vue/compiler-dom` type into the published .d.ts.
+const NodeTypes = {
+  ELEMENT: 1 as VueNodeTypes.ELEMENT,
+  TEXT: 2 as VueNodeTypes.TEXT,
+  COMMENT: 3 as VueNodeTypes.COMMENT,
+  ATTRIBUTE: 6 as VueNodeTypes.ATTRIBUTE,
+  DIRECTIVE: 7 as VueNodeTypes.DIRECTIVE,
+} as const
 
 // Directives that must move from the element ONTO the `<LitWrapper>` wrapper so
 // list/conditional rendering works on the wrapper, not inside the shadow host.
@@ -154,11 +165,15 @@ export function monoClientOnlyPlugin(
         return null
       }
 
+      // `comments: true` keeps comment nodes in production too, so a v-if chain
+      // with a comment between its branches is still read as one chain.
       const { descriptor, errors } = parseSfc(source, {
         filename,
+        templateParseOptions: { comments: true },
       })
 
-      if (errors.length > 0 || !descriptor.template) {
+      // `template.ast` is the template parsed in place (absent for `<template src>`).
+      if (errors.length > 0 || !descriptor.template?.ast) {
         return null
       }
 
@@ -175,14 +190,11 @@ export function monoClientOnlyPlugin(
         }
       }
 
-      const template = descriptor.template
-
-      const ast = parseTemplate(template.content, {
-        comments: true,
-      })
+      // Its node offsets are relative to the whole SFC `source`, so they index
+      // `magicString` directly.
+      const ast = descriptor.template.ast
 
       const magicString = new MagicString(source)
-      const templateOffset = template.loc.start.offset
 
       let changed = false
 
@@ -211,8 +223,8 @@ export function monoClientOnlyPlugin(
        * No skeleton fallback — the element is server-rendered to DSD.
        */
       function wrapLit(node: ElementNode): void {
-        const start = templateOffset + node.loc.start.offset
-        const end = templateOffset + node.loc.end.offset
+        const start = node.loc.start.offset
+        const end = node.loc.end.offset
 
         const moved = node.props.filter(
           (prop): prop is DirectiveNode =>
@@ -237,7 +249,7 @@ export function monoClientOnlyPlugin(
             ? node.props[node.props.length - 1]
             : undefined
           const contentStart = lastProp
-            ? templateOffset + lastProp.loc.end.offset
+            ? lastProp.loc.end.offset
             : start + node.tag.length + 2
           const stripped = source
             .slice(start, contentStart)
@@ -256,10 +268,10 @@ export function monoClientOnlyPlugin(
         lastNode: ElementNode,
       ): void {
         const start =
-          templateOffset + firstNode.loc.start.offset
+          firstNode.loc.start.offset
 
         const end =
-          templateOffset + lastNode.loc.end.offset
+          lastNode.loc.end.offset
 
         /*
          * Read a static attribute's value and strip it (plus its preceding
@@ -274,10 +286,10 @@ export function monoClientOnlyPlugin(
           }
 
           const attributeStart =
-            templateOffset + attribute.loc.start.offset
+            attribute.loc.start.offset
 
           const attributeEnd =
-            templateOffset + attribute.loc.end.offset
+            attribute.loc.end.offset
 
           let removalStart = attributeStart
 
@@ -532,7 +544,7 @@ export function monoClientOnlyPlugin(
       }
 
       visitChildren(
-        (ast as RootNode).children,
+        ast.children,
         false,
         false,
       )
