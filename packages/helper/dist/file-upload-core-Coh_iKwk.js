@@ -1,7 +1,7 @@
 import { a as defineHybridPropAlias, n as arrayHasChanged, o as defineHybridPropAliases, r as booleanStringConverter, t as __decorate } from "./decorate-BpnJwD08.js";
 import { t as dispatchMonoEvent } from "./mono-event-CAZf0F_k.js";
 import { t as isIconifyClass } from "./icon-BM9N-jOt.js";
-import { t as MonoFormControlCore } from "./form-control-core-2y0eTQRI.js";
+import { t as MonoFormControlCore } from "./form-control-core-D49tMELi.js";
 import { html, isServer, nothing } from "lit";
 import { property, query, state } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";

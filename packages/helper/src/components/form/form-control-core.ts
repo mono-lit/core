@@ -11,6 +11,7 @@ import {
 } from '../../composables/hybird-prop'
 import { applyProps, detachEventHandlers } from '../../composables/element-props'
 import { applyVisibility, type MonoVisibleType } from '../../composables/visibility'
+import { isEditCellControl, markTableCell, unmarkTableCell } from '../../composables/table-cell-marks'
 import type { MonoFormController, MonoFormListEntry } from './form-types.js'
 
 /** Public surface added by the form-control mixin. */
@@ -95,12 +96,15 @@ export const MonoFormControlCore = <T extends Constructor<LitElement>>(superClas
       this._bindForm()
       this.addEventListener('mno-input', this._onFormInput as EventListener)
       this.addEventListener('mno-change', this._onFormChange as EventListener)
+      // A table cell holding this control is an editing cell — see `table-cell-marks.ts`.
+      if (isEditCellControl(this)) markTableCell(this, 'mono-edit-cell')
     }
 
     override disconnectedCallback(): void {
       this.removeEventListener('mno-input', this._onFormInput as EventListener)
       this.removeEventListener('mno-change', this._onFormChange as EventListener)
       this._unbindForm()
+      unmarkTableCell(this)
       super.disconnectedCallback()
     }
 

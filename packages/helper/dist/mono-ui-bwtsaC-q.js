@@ -475,6 +475,84 @@ function headerWidth(cell, host) {
 	}
 	return width + boxX(getComputedStyle(cell));
 }
+/** The body / footer row of `table` that `node` sits in — never a row of a table nested in a cell. */
+function ownRow(node, table) {
+	for (let el = node instanceof Element ? node : node.parentElement; el; el = el.parentElement) {
+		if (el === table) return void 0;
+		if (el.tagName === "TR" && el.parentElement?.parentElement === table) return el;
+	}
+}
+/**
+* ONE observer + input listener per TABLE, shared by every auto column in it.
+*
+* Each column used to own a `subtree` observer on the whole table. Under virtual scroll every
+* window shift inserts and removes dozens of rows, so a table with 13 auto columns queued 13
+* copies of every record (≈112k records for a 120-step scroll) and each column re-measured the
+* WHOLE body, header included, on every step. The records are now classified once — which rows
+* came in or changed — and each column decides from that how much to re-measure.
+*/
+var TableWatch = class {
+	constructor(table) {
+		this.table = table;
+		this.sizers = /* @__PURE__ */ new Set();
+		this._onInput = (e) => {
+			const t = e.target;
+			if (!t || this.table.tHead?.contains(t)) return;
+			const row = ownRow(t, this.table);
+			this._notify({
+				rows: new Set(row ? [row] : []),
+				full: !row
+			});
+		};
+		this._onFonts = () => {
+			digitWidths.clear();
+			for (const s of this.sizers) s.schedule();
+		};
+		this._observer = new MutationObserver((records) => this._onRecords(records));
+		this._observer.observe(table, {
+			childList: true,
+			characterData: true,
+			subtree: true
+		});
+		table.addEventListener("input", this._onInput, true);
+		document.fonts?.addEventListener?.("loadingdone", this._onFonts);
+	}
+	dispose() {
+		this._observer.disconnect();
+		this.table.removeEventListener("input", this._onInput, true);
+		document.fonts?.removeEventListener?.("loadingdone", this._onFonts);
+	}
+	_onRecords(records) {
+		const head = this.table.tHead;
+		const change = {
+			rows: /* @__PURE__ */ new Set(),
+			full: false
+		};
+		let relevant = false;
+		for (const r of records) {
+			if (head?.contains(r.target)) continue;
+			relevant = true;
+			const target = r.target;
+			const isSection = target.parentNode === this.table && /^(TBODY|TFOOT)$/.test(target.tagName ?? "");
+			if (r.type === "childList" && isSection) {
+				for (const n of Array.from(r.addedNodes)) {
+					if (n.nodeType !== Node.ELEMENT_NODE) continue;
+					if (n.tagName === "TR") change.rows.add(n);
+					else change.full = true;
+				}
+				continue;
+			}
+			const row = ownRow(target, this.table);
+			if (row) change.rows.add(row);
+			else change.full = true;
+		}
+		if (relevant) this._notify(change);
+	}
+	_notify(change) {
+		for (const s of this.sizers) s._bodyChanged(change);
+	}
+};
+const tableWatches = /* @__PURE__ */ new WeakMap();
 /**
 * One auto-sized column, owned by its `mono-table-th`. `schedule()` coalesces every trigger (a
 * controller notify, a body mutation, typing in an editor) into one measurement per frame.
@@ -485,14 +563,8 @@ var ColumnAutoSize = class ColumnAutoSize {
 		this.growOnly = false;
 		this._floor = 0;
 		this._raf = 0;
-		this._onInput = (e) => {
-			const t = e.target;
-			if (t && this._table && !this._table.tHead?.contains(t)) this.schedule();
-		};
-		this._onFonts = () => {
-			digitWidths.clear();
-			this.schedule();
-		};
+		this._full = true;
+		this._dirty = /* @__PURE__ */ new Set();
 	}
 	static {
 		this._queued = /* @__PURE__ */ new Set();
@@ -510,7 +582,22 @@ var ColumnAutoSize = class ColumnAutoSize {
 		});
 		for (const write of writes) write?.();
 	}
+	/** Re-measure everything — header, body and footer — on the next frame. */
 	schedule() {
+		this._full = true;
+		this._queue();
+	}
+	/**
+	* @internal — from the table's shared watcher. A grow-only column with a floor already set only
+	* needs the rows that came in or changed (a removed row cannot make it wider); anything else
+	* measures in full.
+	*/
+	_bodyChanged(change) {
+		if (change.full || !this.growOnly || !this._floor) this._full = true;
+		else for (const row of change.rows) this._dirty.add(row);
+		if (this._full || this._dirty.size) this._queue();
+	}
+	_queue() {
 		if (this._raf) return;
 		this._raf = 1;
 		ColumnAutoSize._queued.add(this);
@@ -526,6 +613,8 @@ var ColumnAutoSize = class ColumnAutoSize {
 	stop(clear = false) {
 		ColumnAutoSize._queued.delete(this);
 		this._raf = 0;
+		this._full = true;
+		this._dirty.clear();
 		this._unwatch();
 		if (clear && this._wrote) {
 			if (this._wrote.col) this._wrote.col.style.width = "";
@@ -533,45 +622,58 @@ var ColumnAutoSize = class ColumnAutoSize {
 		}
 		this._wrote = void 0;
 	}
-	_watch(table) {
-		if (this._table === table) return;
+	_watchTable(table) {
+		if (this._watch?.table === table) return;
 		this._unwatch();
-		this._table = table;
-		this._observer = new MutationObserver((records) => {
-			const head = table.tHead;
-			if (records.some((r) => !head?.contains(r.target))) this.schedule();
-		});
-		this._observer.observe(table, {
-			childList: true,
-			characterData: true,
-			subtree: true
-		});
-		table.addEventListener("input", this._onInput, true);
-		document.fonts?.addEventListener?.("loadingdone", this._onFonts);
+		let watch = tableWatches.get(table);
+		if (!watch) tableWatches.set(table, watch = new TableWatch(table));
+		watch.sizers.add(this);
+		this._watch = watch;
 	}
 	_unwatch() {
-		this._observer?.disconnect();
-		this._observer = void 0;
-		this._table?.removeEventListener("input", this._onInput, true);
-		document.fonts?.removeEventListener?.("loadingdone", this._onFonts);
-		this._table = void 0;
+		const watch = this._watch;
+		if (!watch) return;
+		this._watch = void 0;
+		watch.sizers.delete(this);
+		if (!watch.sizers.size) {
+			watch.dispose();
+			tableWatches.delete(watch.table);
+		}
 	}
 	/** Measure now (reads only); returns the write to apply after every sizer has measured. */
 	_measure() {
 		const cell = this.host.closest("th, td");
 		const table = cell?.closest("table");
 		if (!cell || !table || !this.host.isConnected) return null;
-		this._watch(table);
+		this._watchTable(table);
 		const index = headerColumnIndex(cell);
-		let width = headerWidth(cell, this.host);
-		const sections = [...Array.from(table.tBodies), ...table.tFoot ? [table.tFoot] : []];
-		for (const section of sections) for (const row of Array.from(section.rows)) {
-			const target = cellAt(row, index);
-			if (target) width = Math.max(width, contentWidth(target));
+		const full = this._full || !this.growOnly || !this._floor;
+		const dirty = this._dirty;
+		this._full = false;
+		this._dirty = /* @__PURE__ */ new Set();
+		let width;
+		if (full) {
+			width = headerWidth(cell, this.host);
+			const sections = [...Array.from(table.tBodies), ...table.tFoot ? [table.tFoot] : []];
+			for (const section of sections) for (const row of Array.from(section.rows)) {
+				const target = cellAt(row, index);
+				if (target) width = Math.max(width, contentWidth(target));
+			}
+		} else {
+			width = 0;
+			for (const row of dirty) {
+				if (!row.isConnected || row.parentElement?.parentElement !== table) continue;
+				const target = cellAt(row, index);
+				if (target) width = Math.max(width, contentWidth(target));
+			}
+			if (!width) return null;
 		}
 		width = Math.ceil(clampWidth(width + 1, this.min, this.max));
-		if (this.growOnly) width = this._floor = Math.max(width, this._floor);
-		else this._floor = 0;
+		if (this.growOnly) {
+			const grown = Math.max(width, this._floor);
+			if (!full && grown === this._floor) return null;
+			width = this._floor = grown;
+		} else this._floor = 0;
 		const value = `${width}px`;
 		const col = colAt(table, index);
 		return () => {

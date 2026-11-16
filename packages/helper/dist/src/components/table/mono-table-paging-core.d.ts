@@ -13,6 +13,8 @@ export declare class MonoTablePagingCoreInterface extends MonoTableControllerCor
   scrollTarget?: string;
   threshold: number;
   overscan: number;
+  renderAllBelow: number;
+  fillChunk: number;
   prevIcon: string;
   nextIcon: string;
   protected _renderIcon(direction: 'prev' | 'next'): TemplateResult;

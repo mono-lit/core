@@ -158,6 +158,61 @@ describe('ColumnAutoSize', () => {
     expect(width().col).toBe('31px')
     sizer.stop()
   })
+
+  it('growOnly measures only the rows that scrolled in — and grows for a wider one', async () => {
+    const { table, sizer, width } = mount(['1.000', '2.000', '3.000'])
+    sizer.growOnly = true
+    sizer.schedule()
+    await tick()
+    expect(width().col).toBe('51px')
+
+    const measured: string[] = []
+    autosizeEnv.measure = (text) => (measured.push(text), text.length * 10)
+    const tbody = table.tBodies[0]!
+    const row = document.createElement('tr')
+    row.innerHTML = '<td>row</td><td>12.345.678</td>'
+    tbody.appendChild(row)
+    tbody.rows[1]!.remove() // the window's far edge leaving — must not trigger a full pass
+    await tick()
+    expect(width().col).toBe('101px')
+    // The new row's cell only: no header caption, no row already in the floor.
+    expect(measured).toEqual(['12.345.678'])
+
+    measured.length = 0
+    const narrow = document.createElement('tr')
+    narrow.innerHTML = '<td>row</td><td>7</td>'
+    tbody.appendChild(narrow)
+    await tick()
+    expect(measured).toEqual(['7'])
+    expect(width().col).toBe('101px')
+    sizer.stop()
+  })
+
+  it('shares one watcher per table: every auto column follows a body change, a stopped one does not', async () => {
+    const { table, sizer, width } = mount(['0'])
+    const first = new ColumnAutoSize(table.querySelector('th') as HTMLElement)
+    sizer.schedule()
+    first.schedule()
+    await tick()
+    const firstWidth = () => (table.querySelectorAll('col')[0] as HTMLElement).style.width
+    expect(firstWidth()).toBe('41px') // "Name"
+    expect(width().col).toBe('31px')
+
+    const row = table.tBodies[0]!.rows[1]!
+    row.cells[0]!.textContent = 'a longer name'
+    row.cells[1]!.textContent = '9.999.999'
+    await tick()
+    expect(firstWidth()).toBe('131px')
+    expect(width().col).toBe('91px')
+
+    first.stop()
+    row.cells[0]!.textContent = 'x'
+    row.cells[1]!.textContent = '1'
+    await tick()
+    expect(firstWidth()).toBe('131px') // stopped: no longer follows
+    expect(width().col).toBe('31px') // still watched after its sibling left
+    sizer.stop()
+  })
 })
 
 describe('mono-width / mono-min-width / mono-max-width attributes', () => {

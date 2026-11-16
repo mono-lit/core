@@ -1,4 +1,4 @@
-import { t as customElement } from "../../mono-element-CKcT0rwv.js";
+import { t as customElement } from "../../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../../decorate-BpnJwD08.js";
 import { i as validateNavProps, n as generateNavRootClasses, r as getNavHeight, t as MonoNavCore } from "../../nav-core-qizaE3H0.js";
 import { i as withShadowUtilityStyles, r as toShadowCss, t as flushSsrHydration } from "../../hydration-flush-Volt9X7Q.js";

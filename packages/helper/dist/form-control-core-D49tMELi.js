@@ -1,5 +1,6 @@
 import { n as detachEventHandlers, t as applyProps } from "./element-props-xvw0EB7H.js";
 import { a as defineHybridPropAlias, o as defineHybridPropAliases, r as booleanStringConverter, t as __decorate } from "./decorate-BpnJwD08.js";
+import { i as unmarkTableCell, n as isEditCellControl, r as markTableCell } from "./table-cell-marks-B6PFlSqD.js";
 import { property } from "lit/decorators.js";
 
 //#region src/composables/visibility.ts
@@ -98,11 +99,13 @@ const MonoFormControlCore = (superClass) => {
 			this._bindForm();
 			this.addEventListener("mno-input", this._onFormInput);
 			this.addEventListener("mno-change", this._onFormChange);
+			if (isEditCellControl(this)) markTableCell(this, "mono-edit-cell");
 		}
 		disconnectedCallback() {
 			this.removeEventListener("mno-input", this._onFormInput);
 			this.removeEventListener("mno-change", this._onFormChange);
 			this._unbindForm();
+			unmarkTableCell(this);
 			super.disconnectedCallback();
 		}
 		/**

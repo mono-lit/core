@@ -842,6 +842,13 @@ The same mode over a remote OData DataSource — each appended page is a real `s
 <DemoSingle name="table" id="virtual-scroll" />
 </ClientOnly>
 
+**Small sets: `render-all-below`.** A window swaps rows on every `overscan` step, and each swap re-renders and re-styles the table. On a wide table (sticky columns, many cells per row) Chrome can stall the scroll on that. When the loaded set has at most `render-all-below` rows, the pager stops windowing and mounts every row instead — progressively, `fill-chunk` rows per frame (default 40), starting with what the viewport shows — so scrolling does no DOM work at all. Past the limit the window comes back. Default `0`: always windowed.
+
+```html
+<mono-table-paging type="virtual-scroll" :control-table.prop="table" :row-height="34"
+  :overscan="12" :render-all-below="800" />
+```
+
 Virtual scroll over a remote DataSource — the DOM stays tiny *and* the server is paged as the window nears the loaded end; `:size` overrides the source's page size.
 
 <ClientOnly>

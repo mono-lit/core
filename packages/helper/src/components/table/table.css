@@ -1874,12 +1874,15 @@ mono-shadow-table-th[data-filtered] :is([mono-th-filter-ind],.mono-th-filter-ind
    NOTE: `--theme-radius-full` is deliberately left alone — the switch track and
    thumb depend on it. Same for checkbox/switch sizing: they're glyph controls,
    not text fields, so they only lose their resting shadow — their sizes AND their
-   border width are restored below (an unchecked checkbox is drawn by its border). */
-:is([mono-table],.mono-table) td:has(mono-input, mono-textarea, mono-select, mono-tag-input, mono-date,
-    mono-dropdown-table, mono-checkbox, mono-radio, mono-switch),
-:is([mono-table],.mono-table) td:has(mono-shadow-input, mono-shadow-textarea, mono-shadow-select,
-    mono-shadow-tag-input, mono-shadow-date, mono-shadow-dropdown-table,
-    mono-shadow-checkbox, mono-shadow-radio, mono-shadow-switch) {
+   border width are restored below (an unchecked checkbox is drawn by its border).
+
+   DETECTION is the `mono-edit-cell` attribute, which the control (input, textarea,
+   select, tag-input, date, dropdown-table, checkbox, radio, switch — both builds)
+   sets on its closest `<td>` when it connects. It used to be
+   `td:has(mono-input, …)`: in Chrome that re-ran over every cell on every row a
+   virtual-scroll window inserted — most of a scroll step's style + layout cost on a
+   wide table. See `composables/table-cell-marks.ts`. */
+:is([mono-table],.mono-table) td[mono-edit-cell] {
   /* geometry — the single lever that also reaches the shadow builds */
   /* 0px, not 0: these tokens are also read inside calc() (a switch builds its
      track from the border, a ring adds it to a shadow), and adding a UNITLESS
@@ -2143,12 +2146,7 @@ mono-shadow-table-th[data-filtered] :is([mono-th-filter-ind],.mono-th-filter-ind
 
 /* `mono-table-fixed` clips with ellipsis; an editing cell must not clip its
    editor (or a select/date popup anchored in it). */
-:is([mono-table],.mono-table):is([mono-fixed],.mono-table-fixed) td:has(mono-input, mono-textarea, mono-select, mono-tag-input,
-    mono-date, mono-dropdown-table, mono-checkbox, mono-radio, mono-switch),
-:is([mono-table],.mono-table):is([mono-fixed],.mono-table-fixed) td:has(mono-shadow-input, mono-shadow-textarea,
-    mono-shadow-select, mono-shadow-tag-input, mono-shadow-date,
-    mono-shadow-dropdown-table, mono-shadow-checkbox, mono-shadow-radio,
-    mono-shadow-switch) {
+:is([mono-table],.mono-table):is([mono-fixed],.mono-table-fixed) td[mono-edit-cell] {
   overflow: visible;
   white-space: normal;
 }
@@ -2157,9 +2155,9 @@ mono-shadow-table-th[data-filtered] :is([mono-th-filter-ind],.mono-th-filter-ind
    gives every cell `overflow: hidden; white-space: nowrap`, which silently cuts
    off a Save/Cancel pair the moment the column is a few px too narrow — the
    button is still there and still clickable, just invisible. Keep `nowrap` so
-   the buttons stay on one line, but let them out of the box. */
-:is([mono-table],.mono-table):is([mono-fixed],.mono-table-fixed) td:has(> mono-button),
-:is([mono-table],.mono-table):is([mono-fixed],.mono-table-fixed) td:has(> mono-shadow-button) {
+   the buttons stay on one line, but let them out of the box. `mono-action-cell` is set
+   by a `<mono-button>` that is a DIRECT child of the cell (was `td:has(> mono-button)`). */
+:is([mono-table],.mono-table):is([mono-fixed],.mono-table-fixed) td[mono-action-cell] {
   overflow: visible;
 }
 
@@ -2168,11 +2166,7 @@ mono-shadow-table-th[data-filtered] :is([mono-th-filter-ind],.mono-th-filter-ind
    component in both builds. Geometry matches the `underlined` form variant —
    spread cancels blur, so the glow stays under the line instead of ringing the
    cell. */
-:is([mono-table],.mono-table) td:has(mono-input, mono-textarea, mono-select, mono-tag-input, mono-date,
-    mono-dropdown-table, mono-checkbox, mono-radio, mono-switch):focus-within,
-:is([mono-table],.mono-table) td:has(mono-shadow-input, mono-shadow-textarea, mono-shadow-select,
-    mono-shadow-tag-input, mono-shadow-date, mono-shadow-dropdown-table,
-    mono-shadow-checkbox, mono-shadow-radio, mono-shadow-switch):focus-within {
+:is([mono-table],.mono-table) td[mono-edit-cell]:focus-within {
   box-shadow:
     inset 0 -2px 0 var(--_mono-table-accent),
     0 5px 6px -6px rgba(var(--theme-primary-rgb, 30, 58, 110), 0.5);

@@ -1,6 +1,7 @@
-import { d as buildSizeStyle } from "./mono-ui-kvLVIf1V.js";
+import { d as buildSizeStyle } from "./mono-ui-bwtsaC-q.js";
 import { o as defineHybridPropAliases, r as booleanStringConverter, t as __decorate } from "./decorate-BpnJwD08.js";
 import { t as dispatchMonoEvent } from "./mono-event-CAZf0F_k.js";
+import { i as unmarkTableCell, r as markTableCell, t as isActionCellButton } from "./table-cell-marks-B6PFlSqD.js";
 import { a as rateLimitHasChanged, i as rateLimitConverter, n as normalizeDebounce, r as normalizeThrottle, t as createRateLimiter } from "./rate-limit-e9Jlpl5l.js";
 import { html, nothing } from "lit";
 import { property, query, state } from "lit/decorators.js";
@@ -189,11 +190,16 @@ const MonoButtonCore = (superClass) => {
 			this._debouncer?.cancel();
 			this._syncLoading();
 		}
+		connectedCallback() {
+			super.connectedCallback();
+			if (isActionCellButton(this)) markTableCell(this, "mono-action-cell");
+		}
 		disconnectedCallback() {
 			this._throttler?.dispose();
 			this._debouncer?.dispose();
 			this._throttler = null;
 			this._debouncer = null;
+			unmarkTableCell(this);
 			super.disconnectedCallback();
 		}
 		_cls(base, key) {

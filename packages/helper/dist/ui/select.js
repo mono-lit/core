@@ -1,8 +1,8 @@
-import { g as monoHostChildNodes } from "../mono-ui-kvLVIf1V.js";
-import { t as customElement } from "../mono-element-CKcT0rwv.js";
+import { g as monoHostChildNodes } from "../mono-ui-bwtsaC-q.js";
+import { t as customElement } from "../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../decorate-BpnJwD08.js";
-import { s as placeSlotNode } from "../light-slots-DGiBODnU.js";
-import { n as MonoSelectCore, t as validateSelectProps } from "../select-utils-Dq4oDOIP.js";
+import { s as placeSlotNode } from "../light-slots-CQuCgSHh.js";
+import { n as MonoSelectCore, t as validateSelectProps } from "../select-utils-C8Mmsr4h.js";
 import { LitElement, html } from "lit";
 
 //#region src/components/select/mono-select.ts

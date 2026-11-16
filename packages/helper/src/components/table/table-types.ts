@@ -344,6 +344,15 @@ export interface TablePagingProps extends TableControlBase {
   threshold?: number
   /** Extra rows rendered above/below the virtual window (default 6). */
   overscan?: number
+  /**
+   * `virtual-scroll` only: at most this many loaded rows → no window, every row mounted
+   * (progressively, `fill-chunk` per frame). Default `0` = always windowed.
+   */
+  renderAllBelow?: number
+  'render-all-below'?: number
+  /** Rows added per frame while a `render-all-below` table fills (default 40). */
+  fillChunk?: number
+  'fill-chunk'?: number
 }
 
 /**

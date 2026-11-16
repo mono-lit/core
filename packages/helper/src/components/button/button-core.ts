@@ -24,6 +24,7 @@ import {
 } from '../../composables/hybird-prop'
 import { buildSizeStyle, type CssSizeValue } from '../../composables/css-size'
 import { dispatchMonoEvent } from '../../composables/mono-event'
+import { isActionCellButton, markTableCell, unmarkTableCell } from '../../composables/table-cell-marks'
 import {
   createRateLimiter,
   normalizeDebounce,
@@ -541,11 +542,18 @@ export const MonoButtonCore = <T extends Constructor<LitElement>>(
       this._syncLoading()
     }
 
+    override connectedCallback(): void {
+      super.connectedCallback()
+      // A row-action cell must not ellipsis-clip its buttons — see `table-cell-marks.ts`.
+      if (isActionCellButton(this)) markTableCell(this, 'mono-action-cell')
+    }
+
     override disconnectedCallback(): void {
       this._throttler?.dispose()
       this._debouncer?.dispose()
       this._throttler = null
       this._debouncer = null
+      unmarkTableCell(this)
       super.disconnectedCallback()
     }
 

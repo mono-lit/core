@@ -1,4 +1,4 @@
-import { t as customElement } from "../../mono-element-CKcT0rwv.js";
+import { t as customElement } from "../../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../../decorate-BpnJwD08.js";
 import { t as isIconifyClass } from "../../icon-BM9N-jOt.js";
 import { a as renderBreadcrumbItemRow, c as renderBreadcrumbSeparator, d as generateBreadcrumbRootClasses, f as resolveCurrentId, i as renderBreadcrumbIcon, l as coerceItems, n as MonoBreadcrumbCore, o as renderBreadcrumbItemsLeadingSep, p as validateBreadcrumbProps, r as renderBreadcrumbBadge, s as renderBreadcrumbList, t as MonoBreadcrumbListCore, u as findItemIndex } from "../../breadcrumb-list-core-BlMbdYWG.js";

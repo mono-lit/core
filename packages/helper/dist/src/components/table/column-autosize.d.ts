@@ -46,6 +46,16 @@ export declare function headerColumnIndex(cell: HTMLTableCellElement): number;
 /** The one-line width a cell's content needs, padding included. */
 export declare function contentWidth(cell: HTMLElement): number;
 /**
+ * What a batch of body mutations touched: the rows that were added or changed inside, and whether
+ * anything changed OUTSIDE a row (a section swapped in, a `<tfoot>` from `v-if`) — that is `full`.
+ * Removed rows are not tracked: a grow-only column cannot narrow, every other column re-measures
+ * in full on any change.
+ */
+interface BodyChange {
+  rows: Set<HTMLTableRowElement>;
+  full: boolean;
+}
+/**
  * One auto-sized column, owned by its `mono-table-th`. `schedule()` coalesces every trigger (a
  * controller notify, a body mutation, typing in an editor) into one measurement per frame.
  */
@@ -58,19 +68,19 @@ export declare class ColumnAutoSize {
    * window shift measured a different slice, so the column grew and shrank as the list scrolled and
    * every change relaid the whole table. The column settles at the widest value seen instead, until
    * `resetFloor()` (a new result set).
+   *
+   * It also makes body changes INCREMENTAL: a column that can only grow needs to look at nothing
+   * but the rows that came in or changed — everything else is already in the floor. A window shift
+   * then measures the few rows that scrolled in, not the whole window plus the header.
    */
   growOnly: boolean;
   private _floor;
   private _raf;
-  private _table?;
-  private _observer?;
+  /** The next measurement must walk header + every row (vs. only `_dirty`). */
+  private _full;
+  private _dirty;
+  private _watch?;
   private _wrote?;
-  private readonly _onInput;
-  /**
-   * A web font that finished loading after a measurement: canvas measured the FALLBACK face, so
-   * the width (and the cached digit advances) are stale — usually too narrow for the real font.
-   */
-  private readonly _onFonts;
   constructor(host: HTMLElement);
   /**
    * Every sizer on the page shares ONE frame callback (`_flush`), which measures all of them
@@ -83,14 +93,23 @@ export declare class ColumnAutoSize {
   private static _queued;
   private static _frame;
   private static _flush;
+  /** Re-measure everything — header, body and footer — on the next frame. */
   schedule(): void;
+  /**
+   * @internal — from the table's shared watcher. A grow-only column with a floor already set only
+   * needs the rows that came in or changed (a removed row cannot make it wider); anything else
+   * measures in full.
+   */
+  _bodyChanged(change: BodyChange): void;
+  private _queue;
   /** Forget the grow-only floor (new rows) and re-measure. */
   resetFloor(): void;
   /** Stop watching, and hand the column back to whatever width it is given next. */
   stop(clear?: boolean): void;
-  private _watch;
+  private _watchTable;
   private _unwatch;
   /** Measure now (reads only); returns the write to apply after every sizer has measured. */
   private _measure;
 }
 //#endregion
+export {};

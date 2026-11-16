@@ -4,12 +4,12 @@ import { C as customRemoteClause, E as hasWildcardSearch, d as DEFAULT_SEARCH_OP
 import { d as createApplyGate, g as storeRows, h as odataStoreVersion, m as odataStoreUrl } from "./data-source-options-DJUNU26C.js";
 import { a as checkState, c as setAllChecked, i as buildDateTree, l as setChecked, n as countTuples, o as minimize, r as groupCountsViaApply, s as seedFromRanges } from "./mono-data-grid-DJkp96N-.js";
 import { t as arrayToODataString } from "./filter-odata-GsczYKNC.js";
-import { b as monoPhantomOptions, d as buildSizeStyle, h as monoApplyPhantomOptions, l as ColumnAutoSize, s as startMonoSizeAttributes, u as cssLengthToPx, v as monoPendingActive, y as monoPendingGrace } from "./mono-ui-kvLVIf1V.js";
+import { b as monoPhantomOptions, d as buildSizeStyle, h as monoApplyPhantomOptions, l as ColumnAutoSize, s as startMonoSizeAttributes, u as cssLengthToPx, v as monoPendingActive, y as monoPendingGrace } from "./mono-ui-bwtsaC-q.js";
 import { n as detachEventHandlers, t as applyProps } from "./element-props-xvw0EB7H.js";
 import { a as defineHybridPropAlias, o as defineHybridPropAliases, r as booleanStringConverter, s as numberStringConverter, t as __decorate } from "./decorate-BpnJwD08.js";
 import { t as dispatchMonoEvent } from "./mono-event-CAZf0F_k.js";
 import { t as isIconifyClass } from "./icon-BM9N-jOt.js";
-import { o as placeLightSlots, r as captureLightSlots } from "./light-slots-DGiBODnU.js";
+import { o as placeLightSlots, r as captureLightSlots } from "./light-slots-CQuCgSHh.js";
 import { t as PopupPortalController } from "./popup-portal-CINuVjNY.js";
 import { n as cssPart } from "./css-class-B6Tc_MAx.js";
 import { html, isServer, nothing } from "lit";
@@ -1758,11 +1758,16 @@ const MonoTablePagingCore = (superClass) => {
 			this.rowHeight = 44;
 			this.threshold = 200;
 			this.overscan = 6;
+			this.renderAllBelow = 0;
+			this.fillChunk = 40;
 			this.prevIcon = DEFAULT_PREV_ICON;
 			this.nextIcon = DEFAULT_NEXT_ICON;
 			this._scrollEl = null;
 			this._onScrollBound = () => this._scheduleScroll();
 			this._rafPending = false;
+			this._filled = 0;
+			this._pushedEnd = 0;
+			this._fillRaf = 0;
 			this._ownsPageSize = false;
 			this._retryPending = false;
 		}
@@ -1833,6 +1838,10 @@ const MonoTablePagingCore = (superClass) => {
 			this._scheduleScroll();
 		}
 		_detachScroll() {
+			if (this._fillRaf && typeof cancelAnimationFrame === "function") cancelAnimationFrame(this._fillRaf);
+			this._fillRaf = 0;
+			this._filled = 0;
+			this._pushedEnd = 0;
 			this._scrollEl?.removeEventListener("scroll", this._onScrollBound);
 			this._ro?.disconnect();
 			this._ro = void 0;
@@ -1889,9 +1898,37 @@ const MonoTablePagingCore = (superClass) => {
 			let end = Math.ceil(last / stride) * stride + over;
 			start = Math.max(0, start);
 			end = Math.min(loaded, Math.max(start, end));
+			const limit = Math.max(0, Math.floor(Number(this.renderAllBelow) || 0));
+			if (limit > 0 && loaded > 0 && loaded <= limit) {
+				if (grid.virtualEnd < this._pushedEnd) this._filled = 0;
+				this._filled = Math.min(loaded, Math.max(this._filled, end));
+				this._pushedEnd = this._filled;
+				grid.setVirtualWindow(0, this._filled, 0, (loaded - this._filled) * rh);
+				if (this._filled < loaded) this._scheduleFill();
+				return;
+			}
+			this._filled = 0;
+			this._pushedEnd = 0;
 			const padTop = start * rh;
 			const padBottom = Math.max(0, (loaded - end) * rh);
 			grid.setVirtualWindow(start, end, padTop, padBottom);
+		}
+		/**
+		* Grow a `render-all-below` fill by one chunk per frame. One frame per chunk, so the browser
+		* paints between them and the page never sits on one long task for the whole set.
+		*/
+		_scheduleFill() {
+			if (this._fillRaf || isServer || typeof requestAnimationFrame !== "function") return;
+			this._fillRaf = requestAnimationFrame(() => {
+				this._fillRaf = 0;
+				const grid = this.dataGrid;
+				if (!grid || !this.isConnected || this.type !== "virtual-scroll") return;
+				const loaded = grid.loadedCount;
+				const limit = Math.max(0, Math.floor(Number(this.renderAllBelow) || 0));
+				if (!limit || loaded > limit || this._filled >= loaded) return;
+				this._filled = Math.min(loaded, this._filled + Math.max(1, Math.floor(Number(this.fillChunk) || 40)));
+				this._recomputeWindow();
+			});
 		}
 		_go(pageIndex) {
 			this.dataGrid?.setPage(pageIndex);
@@ -2013,6 +2050,14 @@ const MonoTablePagingCore = (superClass) => {
 	__decorate([property({ attribute: "scroll-target" })], MonoTablePagingCoreClass.prototype, "scrollTarget", void 0);
 	__decorate([property({ converter: numberStringConverter })], MonoTablePagingCoreClass.prototype, "threshold", void 0);
 	__decorate([property({ converter: numberStringConverter })], MonoTablePagingCoreClass.prototype, "overscan", void 0);
+	__decorate([property({
+		attribute: "render-all-below",
+		converter: numberStringConverter
+	})], MonoTablePagingCoreClass.prototype, "renderAllBelow", void 0);
+	__decorate([property({
+		attribute: "fill-chunk",
+		converter: numberStringConverter
+	})], MonoTablePagingCoreClass.prototype, "fillChunk", void 0);
 	__decorate([property({ attribute: "prev-icon" })], MonoTablePagingCoreClass.prototype, "prevIcon", void 0);
 	__decorate([property({ attribute: "next-icon" })], MonoTablePagingCoreClass.prototype, "nextIcon", void 0);
 	return MonoTablePagingCoreClass;

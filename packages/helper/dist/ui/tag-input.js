@@ -1,8 +1,8 @@
-import { g as monoHostChildNodes } from "../mono-ui-kvLVIf1V.js";
-import { t as customElement } from "../mono-element-CKcT0rwv.js";
+import { g as monoHostChildNodes } from "../mono-ui-bwtsaC-q.js";
+import { t as customElement } from "../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../decorate-BpnJwD08.js";
-import { s as placeSlotNode } from "../light-slots-DGiBODnU.js";
-import { n as validateTagInputProps, r as MonoTagInputCore, t as normalizeSuggestions } from "../tag-input-utils-CaVCdnZ9.js";
+import { s as placeSlotNode } from "../light-slots-CQuCgSHh.js";
+import { n as validateTagInputProps, r as MonoTagInputCore, t as normalizeSuggestions } from "../tag-input-utils-Cfg62HPO.js";
 import { LitElement, html } from "lit";
 
 //#region src/components/tag-input/mono-tag-input.ts

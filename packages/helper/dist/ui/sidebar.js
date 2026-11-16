@@ -1,7 +1,7 @@
-import { g as monoHostChildNodes } from "../mono-ui-kvLVIf1V.js";
-import { t as customElement } from "../mono-element-CKcT0rwv.js";
+import { g as monoHostChildNodes } from "../mono-ui-bwtsaC-q.js";
+import { t as customElement } from "../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../decorate-BpnJwD08.js";
-import { i as guardHostTextContent, s as placeSlotNode } from "../light-slots-DGiBODnU.js";
+import { i as guardHostTextContent, s as placeSlotNode } from "../light-slots-CQuCgSHh.js";
 import { a as resolveMode, i as isAutoTemporary, n as SIDEBAR_AUTO_BREAKPOINT, o as validateSidebarProps, r as generateSidebarRootClasses, t as MonoSidebarCore } from "../sidebar-core-DPixdFlD.js";
 import { LitElement, html } from "lit";
 

@@ -79,6 +79,7 @@ import { run as scrollPagingRace } from './scroll-paging-race.spec.mjs'
 import { run as baseFilter } from './base-filter.spec.mjs'
 import { run as chartBaseQuery } from './chart-base-query.spec.mjs'
 import { run as scrollModeChurn } from './scroll-mode-churn.spec.mjs'
+import { run as renderAllBelow } from './render-all-below.spec.mjs'
 
 const SPECS = [
   ['mono-button-dropdown', buttonDropdown],
@@ -142,6 +143,7 @@ const SPECS = [
   ['base query: a consumer filter survives the grid', baseFilter],
   ['base query: the chart carries it on drain, page and odata', chartBaseQuery],
   ['scroll mode churn: portal move costs no requests', scrollModeChurn],
+  ['virtual scroll: render-all-below fills a small set', renderAllBelow],
 ]
 
 const css = assertBuilt()
@@ -197,6 +199,7 @@ const { server, port } = await serve({
   'chip-strip': pageHtml(css, await bundleFixture('chip-strip')),
   'tag-input-select-all': pageHtml(css, await bundleFixture('tag-input-select-all')),
   'table-empty': pageHtml(css, await bundleFixture('table-empty')),
+  'render-all-below': pageHtml(css, await bundleFixture('render-all-below')),
   'table-loading-manual': pageHtml(css, await bundleFixture('table-loading-manual')),
   'form-feedback-loop': pageHtml(css, await bundleFixture('form-feedback-loop')),
   'table-error': pageHtml(css, await bundleFixture('table-error')),

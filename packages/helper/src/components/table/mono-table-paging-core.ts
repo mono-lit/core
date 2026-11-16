@@ -21,6 +21,8 @@ export declare class MonoTablePagingCoreInterface extends MonoTableControllerCor
   scrollTarget?: string
   threshold: number
   overscan: number
+  renderAllBelow: number
+  fillChunk: number
   prevIcon: string
   nextIcon: string
   protected _renderIcon(direction: 'prev' | 'next'): TemplateResult
@@ -119,6 +121,24 @@ export const MonoTablePagingCore = <T extends Constructor<LitElement>>(superClas
     overscan = 6
 
     /**
+     * `virtual-scroll` only: while the loaded set has AT MOST this many rows, stop windowing and
+     * mount every row — progressively, `fill-chunk` rows per frame, starting with what the
+     * viewport needs. `0` (default) never does.
+     *
+     * A virtual window swaps rows in and out on every `overscan` step of scrolling, and each swap
+     * is a notify, a framework re-render and a style + layout pass over the table. On a wide table
+     * (sticky columns, many cells per row) Chrome takes long enough over that to visibly stall the
+     * scroll. A few hundred rows mounted once cost nothing to scroll — the browser just scrolls. The
+     * fill keeps the one-time mount from freezing the page; past the limit the window comes back.
+     */
+    @property({ attribute: 'render-all-below', converter: numberStringConverter })
+    renderAllBelow = 0
+
+    /** Rows added per frame while a `render-all-below` table fills (default 40). */
+    @property({ attribute: 'fill-chunk', converter: numberStringConverter })
+    fillChunk = 40
+
+    /**
      * Icon class for the previous-page arrow (default `i-mdi-chevron-left`).
      *
      * A global utility class, resolved by the consumer's icon tooling — the same
@@ -135,6 +155,11 @@ export const MonoTablePagingCore = <T extends Constructor<LitElement>>(superClas
     private _scrollEl: HTMLElement | null = null
     private _onScrollBound = (): void => this._scheduleScroll()
     private _rafPending = false
+    /** `render-all-below`: rows mounted so far, from row 0. */
+    private _filled = 0
+    /** …and the window end last pushed to the grid — a reset shows up as the grid falling below it. */
+    private _pushedEnd = 0
+    private _fillRaf = 0
 
     // --- lifecycle -----------------------------------------------------------
     override connectedCallback(): void {
@@ -238,6 +263,10 @@ export const MonoTablePagingCore = <T extends Constructor<LitElement>>(superClas
     private _retryPending = false
 
     private _detachScroll(): void {
+      if (this._fillRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(this._fillRaf)
+      this._fillRaf = 0
+      this._filled = 0
+      this._pushedEnd = 0
       this._scrollEl?.removeEventListener('scroll', this._onScrollBound)
       this._ro?.disconnect()
       this._ro = undefined
@@ -330,9 +359,45 @@ export const MonoTablePagingCore = <T extends Constructor<LitElement>>(superClas
       let end = Math.ceil(last / stride) * stride + over
       start = Math.max(0, start)
       end = Math.min(loaded, Math.max(start, end))
+
+      // Small set: no window — every row, mounted from row 0 in per-frame chunks.
+      const limit = Math.max(0, Math.floor(Number(this.renderAllBelow) || 0))
+      if (limit > 0 && loaded > 0 && loaded <= limit) {
+        // A reset load (new query / search / filter) empties the grid's window — it falls below
+        // what was last pushed: fill again from the top. (Compared with the PUSHED end, not
+        // `_filled`, which a fill step raises just before pushing it.)
+        if (grid.virtualEnd < this._pushedEnd) this._filled = 0
+        // Never less than what the viewport shows right now — the user may scroll mid-fill.
+        this._filled = Math.min(loaded, Math.max(this._filled, end))
+        this._pushedEnd = this._filled
+        grid.setVirtualWindow(0, this._filled, 0, (loaded - this._filled) * rh)
+        if (this._filled < loaded) this._scheduleFill()
+        return
+      }
+      this._filled = 0
+      this._pushedEnd = 0
+
       const padTop = start * rh
       const padBottom = Math.max(0, (loaded - end) * rh)
       grid.setVirtualWindow(start, end, padTop, padBottom)
+    }
+
+    /**
+     * Grow a `render-all-below` fill by one chunk per frame. One frame per chunk, so the browser
+     * paints between them and the page never sits on one long task for the whole set.
+     */
+    private _scheduleFill(): void {
+      if (this._fillRaf || isServer || typeof requestAnimationFrame !== 'function') return
+      this._fillRaf = requestAnimationFrame(() => {
+        this._fillRaf = 0
+        const grid = this.dataGrid
+        if (!grid || !this.isConnected || this.type !== 'virtual-scroll') return
+        const loaded = grid.loadedCount
+        const limit = Math.max(0, Math.floor(Number(this.renderAllBelow) || 0))
+        if (!limit || loaded > limit || this._filled >= loaded) return
+        this._filled = Math.min(loaded, this._filled + Math.max(1, Math.floor(Number(this.fillChunk) || 40)))
+        this._recomputeWindow()
+      })
     }
 
     // --- standard pager (unchanged) -----------------------------------------

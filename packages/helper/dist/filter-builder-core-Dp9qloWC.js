@@ -1,5 +1,5 @@
 import { c as splitMulti, d as OPERATOR_ARITY, m as operatorsFor } from "./filter-odata-GsczYKNC.js";
-import { d as buildSizeStyle } from "./mono-ui-kvLVIf1V.js";
+import { d as buildSizeStyle } from "./mono-ui-bwtsaC-q.js";
 import { n as detachEventHandlers, t as applyProps } from "./element-props-xvw0EB7H.js";
 import { a as defineHybridPropAlias, o as defineHybridPropAliases, t as __decorate } from "./decorate-BpnJwD08.js";
 import { t as dispatchMonoEvent } from "./mono-event-CAZf0F_k.js";

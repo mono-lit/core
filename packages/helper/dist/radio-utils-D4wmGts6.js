@@ -1,37 +1,34 @@
 import { a as defineHybridPropAlias, i as defineAccessorAliases, o as defineHybridPropAliases, r as booleanStringConverter, t as __decorate } from "./decorate-BpnJwD08.js";
 import { t as dispatchMonoEvent } from "./mono-event-CAZf0F_k.js";
-import { t as MonoFormControlCore } from "./form-control-core-2y0eTQRI.js";
+import { t as MonoFormControlCore } from "./form-control-core-D49tMELi.js";
 import { html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
 
-//#region src/components/switch/switch-core.ts
+//#region src/components/radio/radio-core.ts
 /**
-* `MonoSwitchCore` — all render-mode-agnostic logic for `mono-switch`: reactive
-* props (incl. SSR boolean coercion), hybrid aliases, camelCase attribute
-* fallbacks, the `modelValue`↔`checked` sync, class computation, change
-* interactivity (`mno-change`), `focus`/`blur`, AND the shared `render()`
-* skeleton (`<label><input role=switch><track><thumb></track><labelBlock></label>`).
-* The slot-bearing label/description region is an overridable hook
-* (`_renderLabelBlock()`) that defaults to the light build's `[data-mono-slot]`
-* placeholders; the shadow build overrides it with native `<slot>` (mirrors
-* `mono-checkbox`). SSR-safe: no `document`/`window`; `focus`/`blur` query
-* `this.renderRoot`.
+* `MonoRadioCore` — all render-mode-agnostic logic for `mono-radio`: reactive
+* props (incl. SSR `disabled` coercion), hybrid aliases (incl. the
+* `ariaLabel`/`aria-label`/`arialabel` → `ariaLabelText` getters), camelCase
+* attribute fallbacks, class computation, the `mno-change` interactivity, and the
+* shared `<label><input><circle><dot></circle><labelBlock></label>` `render()`
+* (the radio dot is pure CSS — no icons). Only the label/description region is a
+* hook (`_renderLabelBlock`) — the light build uses `data-mono-slot`, the shadow
+* build native `<slot>` (mirrors `mono-checkbox`).
+*
+* SSR-safe: no `document`/`window` access; `focus`/`blur` query `this.renderRoot`.
 */
-const MonoSwitchCore = (superClass) => {
-	class MonoSwitchCoreClass extends MonoFormControlCore(superClass) {
+const MonoRadioCore = (superClass) => {
+	class MonoRadioCoreClass extends MonoFormControlCore(superClass) {
 		constructor(...args) {
 			super(...args);
 			this.size = "md";
 			this.color = "primary";
-			this.modelValue = false;
-			this.checked = false;
+			this.value = "";
+			this.modelValue = "";
 			this.disabled = false;
-			this.loading = false;
 			this.label = "";
 			this.sublabel = "";
-			this.value = "";
-			this.name = "";
 			this.cssClass = {};
 			this.cssClassName = "";
 			this._hasLabelSlotState = false;
@@ -67,8 +64,8 @@ const MonoSwitchCore = (superClass) => {
 				...super.observedAttributes ?? [],
 				"modelvalue",
 				"arialabeltext",
-				"arialabel",
 				"description",
+				"arialabel",
 				"css-class",
 				"cssclass"
 			];
@@ -77,7 +74,7 @@ const MonoSwitchCore = (superClass) => {
 			super.attributeChangedCallback(name, oldValue, newValue);
 			if (oldValue === newValue) return;
 			if (name === "modelvalue") {
-				this.modelValue = this._toBoolean(newValue);
+				this.modelValue = this._toRadioValue(newValue);
 				return;
 			}
 			if (name === "arialabeltext" || name === "arialabel") {
@@ -91,23 +88,11 @@ const MonoSwitchCore = (superClass) => {
 			if (name === "css-class" || name === "cssclass") this._setCssClass(newValue);
 		}
 		willUpdate(changed) {
-			for (const key of [
-				"modelValue",
-				"checked",
-				"disabled",
-				"loading"
-			]) if (typeof this[key] === "string") this[key] = this._toBoolean(this[key]);
-			if (changed.has("modelValue") && this.checked !== this.modelValue) this.checked = this.modelValue;
-			if (changed.has("checked") && this.modelValue !== this.checked) this.modelValue = this.checked;
-			super.willUpdate?.(changed);
-		}
-		_toBoolean(value) {
-			if (typeof value === "boolean") return value;
-			if (typeof value === "string") {
-				const normalized = value.toLowerCase().trim();
-				return normalized === "" || normalized === "true";
+			if (typeof this.disabled === "string") {
+				const normalized = this.disabled.toLowerCase().trim();
+				this.disabled = normalized === "" || normalized === "true";
 			}
-			return Boolean(value);
+			super.willUpdate?.(changed);
 		}
 		_setCssClass(value) {
 			if (value == null) {
@@ -133,30 +118,38 @@ const MonoSwitchCore = (superClass) => {
 				this.cssClassName = trimmed;
 			}
 		}
+		_toRadioValue(value) {
+			if (value === void 0 || value === null) return "";
+			if (typeof value === "boolean") return value;
+			if (typeof value === "number") return value;
+			return String(value);
+		}
 		_cls(base, key) {
 			const extra = this.cssClass?.[key];
 			return extra ? `${base} ${extra}` : base;
 		}
+		get _checked() {
+			return this.modelValue === this.value;
+		}
 		get _wrapperClasses() {
 			return [
-				"mono-switch",
+				"mono-radio",
 				this.size,
 				this.color,
 				this.disabled ? "disabled" : "",
-				this.loading ? "loading" : "",
-				this.checked ? "mono-switch-checked" : "",
+				this._checked ? "mono-radio-checked" : "",
 				this.cssClassName,
 				this.cssClass?.root
 			].filter(Boolean).join(" ");
 		}
 		get _inputClasses() {
-			return this._cls("mono-switch-input", "input");
+			return this._cls("mono-radio-input", "input");
 		}
-		get _trackClasses() {
-			return [this._cls("mono-switch-track", "track"), this.size].filter(Boolean).join(" ");
+		get _circleClasses() {
+			return [this._cls("mono-radio-circle", "circle"), this.size].filter(Boolean).join(" ");
 		}
-		get _thumbClasses() {
-			return [this._cls("mono-switch-thumb", "thumb"), this.size].filter(Boolean).join(" ");
+		get _dotClasses() {
+			return [this._cls("mono-radio-dot", "dot"), this.size].filter(Boolean).join(" ");
 		}
 		_hasLabelContent() {
 			return Boolean(this.label) || this._hasLabelSlotState;
@@ -169,9 +162,8 @@ const MonoSwitchCore = (superClass) => {
 				modelValue: args.modelValue,
 				currentValue: args.modelValue,
 				oldValue: args.oldValue,
-				checked: args.modelValue,
 				value: this.value,
-				name: this.name,
+				checked: args.modelValue === this.value,
 				sourceEvent: args.sourceEvent
 			};
 		}
@@ -179,11 +171,10 @@ const MonoSwitchCore = (superClass) => {
 			dispatchMonoEvent(this, "change", detail);
 		}
 		_handleChange(event) {
-			if (this.disabled || this.loading) return;
-			const input = event.currentTarget;
+			if (this.disabled) return;
+			if (!event.currentTarget.checked) return;
 			const oldValue = this.modelValue;
-			const nextValue = input.checked;
-			this.checked = nextValue;
+			const nextValue = this.value;
 			this.modelValue = nextValue;
 			const detail = this._createModelDetail({
 				modelValue: nextValue,
@@ -196,15 +187,15 @@ const MonoSwitchCore = (superClass) => {
 		_renderLabelBlock() {
 			if (!this._hasLabelContent() && !this._hasDescriptionContent()) return nothing;
 			return html`
-        <span class=${this._cls("mono-switch-label", "label")} mono-label>
+        <span class=${this._cls("mono-radio-label", "label")} mono-label>
           ${this._hasLabelContent() ? html`
-                <span class=${this._cls("mono-switch-label-text", "labelText")} mono-label-text>
+                <span class=${this._cls("mono-radio-label-text", "labelText")} mono-label-text>
                   ${this._hasLabelSlotState ? html`<span data-mono-slot="label"></span>` : this.label}
                 </span>
               ` : nothing}
 
           ${this._hasDescriptionContent() ? html`
-                <span class=${this._cls("mono-switch-label-description", "description")} mono-description>
+                <span class=${this._cls("mono-radio-label-description", "description")} mono-description>
                   ${this._hasDescriptionSlotState ? html`<span data-mono-slot="description"></span>` : this.sublabel}
                 </span>
               ` : nothing}
@@ -212,33 +203,30 @@ const MonoSwitchCore = (superClass) => {
       `;
 		}
 		render() {
-			const ariaLabel = this.ariaLabelText || this.label || (this._hasLabelSlotState ? "Switch" : void 0);
+			const ariaLabel = this.ariaLabelText || this.label || (this._hasLabelSlotState ? "Radio option" : void 0);
 			return html`
         <label
           class=${this._wrapperClasses}
-          mono-switch
+          mono-radio
           mono-size=${this.size === "md" ? nothing : this.size}
           mono-color=${this.color === "primary" ? nothing : this.color}
-          ?mono-checked=${this.checked}
+          ?mono-checked=${this._checked}
           ?mono-disabled=${this.disabled}
-          ?mono-loading=${this.loading}
         >
           <input
             class=${this._inputClasses}
             mono-input
-            type="checkbox"
-            role="switch"
-            .checked=${this.checked}
-            .value=${this.value}
-            name=${ifDefined(this.name || void 0)}
-            ?disabled=${this.disabled || this.loading}
-            aria-checked=${String(this.checked)}
+            type="radio"
+            .checked=${this._checked}
+            .value=${String(this.value ?? "")}
+            ?disabled=${this.disabled}
+            aria-checked=${String(this._checked)}
             aria-label=${ifDefined(ariaLabel)}
             @change=${this._handleChange}
           />
 
-          <span class=${this._trackClasses} mono-track aria-hidden="true">
-            <span class=${this._thumbClasses} mono-thumb></span>
+          <span class=${this._circleClasses} mono-circle aria-hidden="true">
+            <span class=${this._dotClasses} mono-dot></span>
           </span>
 
           ${this._renderLabelBlock()}
@@ -246,52 +234,46 @@ const MonoSwitchCore = (superClass) => {
       `;
 		}
 		focus(options) {
-			this.renderRoot.querySelector(".mono-switch-input")?.focus(options);
+			this.renderRoot.querySelector(".mono-radio-input")?.focus(options);
 		}
 		blur() {
-			this.renderRoot.querySelector(".mono-switch-input")?.blur();
+			this.renderRoot.querySelector(".mono-radio-input")?.blur();
 		}
 	}
-	__decorate([property({ type: String })], MonoSwitchCoreClass.prototype, "size", void 0);
-	__decorate([property({ type: String })], MonoSwitchCoreClass.prototype, "color", void 0);
+	__decorate([property({ type: String })], MonoRadioCoreClass.prototype, "size", void 0);
+	__decorate([property({ type: String })], MonoRadioCoreClass.prototype, "color", void 0);
+	__decorate([property({ type: String })], MonoRadioCoreClass.prototype, "value", void 0);
 	__decorate([property({
+		type: String,
 		attribute: "model-value",
-		reflect: true,
-		converter: booleanStringConverter
-	})], MonoSwitchCoreClass.prototype, "modelValue", void 0);
+		reflect: true
+	})], MonoRadioCoreClass.prototype, "modelValue", void 0);
 	__decorate([property({
 		reflect: true,
 		converter: booleanStringConverter
-	})], MonoSwitchCoreClass.prototype, "checked", void 0);
-	__decorate([property({
-		reflect: true,
-		converter: booleanStringConverter
-	})], MonoSwitchCoreClass.prototype, "disabled", void 0);
-	__decorate([property({
-		reflect: true,
-		converter: booleanStringConverter
-	})], MonoSwitchCoreClass.prototype, "loading", void 0);
-	__decorate([property({ type: String })], MonoSwitchCoreClass.prototype, "label", void 0);
-	__decorate([property({ type: String })], MonoSwitchCoreClass.prototype, "sublabel", void 0);
-	__decorate([property({ type: String })], MonoSwitchCoreClass.prototype, "value", void 0);
-	__decorate([property({ type: String })], MonoSwitchCoreClass.prototype, "name", void 0);
+	})], MonoRadioCoreClass.prototype, "disabled", void 0);
+	__decorate([property({ type: String })], MonoRadioCoreClass.prototype, "label", void 0);
+	__decorate([property({ type: String })], MonoRadioCoreClass.prototype, "sublabel", void 0);
 	__decorate([property({
 		type: String,
 		attribute: "aria-label"
-	})], MonoSwitchCoreClass.prototype, "ariaLabelText", void 0);
-	__decorate([property({ attribute: false })], MonoSwitchCoreClass.prototype, "cssClass", void 0);
-	__decorate([property({ attribute: false })], MonoSwitchCoreClass.prototype, "cssClassName", void 0);
-	__decorate([state()], MonoSwitchCoreClass.prototype, "_hasLabelSlotState", void 0);
-	__decorate([state()], MonoSwitchCoreClass.prototype, "_hasDescriptionSlotState", void 0);
-	return MonoSwitchCoreClass;
+	})], MonoRadioCoreClass.prototype, "ariaLabelText", void 0);
+	__decorate([property({ attribute: false })], MonoRadioCoreClass.prototype, "cssClass", void 0);
+	__decorate([property({
+		type: String,
+		attribute: false
+	})], MonoRadioCoreClass.prototype, "cssClassName", void 0);
+	__decorate([state()], MonoRadioCoreClass.prototype, "_hasLabelSlotState", void 0);
+	__decorate([state()], MonoRadioCoreClass.prototype, "_hasDescriptionSlotState", void 0);
+	return MonoRadioCoreClass;
 };
 
 //#endregion
-//#region src/components/switch/switch-utils.ts
+//#region src/components/radio/radio-utils.ts
 /**
-* Validate switch props
+* Validate radio props
 */
-function validateSwitchProps(props) {
+function validateRadioProps(props) {
 	const validSizes = [
 		"xs",
 		"sm",
@@ -319,15 +301,14 @@ function validateSwitchProps(props) {
 /**
 * Generate ARIA attributes for accessibility
 */
-function generateSwitchAttributes(disabled, loading, checked, label) {
+function generateRadioAttributes(disabled, checked, label) {
 	return {
-		"aria-disabled": disabled || loading ? "true" : void 0,
-		"aria-busy": loading ? "true" : void 0,
+		"aria-disabled": disabled ? "true" : void 0,
 		"aria-checked": String(checked),
-		"role": "switch",
+		"role": "radio",
 		"aria-label": label || void 0
 	};
 }
 
 //#endregion
-export { validateSwitchProps as n, MonoSwitchCore as r, generateSwitchAttributes as t };
+export { validateRadioProps as n, MonoRadioCore as r, generateRadioAttributes as t };

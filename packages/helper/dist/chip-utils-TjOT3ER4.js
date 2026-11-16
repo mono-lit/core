@@ -1,4 +1,4 @@
-import { n as defineMonoElement } from "./mono-element-CKcT0rwv.js";
+import { n as defineMonoElement } from "./mono-element-D1l07Tbd.js";
 import { i as defineAccessorAliases, o as defineHybridPropAliases, r as booleanStringConverter, t as __decorate } from "./decorate-BpnJwD08.js";
 import { t as dispatchMonoEvent } from "./mono-event-CAZf0F_k.js";
 import { t as chip_css_raw_default } from "./chip.css_raw-ChfRSHLO.js";

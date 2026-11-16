@@ -217,6 +217,103 @@ function headerWidth(cell: HTMLElement, host: HTMLElement): number {
   return width + boxX(getComputedStyle(cell))
 }
 
+/** The body / footer row of `table` that `node` sits in — never a row of a table nested in a cell. */
+function ownRow(node: Node, table: HTMLTableElement): HTMLTableRowElement | undefined {
+  for (let el: Element | null = node instanceof Element ? node : node.parentElement; el; el = el.parentElement) {
+    if (el === table) return undefined
+    if (el.tagName === 'TR' && el.parentElement?.parentElement === table) return el as HTMLTableRowElement
+  }
+  return undefined
+}
+
+/**
+ * What a batch of body mutations touched: the rows that were added or changed inside, and whether
+ * anything changed OUTSIDE a row (a section swapped in, a `<tfoot>` from `v-if`) — that is `full`.
+ * Removed rows are not tracked: a grow-only column cannot narrow, every other column re-measures
+ * in full on any change.
+ */
+interface BodyChange {
+  rows: Set<HTMLTableRowElement>
+  full: boolean
+}
+
+/**
+ * ONE observer + input listener per TABLE, shared by every auto column in it.
+ *
+ * Each column used to own a `subtree` observer on the whole table. Under virtual scroll every
+ * window shift inserts and removes dozens of rows, so a table with 13 auto columns queued 13
+ * copies of every record (≈112k records for a 120-step scroll) and each column re-measured the
+ * WHOLE body, header included, on every step. The records are now classified once — which rows
+ * came in or changed — and each column decides from that how much to re-measure.
+ */
+class TableWatch {
+  readonly sizers = new Set<ColumnAutoSize>()
+  private readonly _observer: MutationObserver
+
+  private readonly _onInput = (e: Event): void => {
+    const t = e.target as Element | null
+    if (!t || this.table.tHead?.contains(t)) return
+    const row = ownRow(t, this.table)
+    this._notify({ rows: new Set(row ? [row] : []), full: !row })
+  }
+
+  /**
+   * A web font that finished loading after a measurement: canvas measured the FALLBACK face, so
+   * the width (and the cached digit advances) are stale — usually too narrow for the real font.
+   */
+  private readonly _onFonts = (): void => {
+    digitWidths.clear()
+    for (const s of this.sizers) s.schedule()
+  }
+
+  constructor(readonly table: HTMLTableElement) {
+    // The whole table, subtree: the `<tfoot>` comes and goes with `v-if`. Header churn (the
+    // `mono-table-th` elements' own re-renders) is filtered out — it would only re-schedule us forever.
+    this._observer = new MutationObserver((records) => this._onRecords(records))
+    this._observer.observe(table, { childList: true, characterData: true, subtree: true })
+    // Typing changes an input's value without touching the DOM.
+    table.addEventListener('input', this._onInput, true)
+    document.fonts?.addEventListener?.('loadingdone', this._onFonts)
+  }
+
+  dispose(): void {
+    this._observer.disconnect()
+    this.table.removeEventListener('input', this._onInput, true)
+    document.fonts?.removeEventListener?.('loadingdone', this._onFonts)
+  }
+
+  private _onRecords(records: MutationRecord[]): void {
+    const head = this.table.tHead
+    const change: BodyChange = { rows: new Set(), full: false }
+    let relevant = false
+    for (const r of records) {
+      if (head?.contains(r.target)) continue
+      relevant = true
+      const target = r.target
+      const isSection = target.parentNode === this.table && /^(TBODY|TFOOT)$/.test((target as Element).tagName ?? '')
+      if (r.type === 'childList' && isSection) {
+        // Rows in and out of a body section — the virtual-scroll window moving.
+        for (const n of Array.from(r.addedNodes)) {
+          if (n.nodeType !== Node.ELEMENT_NODE) continue // Vue's text / comment anchors
+          if ((n as Element).tagName === 'TR') change.rows.add(n as HTMLTableRowElement)
+          else change.full = true
+        }
+        continue
+      }
+      const row = ownRow(target, this.table)
+      if (row) change.rows.add(row)
+      else change.full = true // the table itself (a section swapped), or something outside a row
+    }
+    if (relevant) this._notify(change)
+  }
+
+  private _notify(change: BodyChange): void {
+    for (const s of this.sizers) s._bodyChanged(change)
+  }
+}
+
+const tableWatches = new WeakMap<HTMLTableElement, TableWatch>()
+
 /**
  * One auto-sized column, owned by its `mono-table-th`. `schedule()` coalesces every trigger (a
  * controller notify, a body mutation, typing in an editor) into one measurement per frame.
@@ -229,26 +326,20 @@ export class ColumnAutoSize {
    * window shift measured a different slice, so the column grew and shrank as the list scrolled and
    * every change relaid the whole table. The column settles at the widest value seen instead, until
    * `resetFloor()` (a new result set).
+   *
+   * It also makes body changes INCREMENTAL: a column that can only grow needs to look at nothing
+   * but the rows that came in or changed — everything else is already in the floor. A window shift
+   * then measures the few rows that scrolled in, not the whole window plus the header.
    */
   growOnly = false
 
   private _floor = 0
   private _raf = 0
-  private _table?: HTMLTableElement
-  private _observer?: MutationObserver
+  /** The next measurement must walk header + every row (vs. only `_dirty`). */
+  private _full = true
+  private _dirty = new Set<HTMLTableRowElement>()
+  private _watch?: TableWatch
   private _wrote?: { col?: HTMLTableColElement; cell: HTMLElement }
-  private readonly _onInput = (e: Event): void => {
-    const t = e.target as Element | null
-    if (t && this._table && !this._table.tHead?.contains(t)) this.schedule()
-  }
-  /**
-   * A web font that finished loading after a measurement: canvas measured the FALLBACK face, so
-   * the width (and the cached digit advances) are stale — usually too narrow for the real font.
-   */
-  private readonly _onFonts = (): void => {
-    digitWidths.clear()
-    this.schedule()
-  }
 
   constructor(private readonly host: HTMLElement) {}
 
@@ -274,7 +365,24 @@ export class ColumnAutoSize {
     for (const write of writes) write?.()
   }
 
+  /** Re-measure everything — header, body and footer — on the next frame. */
   schedule(): void {
+    this._full = true
+    this._queue()
+  }
+
+  /**
+   * @internal — from the table's shared watcher. A grow-only column with a floor already set only
+   * needs the rows that came in or changed (a removed row cannot make it wider); anything else
+   * measures in full.
+   */
+  _bodyChanged(change: BodyChange): void {
+    if (change.full || !this.growOnly || !this._floor) this._full = true
+    else for (const row of change.rows) this._dirty.add(row)
+    if (this._full || this._dirty.size) this._queue()
+  }
+
+  private _queue(): void {
     if (this._raf) return
     this._raf = 1
     ColumnAutoSize._queued.add(this)
@@ -292,6 +400,8 @@ export class ColumnAutoSize {
   stop(clear = false): void {
     ColumnAutoSize._queued.delete(this)
     this._raf = 0
+    this._full = true
+    this._dirty.clear()
     this._unwatch()
     if (clear && this._wrote) {
       if (this._wrote.col) this._wrote.col.style.width = ''
@@ -300,28 +410,24 @@ export class ColumnAutoSize {
     this._wrote = undefined
   }
 
-  private _watch(table: HTMLTableElement): void {
-    if (this._table === table) return
+  private _watchTable(table: HTMLTableElement): void {
+    if (this._watch?.table === table) return
     this._unwatch()
-    this._table = table
-    // The whole table, subtree: the `<tfoot>` comes and goes with `v-if`. Header churn (this
-    // element's own re-renders) is filtered out — it would only re-schedule us forever.
-    this._observer = new MutationObserver((records) => {
-      const head = table.tHead
-      if (records.some((r) => !head?.contains(r.target))) this.schedule()
-    })
-    this._observer.observe(table, { childList: true, characterData: true, subtree: true })
-    // Typing changes an input's value without touching the DOM.
-    table.addEventListener('input', this._onInput, true)
-    document.fonts?.addEventListener?.('loadingdone', this._onFonts)
+    let watch = tableWatches.get(table)
+    if (!watch) tableWatches.set(table, (watch = new TableWatch(table)))
+    watch.sizers.add(this)
+    this._watch = watch
   }
 
   private _unwatch(): void {
-    this._observer?.disconnect()
-    this._observer = undefined
-    this._table?.removeEventListener('input', this._onInput, true)
-    document.fonts?.removeEventListener?.('loadingdone', this._onFonts)
-    this._table = undefined
+    const watch = this._watch
+    if (!watch) return
+    this._watch = undefined
+    watch.sizers.delete(this)
+    if (!watch.sizers.size) {
+      watch.dispose()
+      tableWatches.delete(watch.table)
+    }
   }
 
   /** Measure now (reads only); returns the write to apply after every sizer has measured. */
@@ -329,20 +435,42 @@ export class ColumnAutoSize {
     const cell = this.host.closest('th, td') as HTMLTableCellElement | null
     const table = cell?.closest('table') as HTMLTableElement | null
     if (!cell || !table || !this.host.isConnected) return null
-    this._watch(table)
+    this._watchTable(table)
 
     const index = headerColumnIndex(cell)
-    let width = headerWidth(cell, this.host)
-    const sections = [...Array.from(table.tBodies), ...(table.tFoot ? [table.tFoot] : [])]
-    for (const section of sections) {
-      for (const row of Array.from(section.rows)) {
+    const full = this._full || !this.growOnly || !this._floor
+    const dirty = this._dirty
+    this._full = false
+    this._dirty = new Set()
+
+    let width: number
+    if (full) {
+      width = headerWidth(cell, this.host)
+      const sections = [...Array.from(table.tBodies), ...(table.tFoot ? [table.tFoot] : [])]
+      for (const section of sections) {
+        for (const row of Array.from(section.rows)) {
+          const target = cellAt(row, index)
+          if (target) width = Math.max(width, contentWidth(target))
+        }
+      }
+    } else {
+      // Grow-only, floor set: only the rows that came in or changed can widen the column. No
+      // header read either — it is already in the floor, and its icons are LAID-OUT boxes, so
+      // reading them is what forced a synchronous layout of the whole table on every scroll step.
+      width = 0
+      for (const row of dirty) {
+        if (!row.isConnected || row.parentElement?.parentElement !== table) continue
         const target = cellAt(row, index)
         if (target) width = Math.max(width, contentWidth(target))
       }
+      if (!width) return null
     }
     width = Math.ceil(clampWidth(width + 1, this.min, this.max)) // +1: sub-pixel text never ellipses
-    if (this.growOnly) width = this._floor = Math.max(width, this._floor)
-    else this._floor = 0
+    if (this.growOnly) {
+      const grown = Math.max(width, this._floor)
+      if (!full && grown === this._floor) return null // nothing wider came in
+      width = this._floor = grown
+    } else this._floor = 0
     const value = `${width}px`
 
     const col = colAt(table, index)
