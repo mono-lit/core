@@ -102,6 +102,14 @@ export declare function parkDetachedNodes(holder: HTMLElement | undefined, nodes
  * `textContent`, so a naive check would report an empty region as occupied.
  */
 export declare function bucketHasContent(nodes: Node[] | undefined): boolean;
+type HostChildCallback = () => void;
+/**
+ * Call `onChange` whenever a DIRECT child of `host` is added or removed (`childList`, no
+ * `subtree`). Idempotent for the same pair. No-op where `MutationObserver` is missing (SSR).
+ */
+export declare function watchHostChildren(host: Node, onChange: HostChildCallback): void;
+/** Stop calling `onChange` for `host` (see the note above on why the node stays registered). */
+export declare function unwatchHostChildren(host: Node, onChange: HostChildCallback): void;
 /**
  * Watches a host for a named slot child that arrives AFTER `connectedCallback`.
  *
@@ -119,7 +127,9 @@ export declare class LateSlotWatcher {
   private readonly host;
   private readonly name;
   private readonly onFound;
-  private _observer?;
+  private _watching;
+  /** Stable identity for the shared observer's registry (`onFound` may be shared by several watchers). */
+  private readonly _notify;
   constructor(host: Element, name: string, onFound: () => void);
   /**
    * The host's own child carrying `slot="<name>"`, or `null`.
@@ -133,3 +143,4 @@ export declare class LateSlotWatcher {
   stop(): void;
 }
 //#endregion
+export {};

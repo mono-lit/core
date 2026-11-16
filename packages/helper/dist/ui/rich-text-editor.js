@@ -1,8 +1,8 @@
 import { g as monoHostChildNodes } from "../mono-ui-kvLVIf1V.js";
 import { t as customElement } from "../mono-element-CKcT0rwv.js";
-import { t as __decorate } from "../decorate-DbYFpi8R.js";
-import { s as placeSlotNode } from "../light-slots-B5Ck0t_E.js";
-import { a as TOOLBAR_DEFAULT, c as TOOLBAR_STANDARD, d as resolveToolbar, f as SUNEDITOR_LANG_CODES, g as loadSunEditorPlugins, h as loadSunEditorLang, i as TOOLBAR_BASIC, l as pruneToolbar, m as loadSunEditorCss, n as AUTO_EXCLUDED_PLUGINS, o as TOOLBAR_FULL, p as loadSunEditor, r as SUNEDITOR_CORE_BUTTONS, s as TOOLBAR_PRESETS, t as MonoRichTextEditorCore, u as resolvePlugins } from "../rich-text-editor-core-Ddd_QaLn.js";
+import { t as __decorate } from "../decorate-BpnJwD08.js";
+import { s as placeSlotNode } from "../light-slots-DGiBODnU.js";
+import { a as TOOLBAR_DEFAULT, c as TOOLBAR_STANDARD, d as resolveToolbar, f as SUNEDITOR_LANG_CODES, g as loadSunEditorPlugins, h as loadSunEditorLang, i as TOOLBAR_BASIC, l as pruneToolbar, m as loadSunEditorCss, n as AUTO_EXCLUDED_PLUGINS, o as TOOLBAR_FULL, p as loadSunEditor, r as SUNEDITOR_CORE_BUTTONS, s as TOOLBAR_PRESETS, t as MonoRichTextEditorCore, u as resolvePlugins } from "../rich-text-editor-core-DeczKUfa.js";
 import { LitElement } from "lit";
 
 //#region src/components/rich-text-editor/mono-rich-text-editor.ts

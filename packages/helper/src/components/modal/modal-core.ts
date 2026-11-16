@@ -15,6 +15,7 @@ import type {
 
 import {
   booleanStringConverter,
+  defineAccessorAliases,
   defineHybridPropAlias,
   defineHybridPropAliases,
   optionalNumberConverter,
@@ -159,19 +160,27 @@ class MonoModalCoreClass extends superClass implements PopupLayer {
     // the way `controlTable` aliases `dataGrid` and `controlForm` aliases `dataForm`.
     defineHybridPropAlias(this, 'controlModal', 'dataModal')
 
-    Object.defineProperty(this, 'css-class', {
-      get: () => this.cssClass,
-      set: (value: unknown) => this._setCssClass(value),
-      configurable: true,
-      enumerable: false,
-    })
+    defineAccessorAliases(
+      this,
+      ['css-class'],
+      function () {
+        return this.cssClass
+      },
+      function (value) {
+        this._setCssClass(value)
+      },
+    )
 
-    Object.defineProperty(this, 'cssclass', {
-      get: () => this.cssClass,
-      set: (value: unknown) => this._setCssClass(value),
-      configurable: true,
-      enumerable: false,
-    })
+    defineAccessorAliases(
+      this,
+      ['cssclass'],
+      function () {
+        return this.cssClass
+      },
+      function (value) {
+        this._setCssClass(value)
+      },
+    )
   }
 
   static get observedAttributes(): string[] {

@@ -1,8 +1,8 @@
 import { g as monoHostChildNodes } from "../mono-ui-kvLVIf1V.js";
 import { t as customElement } from "../mono-element-CKcT0rwv.js";
-import { t as __decorate } from "../decorate-DbYFpi8R.js";
-import { s as placeSlotNode } from "../light-slots-B5Ck0t_E.js";
-import { n as MonoTextareaCore, t as validateTextareaProps } from "../textarea-utils-VU1KeXm8.js";
+import { t as __decorate } from "../decorate-BpnJwD08.js";
+import { s as placeSlotNode } from "../light-slots-DGiBODnU.js";
+import { n as MonoTextareaCore, t as validateTextareaProps } from "../textarea-utils-B5FH6w3u.js";
 import { LitElement } from "lit";
 
 //#region src/components/textarea/mono-textarea.ts

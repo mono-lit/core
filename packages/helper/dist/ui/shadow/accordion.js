@@ -1,7 +1,7 @@
 import { t as customElement } from "../../mono-element-CKcT0rwv.js";
-import { t as __decorate } from "../../decorate-DbYFpi8R.js";
+import { t as __decorate } from "../../decorate-BpnJwD08.js";
 import { n as mdiGlyph, t as isIconifyClass } from "../../icon-BM9N-jOt.js";
-import { t as MonoAccordionCore } from "../../accordion-core-DaNyPWRr.js";
+import { t as MonoAccordionCore } from "../../accordion-core-vWYybabK.js";
 import { i as withShadowUtilityStyles, n as adoptIconStyles, r as toShadowCss, t as flushSsrHydration } from "../../hydration-flush-Volt9X7Q.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { ref } from "lit/directives/ref.js";

@@ -32,6 +32,7 @@ import {
 
 import {
   booleanStringConverter,
+  defineAccessorAliases,
   defineHybridPropAlias,
   defineHybridPropAliases,
   type Constructor,
@@ -150,16 +151,16 @@ export const MonoOtpCore = <T extends Constructor<LitElement>>(superClass: T) =>
         'maxHeight',
       ])
 
-      for (const alias of ['ariaLabel', 'aria-label', 'arialabel']) {
-        Object.defineProperty(this, alias, {
-          get: () => this.ariaLabelText,
-          set: (value: unknown) => {
-            this.ariaLabelText = value == null ? undefined : String(value)
-          },
-          configurable: true,
-          enumerable: false,
-        })
-      }
+      defineAccessorAliases(
+        this,
+        ['ariaLabel', 'aria-label', 'arialabel'],
+        function () {
+          return this.ariaLabelText
+        },
+        function (value) {
+          this.ariaLabelText = value == null ? undefined : String(value)
+        },
+      )
       // `maxlength` reads naturally on a code field — it is `length`.
       defineHybridPropAlias(this, 'maxlength', 'length')
     }

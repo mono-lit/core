@@ -1,6 +1,6 @@
 import { t as customElement } from "../../mono-element-CKcT0rwv.js";
-import { t as __decorate } from "../../decorate-DbYFpi8R.js";
-import { a as TOOLBAR_DEFAULT, c as TOOLBAR_STANDARD, d as resolveToolbar, f as SUNEDITOR_LANG_CODES, g as loadSunEditorPlugins, h as loadSunEditorLang, i as TOOLBAR_BASIC, l as pruneToolbar, m as loadSunEditorCss, n as AUTO_EXCLUDED_PLUGINS, o as TOOLBAR_FULL, p as loadSunEditor, r as SUNEDITOR_CORE_BUTTONS, s as TOOLBAR_PRESETS, t as MonoRichTextEditorCore, u as resolvePlugins } from "../../rich-text-editor-core-Ddd_QaLn.js";
+import { t as __decorate } from "../../decorate-BpnJwD08.js";
+import { a as TOOLBAR_DEFAULT, c as TOOLBAR_STANDARD, d as resolveToolbar, f as SUNEDITOR_LANG_CODES, g as loadSunEditorPlugins, h as loadSunEditorLang, i as TOOLBAR_BASIC, l as pruneToolbar, m as loadSunEditorCss, n as AUTO_EXCLUDED_PLUGINS, o as TOOLBAR_FULL, p as loadSunEditor, r as SUNEDITOR_CORE_BUTTONS, s as TOOLBAR_PRESETS, t as MonoRichTextEditorCore, u as resolvePlugins } from "../../rich-text-editor-core-DeczKUfa.js";
 import { i as withShadowUtilityStyles, r as toShadowCss, t as flushSsrHydration } from "../../hydration-flush-Volt9X7Q.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 

@@ -20,7 +20,8 @@ export declare class MonoInput extends MonoInput_base {
   private _slotSuffix;
   private _slotLabel;
   private _slotHelper;
-  private _slotObserver?;
+  /** Re-capture on children appended after connect — one shared observer, see `watchHostChildren`. */
+  private readonly _onHostChildren;
   /**
    * Capture `slot="…"` light-DOM children into the per-region arrays. Safe to run
    * MORE THAN ONCE: captured nodes have their `slot` attribute removed and are

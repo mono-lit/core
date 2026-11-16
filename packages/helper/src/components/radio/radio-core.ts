@@ -14,6 +14,7 @@ import type {
 
 import {
   booleanStringConverter,
+  defineAccessorAliases,
   defineHybridPropAlias,
   defineHybridPropAliases,
   type Constructor,
@@ -75,30 +76,38 @@ export const MonoRadioCore = <T extends Constructor<LitElement>>(superClass: T) 
       // names read and write the same text.
       defineHybridPropAlias(this, 'description', 'sublabel')
 
-      Object.defineProperty(this, 'css-class', {
-        get: () => this.cssClass,
-        set: (value: unknown) => this._setCssClass(value),
-        configurable: true,
-        enumerable: false,
-      })
-      Object.defineProperty(this, 'cssclass', {
-        get: () => this.cssClass,
-        set: (value: unknown) => this._setCssClass(value),
-        configurable: true,
-        enumerable: false,
-      })
+      defineAccessorAliases(
+        this,
+        ['css-class'],
+        function () {
+          return this.cssClass
+        },
+        function (value) {
+          this._setCssClass(value)
+        },
+      )
+      defineAccessorAliases(
+        this,
+        ['cssclass'],
+        function () {
+          return this.cssClass
+        },
+        function (value) {
+          this._setCssClass(value)
+        },
+      )
 
       // `ariaLabel` / `aria-label` / `arialabel` all map to `ariaLabelText`.
-      for (const name of ['ariaLabel', 'aria-label', 'arialabel']) {
-        Object.defineProperty(this, name, {
-          get: () => this.ariaLabelText,
-          set: (value: unknown) => {
-            this.ariaLabelText = value == null ? undefined : String(value)
-          },
-          configurable: true,
-          enumerable: false,
-        })
-      }
+      defineAccessorAliases(
+        this,
+        ['ariaLabel', 'aria-label', 'arialabel'],
+        function () {
+          return this.ariaLabelText
+        },
+        function (value) {
+          this.ariaLabelText = value == null ? undefined : String(value)
+        },
+      )
     }
 
     static get observedAttributes(): string[] {

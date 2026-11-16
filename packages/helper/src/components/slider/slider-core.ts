@@ -39,6 +39,7 @@ import { applyFormat, parseFormat, type InputFormat } from '../input/input-forma
 
 import {
   booleanStringConverter,
+  defineAccessorAliases,
   defineHybridPropAlias,
   defineHybridPropAliases,
   type Constructor,
@@ -163,16 +164,16 @@ export const MonoSliderCore = <T extends Constructor<LitElement>>(superClass: T)
       // `value` is the other name of `modelValue`.
       defineHybridPropAlias(this, 'value', 'modelValue')
 
-      for (const alias of ['ariaLabel', 'aria-label', 'arialabel']) {
-        Object.defineProperty(this, alias, {
-          get: () => this.ariaLabelText,
-          set: (v: unknown) => {
-            this.ariaLabelText = v == null ? undefined : String(v)
-          },
-          configurable: true,
-          enumerable: false,
-        })
-      }
+      defineAccessorAliases(
+        this,
+        ['ariaLabel', 'aria-label', 'arialabel'],
+        function () {
+          return this.ariaLabelText
+        },
+        function (v) {
+          this.ariaLabelText = v == null ? undefined : String(v)
+        },
+      )
     }
 
     static get observedAttributes(): string[] {

@@ -28,6 +28,7 @@ import { rateLimitHasChanged } from '../../composables/rate-limit'
 import {
   arrayHasChanged,
   booleanStringConverter,
+  defineAccessorAliases,
   defineHybridPropAliases,
   type Constructor,
 } from '../../composables/hybird-prop'
@@ -112,50 +113,60 @@ class MonoSelectCoreClass extends MonoFormControlCore(superClass) {
      * <mono-select :css-class="{}" />
      * <mono-select :cssclass="{}" />
      */
-    Object.defineProperty(this, 'css-class', {
-      get: () => this.cssClass,
-      set: (value: unknown) => {
+    defineAccessorAliases(
+      this,
+      ['css-class'],
+      function () {
+        return this.cssClass
+      },
+      function (value) {
         this._setCssClass(value)
       },
-      configurable: true,
-      enumerable: false,
-    })
+    )
 
-    Object.defineProperty(this, 'cssclass', {
-      get: () => this.cssClass,
-      set: (value: unknown) => {
+    defineAccessorAliases(
+      this,
+      ['cssclass'],
+      function () {
+        return this.cssClass
+      },
+      function (value) {
         this._setCssClass(value)
       },
-      configurable: true,
-      enumerable: false,
-    })
+    )
 
-    Object.defineProperty(this, 'ariaLabel', {
-      get: () => this.ariaLabelText,
-      set: (value: unknown) => {
+    defineAccessorAliases(
+      this,
+      ['ariaLabel'],
+      function () {
+        return this.ariaLabelText
+      },
+      function (value) {
         this.ariaLabelText = value == null ? undefined : String(value)
       },
-      configurable: true,
-      enumerable: false,
-    })
+    )
 
-    Object.defineProperty(this, 'aria-label', {
-      get: () => this.ariaLabelText,
-      set: (value: unknown) => {
+    defineAccessorAliases(
+      this,
+      ['aria-label'],
+      function () {
+        return this.ariaLabelText
+      },
+      function (value) {
         this.ariaLabelText = value == null ? undefined : String(value)
       },
-      configurable: true,
-      enumerable: false,
-    })
+    )
 
-    Object.defineProperty(this, 'arialabel', {
-      get: () => this.ariaLabelText,
-      set: (value: unknown) => {
+    defineAccessorAliases(
+      this,
+      ['arialabel'],
+      function () {
+        return this.ariaLabelText
+      },
+      function (value) {
         this.ariaLabelText = value == null ? undefined : String(value)
       },
-      configurable: true,
-      enumerable: false,
-    })
+    )
 
     this._ds = new DataSourceController<SelectItem>(this, {
       getDataSource: () => this.dataSource,

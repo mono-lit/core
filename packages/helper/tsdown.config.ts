@@ -9,6 +9,8 @@ import { createGenerator } from 'unocss'
 import unoConfig from './uno.config.ts'
 // @ts-expect-error — a plain .mjs build helper, no declarations
 import { buildFontSheets } from './scripts/font-sheets.mjs'
+// @ts-expect-error — a plain .mjs build helper, no declarations
+import { splitIsSelectors } from './scripts/split-is-selectors.mjs'
 
 dotenv.config()
 
@@ -184,6 +186,25 @@ function unocss(cssFileName: string): Plugin {
                 } else {
                     this.emitFile({ type: 'asset', fileName: cssFileName, source: css })
                 }
+            },
+        },
+    }
+}
+
+// `:is([mono-x],.mono-x)` → `[mono-x],.mono-x` in the emitted ui/index.css, so the browser
+// can bucket each rule instead of testing it against every element on the page (halved style
+// recalc for a table of inputs). Conservative and meaning-preserving by construction — see
+// scripts/split-is-selectors.mjs. Runs after mono-unocss (plugin order; both `post`), so the
+// whole final sheet is covered.
+function splitIsSelectorsPlugin(cssFileName: string): Plugin {
+    return {
+        name: 'mono-split-is-selectors',
+        generateBundle: {
+            order: 'post',
+            handler(_options, bundle) {
+                const asset = bundle[cssFileName]
+                if (asset?.type !== 'asset') return
+                asset.source = splitIsSelectors(String(asset.source)).css
             },
         },
     }
@@ -393,7 +414,7 @@ export default defineConfig([
         // The Lit SSR bridge's runtime (vendored from nuxt-ssr-lit, see src/nuxt/ssr-lit)
         // ships verbatim: plugins and `.vue` components the app's Nuxt build compiles.
         copy: [{ from: './src/nuxt/ssr-lit/runtime', to: './dist/ssr-lit' }],
-        plugins: [rawImports(), unocss(CSS_FILE), emitFlavorThemes()],
+        plugins: [rawImports(), unocss(CSS_FILE), splitIsSelectorsPlugin(CSS_FILE), emitFlavorThemes()],
     },
     // Declarations — one `.d.ts` per source module under dist/src/**, mirroring
     // src/. Not bundled per entry on purpose: dist/vue.d.ts (scripts/gen-vue-types.mjs)

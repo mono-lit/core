@@ -15,7 +15,8 @@ export declare class MonoSlider extends MonoSlider_base {
   protected createRenderRoot(): HTMLElement;
   private _slotLabel;
   private _slotHelper;
-  private _slotObserver?;
+  /** Re-capture on children appended after connect — one shared observer, see `watchHostChildren`. */
+  private readonly _onHostChildren;
   /** Capture `slot="label|helper"` children. Safe to re-run: captured nodes lose `slot` and leave the host. */
   private _captureSlots;
   connectedCallback(): void;

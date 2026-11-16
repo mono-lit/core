@@ -5,7 +5,7 @@ import { customElement } from '../../composables/mono-element'
 import { MonoInputCore, type InputIconName } from './input-core.js'
 
 import inputCss from './input.css?raw'
-import { placeSlotNode } from '../../composables/light-slots'
+import { placeSlotNode, unwatchHostChildren, watchHostChildren } from '../../composables/light-slots'
 import { monoHostChildNodes } from '../../composables/mono-skeleton'
 
 /**
@@ -30,7 +30,8 @@ export class MonoInput extends MonoInputCore(LitElement) {
   private _slotSuffix: Node[] = []
   private _slotLabel: Node[] = []
   private _slotHelper: Node[] = []
-  private _slotObserver?: MutationObserver
+  /** Re-capture on children appended after connect — one shared observer, see `watchHostChildren`. */
+  private readonly _onHostChildren = (): void => this._captureSlots()
 
   /**
    * Capture `slot="…"` light-DOM children into the per-region arrays. Safe to run
@@ -42,8 +43,6 @@ export class MonoInput extends MonoInputCore(LitElement) {
    * those, so the prefix wrapper was never rendered and the icon never showed.
    */
   private _captureSlots(): void {
-    // Pause our own observer so the `removeChild` calls below don't re-enter.
-    this._slotObserver?.disconnect()
 
     const captured = monoHostChildNodes(this)
     const capturedSlotNodes = new Set<Node>()
@@ -83,20 +82,13 @@ export class MonoInput extends MonoInputCore(LitElement) {
         if (node.parentNode === this) this.removeChild(node)
       }
     }
-
-    // Resume watching for any further late/dynamic slot children.
-    if (this._slotObserver && this.isConnected) {
-      this._slotObserver.observe(this, { childList: true })
-    }
   }
 
   override connectedCallback(): void {
     super.connectedCallback()
     // Watch for slot children Vue appends after connect (client only; the lit-ssr
     // shim has no MutationObserver and the light input is client-only anyway).
-    if (!isServer && !this._slotObserver && typeof MutationObserver !== 'undefined') {
-      this._slotObserver = new MutationObserver(() => this._captureSlots())
-    }
+    if (!isServer) watchHostChildren(this, this._onHostChildren)
     this._captureSlots()
 
     // Render synchronously so a captured named-slot element (and any Vue anchor
@@ -108,7 +100,7 @@ export class MonoInput extends MonoInputCore(LitElement) {
   }
 
   override disconnectedCallback(): void {
-    this._slotObserver?.disconnect()
+    unwatchHostChildren(this, this._onHostChildren)
     super.disconnectedCallback()
   }
 

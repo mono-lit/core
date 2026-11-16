@@ -16,6 +16,7 @@ import type {
 import {
   arrayHasChanged,
   booleanStringConverter,
+  defineAccessorAliases,
   defineHybridPropAliases,
   type Constructor,
 } from '../../composables/hybird-prop'
@@ -105,19 +106,27 @@ export const MonoBreadcrumbCore = <T extends Constructor<LitElement>>(
 
       defineHybridPropAliases(this, ['modelValue', 'cssClass'])
 
-      Object.defineProperty(this, 'css-class', {
-        get: () => this.cssClass,
-        set: (value: unknown) => this._setCssClass(value),
-        configurable: true,
-        enumerable: false,
-      })
+      defineAccessorAliases(
+        this,
+        ['css-class'],
+        function () {
+          return this.cssClass
+        },
+        function (value) {
+          this._setCssClass(value)
+        },
+      )
 
-      Object.defineProperty(this, 'cssclass', {
-        get: () => this.cssClass,
-        set: (value: unknown) => this._setCssClass(value),
-        configurable: true,
-        enumerable: false,
-      })
+      defineAccessorAliases(
+        this,
+        ['cssclass'],
+        function () {
+          return this.cssClass
+        },
+        function (value) {
+          this._setCssClass(value)
+        },
+      )
     }
 
     static get observedAttributes(): string[] {

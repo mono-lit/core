@@ -1,8 +1,8 @@
 import { g as monoHostChildNodes } from "../mono-ui-kvLVIf1V.js";
 import { t as customElement } from "../mono-element-CKcT0rwv.js";
-import { t as __decorate } from "../decorate-DbYFpi8R.js";
-import { t as MonoAccordionCore } from "../accordion-core-DaNyPWRr.js";
-import { a as parkDetachedNodes, i as guardHostTextContent, s as placeSlotNode } from "../light-slots-B5Ck0t_E.js";
+import { t as __decorate } from "../decorate-BpnJwD08.js";
+import { t as MonoAccordionCore } from "../accordion-core-vWYybabK.js";
+import { a as parkDetachedNodes, c as unwatchHostChildren, i as guardHostTextContent, l as watchHostChildren, s as placeSlotNode } from "../light-slots-DGiBODnU.js";
 import { LitElement, html, isServer, nothing } from "lit";
 import { ref } from "lit/directives/ref.js";
 
@@ -10,6 +10,7 @@ import { ref } from "lit/directives/ref.js";
 let MonoAccordion = class MonoAccordion extends MonoAccordionCore(LitElement) {
 	constructor(..._args) {
 		super(..._args);
+		this._onHostChildren = () => this._captureSlots();
 		this._slotTitle = [];
 		this._slotLabel = [];
 		this._slotSubtitle = [];
@@ -32,12 +33,12 @@ let MonoAccordion = class MonoAccordion extends MonoAccordionCore(LitElement) {
 	}
 	connectedCallback() {
 		super.connectedCallback();
-		if (!isServer && !this._slotObserver && typeof MutationObserver !== "undefined") this._slotObserver = new MutationObserver(() => this._captureSlots());
+		if (!isServer) watchHostChildren(this, this._onHostChildren);
 		this._captureSlots();
 		if (this.isConnected) this.performUpdate();
 	}
 	disconnectedCallback() {
-		this._slotObserver?.disconnect();
+		unwatchHostChildren(this, this._onHostChildren);
 		super.disconnectedCallback();
 	}
 	updated(changed) {
@@ -136,7 +137,6 @@ let MonoAccordion = class MonoAccordion extends MonoAccordionCore(LitElement) {
 	* Re-running lets the MutationObserver pick up children Vue appends after connect.
 	*/
 	_captureSlots() {
-		this._slotObserver?.disconnect();
 		const captured = monoHostChildNodes(this);
 		const capturedNodes = /* @__PURE__ */ new Set();
 		for (const node of captured) if (node instanceof Element) {
@@ -189,7 +189,6 @@ let MonoAccordion = class MonoAccordion extends MonoAccordionCore(LitElement) {
 				this.requestUpdate();
 			}
 		});
-		if (this._slotObserver && this.isConnected) this._slotObserver.observe(this, { childList: true });
 	}
 	_placeSlot(name, nodes) {
 		if (!nodes.length) return;

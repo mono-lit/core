@@ -31,6 +31,7 @@ import type { InputFormat, InputFormatDescriptor, InputFormatOn } from './input-
 
 import {
   booleanStringConverter,
+  defineAccessorAliases,
   defineHybridPropAliases,
   type Constructor,
 } from '../../composables/hybird-prop'
@@ -197,34 +198,38 @@ export const MonoInputCore = <T extends Constructor<LitElement>>(superClass: T) 
       ])
 
       // Shorter aria aliases: ariaLabel / aria-label / arialabel → ariaLabelText
-      for (const alias of ['ariaLabel', 'aria-label', 'arialabel']) {
-        Object.defineProperty(this, alias, {
-          get: () => this.ariaLabelText,
-          set: (value: unknown) => {
-            this.ariaLabelText = value == null ? undefined : String(value)
-          },
-          configurable: true,
-          enumerable: false,
-        })
-      }
+      defineAccessorAliases(
+        this,
+        ['ariaLabel', 'aria-label', 'arialabel'],
+        function () {
+          return this.ariaLabelText
+        },
+        function (value) {
+          this.ariaLabelText = value == null ? undefined : String(value)
+        },
+      )
 
       // Native-style lowercase aliases: maxlength / minlength
-      Object.defineProperty(this, 'maxlength', {
-        get: () => this.maxLength,
-        set: (value: unknown) => {
+      defineAccessorAliases(
+        this,
+        ['maxlength'],
+        function () {
+          return this.maxLength
+        },
+        function (value) {
           this.maxLength = this._toOptionalNumber(value)
         },
-        configurable: true,
-        enumerable: false,
-      })
-      Object.defineProperty(this, 'minlength', {
-        get: () => this.minLength,
-        set: (value: unknown) => {
+      )
+      defineAccessorAliases(
+        this,
+        ['minlength'],
+        function () {
+          return this.minLength
+        },
+        function (value) {
           this.minLength = this._toOptionalNumber(value)
         },
-        configurable: true,
-        enumerable: false,
-      })
+      )
     }
 
     static get observedAttributes(): string[] {

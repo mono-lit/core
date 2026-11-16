@@ -12,6 +12,7 @@ import type {
 
 import {
   booleanStringConverter,
+  defineAccessorAliases,
   defineHybridPropAlias,
   defineHybridPropAliases,
   type Constructor,
@@ -116,23 +117,27 @@ export const MonoAccordionCore = <T extends Constructor<LitElement>>(
        * <mono-accordion :css-class="{}" />
        * <mono-accordion :cssclass="{}" />
        */
-      Object.defineProperty(this, 'css-class', {
-        get: () => this.cssClass,
-        set: (value: unknown) => {
+      defineAccessorAliases(
+        this,
+        ['css-class'],
+        function () {
+          return this.cssClass
+        },
+        function (value) {
           this._setCssClass(value)
         },
-        configurable: true,
-        enumerable: false,
-      })
+      )
 
-      Object.defineProperty(this, 'cssclass', {
-        get: () => this.cssClass,
-        set: (value: unknown) => {
+      defineAccessorAliases(
+        this,
+        ['cssclass'],
+        function () {
+          return this.cssClass
+        },
+        function (value) {
           this._setCssClass(value)
         },
-        configurable: true,
-        enumerable: false,
-      })
+      )
     }
 
     static get observedAttributes(): string[] {

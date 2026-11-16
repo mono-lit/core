@@ -5,7 +5,7 @@ import { customElement } from '../../composables/mono-element'
 import { MonoSliderCore } from './slider-core.js'
 
 import sliderCss from './slider.css?raw'
-import { placeSlotNode } from '../../composables/light-slots'
+import { placeSlotNode, unwatchHostChildren, watchHostChildren } from '../../composables/light-slots'
 import { monoHostChildNodes } from '../../composables/mono-skeleton'
 
 /**
@@ -25,11 +25,11 @@ export class MonoSlider extends MonoSliderCore(LitElement) {
 
   private _slotLabel: Node[] = []
   private _slotHelper: Node[] = []
-  private _slotObserver?: MutationObserver
+  /** Re-capture on children appended after connect — one shared observer, see `watchHostChildren`. */
+  private readonly _onHostChildren = (): void => this._captureSlots()
 
   /** Capture `slot="label|helper"` children. Safe to re-run: captured nodes lose `slot` and leave the host. */
   private _captureSlots(): void {
-    this._slotObserver?.disconnect()
     const captured = new Set<Node>()
     for (const node of monoHostChildNodes(this)) {
       if (!(node instanceof Element)) continue
@@ -45,21 +45,18 @@ export class MonoSlider extends MonoSliderCore(LitElement) {
       this._hasHelperSlotState = this._slotHelper.length > 0
       for (const node of captured) if (node.parentNode === this) this.removeChild(node)
     }
-    if (this._slotObserver && this.isConnected) this._slotObserver.observe(this, { childList: true })
   }
 
   override connectedCallback(): void {
     super.connectedCallback()
-    if (!isServer && !this._slotObserver && typeof MutationObserver !== 'undefined') {
-      this._slotObserver = new MutationObserver(() => this._captureSlots())
-    }
+    if (!isServer) watchHostChildren(this, this._onHostChildren)
     this._captureSlots()
     // Render synchronously so captured slot nodes are re-placed within this insert (see mono-input).
     if (this.isConnected) this.performUpdate()
   }
 
   override disconnectedCallback(): void {
-    this._slotObserver?.disconnect()
+    unwatchHostChildren(this, this._onHostChildren)
     super.disconnectedCallback()
   }
 

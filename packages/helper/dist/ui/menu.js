@@ -1,9 +1,9 @@
 import { g as monoHostChildNodes } from "../mono-ui-kvLVIf1V.js";
 import { t as customElement } from "../mono-element-CKcT0rwv.js";
-import { n as arrayHasChanged, t as __decorate } from "../decorate-DbYFpi8R.js";
+import { n as arrayHasChanged, t as __decorate } from "../decorate-BpnJwD08.js";
 import { t as isIconifyClass } from "../icon-BM9N-jOt.js";
-import { a as parkDetachedNodes, s as placeSlotNode } from "../light-slots-B5Ck0t_E.js";
-import { _ as isGroup, a as renderMenuGroup, b as validateMenuProps, c as renderMenuItemRow, d as collectDefaultOpenGroups, f as findActivePath, g as isDivider, h as getMenuAlias, i as renderMenuDivider, l as renderMenuList, m as generateMenuRootClasses, n as renderMenuAppend, o as renderMenuGroupsOnly, p as findItem, r as renderMenuBadge, s as renderMenuIcon, t as MonoMenuCore, u as renderMenuSubheader, v as isItem, y as isSubheader } from "../menu-core-DkAYuCZ2.js";
+import { a as parkDetachedNodes, s as placeSlotNode } from "../light-slots-DGiBODnU.js";
+import { _ as isGroup, a as renderMenuGroup, b as validateMenuProps, c as renderMenuItemRow, d as collectDefaultOpenGroups, f as findActivePath, g as isDivider, h as getMenuAlias, i as renderMenuDivider, l as renderMenuList, m as generateMenuRootClasses, n as renderMenuAppend, o as renderMenuGroupsOnly, p as findItem, r as renderMenuBadge, s as renderMenuIcon, t as MonoMenuCore, u as renderMenuSubheader, v as isItem, y as isSubheader } from "../menu-core-P8ZfcHFh.js";
 import { LitElement, html } from "lit";
 import { property, state } from "lit/decorators.js";
 

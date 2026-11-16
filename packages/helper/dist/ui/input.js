@@ -1,9 +1,9 @@
 import { g as monoHostChildNodes } from "../mono-ui-kvLVIf1V.js";
 import { t as customElement } from "../mono-element-CKcT0rwv.js";
-import { t as __decorate } from "../decorate-DbYFpi8R.js";
-import { s as placeSlotNode } from "../light-slots-B5Ck0t_E.js";
+import { t as __decorate } from "../decorate-BpnJwD08.js";
+import { c as unwatchHostChildren, l as watchHostChildren, s as placeSlotNode } from "../light-slots-DGiBODnU.js";
 import { a as parseFormat, c as stripFormat, i as normaliseValue, n as caretAfterFormat, o as resolveFormat, r as localeSeparators, s as significantFor, t as applyFormat } from "../input-format-GrRCJBqV.js";
-import { a as MonoInputCore, i as validateInputProps, n as generateInputAttributes, r as getInputIcon, t as generateInputAriaAttributes } from "../input-utils-BglY-k0H.js";
+import { a as MonoInputCore, i as validateInputProps, n as generateInputAttributes, r as getInputIcon, t as generateInputAriaAttributes } from "../input-utils-C-rhsVQT.js";
 import { LitElement, html, isServer, nothing } from "lit";
 
 //#region src/components/input/mono-input.ts
@@ -14,6 +14,7 @@ let MonoInput = class MonoInput extends MonoInputCore(LitElement) {
 		this._slotSuffix = [];
 		this._slotLabel = [];
 		this._slotHelper = [];
+		this._onHostChildren = () => this._captureSlots();
 	}
 	createRenderRoot() {
 		return this;
@@ -28,7 +29,6 @@ let MonoInput = class MonoInput extends MonoInputCore(LitElement) {
 	* those, so the prefix wrapper was never rendered and the icon never showed.
 	*/
 	_captureSlots() {
-		this._slotObserver?.disconnect();
 		const captured = monoHostChildNodes(this);
 		const capturedSlotNodes = /* @__PURE__ */ new Set();
 		for (const node of captured) {
@@ -59,16 +59,15 @@ let MonoInput = class MonoInput extends MonoInputCore(LitElement) {
 			this._hasHelperSlotState = this._slotHelper.length > 0;
 			for (const node of capturedSlotNodes) if (node.parentNode === this) this.removeChild(node);
 		}
-		if (this._slotObserver && this.isConnected) this._slotObserver.observe(this, { childList: true });
 	}
 	connectedCallback() {
 		super.connectedCallback();
-		if (!isServer && !this._slotObserver && typeof MutationObserver !== "undefined") this._slotObserver = new MutationObserver(() => this._captureSlots());
+		if (!isServer) watchHostChildren(this, this._onHostChildren);
 		this._captureSlots();
 		if (this.isConnected) this.performUpdate();
 	}
 	disconnectedCallback() {
-		this._slotObserver?.disconnect();
+		unwatchHostChildren(this, this._onHostChildren);
 		super.disconnectedCallback();
 	}
 	updated(changed) {

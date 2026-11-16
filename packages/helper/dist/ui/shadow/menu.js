@@ -1,7 +1,7 @@
 import { t as customElement } from "../../mono-element-CKcT0rwv.js";
-import { t as __decorate } from "../../decorate-DbYFpi8R.js";
+import { t as __decorate } from "../../decorate-BpnJwD08.js";
 import { t as isIconifyClass } from "../../icon-BM9N-jOt.js";
-import { _ as isGroup, a as renderMenuGroup, b as validateMenuProps, c as renderMenuItemRow, d as collectDefaultOpenGroups, f as findActivePath, g as isDivider, h as getMenuAlias, i as renderMenuDivider, l as renderMenuList, m as generateMenuRootClasses, n as renderMenuAppend, o as renderMenuGroupsOnly, p as findItem, r as renderMenuBadge, s as renderMenuIcon, t as MonoMenuCore, u as renderMenuSubheader, v as isItem, y as isSubheader } from "../../menu-core-DkAYuCZ2.js";
+import { _ as isGroup, a as renderMenuGroup, b as validateMenuProps, c as renderMenuItemRow, d as collectDefaultOpenGroups, f as findActivePath, g as isDivider, h as getMenuAlias, i as renderMenuDivider, l as renderMenuList, m as generateMenuRootClasses, n as renderMenuAppend, o as renderMenuGroupsOnly, p as findItem, r as renderMenuBadge, s as renderMenuIcon, t as MonoMenuCore, u as renderMenuSubheader, v as isItem, y as isSubheader } from "../../menu-core-P8ZfcHFh.js";
 import { i as withShadowUtilityStyles, r as toShadowCss, t as flushSsrHydration } from "../../hydration-flush-Volt9X7Q.js";
 import { LitElement, html, isServer, unsafeCSS } from "lit";
 

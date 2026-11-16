@@ -15,6 +15,7 @@ import type {
 
 import {
   booleanStringConverter,
+  defineAccessorAliases,
   defineHybridPropAliases,
   type Constructor,
 } from '../../composables/hybird-prop'
@@ -91,16 +92,16 @@ export const MonoChipCore = <T extends Constructor<LitElement>>(superClass: T) =
       ])
 
       // `ariaLabel` / `aria-label` / `arialabel` all map to `ariaLabelText`.
-      for (const name of ['ariaLabel', 'aria-label', 'arialabel']) {
-        Object.defineProperty(this, name, {
-          get: () => this.ariaLabelText,
-          set: (value: unknown) => {
-            this.ariaLabelText = value == null ? undefined : String(value)
-          },
-          configurable: true,
-          enumerable: false,
-        })
-      }
+      defineAccessorAliases(
+        this,
+        ['ariaLabel', 'aria-label', 'arialabel'],
+        function () {
+          return this.ariaLabelText
+        },
+        function (value) {
+          this.ariaLabelText = value == null ? undefined : String(value)
+        },
+      )
 
       this.size = 'md'
       this.color = 'primary'

@@ -16,7 +16,8 @@ declare const MonoAccordion_base: Constructor<MonoAccordionCoreInterface> & type
  */
 export declare class MonoAccordion extends MonoAccordion_base {
   protected createRenderRoot(): HTMLElement;
-  private _slotObserver?;
+  /** Re-capture on children appended after connect — one shared observer, see `watchHostChildren`. */
+  private readonly _onHostChildren;
   private _slotTitle;
   private _slotLabel;
   private _slotSubtitle;

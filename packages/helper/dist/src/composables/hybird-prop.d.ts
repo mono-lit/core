@@ -5,6 +5,19 @@ export declare function toKebabCase(value: string): string;
 export declare function toLowerCaseProp(value: string): string;
 export declare function defineHybridPropAliases<T extends object>(target: T, props: string[]): void;
 /**
+ * A hand-written accessor alias — for the names a plain forward cannot express (`css-class`
+ * through a normalizing setter, `aria-label` coercing to a string, `maxlength` → a number).
+ *
+ * Installed once on the prototype like the hybrid aliases (see above), so `get` / `set` MUST be
+ * `function`s that use `this`, never arrows closing over the constructing instance — the first
+ * instance's closure would otherwise serve every element of the class.
+ *
+ * It OVERWRITES a hybrid alias of the same name, exactly as the per-instance
+ * `Object.defineProperty` it replaces did (e.g. `cssClass`'s generated `css-class` forward is
+ * replaced by the normalizing one).
+ */
+export declare function defineAccessorAliases<T extends object>(target: T, names: readonly string[], get: (this: T) => unknown, set: (this: T, value: unknown) => void): void;
+/**
  * Register a cross-name alias for a controller-binding prop — e.g.
  * `defineHybridPropAlias(el, 'controlTable', 'dataGrid')` makes `controlTable`,
  * `control-table` and `controltable` all read/write the canonical reactive

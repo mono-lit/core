@@ -18,6 +18,7 @@ import type {
 
 import {
   booleanStringConverter,
+  defineAccessorAliases,
   defineHybridPropAliases,
   type Constructor,
 } from '../../composables/hybird-prop'
@@ -89,68 +90,82 @@ class MonoTextareaCoreClass extends MonoFormControlCore(superClass) {
      * <mono-textarea :css-class="{}" />
      * <mono-textarea :cssclass="{}" />
      */
-    Object.defineProperty(this, 'css-class', {
-      get: () => this.cssClass,
-      set: (value: unknown) => {
+    defineAccessorAliases(
+      this,
+      ['css-class'],
+      function () {
+        return this.cssClass
+      },
+      function (value) {
         this._setCssClass(value)
       },
-      configurable: true,
-      enumerable: false,
-    })
+    )
 
-    Object.defineProperty(this, 'cssclass', {
-      get: () => this.cssClass,
-      set: (value: unknown) => {
+    defineAccessorAliases(
+      this,
+      ['cssclass'],
+      function () {
+        return this.cssClass
+      },
+      function (value) {
         this._setCssClass(value)
       },
-      configurable: true,
-      enumerable: false,
-    })
+    )
 
-    Object.defineProperty(this, 'ariaLabel', {
-      get: () => this.ariaLabelText,
-      set: (value: unknown) => {
+    defineAccessorAliases(
+      this,
+      ['ariaLabel'],
+      function () {
+        return this.ariaLabelText
+      },
+      function (value) {
         this.ariaLabelText = value == null ? undefined : String(value)
       },
-      configurable: true,
-      enumerable: false,
-    })
+    )
 
-    Object.defineProperty(this, 'aria-label', {
-      get: () => this.ariaLabelText,
-      set: (value: unknown) => {
+    defineAccessorAliases(
+      this,
+      ['aria-label'],
+      function () {
+        return this.ariaLabelText
+      },
+      function (value) {
         this.ariaLabelText = value == null ? undefined : String(value)
       },
-      configurable: true,
-      enumerable: false,
-    })
+    )
 
-    Object.defineProperty(this, 'arialabel', {
-      get: () => this.ariaLabelText,
-      set: (value: unknown) => {
+    defineAccessorAliases(
+      this,
+      ['arialabel'],
+      function () {
+        return this.ariaLabelText
+      },
+      function (value) {
         this.ariaLabelText = value == null ? undefined : String(value)
       },
-      configurable: true,
-      enumerable: false,
-    })
+    )
 
-    Object.defineProperty(this, 'maxlength', {
-      get: () => this.maxLength,
-      set: (value: unknown) => {
+    defineAccessorAliases(
+      this,
+      ['maxlength'],
+      function () {
+        return this.maxLength
+      },
+      function (value) {
         this.maxLength = this._toOptionalNumber(value)
       },
-      configurable: true,
-      enumerable: false,
-    })
+    )
 
-    Object.defineProperty(this, 'minlength', {
-      get: () => this.minLength,
-      set: (value: unknown) => {
+    defineAccessorAliases(
+      this,
+      ['minlength'],
+      function () {
+        return this.minLength
+      },
+      function (value) {
         this.minLength = this._toOptionalNumber(value)
       },
-      configurable: true,
-      enumerable: false,
-    })
+    )
   }
 
   static get observedAttributes(): string[] {

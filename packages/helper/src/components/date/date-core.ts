@@ -22,6 +22,7 @@ import type { Options as FlatpickrOptions } from 'flatpickr/dist/types/options'
 
 import {
   booleanStringConverter,
+  defineAccessorAliases,
   defineHybridPropAliases,
   type Constructor,
 } from '../../composables/hybird-prop'
@@ -98,18 +99,26 @@ class MonoDateCoreClass extends MonoFormControlCore(superClass) {
       'maxHeight',
     ])
 
-    Object.defineProperty(this, 'css-class', {
-      get: () => this.cssClass,
-      set: (value: unknown) => this._setCssClass(value),
-      configurable: true,
-      enumerable: false,
-    })
-    Object.defineProperty(this, 'cssclass', {
-      get: () => this.cssClass,
-      set: (value: unknown) => this._setCssClass(value),
-      configurable: true,
-      enumerable: false,
-    })
+    defineAccessorAliases(
+      this,
+      ['css-class'],
+      function () {
+        return this.cssClass
+      },
+      function (value) {
+        this._setCssClass(value)
+      },
+    )
+    defineAccessorAliases(
+      this,
+      ['cssclass'],
+      function () {
+        return this.cssClass
+      },
+      function (value) {
+        this._setCssClass(value)
+      },
+    )
   }
 
   static get observedAttributes(): string[] {

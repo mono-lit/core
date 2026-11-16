@@ -7,6 +7,7 @@ import type { StyleInfo } from 'lit/directives/style-map.js'
 
 import {
   booleanStringConverter,
+  defineAccessorAliases,
   defineHybridPropAlias,
   defineHybridPropAliases,
   numberStringConverter,
@@ -139,14 +140,16 @@ export const MonoChartCore = <T extends Constructor<LitElement>>(superClass: T) 
       // Renamed controller binding — `:control-chart` / `:controlChart` alias the
       // canonical `dataChart` (no breaking change; both spellings work).
       defineHybridPropAlias(this, 'controlChart', 'dataChart')
-      for (const alias of ['css-class', 'cssclass']) {
-        Object.defineProperty(this, alias, {
-          get: () => this.cssClass,
-          set: (value: unknown) => this._setCssClass(value),
-          configurable: true,
-          enumerable: false,
-        })
-      }
+      defineAccessorAliases(
+        this,
+        ['css-class', 'cssclass'],
+        function () {
+          return this.cssClass
+        },
+        function (value) {
+          this._setCssClass(value)
+        },
+      )
     }
 
     /** The chart controller (bind with `.prop`). */

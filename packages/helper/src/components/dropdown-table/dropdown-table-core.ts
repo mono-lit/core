@@ -16,10 +16,11 @@ import {
 import type { DropdownPlacement } from '../dropdown/dropdown-types.js'
 import {
   booleanStringConverter,
-  numberStringConverter,
-  optionalNumberConverter,
+  defineAccessorAliases,
   defineHybridPropAlias,
   defineHybridPropAliases,
+  numberStringConverter,
+  optionalNumberConverter,
   type Constructor,
 } from '../../composables/hybird-prop'
 import { dispatchMonoEvent } from '../../composables/mono-event'
@@ -148,14 +149,16 @@ export const MonoDropdownTableCore = <T extends Constructor<LitElement>>(superCl
 
       // Make `:css-class`, `:cssclass` and `:cssClass` (object or JSON string) all
       // reach `_setCssClass`, exactly like <mono-select>.
-      for (const alias of ['css-class', 'cssclass']) {
-        Object.defineProperty(this, alias, {
-          get: () => this.cssClass,
-          set: (value: unknown) => this._setCssClass(value),
-          configurable: true,
-          enumerable: false,
-        })
-      }
+      defineAccessorAliases(
+        this,
+        ['css-class', 'cssclass'],
+        function () {
+          return this.cssClass
+        },
+        function (value) {
+          this._setCssClass(value)
+        },
+      )
     }
 
     /** Normalize an object | JSON string | plain-string `css-class` value. */

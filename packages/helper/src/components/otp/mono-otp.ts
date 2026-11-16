@@ -5,7 +5,7 @@ import { customElement } from '../../composables/mono-element'
 import { MonoOtpCore, type OtpIconName } from './otp-core.js'
 
 import otpCss from './otp.css?raw'
-import { placeSlotNode } from '../../composables/light-slots'
+import { placeSlotNode, unwatchHostChildren, watchHostChildren } from '../../composables/light-slots'
 import { monoHostChildNodes } from '../../composables/mono-skeleton'
 
 /**
@@ -24,11 +24,11 @@ export class MonoOtp extends MonoOtpCore(LitElement) {
   }
 
   private _slots: Record<'prefix' | 'suffix' | 'label' | 'helper', Node[]> = { prefix: [], suffix: [], label: [], helper: [] }
-  private _slotObserver?: MutationObserver
+  /** Re-capture on children appended after connect — one shared observer, see `watchHostChildren`. */
+  private readonly _onHostChildren = (): void => this._captureSlots()
 
   /** Capture `slot="…"` children. Safe to re-run: captured nodes lose `slot` and leave the host. */
   private _captureSlots(): void {
-    this._slotObserver?.disconnect()
     const captured = new Set<Node>()
     for (const node of monoHostChildNodes(this)) {
       if (!(node instanceof Element)) continue
@@ -45,21 +45,18 @@ export class MonoOtp extends MonoOtpCore(LitElement) {
       this._hasHelperSlotState = this._slots.helper.length > 0
       for (const node of captured) if (node.parentNode === this) this.removeChild(node)
     }
-    if (this._slotObserver && this.isConnected) this._slotObserver.observe(this, { childList: true })
   }
 
   override connectedCallback(): void {
     super.connectedCallback()
-    if (!isServer && !this._slotObserver && typeof MutationObserver !== 'undefined') {
-      this._slotObserver = new MutationObserver(() => this._captureSlots())
-    }
+    if (!isServer) watchHostChildren(this, this._onHostChildren)
     this._captureSlots()
     // Render synchronously so captured slot nodes are re-placed within this insert (see mono-input).
     if (this.isConnected) this.performUpdate()
   }
 
   override disconnectedCallback(): void {
-    this._slotObserver?.disconnect()
+    unwatchHostChildren(this, this._onHostChildren)
     super.disconnectedCallback()
   }
 

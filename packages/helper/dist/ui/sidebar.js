@@ -1,8 +1,8 @@
 import { g as monoHostChildNodes } from "../mono-ui-kvLVIf1V.js";
 import { t as customElement } from "../mono-element-CKcT0rwv.js";
-import { t as __decorate } from "../decorate-DbYFpi8R.js";
-import { i as guardHostTextContent, s as placeSlotNode } from "../light-slots-B5Ck0t_E.js";
-import { a as resolveMode, i as isAutoTemporary, n as SIDEBAR_AUTO_BREAKPOINT, o as validateSidebarProps, r as generateSidebarRootClasses, t as MonoSidebarCore } from "../sidebar-core-CD6txDo3.js";
+import { t as __decorate } from "../decorate-BpnJwD08.js";
+import { i as guardHostTextContent, s as placeSlotNode } from "../light-slots-DGiBODnU.js";
+import { a as resolveMode, i as isAutoTemporary, n as SIDEBAR_AUTO_BREAKPOINT, o as validateSidebarProps, r as generateSidebarRootClasses, t as MonoSidebarCore } from "../sidebar-core-DPixdFlD.js";
 import { LitElement, html } from "lit";
 
 //#region src/components/sidebar/mono-sidebar.ts

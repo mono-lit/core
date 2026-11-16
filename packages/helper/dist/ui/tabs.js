@@ -1,8 +1,8 @@
 import { g as monoHostChildNodes } from "../mono-ui-kvLVIf1V.js";
 import { t as customElement } from "../mono-element-CKcT0rwv.js";
-import { t as __decorate } from "../decorate-DbYFpi8R.js";
-import { a as parkDetachedNodes, s as placeSlotNode } from "../light-slots-B5Ck0t_E.js";
-import { t as MonoTabsCore } from "../tabs-core-r5-B8k_N.js";
+import { t as __decorate } from "../decorate-BpnJwD08.js";
+import { a as parkDetachedNodes, s as placeSlotNode } from "../light-slots-DGiBODnU.js";
+import { t as MonoTabsCore } from "../tabs-core-bVceZTVw.js";
 import { LitElement } from "lit";
 import { state } from "lit/decorators.js";
 

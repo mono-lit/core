@@ -14,7 +14,8 @@ declare const MonoOtp_base: Constructor<MonoOtpCoreInterface> & typeof LitElemen
 export declare class MonoOtp extends MonoOtp_base {
   protected createRenderRoot(): HTMLElement;
   private _slots;
-  private _slotObserver?;
+  /** Re-capture on children appended after connect — one shared observer, see `watchHostChildren`. */
+  private readonly _onHostChildren;
   /** Capture `slot="…"` children. Safe to re-run: captured nodes lose `slot` and leave the host. */
   private _captureSlots;
   connectedCallback(): void;

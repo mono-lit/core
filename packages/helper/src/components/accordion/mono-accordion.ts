@@ -9,6 +9,8 @@ import {
   guardHostTextContent,
   parkDetachedNodes,
   placeSlotNode,
+  unwatchHostChildren,
+  watchHostChildren,
 } from '../../composables/light-slots'
 
 import accordionCss from './accordion.css?raw'
@@ -32,7 +34,8 @@ export class MonoAccordion extends MonoAccordionCore(LitElement) {
     return this
   }
 
-  private _slotObserver?: MutationObserver
+  /** Re-capture on children appended after connect — one shared observer, see `watchHostChildren`. */
+  private readonly _onHostChildren = (): void => this._captureSlots()
 
   // `title` / `subtitle` are canonical; `label` / `description` are their old
   // names, captured separately so the canonical one can win when both are given.
@@ -64,9 +67,7 @@ export class MonoAccordion extends MonoAccordionCore(LitElement) {
     // connectedCallback, so a one-shot capture misses them and the body text /
     // `slot="icon"` stay stranded outside the accordion. Watch for late children
     // and re-capture (mirrors mono-input).
-    if (!isServer && !this._slotObserver && typeof MutationObserver !== 'undefined') {
-      this._slotObserver = new MutationObserver(() => this._captureSlots())
-    }
+    if (!isServer) watchHostChildren(this, this._onHostChildren)
     this._captureSlots()
 
     // Render synchronously so the captured body/named content — and the consumer's
@@ -78,7 +79,7 @@ export class MonoAccordion extends MonoAccordionCore(LitElement) {
   }
 
   override disconnectedCallback(): void {
-    this._slotObserver?.disconnect()
+    unwatchHostChildren(this, this._onHostChildren)
     super.disconnectedCallback()
   }
 
@@ -220,8 +221,6 @@ export class MonoAccordion extends MonoAccordionCore(LitElement) {
    * Re-running lets the MutationObserver pick up children Vue appends after connect.
    */
   private _captureSlots(): void {
-    // Pause our own observer so the removeChild() calls below don't re-enter.
-    this._slotObserver?.disconnect()
 
     const captured = monoHostChildNodes(this)
     const capturedNodes = new Set<Node>()
@@ -304,11 +303,6 @@ export class MonoAccordion extends MonoAccordionCore(LitElement) {
         },
       },
     )
-
-    // Resume watching for any further late/dynamic slot children.
-    if (this._slotObserver && this.isConnected) {
-      this._slotObserver.observe(this, { childList: true })
-    }
   }
 
   private _placeSlot(name: string, nodes: Node[]): void {

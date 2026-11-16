@@ -1,8 +1,8 @@
 import { g as monoHostChildNodes } from "../mono-ui-kvLVIf1V.js";
 import { t as customElement } from "../mono-element-CKcT0rwv.js";
-import { t as __decorate } from "../decorate-DbYFpi8R.js";
-import { s as placeSlotNode } from "../light-slots-B5Ck0t_E.js";
-import { a as moveRun, c as normalise, d as stepFrom, f as thumbBounds, i as markPoints, l as resolveScale, m as trackPieces, n as coerceNumbers, o as moveThumb, p as toPercent, r as fromRatio, s as nearestThumb, t as MonoSliderCore, u as snap } from "../slider-core-vcWr321-.js";
+import { t as __decorate } from "../decorate-BpnJwD08.js";
+import { c as unwatchHostChildren, l as watchHostChildren, s as placeSlotNode } from "../light-slots-DGiBODnU.js";
+import { a as moveRun, c as normalise, d as stepFrom, f as thumbBounds, i as markPoints, l as resolveScale, m as trackPieces, n as coerceNumbers, o as moveThumb, p as toPercent, r as fromRatio, s as nearestThumb, t as MonoSliderCore, u as snap } from "../slider-core-BF5x9Ydk.js";
 import { LitElement, isServer } from "lit";
 
 //#region src/components/slider/mono-slider.ts
@@ -11,13 +11,13 @@ let MonoSlider = class MonoSlider extends MonoSliderCore(LitElement) {
 		super(..._args);
 		this._slotLabel = [];
 		this._slotHelper = [];
+		this._onHostChildren = () => this._captureSlots();
 	}
 	createRenderRoot() {
 		return this;
 	}
 	/** Capture `slot="label|helper"` children. Safe to re-run: captured nodes lose `slot` and leave the host. */
 	_captureSlots() {
-		this._slotObserver?.disconnect();
 		const captured = /* @__PURE__ */ new Set();
 		for (const node of monoHostChildNodes(this)) {
 			if (!(node instanceof Element)) continue;
@@ -33,16 +33,15 @@ let MonoSlider = class MonoSlider extends MonoSliderCore(LitElement) {
 			this._hasHelperSlotState = this._slotHelper.length > 0;
 			for (const node of captured) if (node.parentNode === this) this.removeChild(node);
 		}
-		if (this._slotObserver && this.isConnected) this._slotObserver.observe(this, { childList: true });
 	}
 	connectedCallback() {
 		super.connectedCallback();
-		if (!isServer && !this._slotObserver && typeof MutationObserver !== "undefined") this._slotObserver = new MutationObserver(() => this._captureSlots());
+		if (!isServer) watchHostChildren(this, this._onHostChildren);
 		this._captureSlots();
 		if (this.isConnected) this.performUpdate();
 	}
 	disconnectedCallback() {
-		this._slotObserver?.disconnect();
+		unwatchHostChildren(this, this._onHostChildren);
 		super.disconnectedCallback();
 	}
 	updated(changed) {

@@ -362,6 +362,73 @@ export function bucketHasContent(nodes: Node[] | undefined): boolean {
   )
 }
 
+/* ── One shared `childList` observer for every light host ───────────────────────
+   Light builds watch their host for children a framework appends AFTER connect (see
+   `LateSlotWatcher` below). That used to be one `MutationObserver` per element — 900 of them
+   for a 300-row table with three `mono-input`s per row, each allocated and registered during
+   mount. One observer can watch any number of nodes, so they now share this one and keep only
+   a callback in a WeakMap.
+
+   What changes, and why it is safe:
+   - There is no per-target `unobserve()` in the DOM API, so "stop" just drops the callback. The
+     node stays registered and its records are ignored; the registration does not keep the node
+     alive (the node owns it, not the observer).
+   - The old code `disconnect()`ed around its own `removeChild` calls to swallow the records they
+     produce. A shared observer cannot pause one host, so those records now arrive and run one
+     more capture — every capture routine is idempotent (captured nodes lose `slot` and leave the
+     host), and the records from each element's own first render already caused exactly such a
+     re-run before this change.
+   - Callbacks run once per host per delivery, as before, each isolated so one throwing cannot
+     starve the others. */
+
+type HostChildCallback = () => void
+
+const hostChildCallbacks = new WeakMap<Node, Set<HostChildCallback>>()
+let hostChildObserver: MutationObserver | undefined
+
+function dispatchHostChildRecords(records: MutationRecord[]): void {
+  const seen = new Set<Node>()
+  for (const record of records) {
+    const host = record.target
+    if (seen.has(host)) continue
+    seen.add(host)
+    const callbacks = hostChildCallbacks.get(host)
+    if (!callbacks?.size) continue
+    for (const cb of Array.from(callbacks)) {
+      try {
+        cb()
+      } catch (err) {
+        // Surface it like an uncaught observer error would, without breaking the other hosts.
+        setTimeout(() => {
+          throw err
+        })
+      }
+    }
+  }
+}
+
+/**
+ * Call `onChange` whenever a DIRECT child of `host` is added or removed (`childList`, no
+ * `subtree`). Idempotent for the same pair. No-op where `MutationObserver` is missing (SSR).
+ */
+export function watchHostChildren(host: Node, onChange: HostChildCallback): void {
+  if (typeof MutationObserver === 'undefined') return
+  let callbacks = hostChildCallbacks.get(host)
+  if (!callbacks) hostChildCallbacks.set(host, (callbacks = new Set()))
+  callbacks.add(onChange)
+  hostChildObserver ??= new MutationObserver(dispatchHostChildRecords)
+  // Re-observing an already-observed node just replaces its options — never a duplicate.
+  hostChildObserver.observe(host, { childList: true })
+}
+
+/** Stop calling `onChange` for `host` (see the note above on why the node stays registered). */
+export function unwatchHostChildren(host: Node, onChange: HostChildCallback): void {
+  const callbacks = hostChildCallbacks.get(host)
+  if (!callbacks) return
+  callbacks.delete(onChange)
+  if (!callbacks.size) hostChildCallbacks.delete(host)
+}
+
 /**
  * Watches a host for a named slot child that arrives AFTER `connectedCallback`.
  *
@@ -376,7 +443,9 @@ export function bucketHasContent(nodes: Node[] | undefined): boolean {
  * build, and all it needs is connect/disconnect.
  */
 export class LateSlotWatcher {
-  private _observer?: MutationObserver
+  private _watching = false
+  /** Stable identity for the shared observer's registry (`onFound` may be shared by several watchers). */
+  private readonly _notify = (): void => this.onFound()
 
   constructor(
     private readonly host: Element,
@@ -399,17 +468,17 @@ export class LateSlotWatcher {
   }
 
   start(): void {
-    if (this._observer || typeof MutationObserver === 'undefined') return
-
-    this._observer = new MutationObserver(() => this.onFound())
+    if (this._watching || typeof MutationObserver === 'undefined') return
+    this._watching = true
     // `childList` only, and not `subtree`: what we are waiting for is a direct child appearing.
     // The consumer's own churn INSIDE that child — every `v-for` insert and removal — must not
     // wake this up, which a subtree observer would do on every keystroke of a search box.
-    this._observer.observe(this.host, { childList: true })
+    watchHostChildren(this.host, this._notify)
   }
 
   stop(): void {
-    this._observer?.disconnect()
-    this._observer = undefined
+    if (!this._watching) return
+    this._watching = false
+    unwatchHostChildren(this.host, this._notify)
   }
 }

@@ -28,6 +28,7 @@ import { pluginsNeedCatalog, pruneToolbar, resolvePlugins, resolveToolbar } from
 
 import {
   booleanStringConverter,
+  defineAccessorAliases,
   defineHybridPropAliases,
   optionalNumberConverter,
   type Constructor,
@@ -99,24 +100,26 @@ export const MonoRichTextEditorCore = <T extends Constructor<LitElement>>(superC
       ])
 
       // `:css-class` / `:cssclass` land on the object OR the root-class string.
-      for (const alias of ['css-class', 'cssclass']) {
-        Object.defineProperty(this, alias, {
-          get: () => this.cssClass,
-          set: (value: unknown) => this._setCssClass(value),
-          configurable: true,
-          enumerable: false,
-        })
-      }
-      for (const alias of ['ariaLabel', 'aria-label', 'arialabel']) {
-        Object.defineProperty(this, alias, {
-          get: () => this.ariaLabelText,
-          set: (value: unknown) => {
-            this.ariaLabelText = value == null ? undefined : String(value)
-          },
-          configurable: true,
-          enumerable: false,
-        })
-      }
+      defineAccessorAliases(
+        this,
+        ['css-class', 'cssclass'],
+        function () {
+          return this.cssClass
+        },
+        function (value) {
+          this._setCssClass(value)
+        },
+      )
+      defineAccessorAliases(
+        this,
+        ['ariaLabel', 'aria-label', 'arialabel'],
+        function () {
+          return this.ariaLabelText
+        },
+        function (value) {
+          this.ariaLabelText = value == null ? undefined : String(value)
+        },
+      )
     }
 
     static get observedAttributes(): string[] {

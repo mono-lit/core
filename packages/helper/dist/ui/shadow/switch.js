@@ -1,6 +1,6 @@
 import { t as customElement } from "../../mono-element-CKcT0rwv.js";
-import { t as __decorate } from "../../decorate-DbYFpi8R.js";
-import { n as validateSwitchProps, r as MonoSwitchCore, t as generateSwitchAttributes } from "../../switch-utils-CTZ4id2V.js";
+import { t as __decorate } from "../../decorate-BpnJwD08.js";
+import { n as validateSwitchProps, r as MonoSwitchCore, t as generateSwitchAttributes } from "../../switch-utils-CQSTPvJZ.js";
 import { i as withShadowUtilityStyles, r as toShadowCss, t as flushSsrHydration } from "../../hydration-flush-Volt9X7Q.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 
