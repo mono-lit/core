@@ -1,6 +1,6 @@
 import { n as detachEventHandlers, t as applyProps } from "./element-props-xvw0EB7H.js";
 import { a as defineHybridPropAlias, o as defineHybridPropAliases, r as booleanStringConverter, t as __decorate } from "./decorate-BpnJwD08.js";
-import { i as unmarkTableCell, n as isEditCellControl, r as markTableCell } from "./table-cell-marks-B6PFlSqD.js";
+import { i as unmarkTableCell, n as isEditCellControl, r as markTableCell } from "./table-cell-marks-gyvkZfq9.js";
 import { property } from "lit/decorators.js";
 
 //#region src/composables/visibility.ts

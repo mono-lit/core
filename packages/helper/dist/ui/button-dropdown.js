@@ -1,6 +1,6 @@
 import { t as customElement } from "../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../decorate-BpnJwD08.js";
-import "../mono-button-KBrhSM2V.js";
+import "../mono-button-CXYkw5ev.js";
 import { t as MonoButtonDropdownCore } from "../button-dropdown-core-D_2ypoL-.js";
 import { LitElement, html } from "lit";
 import { ref } from "lit/directives/ref.js";

@@ -3,7 +3,7 @@ import { t as customElement } from "../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../decorate-BpnJwD08.js";
 import { c as unwatchHostChildren, l as watchHostChildren, s as placeSlotNode } from "../light-slots-CQuCgSHh.js";
 import { a as parseFormat, c as stripFormat, i as normaliseValue, n as caretAfterFormat, o as resolveFormat, r as localeSeparators, s as significantFor, t as applyFormat } from "../input-format-GrRCJBqV.js";
-import { a as MonoInputCore, i as validateInputProps, n as generateInputAttributes, r as getInputIcon, t as generateInputAriaAttributes } from "../input-utils-UuQeD_LX.js";
+import { a as MonoInputCore, i as validateInputProps, n as generateInputAttributes, r as getInputIcon, t as generateInputAriaAttributes } from "../input-utils-douBYYiw.js";
 import { LitElement, html, isServer, nothing } from "lit";
 
 //#region src/components/input/mono-input.ts

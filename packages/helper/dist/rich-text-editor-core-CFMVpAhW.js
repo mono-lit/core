@@ -1,7 +1,7 @@
 import { d as buildSizeStyle, f as toCssSize } from "./mono-ui-bwtsaC-q.js";
 import { c as optionalNumberConverter, i as defineAccessorAliases, o as defineHybridPropAliases, r as booleanStringConverter, t as __decorate } from "./decorate-BpnJwD08.js";
 import { t as dispatchMonoEvent } from "./mono-event-CAZf0F_k.js";
-import { t as MonoFormControlCore } from "./form-control-core-D49tMELi.js";
+import { t as MonoFormControlCore } from "./form-control-core-Bdl7XM0o.js";
 import { html, isServer, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { styleMap } from "lit/directives/style-map.js";

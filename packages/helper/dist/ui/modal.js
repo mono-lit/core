@@ -3,7 +3,7 @@ import { t as monoModal } from "../mono-modal-controller-ClObbHUs.js";
 import { t as customElement } from "../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../decorate-BpnJwD08.js";
 import { a as parkDetachedNodes, i as guardHostTextContent, s as placeSlotNode } from "../light-slots-CQuCgSHh.js";
-import "../mono-button-KBrhSM2V.js";
+import "../mono-button-CXYkw5ev.js";
 import { t as MonoModalCore } from "../modal-core-yG32-4te.js";
 import { LitElement } from "lit";
 

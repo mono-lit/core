@@ -1,7 +1,7 @@
 import { d as buildSizeStyle } from "./mono-ui-bwtsaC-q.js";
 import { t as customElement } from "./mono-element-D1l07Tbd.js";
 import { t as __decorate } from "./decorate-BpnJwD08.js";
-import { t as MonoButtonCore } from "./button-core-BqnUopVh.js";
+import { t as MonoButtonCore } from "./button-core-Dx1ooF49.js";
 import { i as withShadowUtilityStyles, r as toShadowCss, t as flushSsrHydration } from "./hydration-flush-Volt9X7Q.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { ifDefined } from "lit/directives/if-defined.js";

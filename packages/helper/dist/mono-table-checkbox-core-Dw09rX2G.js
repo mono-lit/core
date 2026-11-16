@@ -3879,6 +3879,17 @@ const MonoTableEmptyCore = (superClass) => {
 			]);
 			defineHybridPropAlias(this, "controlForm", "dataForm");
 		}
+		_markShown(on) {
+			const table = on ? this.closest("table") : null;
+			if (this._shownOn && this._shownOn !== table) {
+				this._shownOn.removeAttribute("mono-empty-shown");
+				this._shownOn = void 0;
+			}
+			if (table) {
+				if (!table.hasAttribute("mono-empty-shown")) table.setAttribute("mono-empty-shown", "");
+				this._shownOn = table;
+			}
+		}
 		connectedCallback() {
 			super.connectedCallback();
 			if (isServer) return;
@@ -3891,6 +3902,7 @@ const MonoTableEmptyCore = (superClass) => {
 			releaseOverlayHost(this);
 			releaseRowHost(this, this._rowHost);
 			this._rowHost = void 0;
+			this._markShown(false);
 			super.disconnectedCallback();
 		}
 		/**
@@ -3967,6 +3979,7 @@ const MonoTableEmptyCore = (superClass) => {
 		_apply() {
 			this.toggleAttribute("data-mono-empty", this._visible);
 			this.setAttribute("aria-hidden", this._visible ? "false" : "true");
+			this._markShown(this._visible);
 			applyOverlayHost(this, this._visible, {
 				headVar: "--mono-table-empty-head",
 				holdVar: "--mono-table-hold-empty",

@@ -2,7 +2,7 @@ import { g as monoHostChildNodes } from "../mono-ui-bwtsaC-q.js";
 import { t as customElement } from "../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../decorate-BpnJwD08.js";
 import { s as placeSlotNode } from "../light-slots-CQuCgSHh.js";
-import { n as validateCheckboxProps, r as MonoCheckboxCore, t as generateCheckboxAttributes } from "../checkbox-utils-Ci13yrit.js";
+import { n as validateCheckboxProps, r as MonoCheckboxCore, t as generateCheckboxAttributes } from "../checkbox-utils-Qb3m_UHR.js";
 import { LitElement } from "lit";
 import { state } from "lit/decorators.js";
 

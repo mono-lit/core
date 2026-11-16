@@ -2,7 +2,7 @@ import { g as monoHostChildNodes } from "../mono-ui-bwtsaC-q.js";
 import { t as customElement } from "../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../decorate-BpnJwD08.js";
 import { s as placeSlotNode } from "../light-slots-CQuCgSHh.js";
-import { n as MonoTextareaCore, t as validateTextareaProps } from "../textarea-utils-CQRMchVa.js";
+import { n as MonoTextareaCore, t as validateTextareaProps } from "../textarea-utils-loZHL__o.js";
 import { LitElement } from "lit";
 
 //#region src/components/textarea/mono-textarea.ts

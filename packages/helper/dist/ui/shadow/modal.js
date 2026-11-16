@@ -3,7 +3,7 @@ import { t as customElement } from "../../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../../decorate-BpnJwD08.js";
 import { t as MonoModalCore } from "../../modal-core-yG32-4te.js";
 import { i as withShadowUtilityStyles, r as toShadowCss, t as flushSsrHydration } from "../../hydration-flush-Volt9X7Q.js";
-import "../../mono-button.shadow-DHj1-VMV.js";
+import "../../mono-button.shadow-Cfu1pZEv.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 import { ref } from "lit/directives/ref.js";
 import { ifDefined } from "lit/directives/if-defined.js";

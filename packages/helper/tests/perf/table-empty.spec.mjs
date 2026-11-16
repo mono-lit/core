@@ -48,6 +48,14 @@ export async function run({ port, page, reporter }) {
     `shown=${filled?.shown} over ${filled?.rows} row(s)`,
   )
 
+  // `mono-empty-shown` on the table mirrors the message exactly — what a stylesheet keys on
+  // instead of `table:has(> caption > mono-table-empty[data-mono-empty])`.
+  reporter.check(
+    'the table carries mono-empty-shown only while the message shows',
+    fresh && !fresh.tableMark && empty && empty.tableMark && filled && !filled.tableMark,
+    `never loaded=${fresh?.tableMark} empty=${empty?.tableMark} filled=${filled?.tableMark}`,
+  )
+
   const busy = await page.evaluate(() => window.__loadHeld('busy'))
   reporter.check(
     'it stays away while the FIRST query runs',

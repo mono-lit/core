@@ -3,7 +3,7 @@ import { t as monoDataDropdown } from "../mono-data-dropdown-Bgj2PDfm.js";
 import { t as customElement } from "../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../decorate-BpnJwD08.js";
 import { i as guardHostTextContent, s as placeSlotNode } from "../light-slots-CQuCgSHh.js";
-import { t as MonoDropdownTableCore } from "../dropdown-table-core-gPx-v65K.js";
+import { t as MonoDropdownTableCore } from "../dropdown-table-core-mcb5HJix.js";
 import { LitElement } from "lit";
 
 //#region src/components/dropdown-table/mono-dropdown-table.ts

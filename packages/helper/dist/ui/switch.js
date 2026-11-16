@@ -2,7 +2,7 @@ import { g as monoHostChildNodes } from "../mono-ui-bwtsaC-q.js";
 import { t as customElement } from "../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../decorate-BpnJwD08.js";
 import { s as placeSlotNode } from "../light-slots-CQuCgSHh.js";
-import { n as validateSwitchProps, r as MonoSwitchCore, t as generateSwitchAttributes } from "../switch-utils-CqYQ9m9S.js";
+import { n as validateSwitchProps, r as MonoSwitchCore, t as generateSwitchAttributes } from "../switch-utils-Bukjo77C.js";
 import { LitElement } from "lit";
 import { state } from "lit/decorators.js";
 

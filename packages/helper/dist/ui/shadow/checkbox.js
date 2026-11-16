@@ -1,6 +1,6 @@
 import { t as customElement } from "../../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../../decorate-BpnJwD08.js";
-import { n as validateCheckboxProps, r as MonoCheckboxCore, t as generateCheckboxAttributes } from "../../checkbox-utils-Ci13yrit.js";
+import { n as validateCheckboxProps, r as MonoCheckboxCore, t as generateCheckboxAttributes } from "../../checkbox-utils-Qb3m_UHR.js";
 import { i as withShadowUtilityStyles, r as toShadowCss, t as flushSsrHydration } from "../../hydration-flush-Volt9X7Q.js";
 import { t as checkbox_css_raw_default } from "../../checkbox.css_raw-AYtSbUtY.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";

@@ -258,6 +258,8 @@ window.__read = (id) => {
 
   return {
     attr: el.hasAttribute('data-mono-empty'),
+    // The table-level mirror of `data-mono-empty` (what a sheet keys `table[mono-empty-shown]` on).
+    tableMark: !!el.closest('table')?.hasAttribute('mono-empty-shown'),
     display: cs.display,
     shown: cs.display !== 'none' && rect.height > 0,
     height: Math.round(rect.height),

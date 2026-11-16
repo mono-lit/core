@@ -19,8 +19,19 @@ const isEditCellControl = (el) => el.localName.startsWith("mono-") && EDIT_CONTR
 const isActionCellButton = (el) => el.localName.startsWith("mono-") && baseName(el) === "button";
 /** What each element marked, so the mark is released from the RIGHT cell once it has moved away. */
 const marked = /* @__PURE__ */ new WeakMap();
-/** How many elements hold each mark on a cell — two editors in one cell keep it until both leave. */
+/**
+* Per cell, per mark: how many elements of each KIND hold it — two editors in one cell keep the
+* mark until both leave.
+*
+* The attribute's VALUE is the kinds present, sorted and space-separated — `mono-edit-cell="input"`,
+* `"checkbox"`, `"input select"` — so a stylesheet can tell a text editor from a glyph control
+* without `:has()`: `td[mono-edit-cell]:not([mono-edit-cell="checkbox"])`, or `~=` for one kind.
+*/
 const holders = /* @__PURE__ */ new WeakMap();
+function writeMark(cell, mark, kinds) {
+	if (!kinds.size) cell.removeAttribute(mark);
+	else cell.setAttribute(mark, [...kinds.keys()].sort().join(" "));
+}
 function cellFor(el, mark) {
 	if (mark === "mono-action-cell") {
 		const parent = el.parentElement;
@@ -36,13 +47,17 @@ function markTableCell(el, mark) {
 	if (prev && prev.cell === cell && prev.mark === mark) return;
 	unmarkTableCell(el);
 	if (!cell) return;
-	const count = holders.get(cell) ?? {};
-	count[mark] = (count[mark] ?? 0) + 1;
-	holders.set(cell, count);
-	if (count[mark] === 1) cell.setAttribute(mark, "");
+	const kind = baseName(el);
+	const perCell = holders.get(cell) ?? {};
+	const kinds = perCell[mark] ??= /* @__PURE__ */ new Map();
+	holders.set(cell, perCell);
+	const before = kinds.size;
+	kinds.set(kind, (kinds.get(kind) ?? 0) + 1);
+	if (kinds.size !== before) writeMark(cell, mark, kinds);
 	marked.set(el, {
 		cell,
-		mark
+		mark,
+		kind
 	});
 }
 /** Release `el`'s mark (call from `disconnectedCallback`). */
@@ -50,15 +65,15 @@ function unmarkTableCell(el) {
 	const prev = marked.get(el);
 	if (!prev) return;
 	marked.delete(el);
-	const count = holders.get(prev.cell);
-	if (!count) return;
-	const left = (count[prev.mark] ?? 1) - 1;
+	const kinds = holders.get(prev.cell)?.[prev.mark];
+	if (!kinds) return;
+	const left = (kinds.get(prev.kind) ?? 1) - 1;
 	if (left > 0) {
-		count[prev.mark] = left;
+		kinds.set(prev.kind, left);
 		return;
 	}
-	delete count[prev.mark];
-	prev.cell.removeAttribute(prev.mark);
+	kinds.delete(prev.kind);
+	writeMark(prev.cell, prev.mark, kinds);
 }
 
 //#endregion

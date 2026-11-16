@@ -96,6 +96,35 @@ describe('table cell marks', () => {
     expect(nested!.hasAttribute('mono-action-cell')).toBe(false)
   })
 
+  it('names the editor KINDS in the value, so CSS can tell a text editor from a checkbox', () => {
+    const [td] = table(1)
+    const input = el('mono-input'), select = el('mono-shadow-select'), check = el('mono-checkbox')
+    td!.append(input, select, check)
+    markTableCell(input, 'mono-edit-cell')
+    expect(td!.getAttribute('mono-edit-cell')).toBe('input')
+    markTableCell(select, 'mono-edit-cell')
+    markTableCell(check, 'mono-edit-cell')
+    expect(td!.getAttribute('mono-edit-cell')).toBe('checkbox input select') // sorted, shadow → base name
+    unmarkTableCell(input)
+    unmarkTableCell(select)
+    expect(td!.getAttribute('mono-edit-cell')).toBe('checkbox')
+    unmarkTableCell(check)
+    expect(td!.hasAttribute('mono-edit-cell')).toBe(false)
+  })
+
+  it('counts two editors of the SAME kind: the kind stays until both leave', () => {
+    const [td] = table(1)
+    const a = el('mono-input'), b = el('mono-input')
+    td!.append(a, b)
+    markTableCell(a, 'mono-edit-cell')
+    markTableCell(b, 'mono-edit-cell')
+    expect(td!.getAttribute('mono-edit-cell')).toBe('input')
+    unmarkTableCell(a)
+    expect(td!.getAttribute('mono-edit-cell')).toBe('input')
+    unmarkTableCell(b)
+    expect(td!.hasAttribute('mono-edit-cell')).toBe(false)
+  })
+
   it('does nothing outside a table cell', () => {
     const input = el('mono-input')
     document.body.appendChild(input)
