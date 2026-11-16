@@ -1763,8 +1763,12 @@ const MonoTablePagingCore = (superClass) => {
 			this.prevIcon = DEFAULT_PREV_ICON;
 			this.nextIcon = DEFAULT_NEXT_ICON;
 			this._scrollEl = null;
-			this._onScrollBound = () => this._scheduleScroll();
+			this._onScrollBound = () => {
+				this._metricsStale = true;
+				this._scheduleScroll();
+			};
 			this._rafPending = false;
+			this._metricsStale = true;
 			this._filled = 0;
 			this._pushedEnd = 0;
 			this._fillRaf = 0;
@@ -1846,6 +1850,8 @@ const MonoTablePagingCore = (superClass) => {
 			this._ro?.disconnect();
 			this._ro = void 0;
 			this._scrollEl = null;
+			this._metrics = void 0;
+			this._metricsStale = true;
 		}
 		/** The scroll container: explicit `scroll-target`, else nearest `.mono-table-scroll`. */
 		_resolveScrollEl() {
@@ -1879,20 +1885,35 @@ const MonoTablePagingCore = (superClass) => {
 			const grid = this.dataGrid;
 			const el = this._scrollEl;
 			if (!grid || !el) return;
-			if (el.clientHeight <= 0) return;
+			const m = this._readMetrics(el);
+			if (m.height <= 0) return;
 			if (this.type === "virtual-scroll") this._recomputeWindow();
-			if (el.scrollHeight - el.scrollTop - el.clientHeight <= Math.max(0, this.threshold) && grid.hasMore && !grid.loading) grid.loadNext();
+			if (grid.hasMore && !grid.loading) {
+				if (el.scrollHeight - m.top - m.height <= Math.max(0, this.threshold)) grid.loadNext();
+			}
+		}
+		/** The cached scroll geometry, re-read only when a scroll / resize marked it stale. */
+		_readMetrics(el) {
+			if (this._metricsStale || !this._metrics) {
+				this._metrics = {
+					top: el.scrollTop,
+					height: el.clientHeight
+				};
+				this._metricsStale = false;
+			}
+			return this._metrics;
 		}
 		/** Compute the virtual window from scrollTop + rowHeight and push it to the grid. */
 		_recomputeWindow() {
 			const grid = this.dataGrid;
 			const el = this._scrollEl;
 			if (!grid || !el || this.type !== "virtual-scroll") return;
+			const { top: scrollTop, height: viewH } = this._readMetrics(el);
 			const rh = Math.max(1, Number(this.rowHeight) || 44);
 			const over = Math.max(0, Math.floor(Number(this.overscan) || 0));
 			const loaded = grid.loadedCount;
-			const first = Math.floor(el.scrollTop / rh);
-			const last = Math.ceil((el.scrollTop + el.clientHeight) / rh);
+			const first = Math.floor(scrollTop / rh);
+			const last = Math.ceil((scrollTop + viewH) / rh);
 			const stride = Math.max(1, over);
 			let start = Math.floor(first / stride) * stride - over;
 			let end = Math.ceil(last / stride) * stride + over;

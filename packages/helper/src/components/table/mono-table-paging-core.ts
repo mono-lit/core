@@ -153,8 +153,25 @@ export const MonoTablePagingCore = <T extends Constructor<LitElement>>(superClas
     nextIcon = DEFAULT_NEXT_ICON
 
     private _scrollEl: HTMLElement | null = null
-    private _onScrollBound = (): void => this._scheduleScroll()
+    /** A real scroll / resize: the scroller's geometry must be re-read on the next pass. */
+    private _onScrollBound = (): void => {
+      this._metricsStale = true
+      this._scheduleScroll()
+    }
     private _rafPending = false
+    /**
+     * The scroller's `scrollTop` / `clientHeight`, as last read. Re-read ONLY after a scroll event
+     * or a resize (`_metricsStale`) — a grid notify reuses them.
+     *
+     * Reading them right after the rows changed is a FORCED LAYOUT of the whole table, and every
+     * notify (each window shift, each render-all fill chunk, each edit) used to do it: measured
+     * 1.7s of a 6s render-all fill on a 240-row, 19-column table, the cost growing with every chunk
+     * because the whole table is laid out each time. A notify does not move the scroll position or
+     * resize the box — a content change that does (a shorter result set clamping `scrollTop`)
+     * fires its own scroll event.
+     */
+    private _metrics?: { top: number; height: number }
+    private _metricsStale = true
     /** `render-all-below`: rows mounted so far, from row 0. */
     private _filled = 0
     /** …and the window end last pushed to the grid — a reset shows up as the grid falling below it. */
@@ -271,6 +288,8 @@ export const MonoTablePagingCore = <T extends Constructor<LitElement>>(superClas
       this._ro?.disconnect()
       this._ro = undefined
       this._scrollEl = null
+      this._metrics = undefined
+      this._metricsStale = true
     }
 
     /** The scroll container: explicit `scroll-target`, else nearest `.mono-table-scroll`. */
@@ -330,12 +349,25 @@ export const MonoTablePagingCore = <T extends Constructor<LitElement>>(superClas
       //
       // Nothing is visible, so there is nothing to prefetch. Once the panel opens and has a real
       // box, the ResizeObserver wired in `_configure` runs this again.
-      if (el.clientHeight <= 0) return
+      const m = this._readMetrics(el)
+      if (m.height <= 0) return
 
       if (this.type === 'virtual-scroll') this._recomputeWindow()
-      // Load the next page when the viewport bottom nears the loaded end.
-      const nearEnd = el.scrollHeight - el.scrollTop - el.clientHeight <= Math.max(0, this.threshold)
-      if (nearEnd && grid.hasMore && !grid.loading) void grid.loadNext()
+      // Load the next page when the viewport bottom nears the loaded end. `scrollHeight` is a
+      // layout read, so only when there IS a next page to ask for — never for an array source.
+      if (grid.hasMore && !grid.loading) {
+        const nearEnd = el.scrollHeight - m.top - m.height <= Math.max(0, this.threshold)
+        if (nearEnd) void grid.loadNext()
+      }
+    }
+
+    /** The cached scroll geometry, re-read only when a scroll / resize marked it stale. */
+    private _readMetrics(el: HTMLElement): { top: number; height: number } {
+      if (this._metricsStale || !this._metrics) {
+        this._metrics = { top: el.scrollTop, height: el.clientHeight }
+        this._metricsStale = false
+      }
+      return this._metrics
     }
 
     /** Compute the virtual window from scrollTop + rowHeight and push it to the grid. */
@@ -343,6 +375,7 @@ export const MonoTablePagingCore = <T extends Constructor<LitElement>>(superClas
       const grid = this.dataGrid
       const el = this._scrollEl
       if (!grid || !el || this.type !== 'virtual-scroll') return
+      const { top: scrollTop, height: viewH } = this._readMetrics(el)
       const rh = Math.max(1, Number(this.rowHeight) || 44)
       const over = Math.max(0, Math.floor(Number(this.overscan) || 0))
       const loaded = grid.loadedCount
@@ -352,8 +385,8 @@ export const MonoTablePagingCore = <T extends Constructor<LitElement>>(superClas
       // every ~rowHeight px of scroll (every frame on a fast scroll). The visible rows always keep
       // between `over` and `over + stride` rows of buffer, and `setVirtualWindow` drops the
       // unchanged recomputes in between.
-      const first = Math.floor(el.scrollTop / rh)
-      const last = Math.ceil((el.scrollTop + el.clientHeight) / rh)
+      const first = Math.floor(scrollTop / rh)
+      const last = Math.ceil((scrollTop + viewH) / rh)
       const stride = Math.max(1, over)
       let start = Math.floor(first / stride) * stride - over
       let end = Math.ceil(last / stride) * stride + over
