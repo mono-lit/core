@@ -53,6 +53,7 @@ export declare class MonoSidebarCoreInterface {
   expandOnHover: boolean
   rail: boolean | null
   contained: boolean
+  publishRootWidth: boolean
   persistent: boolean
   closeOnEscape: boolean
   closeOnScrim: boolean
@@ -171,6 +172,15 @@ export const MonoSidebarCore = <T extends Constructor<LitElement>>(superClass: T
     @property({ reflect: true, converter: booleanStringConverter })
     contained = false
 
+    /**
+     * Also write the pushed width as `--mono-sidebar-<side>-width` on `<html>` (the pre-0.1.3
+     * behaviour). Off by default: an inherited variable on the root makes every collapse /
+     * expand restyle the whole page. The layout content always gets
+     * `--mono-sidebar-<side>-push` instead — see `_writeLayoutVar`.
+     */
+    @property({ attribute: 'publish-root-width', converter: booleanStringConverter })
+    publishRootWidth = false
+
     @property({ reflect: true, converter: booleanStringConverter })
     persistent = false
 
@@ -262,7 +272,8 @@ export const MonoSidebarCore = <T extends Constructor<LitElement>>(superClass: T
         changed.has('railWidth') ||
         changed.has('location') ||
         changed.has('modelValue') ||
-        changed.has('contained')
+        changed.has('contained') ||
+        changed.has('publishRootWidth')
       ) {
         this._writeLayoutVar()
       }
@@ -421,26 +432,47 @@ export const MonoSidebarCore = <T extends Constructor<LitElement>>(superClass: T
       this._railHovered = false
     }
 
-    /** The var this instance last wrote — `location` can change while mounted. */
+    /**
+     * What this instance last wrote — `location` can change while mounted:
+     * the content push var (always) and the root width var (`publishRootWidth` only).
+     */
+    private _writtenPush: string | null = null
     private _writtenVar: string | null = null
 
+    /**
+     * Publish the width this sidebar pushes the page by.
+     *
+     * To the LAYOUT CONTENT, as `--mono-sidebar-<side>-push`: a non-inheriting property
+     * applied only to `.mono-layout-content` / `[mono-layout-content]` / `[mono-sidebar-push]`
+     * (see `composables/layout-var.ts`). It used to be `--mono-sidebar-<side>-width` on
+     * `<html>` — inherited by every element, so a rail collapse restyled the whole page: on a
+     * page with a 240-row table, ~6,600 elements and ~1.1–1.6s per toggle in Chrome. Now the
+     * same toggle restyles the marked content only (2 elements, ~15ms).
+     *
+     * The old `<html>` variable is still written when `publishRootWidth` is set, for
+     * consumers that read it somewhere other than the layout content.
+     */
     private _writeLayoutVar(): void {
       if (isServer) return
       // A sidebar that became `contained` while mounted no longer pushes the page —
       // give up any claim it already holds instead of silently keeping it forever.
       if (this.contained) {
-        if (this._writtenVar) releaseLayoutVar(this._writtenVar, this)
-        this._writtenVar = null
+        this._clearLayoutVar()
         return
       }
 
-      const widthVarLeft = '--mono-sidebar-left-width'
-      const widthVarRight = '--mono-sidebar-right-width'
-      const myVar = this.location === 'right' ? widthVarRight : widthVarLeft
+      const side = this.location === 'right' ? 'right' : 'left'
+      const myPush = `--mono-sidebar-${side}-push`
+      const myVar = `--mono-sidebar-${side}-width`
 
-      // Moved sides while mounted — give the old side's var back first.
-      if (this._writtenVar && this._writtenVar !== myVar) {
+      // Moved sides while mounted (or stopped publishing to the root) — give the old claims back first.
+      if (this._writtenPush && this._writtenPush !== myPush) {
+        releaseLayoutVar(this._writtenPush, this, 'content')
+        this._writtenPush = null
+      }
+      if (this._writtenVar && (this._writtenVar !== myVar || !this.publishRootWidth)) {
         releaseLayoutVar(this._writtenVar, this)
+        this._writtenVar = null
       }
 
       let pushPx = 0
@@ -452,8 +484,12 @@ export const MonoSidebarCore = <T extends Constructor<LitElement>>(superClass: T
         pushPx = 0
       }
 
-      this._writtenVar = myVar
-      claimLayoutVar(myVar, this, `${pushPx}px`)
+      this._writtenPush = myPush
+      claimLayoutVar(myPush, this, `${pushPx}px`, 'content')
+      if (this.publishRootWidth) {
+        this._writtenVar = myVar
+        claimLayoutVar(myVar, this, `${pushPx}px`)
+      }
     }
 
     private _clearLayoutVar(): void {
@@ -461,7 +497,9 @@ export const MonoSidebarCore = <T extends Constructor<LitElement>>(superClass: T
       // Deliberately NOT gated on `contained`: release whatever this instance
       // actually claimed. A sidebar that was pushing the page and then flipped to
       // `contained` would otherwise skip its own release and strand the var.
+      if (this._writtenPush) releaseLayoutVar(this._writtenPush, this, 'content')
       if (this._writtenVar) releaseLayoutVar(this._writtenVar, this)
+      this._writtenPush = null
       this._writtenVar = null
     }
 

@@ -17,6 +17,7 @@ export declare class MonoSidebarCoreInterface {
   expandOnHover: boolean;
   rail: boolean | null;
   contained: boolean;
+  publishRootWidth: boolean;
   persistent: boolean;
   closeOnEscape: boolean;
   closeOnScrim: boolean;

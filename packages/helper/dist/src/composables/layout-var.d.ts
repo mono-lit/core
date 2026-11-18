@@ -2,11 +2,10 @@
 /**
  * Refcounted document-level layout variables.
  *
- * Several components publish their own size as a custom property on
- * `document.documentElement` so page content can offset itself —
- * `--mono-nav-height`, `--mono-sidebar-left-width`, `--mono-sidebar-right-width`.
- * The property is global but the writers are not: two navs, or two sidebars on the
- * same side, all write the SAME property.
+ * Several components publish their own size as a custom property so page content can
+ * offset itself — `--mono-nav-height`, and the sidebar's push width. The property is
+ * global but the writers are not: two navs, or two sidebars on the same side, all write
+ * the SAME property.
  *
  * Removing it outright on the first unmount blanked the offset for every writer that
  * was still mounted — the page content jumped back underneath a nav or sidebar that
@@ -18,19 +17,39 @@
  * known value. Note that a refcount has two failure modes — releasing too early
  * (survivor loses the var) and never reaching zero (the var is stranded on the
  * document forever). Both are covered by assertions in `docs/e2e/stress.mjs` (repo root).
+ *
+ * TWO TARGETS.
+ *
+ * - `'root'`: an ordinary (inherited) property on `document.documentElement`. Every
+ *   element on the page inherits it — so CHANGING it makes the browser restyle every
+ *   element on the page. Fine for a value that is set once (the nav height); ruinous for
+ *   one that changes on a click: a sidebar collapsing on a page with a large table froze
+ *   Chrome for ~1.1–1.6s per toggle, restyling ~6,600 elements to move one padding.
+ * - `'content'`: the value lives in ONE rule of a library-owned stylesheet that matches
+ *   only the elements marked as layout content (`.mono-layout-content`,
+ *   `[mono-layout-content]`, `[mono-sidebar-push]`), and the property is registered as
+ *   NON-inheriting. A change restyles exactly those elements (measured: 2 elements, ~15ms
+ *   for the same toggle). A rule rather than inline styles so content mounted later — a
+ *   layout swap — is covered without anyone looking for it. Registered with syntax `*`
+ *   and no initial value, so an unset property is still "guaranteed-invalid" and a
+ *   consumer's `var(--x, fallback)` keeps working. A child that needs the value (a
+ *   `::before` seam drawn at the content's edge) takes it with `--x: inherit`.
  */
+export type LayoutVarTarget = 'root' | 'content';
+/** The elements a `'content'` variable applies to — the layout content markers. */
+export declare const LAYOUT_CONTENT_SELECTOR = ".mono-layout-content, [mono-layout-content], [mono-sidebar-push]";
 /**
  * Publish `value` for `name` on behalf of `owner`.
  *
  * Re-claiming with the same owner just updates that owner's value, so this is safe
  * to call on every render.
  */
-export declare function claimLayoutVar(name: string, owner: object, value: string): void;
+export declare function claimLayoutVar(name: string, owner: object, value: string, target?: LayoutVarTarget): void;
 /**
  * Drop `owner`'s claim on `name`.
  *
  * The property is only removed once nobody holds it; while another owner remains,
  * that owner's last published value is restored instead.
  */
-export declare function releaseLayoutVar(name: string, owner: object): void;
+export declare function releaseLayoutVar(name: string, owner: object, target?: LayoutVarTarget): void;
 //#endregion

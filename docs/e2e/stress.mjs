@@ -1131,7 +1131,7 @@ else {
 await goto('/ui/sidebar', 'mono-sidebar')
 
 // 1. the var round-trips across a reconnect
-await fixture(`<mono-sidebar id="sb" mode="permanent" width="240"></mono-sidebar>`)
+await fixture(`<mono-sidebar id="sb" mode="permanent" width="240" publish-root-width></mono-sidebar>`)
 await page.waitForTimeout(500)
 r = await page.evaluate(async () => {
   const wait = (ms) => new Promise((res) => setTimeout(res, ms))
@@ -1226,8 +1226,8 @@ ok('sidebar: Escape STILL closes after reconnect', r.closedAfter)
 
 // 4. two sidebars share one document-global var — does unmounting one blank the other?
 await fixture(
-  `<mono-sidebar id="sbA" mode="permanent" width="240"></mono-sidebar>
-   <mono-sidebar id="sbB" mode="permanent" width="240"></mono-sidebar>`,
+  `<mono-sidebar id="sbA" mode="permanent" width="240" publish-root-width></mono-sidebar>
+   <mono-sidebar id="sbB" mode="permanent" width="240" publish-root-width></mono-sidebar>`,
 )
 await page.waitForTimeout(600)
 r = await page.evaluate(async () => {
@@ -1250,9 +1250,9 @@ ok(
 // can release too early (survivor loses the var) or never reach zero (the var is
 // stranded on the document after the last sidebar leaves).
 await fixture(
-  `<mono-sidebar id="s1" mode="permanent" width="240"></mono-sidebar>
-   <mono-sidebar id="s2" mode="permanent" width="240"></mono-sidebar>
-   <mono-sidebar id="s3" mode="permanent" width="240"></mono-sidebar>`,
+  `<mono-sidebar id="s1" mode="permanent" width="240" publish-root-width></mono-sidebar>
+   <mono-sidebar id="s2" mode="permanent" width="240" publish-root-width></mono-sidebar>
+   <mono-sidebar id="s3" mode="permanent" width="240" publish-root-width></mono-sidebar>`,
 )
 await page.waitForTimeout(800)
 r = await page.evaluate(async () => {
@@ -1277,7 +1277,7 @@ ok('sidebar: layout var REMOVED once the last one leaves', r.steps[3] === '', `"
 // 6. A sidebar that changes `location` while mounted must release the side it used
 // to own. The var name is recomputed from the CURRENT location, so without tracking
 // what was actually written the old side keeps a value nothing will ever clear.
-await fixture(`<mono-sidebar id="mv" mode="permanent" width="240"></mono-sidebar>`)
+await fixture(`<mono-sidebar id="mv" mode="permanent" width="240" publish-root-width></mono-sidebar>`)
 await page.waitForTimeout(600)
 r = await page.evaluate(async () => {
   const wait = (ms) => new Promise((res) => setTimeout(res, ms))
@@ -1302,6 +1302,39 @@ ok(
   r.gone.left === '' && r.gone.right === '',
   `L="${r.gone.left}" R="${r.gone.right}"`,
 )
+
+// 7. The DEFAULT (no `publish-root-width`): nothing on <html> — an inherited root variable made every
+// collapse restyle the whole page — and the width reaches the marked layout content as the
+// non-inheriting `--mono-sidebar-left-push`, which its children do NOT inherit.
+await fixture(`<mono-sidebar id="pd" mode="rail" width="240" rail-width="64"></mono-sidebar>
+   <div id="content" class="mono-layout-content"><span id="child">x</span></div>`)
+await page.waitForTimeout(600)
+r = await page.evaluate(async () => {
+  const wait = (ms) => new Promise((res) => setTimeout(res, ms))
+  const content = document.getElementById('content')
+  const read = () => ({
+    root: document.documentElement.style.getPropertyValue('--mono-sidebar-left-width').trim(),
+    push: getComputedStyle(content).getPropertyValue('--mono-sidebar-left-push').trim(),
+    pad: getComputedStyle(content).paddingLeft,
+    child: getComputedStyle(document.getElementById('child')).getPropertyValue('--mono-sidebar-left-push').trim(),
+  })
+  const el = document.getElementById('pd')
+  const collapsed = read()
+  el.modelValue = true
+  await wait(400)
+  const expanded = read()
+  el.remove()
+  await wait(350)
+  return { collapsed, expanded, gone: read() }
+})
+ok('sidebar: default writes NO root variable', r.collapsed.root === '' && r.expanded.root === '', JSON.stringify(r.collapsed))
+ok(
+  'sidebar: layout content is pushed through --mono-sidebar-left-push (rail 64 → open 240)',
+  r.collapsed.push === '64px' && r.collapsed.pad === '64px' && r.expanded.push === '240px' && r.expanded.pad === '240px',
+  JSON.stringify({ collapsed: r.collapsed, expanded: r.expanded }),
+)
+ok("sidebar: the push does NOT inherit into the content's children", r.expanded.child === '', JSON.stringify(r.expanded))
+ok('sidebar: the push is released once the sidebar leaves', r.gone.push === '' && r.gone.pad === '0px', JSON.stringify(r.gone))
 
 // --- leaf form controls: interaction still works after a reconnect ---
 //

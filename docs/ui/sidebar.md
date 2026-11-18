@@ -1,6 +1,6 @@
 # Sidebar
 
-A Vuetify-style navigation drawer with four modes — `permanent` (always visible, pushes content), `temporary` (overlay drawer with scrim + Escape), `rail` (mini collapsed, optional `expandOnHover`), and `auto` (responsive: permanent on ≥ 768 px viewports, temporary below). Anchors `left` or `right`, three densities, three variants, eleven colors (ten theme palette slots + `surface`) — or any CSS color, e.g. `color="#7c3aed"`. Three named slots — `header`, default (body), `footer` — designed to host a future `<mono-menu>` in the body. Writes its width to `--mono-sidebar-{left,right}-width` on `:root` so layout wrappers can pad themselves. Demos use the `contained` prop to position absolutely inside a scoped preview pane. Toggle **Vue / CSS** to switch the live demo and source together.
+A Vuetify-style navigation drawer with four modes — `permanent` (always visible, pushes content), `temporary` (overlay drawer with scrim + Escape), `rail` (mini collapsed, optional `expandOnHover`), and `auto` (responsive: permanent on ≥ 768 px viewports, temporary below). Anchors `left` or `right`, three densities, three variants, eleven colors (ten theme palette slots + `surface`) — or any CSS color, e.g. `color="#7c3aed"`. Three named slots — `header`, default (body), `footer` — designed to host a future `<mono-menu>` in the body. Publishes the width it pushes as `--mono-sidebar-{left,right}-push` on the layout content (`.mono-layout-content`, `[mono-layout-content]` or `[mono-sidebar-push]`) so it can pad itself — see [Layout padding](#layout-padding). Demos use the `contained` prop to position absolutely inside a scoped preview pane. Toggle **Vue / CSS** to switch the live demo and source together.
 
 ## Permanent
 
@@ -68,7 +68,7 @@ Override per-element styling via `cssClass` (Vue) or utility classes (CSS).
 
 Every sidebar is themed through `--mono-sidebar-*` custom properties. Setting one on the element, on any wrapper/ancestor, or inline all work — custom properties inherit, and they **pierce the shadow-DOM boundary**, so the same overrides apply to `<mono-sidebar>` and the shadow build. The `density` and `color` props set presets, but an explicit `--mono-sidebar-*` override always wins. To re-skin globally, set the underlying [`--theme-*`](./theme) tokens. Scroll areas use the shared [`--mono-scrollbar-*`](./theme#scrollbar) tokens.
 
-> `width` / `rail-width` are usually set via the props (they're also exposed as `--mono-sidebar-width` / `--mono-sidebar-rail-width`). The separate `--mono-sidebar-{left,right}-width` on `:root` are the layout-padding values the sidebar writes for content wrappers.
+> `width` / `rail-width` are usually set via the props (they're also exposed as `--mono-sidebar-width` / `--mono-sidebar-rail-width`). The separate `--mono-sidebar-{left,right}-push` are the layout-padding values the sidebar writes for content wrappers — see [Layout padding](#layout-padding).
 
 | Variable | Default | Controls |
 | --- | --- | --- |
@@ -92,3 +92,13 @@ Every sidebar is themed through `--mono-sidebar-*` custom properties. Setting on
 ## Types
 
 <DemoTypes name="sidebar" />
+
+## Layout padding
+
+The sidebar publishes the width it pushes the page by as `--mono-sidebar-left-push` / `--mono-sidebar-right-push` (`width` when open, `rail-width` when a rail is collapsed, `0` while it is a temporary overlay). The value is set **only on the layout content**: elements with class `mono-layout-content`, attribute `mono-layout-content`, or attribute `mono-sidebar-push`. `.mono-layout-content` pads itself with it already; on your own wrapper, mark it and read the variable:
+
+```html
+<main mono-sidebar-push style="padding-left: var(--mono-sidebar-left-push, 0px)">…</main>
+```
+
+The property is **non-inheriting**, so the wrapper's children do not see it — a child that needs it (a seam drawn at the content edge) takes it with `--mono-sidebar-left-push: inherit`. That is the point: a collapse or expand restyles the wrapper, not the whole page. The pre-0.1.3 `--mono-sidebar-{left,right}-width` on `:root` was inherited by every element, so on a page with a large table every toggle made the browser restyle thousands of elements (measured ~1.1–1.6s in Chrome). Set `publish-root-width` to keep writing it for code that still reads it.

@@ -3,7 +3,7 @@ import { o as defineHybridPropAliases, r as booleanStringConverter, s as numberS
 import { t as dispatchMonoEvent } from "./mono-event-CAZf0F_k.js";
 import { n as cssPart, r as defineCssClassAliases, t as applyCssClass } from "./css-class-B6Tc_MAx.js";
 import { a as validateColorProp, i as isThemeColorToken, n as colorClassToken, r as customColorStyle, t as CUSTOM_COLOR_CLASS } from "./color-CEYYtRX-.js";
-import { n as releaseLayoutVar, t as claimLayoutVar } from "./layout-var-BSBKY49k.js";
+import { n as releaseLayoutVar, t as claimLayoutVar } from "./layout-var-Cm1UHn_n.js";
 import { html, isServer, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 
@@ -123,6 +123,7 @@ const MonoSidebarCore = (superClass) => {
 			this.expandOnHover = false;
 			this.rail = null;
 			this.contained = false;
+			this.publishRootWidth = false;
 			this.persistent = false;
 			this.closeOnEscape = true;
 			this.closeOnScrim = true;
@@ -137,6 +138,7 @@ const MonoSidebarCore = (superClass) => {
 			this._railHovered = false;
 			this._railPointerEnter = null;
 			this._railPointerLeave = null;
+			this._writtenPush = null;
 			this._writtenVar = null;
 			defineHybridPropAliases(this, [
 				"modelValue",
@@ -191,7 +193,7 @@ const MonoSidebarCore = (superClass) => {
 				if (this._resolvedMode === "temporary" && this.modelValue) this._applyOpenSideEffects();
 				else this._releaseSideEffects();
 			}
-			if (changed.has("mode") || changed.has("width") || changed.has("railWidth") || changed.has("location") || changed.has("modelValue") || changed.has("contained")) this._writeLayoutVar();
+			if (changed.has("mode") || changed.has("width") || changed.has("railWidth") || changed.has("location") || changed.has("modelValue") || changed.has("contained") || changed.has("publishRootWidth")) this._writeLayoutVar();
 		}
 		/**
 		* `connectedCallback` computes `_resolvedMode` / `data-rail-collapsed` /
@@ -314,25 +316,52 @@ const MonoSidebarCore = (superClass) => {
 			this._railPointerLeave = null;
 			this._railHovered = false;
 		}
+		/**
+		* Publish the width this sidebar pushes the page by.
+		*
+		* To the LAYOUT CONTENT, as `--mono-sidebar-<side>-push`: a non-inheriting property
+		* applied only to `.mono-layout-content` / `[mono-layout-content]` / `[mono-sidebar-push]`
+		* (see `composables/layout-var.ts`). It used to be `--mono-sidebar-<side>-width` on
+		* `<html>` — inherited by every element, so a rail collapse restyled the whole page: on a
+		* page with a 240-row table, ~6,600 elements and ~1.1–1.6s per toggle in Chrome. Now the
+		* same toggle restyles the marked content only (2 elements, ~15ms).
+		*
+		* The old `<html>` variable is still written when `publishRootWidth` is set, for
+		* consumers that read it somewhere other than the layout content.
+		*/
 		_writeLayoutVar() {
 			if (isServer) return;
 			if (this.contained) {
-				if (this._writtenVar) releaseLayoutVar(this._writtenVar, this);
-				this._writtenVar = null;
+				this._clearLayoutVar();
 				return;
 			}
-			const myVar = this.location === "right" ? "--mono-sidebar-right-width" : "--mono-sidebar-left-width";
-			if (this._writtenVar && this._writtenVar !== myVar) releaseLayoutVar(this._writtenVar, this);
+			const side = this.location === "right" ? "right" : "left";
+			const myPush = `--mono-sidebar-${side}-push`;
+			const myVar = `--mono-sidebar-${side}-width`;
+			if (this._writtenPush && this._writtenPush !== myPush) {
+				releaseLayoutVar(this._writtenPush, this, "content");
+				this._writtenPush = null;
+			}
+			if (this._writtenVar && (this._writtenVar !== myVar || !this.publishRootWidth)) {
+				releaseLayoutVar(this._writtenVar, this);
+				this._writtenVar = null;
+			}
 			let pushPx = 0;
 			if (this._resolvedMode === "permanent") pushPx = this.width;
 			else if (this._resolvedMode === "rail") pushPx = this.modelValue ? this.width : this.railWidth;
 			else pushPx = 0;
-			this._writtenVar = myVar;
-			claimLayoutVar(myVar, this, `${pushPx}px`);
+			this._writtenPush = myPush;
+			claimLayoutVar(myPush, this, `${pushPx}px`, "content");
+			if (this.publishRootWidth) {
+				this._writtenVar = myVar;
+				claimLayoutVar(myVar, this, `${pushPx}px`);
+			}
 		}
 		_clearLayoutVar() {
 			if (isServer) return;
+			if (this._writtenPush) releaseLayoutVar(this._writtenPush, this, "content");
 			if (this._writtenVar) releaseLayoutVar(this._writtenVar, this);
+			this._writtenPush = null;
 			this._writtenVar = null;
 		}
 		_setCssClass(value) {
@@ -553,6 +582,10 @@ const MonoSidebarCore = (superClass) => {
 		reflect: true,
 		converter: booleanStringConverter
 	})], MonoSidebarCoreClass.prototype, "contained", void 0);
+	__decorate([property({
+		attribute: "publish-root-width",
+		converter: booleanStringConverter
+	})], MonoSidebarCoreClass.prototype, "publishRootWidth", void 0);
 	__decorate([property({
 		reflect: true,
 		converter: booleanStringConverter

@@ -86,6 +86,14 @@ export interface SidebarProps {
   rail?: boolean | null;
   /** Keep the sidebar within its parent rather than the viewport. */
   contained?: boolean;
+  /**
+   * Also write the pushed width as `--mono-sidebar-<side>-width` on `<html>` (the pre-0.1.3 behaviour).
+   * Off by default — an inherited root variable makes every collapse restyle the whole page. Layout
+   * content (`.mono-layout-content` / `[mono-layout-content]` / `[mono-sidebar-push]`) always gets
+   * `--mono-sidebar-<side>-push`.
+   */
+  publishRootWidth?: boolean;
+  'publish-root-width'?: boolean;
   /** Prevent the sidebar from closing on scrim click or Escape. */
   persistent?: boolean;
   /** Close the sidebar when the Escape key is pressed. */

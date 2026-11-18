@@ -424,8 +424,11 @@ mono-nav[sticky],
    Layout helper
    -----------------------------------------------------------------------------
    Consumers wrap their main content in this to pad around the nav (and the
-   sidebar). The vars are written on `:root` by mono-nav and mono-sidebar
-   themselves. Kept as a CLASS — it is a consumer-applied utility, not a part of
+   sidebar). `--mono-nav-height` is written on `:root` by mono-nav; the sidebar's
+   width arrives as `--mono-sidebar-<side>-push`, a non-inheriting property mono-sidebar
+   sets on THESE elements only (so a collapse restyles the content, not the whole page —
+   see composables/layout-var.ts). The old `:root` `--mono-sidebar-<side>-width` (written
+   only with `publish-root-width`) is the fallback. Kept as a CLASS — it is a consumer-applied utility, not a part of
    this component — with the attribute form accepted for markup that would
    rather stay attributes all the way down.
    ========================================= */
@@ -433,8 +436,8 @@ mono-nav[sticky],
 .mono-layout-content,
 [mono-layout-content] {
   padding-top: var(--mono-nav-height, 0);
-  padding-left: var(--mono-sidebar-left-width, 0);
-  padding-right: var(--mono-sidebar-right-width, 0);
+  padding-left: var(--mono-sidebar-left-push, var(--mono-sidebar-left-width, 0px));
+  padding-right: var(--mono-sidebar-right-push, var(--mono-sidebar-right-width, 0px));
   min-height: 100vh;
   min-height: 100dvh;
   box-sizing: border-box;
