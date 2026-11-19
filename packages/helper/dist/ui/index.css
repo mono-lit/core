@@ -1611,30 +1611,7 @@
    for any `overflow: auto|scroll` in `src/components/**` that is missing here,
    and for any component CSS that styles a scrollbar itself.
    ─────────────────────────────────────────────────────────────────────────── */
-.mono-scrollbar,
-:where([mono-sidebar]) :where([mono-panel]) > [mono-body],
-.mono-drawer-body,
-:where([mono-drawer] > [mono-panel]) > [mono-body],
-.mono-modal-body,
-:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body],
-.mono-select-dropdown-body,
-
-[mono-select] [mono-dropdown-body],
-.mono-tag-input-dropdown,
-[mono-tag-input] > [mono-dropdown],
-:where([mono-dropdown]) > [mono-panel],
-:where([mono-button-dropdown]) > [mono-panel],
-.mono-tag-input-more-panel,
-[mono-tag-input] > [mono-more-panel],
-.mono-textarea-field,
-[mono-table-scroll],
-[mono-search-more-panel],
-[mono-search-filter],
-[mono-search-panel],
-[mono-th-filter-list],
-[mono-dropdown-table] [mono-dd-more],
-[mono-dropdown-table] [mono-dd-region="body"],
-[mono-filter-builder] > [mono-filter-group] {
+.mono-scrollbar,:where([mono-sidebar]) :where([mono-panel]) > [mono-body],.mono-drawer-body,:where([mono-drawer] > [mono-panel]) > [mono-body],.mono-modal-body,:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body],.mono-select-dropdown-body,[mono-select] [mono-dropdown-body],.mono-tag-input-dropdown,[mono-tag-input] > [mono-dropdown],:where([mono-dropdown]) > [mono-panel],:where([mono-button-dropdown]) > [mono-panel],.mono-tag-input-more-panel,[mono-tag-input] > [mono-more-panel],.mono-textarea-field,[mono-table-scroll],.mono-table-scroll,[mono-search-more-panel],.mono-table-search-more-panel,[mono-search-filter],.mono-table-search-filter,[mono-search-panel],.mono-table-search-panel,[mono-th-filter-list],.mono-th-filter-list,[mono-dropdown-table] [mono-dd-more],[mono-dropdown-table] .mono-dropdown-table-more,.mono-dropdown-table [mono-dd-more],.mono-dropdown-table .mono-dropdown-table-more,[mono-dropdown-table] :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body)),.mono-dropdown-table :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body)),[mono-filter-builder] > [mono-filter-group] {
   --_mono-scrollbar-size: var(--mono-scrollbar-size, var(--_mono-scrollbar-size-preset, 8px));
   --_mono-scrollbar-radius: var(--mono-scrollbar-radius, var(--_mono-scrollbar-radius-preset, 999px));
   --_mono-scrollbar-track: var(--mono-scrollbar-track, var(--_mono-scrollbar-track-preset, transparent));
@@ -1651,221 +1628,37 @@
       scrollbar. Duplicated across two guards rather than comma-joined because
       `@supports` conditions cannot be combined with a selector list. ───────── */
 @supports not selector(::-webkit-scrollbar) {
-  .mono-scrollbar,
-  :where([mono-sidebar]) :where([mono-panel]) > [mono-body],
-  .mono-drawer-body,
-  :where([mono-drawer] > [mono-panel]) > [mono-body],
-  .mono-modal-body,
-  :where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body],
-  .mono-select-dropdown-body,
-
-  [mono-select] [mono-dropdown-body],
-  .mono-tag-input-dropdown,
-  [mono-tag-input] > [mono-dropdown],
-  :where([mono-dropdown]) > [mono-panel],
-  :where([mono-button-dropdown]) > [mono-panel],
-  .mono-tag-input-more-panel,
-  [mono-tag-input] > [mono-more-panel],
-  .mono-textarea-field,
-  [mono-table-scroll],
-  [mono-search-more-panel],
-  [mono-search-filter],
-  [mono-search-panel],
-  [mono-th-filter-list],
-  [mono-dropdown-table] [mono-dd-more],
-  [mono-dropdown-table] [mono-dd-region="body"],
-  [mono-filter-builder] > [mono-filter-group] {
+  .mono-scrollbar,:where([mono-sidebar]) :where([mono-panel]) > [mono-body],.mono-drawer-body,:where([mono-drawer] > [mono-panel]) > [mono-body],.mono-modal-body,:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body],.mono-select-dropdown-body,[mono-select] [mono-dropdown-body],.mono-tag-input-dropdown,[mono-tag-input] > [mono-dropdown],:where([mono-dropdown]) > [mono-panel],:where([mono-button-dropdown]) > [mono-panel],.mono-tag-input-more-panel,[mono-tag-input] > [mono-more-panel],.mono-textarea-field,[mono-table-scroll],.mono-table-scroll,[mono-search-more-panel],.mono-table-search-more-panel,[mono-search-filter],.mono-table-search-filter,[mono-search-panel],.mono-table-search-panel,[mono-th-filter-list],.mono-th-filter-list,[mono-dropdown-table] [mono-dd-more],[mono-dropdown-table] .mono-dropdown-table-more,.mono-dropdown-table [mono-dd-more],.mono-dropdown-table .mono-dropdown-table-more,[mono-dropdown-table] :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body)),.mono-dropdown-table :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body)),[mono-filter-builder] > [mono-filter-group] {
     scrollbar-width: thin;
     scrollbar-color: var(--_mono-scrollbar-thumb) var(--_mono-scrollbar-track);
   }
 }
 @supports (-moz-appearance: none) {
-  .mono-scrollbar,
-  :where([mono-sidebar]) :where([mono-panel]) > [mono-body],
-  .mono-drawer-body,
-  :where([mono-drawer] > [mono-panel]) > [mono-body],
-  .mono-modal-body,
-  :where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body],
-  .mono-select-dropdown-body,
-
-  [mono-select] [mono-dropdown-body],
-  .mono-tag-input-dropdown,
-  [mono-tag-input] > [mono-dropdown],
-  :where([mono-dropdown]) > [mono-panel],
-  :where([mono-button-dropdown]) > [mono-panel],
-  .mono-tag-input-more-panel,
-  [mono-tag-input] > [mono-more-panel],
-  .mono-textarea-field,
-  [mono-table-scroll],
-  [mono-search-more-panel],
-  [mono-search-filter],
-  [mono-search-panel],
-  [mono-th-filter-list],
-  [mono-dropdown-table] [mono-dd-more],
-  [mono-dropdown-table] [mono-dd-region="body"],
-  [mono-filter-builder] > [mono-filter-group] {
+  .mono-scrollbar,:where([mono-sidebar]) :where([mono-panel]) > [mono-body],.mono-drawer-body,:where([mono-drawer] > [mono-panel]) > [mono-body],.mono-modal-body,:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body],.mono-select-dropdown-body,[mono-select] [mono-dropdown-body],.mono-tag-input-dropdown,[mono-tag-input] > [mono-dropdown],:where([mono-dropdown]) > [mono-panel],:where([mono-button-dropdown]) > [mono-panel],.mono-tag-input-more-panel,[mono-tag-input] > [mono-more-panel],.mono-textarea-field,[mono-table-scroll],.mono-table-scroll,[mono-search-more-panel],.mono-table-search-more-panel,[mono-search-filter],.mono-table-search-filter,[mono-search-panel],.mono-table-search-panel,[mono-th-filter-list],.mono-th-filter-list,[mono-dropdown-table] [mono-dd-more],[mono-dropdown-table] .mono-dropdown-table-more,.mono-dropdown-table [mono-dd-more],.mono-dropdown-table .mono-dropdown-table-more,[mono-dropdown-table] :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body)),.mono-dropdown-table :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body)),[mono-filter-builder] > [mono-filter-group] {
     scrollbar-width: thin;
     scrollbar-color: var(--_mono-scrollbar-thumb) var(--_mono-scrollbar-track);
   }
 }/* ── WebKit / Blink lane: the actual design. ──────────────────────────────── */
-.mono-scrollbar::-webkit-scrollbar,
-:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar,
-.mono-drawer-body::-webkit-scrollbar,
-:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar,
-.mono-modal-body::-webkit-scrollbar,
-:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar,
-.mono-select-dropdown-body::-webkit-scrollbar,
-
-[mono-select] [mono-dropdown-body]::-webkit-scrollbar,
-.mono-tag-input-dropdown::-webkit-scrollbar,
-[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar,
-:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar,
-:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar,
-.mono-tag-input-more-panel::-webkit-scrollbar,
-[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar,
-.mono-textarea-field::-webkit-scrollbar,
-[mono-table-scroll]::-webkit-scrollbar,
-[mono-search-more-panel]::-webkit-scrollbar,
-[mono-search-filter]::-webkit-scrollbar,
-[mono-search-panel]::-webkit-scrollbar,
-[mono-th-filter-list]::-webkit-scrollbar,
-[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar,
-[mono-dropdown-table] [mono-dd-region="body"]::-webkit-scrollbar,
-[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar {
+.mono-scrollbar::-webkit-scrollbar,:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar,.mono-drawer-body::-webkit-scrollbar,:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar,.mono-modal-body::-webkit-scrollbar,:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar,.mono-select-dropdown-body::-webkit-scrollbar,[mono-select] [mono-dropdown-body]::-webkit-scrollbar,.mono-tag-input-dropdown::-webkit-scrollbar,[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar,:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar,:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar,.mono-tag-input-more-panel::-webkit-scrollbar,[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar,.mono-textarea-field::-webkit-scrollbar,[mono-table-scroll]::-webkit-scrollbar,.mono-table-scroll::-webkit-scrollbar,[mono-search-more-panel]::-webkit-scrollbar,.mono-table-search-more-panel::-webkit-scrollbar,[mono-search-filter]::-webkit-scrollbar,.mono-table-search-filter::-webkit-scrollbar,[mono-search-panel]::-webkit-scrollbar,.mono-table-search-panel::-webkit-scrollbar,[mono-th-filter-list]::-webkit-scrollbar,.mono-th-filter-list::-webkit-scrollbar,[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar,[mono-dropdown-table] .mono-dropdown-table-more::-webkit-scrollbar,.mono-dropdown-table [mono-dd-more]::-webkit-scrollbar,.mono-dropdown-table .mono-dropdown-table-more::-webkit-scrollbar,[mono-dropdown-table] :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body))::-webkit-scrollbar,.mono-dropdown-table :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body))::-webkit-scrollbar,[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar {
   width: var(--_mono-scrollbar-size);
   height: var(--_mono-scrollbar-size);
 }
-.mono-scrollbar::-webkit-scrollbar-track,
-:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar-track,
-.mono-drawer-body::-webkit-scrollbar-track,
-:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar-track,
-.mono-modal-body::-webkit-scrollbar-track,
-:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar-track,
-.mono-select-dropdown-body::-webkit-scrollbar-track,
-
-[mono-select] [mono-dropdown-body]::-webkit-scrollbar-track,
-.mono-tag-input-dropdown::-webkit-scrollbar-track,
-[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar-track,
-:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar-track,
-:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar-track,
-.mono-tag-input-more-panel::-webkit-scrollbar-track,
-[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar-track,
-.mono-textarea-field::-webkit-scrollbar-track,
-[mono-table-scroll]::-webkit-scrollbar-track,
-[mono-search-more-panel]::-webkit-scrollbar-track,
-[mono-search-filter]::-webkit-scrollbar-track,
-[mono-search-panel]::-webkit-scrollbar-track,
-[mono-th-filter-list]::-webkit-scrollbar-track,
-[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar-track,
-[mono-dropdown-table] [mono-dd-region="body"]::-webkit-scrollbar-track,
-[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar-track {
+.mono-scrollbar::-webkit-scrollbar-track,:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar-track,.mono-drawer-body::-webkit-scrollbar-track,:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar-track,.mono-modal-body::-webkit-scrollbar-track,:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar-track,.mono-select-dropdown-body::-webkit-scrollbar-track,[mono-select] [mono-dropdown-body]::-webkit-scrollbar-track,.mono-tag-input-dropdown::-webkit-scrollbar-track,[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar-track,:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar-track,:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar-track,.mono-tag-input-more-panel::-webkit-scrollbar-track,[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar-track,.mono-textarea-field::-webkit-scrollbar-track,[mono-table-scroll]::-webkit-scrollbar-track,.mono-table-scroll::-webkit-scrollbar-track,[mono-search-more-panel]::-webkit-scrollbar-track,.mono-table-search-more-panel::-webkit-scrollbar-track,[mono-search-filter]::-webkit-scrollbar-track,.mono-table-search-filter::-webkit-scrollbar-track,[mono-search-panel]::-webkit-scrollbar-track,.mono-table-search-panel::-webkit-scrollbar-track,[mono-th-filter-list]::-webkit-scrollbar-track,.mono-th-filter-list::-webkit-scrollbar-track,[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar-track,[mono-dropdown-table] .mono-dropdown-table-more::-webkit-scrollbar-track,.mono-dropdown-table [mono-dd-more]::-webkit-scrollbar-track,.mono-dropdown-table .mono-dropdown-table-more::-webkit-scrollbar-track,[mono-dropdown-table] :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body))::-webkit-scrollbar-track,.mono-dropdown-table :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body))::-webkit-scrollbar-track,[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar-track {
   background: var(--_mono-scrollbar-track);
 }
-.mono-scrollbar::-webkit-scrollbar-thumb,
-:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar-thumb,
-.mono-drawer-body::-webkit-scrollbar-thumb,
-:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar-thumb,
-.mono-modal-body::-webkit-scrollbar-thumb,
-:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar-thumb,
-.mono-select-dropdown-body::-webkit-scrollbar-thumb,
-
-[mono-select] [mono-dropdown-body]::-webkit-scrollbar-thumb,
-.mono-tag-input-dropdown::-webkit-scrollbar-thumb,
-[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar-thumb,
-:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar-thumb,
-:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar-thumb,
-.mono-tag-input-more-panel::-webkit-scrollbar-thumb,
-[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar-thumb,
-.mono-textarea-field::-webkit-scrollbar-thumb,
-[mono-table-scroll]::-webkit-scrollbar-thumb,
-[mono-search-more-panel]::-webkit-scrollbar-thumb,
-[mono-search-filter]::-webkit-scrollbar-thumb,
-[mono-search-panel]::-webkit-scrollbar-thumb,
-[mono-th-filter-list]::-webkit-scrollbar-thumb,
-[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar-thumb,
-[mono-dropdown-table] [mono-dd-region="body"]::-webkit-scrollbar-thumb,
-[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar-thumb {
+.mono-scrollbar::-webkit-scrollbar-thumb,:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar-thumb,.mono-drawer-body::-webkit-scrollbar-thumb,:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar-thumb,.mono-modal-body::-webkit-scrollbar-thumb,:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar-thumb,.mono-select-dropdown-body::-webkit-scrollbar-thumb,[mono-select] [mono-dropdown-body]::-webkit-scrollbar-thumb,.mono-tag-input-dropdown::-webkit-scrollbar-thumb,[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar-thumb,:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar-thumb,:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar-thumb,.mono-tag-input-more-panel::-webkit-scrollbar-thumb,[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar-thumb,.mono-textarea-field::-webkit-scrollbar-thumb,[mono-table-scroll]::-webkit-scrollbar-thumb,.mono-table-scroll::-webkit-scrollbar-thumb,[mono-search-more-panel]::-webkit-scrollbar-thumb,.mono-table-search-more-panel::-webkit-scrollbar-thumb,[mono-search-filter]::-webkit-scrollbar-thumb,.mono-table-search-filter::-webkit-scrollbar-thumb,[mono-search-panel]::-webkit-scrollbar-thumb,.mono-table-search-panel::-webkit-scrollbar-thumb,[mono-th-filter-list]::-webkit-scrollbar-thumb,.mono-th-filter-list::-webkit-scrollbar-thumb,[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar-thumb,[mono-dropdown-table] .mono-dropdown-table-more::-webkit-scrollbar-thumb,.mono-dropdown-table [mono-dd-more]::-webkit-scrollbar-thumb,.mono-dropdown-table .mono-dropdown-table-more::-webkit-scrollbar-thumb,[mono-dropdown-table] :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body))::-webkit-scrollbar-thumb,.mono-dropdown-table :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body))::-webkit-scrollbar-thumb,[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar-thumb {
   background: var(--_mono-scrollbar-thumb);
   border-radius: var(--_mono-scrollbar-radius);
 }
-.mono-scrollbar::-webkit-scrollbar-thumb:hover,
-:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar-thumb:hover,
-.mono-drawer-body::-webkit-scrollbar-thumb:hover,
-:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar-thumb:hover,
-.mono-modal-body::-webkit-scrollbar-thumb:hover,
-:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar-thumb:hover,
-.mono-select-dropdown-body::-webkit-scrollbar-thumb:hover,
-
-[mono-select] [mono-dropdown-body]::-webkit-scrollbar-thumb:hover,
-.mono-tag-input-dropdown::-webkit-scrollbar-thumb:hover,
-[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar-thumb:hover,
-:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar-thumb:hover,
-:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar-thumb:hover,
-.mono-tag-input-more-panel::-webkit-scrollbar-thumb:hover,
-[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar-thumb:hover,
-.mono-textarea-field::-webkit-scrollbar-thumb:hover,
-[mono-table-scroll]::-webkit-scrollbar-thumb:hover,
-[mono-search-more-panel]::-webkit-scrollbar-thumb:hover,
-[mono-search-filter]::-webkit-scrollbar-thumb:hover,
-[mono-search-panel]::-webkit-scrollbar-thumb:hover,
-[mono-th-filter-list]::-webkit-scrollbar-thumb:hover,
-[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar-thumb:hover,
-[mono-dropdown-table] [mono-dd-region="body"]::-webkit-scrollbar-thumb:hover,
-[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar-thumb:hover {
+.mono-scrollbar::-webkit-scrollbar-thumb:hover,:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar-thumb:hover,.mono-drawer-body::-webkit-scrollbar-thumb:hover,:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar-thumb:hover,.mono-modal-body::-webkit-scrollbar-thumb:hover,:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar-thumb:hover,.mono-select-dropdown-body::-webkit-scrollbar-thumb:hover,[mono-select] [mono-dropdown-body]::-webkit-scrollbar-thumb:hover,.mono-tag-input-dropdown::-webkit-scrollbar-thumb:hover,[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar-thumb:hover,:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar-thumb:hover,:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar-thumb:hover,.mono-tag-input-more-panel::-webkit-scrollbar-thumb:hover,[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar-thumb:hover,.mono-textarea-field::-webkit-scrollbar-thumb:hover,[mono-table-scroll]::-webkit-scrollbar-thumb:hover,.mono-table-scroll::-webkit-scrollbar-thumb:hover,[mono-search-more-panel]::-webkit-scrollbar-thumb:hover,.mono-table-search-more-panel::-webkit-scrollbar-thumb:hover,[mono-search-filter]::-webkit-scrollbar-thumb:hover,.mono-table-search-filter::-webkit-scrollbar-thumb:hover,[mono-search-panel]::-webkit-scrollbar-thumb:hover,.mono-table-search-panel::-webkit-scrollbar-thumb:hover,[mono-th-filter-list]::-webkit-scrollbar-thumb:hover,.mono-th-filter-list::-webkit-scrollbar-thumb:hover,[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar-thumb:hover,[mono-dropdown-table] .mono-dropdown-table-more::-webkit-scrollbar-thumb:hover,.mono-dropdown-table [mono-dd-more]::-webkit-scrollbar-thumb:hover,.mono-dropdown-table .mono-dropdown-table-more::-webkit-scrollbar-thumb:hover,[mono-dropdown-table] :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body))::-webkit-scrollbar-thumb:hover,.mono-dropdown-table :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body))::-webkit-scrollbar-thumb:hover,[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar-thumb:hover {
   background: var(--_mono-scrollbar-thumb-hover);
 }/* Chrome draws stepper arrows on a custom scrollbar in some configurations, and
    the corner square where two bars meet takes the UA's own grey. Both are part
    of "do not look like the browser's scrollbar". */
-.mono-scrollbar::-webkit-scrollbar-button,
-:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar-button,
-.mono-drawer-body::-webkit-scrollbar-button,
-:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar-button,
-.mono-modal-body::-webkit-scrollbar-button,
-:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar-button,
-.mono-select-dropdown-body::-webkit-scrollbar-button,
-
-[mono-select] [mono-dropdown-body]::-webkit-scrollbar-button,
-.mono-tag-input-dropdown::-webkit-scrollbar-button,
-[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar-button,
-:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar-button,
-:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar-button,
-.mono-tag-input-more-panel::-webkit-scrollbar-button,
-[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar-button,
-.mono-textarea-field::-webkit-scrollbar-button,
-[mono-table-scroll]::-webkit-scrollbar-button,
-[mono-search-more-panel]::-webkit-scrollbar-button,
-[mono-search-filter]::-webkit-scrollbar-button,
-[mono-search-panel]::-webkit-scrollbar-button,
-[mono-th-filter-list]::-webkit-scrollbar-button,
-[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar-button,
-[mono-dropdown-table] [mono-dd-region="body"]::-webkit-scrollbar-button,
-[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar-button {
+.mono-scrollbar::-webkit-scrollbar-button,:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar-button,.mono-drawer-body::-webkit-scrollbar-button,:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar-button,.mono-modal-body::-webkit-scrollbar-button,:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar-button,.mono-select-dropdown-body::-webkit-scrollbar-button,[mono-select] [mono-dropdown-body]::-webkit-scrollbar-button,.mono-tag-input-dropdown::-webkit-scrollbar-button,[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar-button,:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar-button,:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar-button,.mono-tag-input-more-panel::-webkit-scrollbar-button,[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar-button,.mono-textarea-field::-webkit-scrollbar-button,[mono-table-scroll]::-webkit-scrollbar-button,.mono-table-scroll::-webkit-scrollbar-button,[mono-search-more-panel]::-webkit-scrollbar-button,.mono-table-search-more-panel::-webkit-scrollbar-button,[mono-search-filter]::-webkit-scrollbar-button,.mono-table-search-filter::-webkit-scrollbar-button,[mono-search-panel]::-webkit-scrollbar-button,.mono-table-search-panel::-webkit-scrollbar-button,[mono-th-filter-list]::-webkit-scrollbar-button,.mono-th-filter-list::-webkit-scrollbar-button,[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar-button,[mono-dropdown-table] .mono-dropdown-table-more::-webkit-scrollbar-button,.mono-dropdown-table [mono-dd-more]::-webkit-scrollbar-button,.mono-dropdown-table .mono-dropdown-table-more::-webkit-scrollbar-button,[mono-dropdown-table] :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body))::-webkit-scrollbar-button,.mono-dropdown-table :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body))::-webkit-scrollbar-button,[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar-button {
   display: none;
 }
-.mono-scrollbar::-webkit-scrollbar-corner,
-:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar-corner,
-.mono-drawer-body::-webkit-scrollbar-corner,
-:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar-corner,
-.mono-modal-body::-webkit-scrollbar-corner,
-:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar-corner,
-.mono-select-dropdown-body::-webkit-scrollbar-corner,
-
-[mono-select] [mono-dropdown-body]::-webkit-scrollbar-corner,
-.mono-tag-input-dropdown::-webkit-scrollbar-corner,
-[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar-corner,
-:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar-corner,
-:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar-corner,
-.mono-tag-input-more-panel::-webkit-scrollbar-corner,
-[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar-corner,
-.mono-textarea-field::-webkit-scrollbar-corner,
-[mono-table-scroll]::-webkit-scrollbar-corner,
-[mono-search-more-panel]::-webkit-scrollbar-corner,
-[mono-search-filter]::-webkit-scrollbar-corner,
-[mono-search-panel]::-webkit-scrollbar-corner,
-[mono-th-filter-list]::-webkit-scrollbar-corner,
-[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar-corner,
-[mono-dropdown-table] [mono-dd-region="body"]::-webkit-scrollbar-corner,
-[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar-corner {
+.mono-scrollbar::-webkit-scrollbar-corner,:where([mono-sidebar]) :where([mono-panel]) > [mono-body]::-webkit-scrollbar-corner,.mono-drawer-body::-webkit-scrollbar-corner,:where([mono-drawer] > [mono-panel]) > [mono-body]::-webkit-scrollbar-corner,.mono-modal-body::-webkit-scrollbar-corner,:where([mono-modal] > [mono-panel-wrap] > [mono-panel]) > [mono-body]::-webkit-scrollbar-corner,.mono-select-dropdown-body::-webkit-scrollbar-corner,[mono-select] [mono-dropdown-body]::-webkit-scrollbar-corner,.mono-tag-input-dropdown::-webkit-scrollbar-corner,[mono-tag-input] > [mono-dropdown]::-webkit-scrollbar-corner,:where([mono-dropdown]) > [mono-panel]::-webkit-scrollbar-corner,:where([mono-button-dropdown]) > [mono-panel]::-webkit-scrollbar-corner,.mono-tag-input-more-panel::-webkit-scrollbar-corner,[mono-tag-input] > [mono-more-panel]::-webkit-scrollbar-corner,.mono-textarea-field::-webkit-scrollbar-corner,[mono-table-scroll]::-webkit-scrollbar-corner,.mono-table-scroll::-webkit-scrollbar-corner,[mono-search-more-panel]::-webkit-scrollbar-corner,.mono-table-search-more-panel::-webkit-scrollbar-corner,[mono-search-filter]::-webkit-scrollbar-corner,.mono-table-search-filter::-webkit-scrollbar-corner,[mono-search-panel]::-webkit-scrollbar-corner,.mono-table-search-panel::-webkit-scrollbar-corner,[mono-th-filter-list]::-webkit-scrollbar-corner,.mono-th-filter-list::-webkit-scrollbar-corner,[mono-dropdown-table] [mono-dd-more]::-webkit-scrollbar-corner,[mono-dropdown-table] .mono-dropdown-table-more::-webkit-scrollbar-corner,.mono-dropdown-table [mono-dd-more]::-webkit-scrollbar-corner,.mono-dropdown-table .mono-dropdown-table-more::-webkit-scrollbar-corner,[mono-dropdown-table] :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body))::-webkit-scrollbar-corner,.mono-dropdown-table :is([mono-dd-region="body"],:where(.mono-dropdown-table-region.body))::-webkit-scrollbar-corner,[mono-filter-builder] > [mono-filter-group]::-webkit-scrollbar-corner {
   background: var(--_mono-scrollbar-track);
 }/* Text selection on the surfaces mono repaints. Same two-lane wiring as the
    scrollbar above, and for the same reason. *//* ───────────────────────────────────────────────────────────────────────────

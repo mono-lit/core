@@ -129,6 +129,17 @@ const DROPDOWN_VALUES = {
 const SHEETS = [
   { file: 'src/components/table/table.css', bare: TABLE_BARE, families: TABLE_FAMILIES, values: TABLE_VALUES },
   { file: 'src/components/dropdown-table/dropdown-table.css', bare: DROPDOWN_BARE, families: [], values: DROPDOWN_VALUES },
+  // The shared scrollbar lists the table / dropdown-table scroll containers by
+  // ATTRIBUTE. Class-written markup (`<div class="mono-table-scroll">`) is painted
+  // by the two sheets above but matched nothing here, so Chrome drew its default
+  // 15px bar on it (Firefox looked fine only because its native bar is thin).
+  // Both maps apply; no other component's attribute is in either of them.
+  {
+    file: 'src/data/theme/scrollbar.css',
+    bare: { ...DROPDOWN_BARE, ...TABLE_BARE },
+    families: TABLE_FAMILIES,
+    values: { ...TABLE_VALUES, ...DROPDOWN_VALUES },
+  },
 ]
 
 const classOf = (sheet, name) => {

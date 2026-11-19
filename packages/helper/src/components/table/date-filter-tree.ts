@@ -12,6 +12,7 @@
 // another column-filter value (see `isDateRange` in mono-data-grid).
 
 import type { MonoColumnValue } from './mono-data-grid.js'
+import { dateTimeFormat } from '../../utils/intl-cache.js'
 
 /** The levels of the tree, outermost first. */
 export type MonoDateLevel = 'year' | 'month' | 'day' | 'hour' | 'minute' | 'second'
@@ -111,9 +112,9 @@ function labelFor(parts: number[], level: MonoDateLevel, utc: boolean, locale?: 
     case 'year':
       return String(parts[0])
     case 'month':
-      return new Intl.DateTimeFormat(locale, { month: 'long', ...tz }).format(d)
+      return dateTimeFormat(locale, { month: 'long', ...tz }).format(d)
     case 'day':
-      return `${two(parts[2])} (${new Intl.DateTimeFormat(locale, { weekday: 'short', ...tz }).format(d)})`
+      return `${two(parts[2])} (${dateTimeFormat(locale, { weekday: 'short', ...tz }).format(d)})`
     case 'hour':
       return `${two(parts[3])}:00`
     case 'minute':

@@ -16,6 +16,7 @@
 import { encodeDirective } from './sentinel'
 import { escapeForCell } from './expression'
 import type { MonoExportFormatOptions, MonoExportHelper } from './types'
+import { dateTimeFormat, numberFormat } from '../utils/intl-cache'
 
 /** The trailing object Handlebars appends to every helper call. */
 interface HelperOptions {
@@ -75,7 +76,7 @@ function numbersOf(list: unknown, field: unknown): number[] {
  */
 function deriveCurrencyFormat(locale: string | undefined, currency: string): string {
   try {
-    const parts = new Intl.NumberFormat(locale, { style: 'currency', currency }).formatToParts(1)
+    const parts = numberFormat(locale, { style: 'currency', currency }).formatToParts(1)
     const symbol = parts.find((p) => p.type === 'currency')?.value ?? currency
     const fraction = parts.find((p) => p.type === 'fraction')?.value ?? ''
     const digits = fraction.length ? `.${'0'.repeat(fraction.length)}` : ''
@@ -119,7 +120,7 @@ export function createHelpers(
       const n = toNumber(args[0])
       if (n === null) return ''
       const code = (hash.code as string) ?? currencyCode
-      const display = new Intl.NumberFormat(locale, { style: 'currency', currency: code }).format(n)
+      const display = numberFormat(locale, { style: 'currency', currency: code }).format(n)
       const fmt =
         (hash.fmt as string) ??
         (code === currencyCode ? currencyFormat : deriveCurrencyFormat(locale, code))
@@ -132,7 +133,7 @@ export function createHelpers(
       const n = toNumber(args[0])
       if (n === null) return ''
       const decimals = toNumber(hash.decimals)
-      const display = new Intl.NumberFormat(locale, {
+      const display = numberFormat(locale, {
         minimumFractionDigits: decimals ?? undefined,
         maximumFractionDigits: decimals ?? undefined,
       }).format(n)
@@ -147,7 +148,7 @@ export function createHelpers(
       const { args, hash } = splitArgs(raw)
       const d = toDate(args[0])
       if (!d) return ''
-      const display = new Intl.DateTimeFormat(locale, {
+      const display = dateTimeFormat(locale, {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -160,7 +161,7 @@ export function createHelpers(
       const { args, hash } = splitArgs(raw)
       const n = toNumber(args[0])
       if (n === null) return ''
-      const display = new Intl.NumberFormat(locale, {
+      const display = numberFormat(locale, {
         style: 'percent',
         minimumFractionDigits: 2,
       }).format(n)

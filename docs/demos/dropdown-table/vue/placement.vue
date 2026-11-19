@@ -65,7 +65,7 @@ onBeforeUnmount(() => {
     </p>
 
     <!-- A tall scroller so a field can be dragged to either viewport edge. -->
-    <div class="example-scroller">
+    <div class="example-scroller mono-scrollbar">
       <div class="example-row">
         <mono-dropdown-table :control-data-dropdown.prop="startDd" label="Left edge" placeholder="Pick a person…"
           clearable :flip="flip" :shift="shift" :dropdown.prop="{ width: 460, maxHeight: 300 }">

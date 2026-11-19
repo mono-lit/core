@@ -1,6 +1,7 @@
 import { c as escapeCellText, d as __toESM, l as stripDirectives, o as parseMarkdown, s as encodeDirective, t as DEFAULT_STYLES, u as __commonJSMin } from "./styles-D-ergrfR.js";
 import { n as isReadableSource, r as readAllRows } from "./data-source-read-uKJpRAzx.js";
 import { n as unwrapReactive } from "./reactive-Dtd-esHO.js";
+import { n as dateTimeFormat, r as numberFormat } from "./intl-cache-DoVGRXDU.js";
 
 //#region src/export/download.ts
 /**
@@ -2013,7 +2014,7 @@ function numbersOf(list, field) {
 */
 function deriveCurrencyFormat(locale, currency) {
 	try {
-		const parts = new Intl.NumberFormat(locale, {
+		const parts = numberFormat(locale, {
 			style: "currency",
 			currency
 		}).formatToParts(1);
@@ -2057,7 +2058,7 @@ function createHelpers(formatting = {}) {
 			const n = toNumber(args[0]);
 			if (n === null) return "";
 			const code = hash.code ?? currencyCode;
-			return formatted(new Intl.NumberFormat(locale, {
+			return formatted(numberFormat(locale, {
 				style: "currency",
 				currency: code
 			}).format(n), {
@@ -2071,7 +2072,7 @@ function createHelpers(formatting = {}) {
 			const n = toNumber(args[0]);
 			if (n === null) return "";
 			const decimals = toNumber(hash.decimals);
-			return formatted(new Intl.NumberFormat(locale, {
+			return formatted(numberFormat(locale, {
 				minimumFractionDigits: decimals ?? void 0,
 				maximumFractionDigits: decimals ?? void 0
 			}).format(n), {
@@ -2084,7 +2085,7 @@ function createHelpers(formatting = {}) {
 			const { args, hash } = splitArgs(raw);
 			const d = toDate(args[0]);
 			if (!d) return "";
-			return formatted(new Intl.DateTimeFormat(locale, {
+			return formatted(dateTimeFormat(locale, {
 				year: "numeric",
 				month: "2-digit",
 				day: "2-digit"
@@ -2098,7 +2099,7 @@ function createHelpers(formatting = {}) {
 			const { args, hash } = splitArgs(raw);
 			const n = toNumber(args[0]);
 			if (n === null) return "";
-			return formatted(new Intl.NumberFormat(locale, {
+			return formatted(numberFormat(locale, {
 				style: "percent",
 				minimumFractionDigits: 2
 			}).format(n), {

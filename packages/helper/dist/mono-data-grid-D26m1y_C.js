@@ -4,6 +4,7 @@ import { i as joinFilters, n as andPredicates, r as compileFilterPredicate, t as
 import { A as resolveSearchEntries, C as customRemoteClause, E as hasWildcardSearch, S as customPredicate, T as hasCustomSearch, h as mergeSearchFields, j as searchEntryFor, k as plainSearchColumns, n as describeError, o as isCanceled, u as DEFAULT_SEARCH_FIELDS } from "./normalize-error-BEcd1tmS.js";
 import { _ as monoArraySource, a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, g as storeRows, i as normalizeSortList, l as summaryAliases, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-DJUNU26C.js";
 import { n as unwrapReactive } from "./reactive-Dtd-esHO.js";
+import { n as dateTimeFormat, r as numberFormat, t as collator } from "./intl-cache-DoVGRXDU.js";
 import { t as arrayToODataString } from "./filter-odata-GsczYKNC.js";
 import { t as createNotifier } from "./notifier-BIrqUzRh.js";
 import { t as monoFilterBuilder } from "./filter-builder-vbqIuPhX.js";
@@ -165,11 +166,11 @@ function labelFor(parts, level, utc, locale) {
 	const two = (n) => String(n).padStart(2, "0");
 	switch (level) {
 		case "year": return String(parts[0]);
-		case "month": return new Intl.DateTimeFormat(locale, {
+		case "month": return dateTimeFormat(locale, {
 			month: "long",
 			...tz
 		}).format(d);
-		case "day": return `${two(parts[2])} (${new Intl.DateTimeFormat(locale, {
+		case "day": return `${two(parts[2])} (${dateTimeFormat(locale, {
 			weekday: "short",
 			...tz
 		}).format(d)})`;
@@ -877,10 +878,10 @@ function monoDataGrid(ds = null, opts = {}) {
 	function formatSummary(value, spec) {
 		if (spec.format) return spec.format(value, ctrl.items);
 		if (value === null || Number.isNaN(value)) return spec.emptyText ?? "—";
-		const body = spec.precision != null ? value.toLocaleString(void 0, {
+		const body = spec.precision != null ? numberFormat(void 0, {
 			minimumFractionDigits: spec.precision,
 			maximumFractionDigits: spec.precision
-		}) : value.toLocaleString();
+		}).format(value) : numberFormat().format(value);
 		return `${spec.prefix ?? ""}${body}${spec.suffix ?? ""}`;
 	}
 	/** Aggregate one spec over `rows`. Non-numeric values are skipped. */
@@ -3045,7 +3046,7 @@ function monoDataGrid(ds = null, opts = {}) {
 		if (ea || eb) return ea === eb ? 0 : ea ? 1 : -1;
 		if (typeof a === "number" && typeof b === "number") return a - b;
 		if (a instanceof Date && b instanceof Date) return a.getTime() - b.getTime();
-		return String(a).localeCompare(String(b), void 0, { numeric: true });
+		return collator(void 0, { numeric: true }).compare(String(a), String(b));
 	}
 	/** Every matching row, sorted by the active keys (stable). */
 	function sortBrowserRows(rows) {

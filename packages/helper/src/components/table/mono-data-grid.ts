@@ -33,6 +33,7 @@ import {
 import type { MonoExportOptions, MonoExportResult } from '../../export/types'
 import type { MonoImportOptions, MonoImportResult } from '../../import/types'
 import { createNotifier } from '../../composables/notifier'
+import { collator, numberFormat } from '../../utils/intl-cache'
 import type { MonoEventProps } from '../../composables/element-props'
 import type { TableDetailEvents } from './mono-table-detail-core'
 import type { TableCheckboxEvents } from './mono-table-checkbox-core'
@@ -2486,11 +2487,11 @@ export function monoDataGrid<T = any>(
     if (value === null || Number.isNaN(value)) return spec.emptyText ?? '—'
     const body =
       spec.precision != null
-        ? value.toLocaleString(undefined, {
+        ? numberFormat(undefined, {
             minimumFractionDigits: spec.precision,
             maximumFractionDigits: spec.precision,
-          })
-        : value.toLocaleString()
+          }).format(value)
+        : numberFormat().format(value)
     return `${spec.prefix ?? ''}${body}${spec.suffix ?? ''}`
   }
 
@@ -5300,7 +5301,7 @@ export function monoDataGrid<T = any>(
     if (ea || eb) return ea === eb ? 0 : ea ? 1 : -1
     if (typeof a === 'number' && typeof b === 'number') return a - b
     if (a instanceof Date && b instanceof Date) return a.getTime() - b.getTime()
-    return String(a).localeCompare(String(b), undefined, { numeric: true })
+    return collator(undefined, { numeric: true }).compare(String(a), String(b))
   }
 
   /** Every matching row, sorted by the active keys (stable). */

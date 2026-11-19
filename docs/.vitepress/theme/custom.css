@@ -814,3 +814,97 @@ html.dark .mono-sync {
   border-color: var(--cyber-edge);
   background-color: color-mix(in srgb, var(--vp-c-brand-1) 12%, transparent);
 }
+
+/* ----------------------------------------------------------------------------
+   Docs-site scrollbars — the page, the VitePress sidebar/outline, code blocks
+   and the API tables wear the library's rail (8px pill, `currentColor` thumb;
+   packages/helper/src/data/theme/scrollbar.css). Every mono component already
+   carries it; these are the site's OWN scrollers, which Chrome otherwise draws
+   with its classic 15px bar (Firefox's native thin/overlay bar hid the gap).
+
+   Deliberately an explicit list, not `*`: a blanket rule would also dress any
+   demo scroller the library failed to cover and hide that bug from the docs.
+
+   WebKit lane only. No `scrollbar-width`/`scrollbar-color` here — Chrome drops
+   every `::-webkit-scrollbar` rule on an element that sets either one.
+   ---------------------------------------------------------------------------- */
+html,
+.VPSidebar,
+.VPNavScreen,
+.VPDocAside,
+.vp-doc div[class*='language-'] pre,
+.vp-doc table,
+.example-pre,
+.mono-types-table {
+  --_docs-scrollbar-ink: currentColor;
+}
+/* `<html>` has no `color` of its own (VitePress colours `<body>`), so the page
+   bar's thumb would mix from the UA's black and vanish in dark mode. */
+html {
+  --_docs-scrollbar-ink: var(--vp-c-text-1);
+}
+
+html::-webkit-scrollbar,
+.VPSidebar::-webkit-scrollbar,
+.VPNavScreen::-webkit-scrollbar,
+.VPDocAside::-webkit-scrollbar,
+.vp-doc div[class*='language-'] pre::-webkit-scrollbar,
+.vp-doc table::-webkit-scrollbar,
+.example-pre::-webkit-scrollbar,
+.mono-types-table::-webkit-scrollbar {
+  width: var(--mono-scrollbar-size, 8px);
+  height: var(--mono-scrollbar-size, 8px);
+}
+
+html::-webkit-scrollbar-track,
+html::-webkit-scrollbar-corner,
+.VPSidebar::-webkit-scrollbar-track,
+.VPSidebar::-webkit-scrollbar-corner,
+.VPNavScreen::-webkit-scrollbar-track,
+.VPNavScreen::-webkit-scrollbar-corner,
+.VPDocAside::-webkit-scrollbar-track,
+.VPDocAside::-webkit-scrollbar-corner,
+.vp-doc div[class*='language-'] pre::-webkit-scrollbar-track,
+.vp-doc div[class*='language-'] pre::-webkit-scrollbar-corner,
+.vp-doc table::-webkit-scrollbar-track,
+.vp-doc table::-webkit-scrollbar-corner,
+.example-pre::-webkit-scrollbar-track,
+.example-pre::-webkit-scrollbar-corner,
+.mono-types-table::-webkit-scrollbar-track,
+.mono-types-table::-webkit-scrollbar-corner {
+  background: var(--mono-scrollbar-track, transparent);
+}
+
+html::-webkit-scrollbar-thumb,
+.VPSidebar::-webkit-scrollbar-thumb,
+.VPNavScreen::-webkit-scrollbar-thumb,
+.VPDocAside::-webkit-scrollbar-thumb,
+.vp-doc div[class*='language-'] pre::-webkit-scrollbar-thumb,
+.vp-doc table::-webkit-scrollbar-thumb,
+.example-pre::-webkit-scrollbar-thumb,
+.mono-types-table::-webkit-scrollbar-thumb {
+  background: var(--mono-scrollbar-thumb, color-mix(in srgb, var(--_docs-scrollbar-ink) 22%, transparent));
+  border-radius: var(--mono-scrollbar-radius, 999px);
+}
+
+html::-webkit-scrollbar-thumb:hover,
+.VPSidebar::-webkit-scrollbar-thumb:hover,
+.VPNavScreen::-webkit-scrollbar-thumb:hover,
+.VPDocAside::-webkit-scrollbar-thumb:hover,
+.vp-doc div[class*='language-'] pre::-webkit-scrollbar-thumb:hover,
+.vp-doc table::-webkit-scrollbar-thumb:hover,
+.example-pre::-webkit-scrollbar-thumb:hover,
+.mono-types-table::-webkit-scrollbar-thumb:hover {
+  background: var(--mono-scrollbar-thumb-hover, color-mix(in srgb, var(--_docs-scrollbar-ink) 38%, transparent));
+}
+
+html::-webkit-scrollbar-button,
+.VPSidebar::-webkit-scrollbar-button,
+.VPNavScreen::-webkit-scrollbar-button,
+.VPDocAside::-webkit-scrollbar-button,
+.vp-doc div[class*='language-'] pre::-webkit-scrollbar-button,
+.vp-doc table::-webkit-scrollbar-button,
+.example-pre::-webkit-scrollbar-button,
+.mono-types-table::-webkit-scrollbar-button {
+  display: none;
+}
