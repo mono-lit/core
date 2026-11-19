@@ -107,7 +107,7 @@ export function createHelpers(
   const locale = formatting.locale
   const currencyCode = formatting.currency ?? 'USD'
   const currencyFormat = formatting.currencyFormat ?? deriveCurrencyFormat(locale, currencyCode)
-  const numberFormat = formatting.numberFormat ?? '#,##0'
+  const numberFmt = formatting.numberFormat ?? '#,##0'
   const dateFormat = formatting.dateFormat ?? 'yyyy-mm-dd'
   const percentFormat = formatting.percentFormat ?? '0.00%'
 
@@ -139,7 +139,7 @@ export function createHelpers(
       }).format(n)
       const fmt =
         (hash.fmt as string) ??
-        (decimals ? `#,##0.${'0'.repeat(decimals)}` : numberFormat)
+        (decimals ? `#,##0.${'0'.repeat(decimals)}` : numberFmt)
       return formatted(display, { n, f: fmt })
     },
 

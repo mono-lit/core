@@ -2048,7 +2048,7 @@ function createHelpers(formatting = {}) {
 	const locale = formatting.locale;
 	const currencyCode = formatting.currency ?? "USD";
 	const currencyFormat = formatting.currencyFormat ?? deriveCurrencyFormat(locale, currencyCode);
-	const numberFormat = formatting.numberFormat ?? "#,##0";
+	const numberFmt = formatting.numberFormat ?? "#,##0";
 	const dateFormat = formatting.dateFormat ?? "yyyy-mm-dd";
 	const percentFormat = formatting.percentFormat ?? "0.00%";
 	return {
@@ -2077,7 +2077,7 @@ function createHelpers(formatting = {}) {
 				maximumFractionDigits: decimals ?? void 0
 			}).format(n), {
 				n,
-				f: hash.fmt ?? (decimals ? `#,##0.${"0".repeat(decimals)}` : numberFormat)
+				f: hash.fmt ?? (decimals ? `#,##0.${"0".repeat(decimals)}` : numberFmt)
 			});
 		},
 		/** `{{date createdAt}}` — Markdown gets the locale date, Excel a real Date. */
