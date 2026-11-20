@@ -61,9 +61,16 @@ export function overlaySizeHost(el: Element): HTMLElement | null {
  * Generated and spacer rows are excluded by `data-mono-stripe-skip` rather than
  * by class name: this has to skip the row the OTHER overlay may have built as
  * well as its own, and both already carry that attribute for the zebra count.
+ *
+ * THIS table's rows only (`tHead.rows` / `tBodies`). A plain `thead tr` also matches the header
+ * of a table NESTED in a row — an open `<mono-table-detail>` panel holding its own
+ * grid — and a 20-column inner header then stamped `colspan="20"` on the outer
+ * 11-column table's overlay row. Under `table-layout: fixed` those 9 phantom
+ * columns have no width, take all the spare width, and the real columns shrink
+ * to their declared minimum.
  */
 export function columnCount(table: HTMLTableElement): number {
-  const widest = Array.from(table.querySelectorAll<HTMLTableRowElement>('thead tr')).reduce(
+  const widest = Array.from(table.tHead?.rows ?? []).reduce(
     (max, tr) => {
       const span = (Array.from(tr.children) as HTMLTableCellElement[]).reduce(
         (sum, c) => sum + (c.colSpan || 1),
@@ -77,7 +84,9 @@ export function columnCount(table: HTMLTableElement): number {
   if (widest) return widest
 
   // No header, or it has not rendered yet — fall back to the first real body row.
-  const first = table.querySelector<HTMLTableRowElement>('tbody tr:not([data-mono-stripe-skip])')
+  const first = Array.from(table.tBodies)
+    .flatMap((body) => Array.from(body.rows))
+    .find((row) => !row.hasAttribute('data-mono-stripe-skip'))
   return first ? Array.from(first.children).length : 0
 }
 
@@ -161,7 +170,7 @@ export function ensureRowHost(el: HTMLElement, rowClass: string): RowHost | unde
   // A `<tr>` cannot be a child of `<table>` itself, so that case needs a section.
   const section =
     tag === 'TABLE'
-      ? (table?.querySelector('tbody') ?? table?.appendChild(document.createElement('tbody')))
+      ? (table?.tBodies[0] ?? table?.appendChild(document.createElement('tbody')))
       : parent
 
   cell.appendChild(el)

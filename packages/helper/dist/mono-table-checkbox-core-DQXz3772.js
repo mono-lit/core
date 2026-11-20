@@ -3613,14 +3613,21 @@ function overlaySizeHost(el) {
 * Generated and spacer rows are excluded by `data-mono-stripe-skip` rather than
 * by class name: this has to skip the row the OTHER overlay may have built as
 * well as its own, and both already carry that attribute for the zebra count.
+*
+* THIS table's rows only (`tHead.rows` / `tBodies`). A plain `thead tr` also matches the header
+* of a table NESTED in a row — an open `<mono-table-detail>` panel holding its own
+* grid — and a 20-column inner header then stamped `colspan="20"` on the outer
+* 11-column table's overlay row. Under `table-layout: fixed` those 9 phantom
+* columns have no width, take all the spare width, and the real columns shrink
+* to their declared minimum.
 */
 function columnCount(table) {
-	const widest = Array.from(table.querySelectorAll("thead tr")).reduce((max, tr) => {
+	const widest = Array.from(table.tHead?.rows ?? []).reduce((max, tr) => {
 		const span = Array.from(tr.children).reduce((sum, c) => sum + (c.colSpan || 1), 0);
 		return Math.max(max, span);
 	}, 0);
 	if (widest) return widest;
-	const first = table.querySelector("tbody tr:not([data-mono-stripe-skip])");
+	const first = Array.from(table.tBodies).flatMap((body) => Array.from(body.rows)).find((row) => !row.hasAttribute("data-mono-stripe-skip"));
 	return first ? Array.from(first.children).length : 0;
 }
 /**
@@ -3681,7 +3688,7 @@ function ensureRowHost(el, rowClass) {
 	const cell = document.createElement("td");
 	const span = table ? columnCount(table) : 0;
 	if (span > 0) cell.colSpan = span;
-	const section = tag === "TABLE" ? table?.querySelector("tbody") ?? table?.appendChild(document.createElement("tbody")) : parent;
+	const section = tag === "TABLE" ? table?.tBodies[0] ?? table?.appendChild(document.createElement("tbody")) : parent;
 	cell.appendChild(el);
 	row.appendChild(cell);
 	section?.insertBefore(row, section.firstChild);

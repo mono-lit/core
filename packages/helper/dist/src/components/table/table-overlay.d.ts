@@ -35,6 +35,13 @@ export declare function overlaySizeHost(el: Element): HTMLElement | null;
  * Generated and spacer rows are excluded by `data-mono-stripe-skip` rather than
  * by class name: this has to skip the row the OTHER overlay may have built as
  * well as its own, and both already carry that attribute for the zebra count.
+ *
+ * THIS table's rows only (`tHead.rows` / `tBodies`). A plain `thead tr` also matches the header
+ * of a table NESTED in a row — an open `<mono-table-detail>` panel holding its own
+ * grid — and a 20-column inner header then stamped `colspan="20"` on the outer
+ * 11-column table's overlay row. Under `table-layout: fixed` those 9 phantom
+ * columns have no width, take all the spare width, and the real columns shrink
+ * to their declared minimum.
  */
 export declare function columnCount(table: HTMLTableElement): number;
 /**

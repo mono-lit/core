@@ -5,7 +5,7 @@ import { t as monoDataGrid } from "../../mono-data-grid-D26m1y_C.js";
 import { t as customElement } from "../../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../../decorate-BpnJwD08.js";
 import { t as isIconifyClass } from "../../icon-BM9N-jOt.js";
-import { a as MonoTableErrorCore, c as MonoTableSortCore, d as MonoTablePagingGroupCore, f as MonoTablePagingCore, i as MonoTableLoadingCore, l as MonoTableInfoCore, m as MonoTableControllerCore, n as MonoTableDetailCore, o as MonoTableEmptyCore, p as MonoTableSearchCore, r as MonoTableSummaryCore, s as MonoTableThCore, t as MonoTableCheckboxCore, u as MonoTablePageSizeCore } from "../../mono-table-checkbox-core-hKIr_Zdm.js";
+import { a as MonoTableErrorCore, c as MonoTableSortCore, d as MonoTablePagingGroupCore, f as MonoTablePagingCore, i as MonoTableLoadingCore, l as MonoTableInfoCore, m as MonoTableControllerCore, n as MonoTableDetailCore, o as MonoTableEmptyCore, p as MonoTableSearchCore, r as MonoTableSummaryCore, s as MonoTableThCore, t as MonoTableCheckboxCore, u as MonoTablePageSizeCore } from "../../mono-table-checkbox-core-DQXz3772.js";
 import { n as adoptIconStyles, r as toShadowCss, t as flushSsrHydration } from "../../hydration-flush-BXaqxWu2.js";
 import { t as input_css_raw_default } from "../../input.css_raw-Br-T8RWv.js";
 import { t as checkbox_css_raw_default } from "../../checkbox.css_raw-AYtSbUtY.js";

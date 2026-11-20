@@ -101,7 +101,7 @@ declare const useHelper: () => {
   }) => boolean;
   safeJSONParse: (str: string) => any;
   replacerData: <ComT>({ fn, type, item, key, items }: {
-    fn: "push" | "replace" | "remove";
+    fn: "push" | "remove" | "replace";
     type: "data";
     item: ComT;
     key?: (keyof ComT & (string | number)) | undefined;
@@ -110,7 +110,7 @@ declare const useHelper: () => {
       var: any;
     };
   } | {
-    fn: "push" | "replace" | "remove";
+    fn: "push" | "remove" | "replace";
     type: "datasource";
     item: ComT;
     key?: (keyof ComT & (string | number)) | undefined;

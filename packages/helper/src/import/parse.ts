@@ -112,7 +112,30 @@ async function toArrayBuffer(data: File | Blob | ArrayBuffer | Uint8Array): Prom
   throw new Error('[mono-import] `data` must be a File, Blob, ArrayBuffer, Uint8Array or string.')
 }
 
-/** Read a worksheet into a dense matrix of raw cell values. */
+/**
+ * A formula cell's value as the sheet shows it.
+ *
+ * ExcelJS hands a formula cell over as `{ formula | sharedFormula, result }`,
+ * where `result` is the value Excel last calculated and saved with the file.
+ * Left wrapped, every consumer has to know that shape — and the number parser
+ * didn't, so `=D3*110%` read as "not a number". Unwrapped here, a formula cell
+ * is indistinguishable from the same value typed in.
+ *
+ * An Excel error result (`#DIV/0!`, `#REF!` → `{ error }`) reads as an empty
+ * cell, as does a formula with no saved result (a file written by a script and
+ * never recalculated) — there is no formula engine here to compute one.
+ */
+function formulaResult(value: unknown): unknown {
+  if (value == null || typeof value !== 'object' || value instanceof Date) return value
+  const v = value as Record<string, any>
+  if (!('formula' in v) && !('sharedFormula' in v)) return value
+  const result = v.result
+  if (result == null) return null
+  if (typeof result === 'object' && !(result instanceof Date) && 'error' in result) return null
+  return result
+}
+
+/** Read a worksheet into a dense matrix of raw cell values (formula cells unwrapped to their result). */
 async function readWorkbook(
   data: File | Blob | ArrayBuffer | Uint8Array,
   sheet: string | number | undefined,
@@ -136,7 +159,7 @@ async function readWorkbook(
     const cells: unknown[] = []
     // `row.values` is 1-based with a hole at index 0.
     const values = row.values as unknown[]
-    for (let c = 1; c < values.length; c += 1) cells.push(values[c])
+    for (let c = 1; c < values.length; c += 1) cells.push(formulaResult(values[c]))
     matrix.push(cells)
   })
   return matrix
