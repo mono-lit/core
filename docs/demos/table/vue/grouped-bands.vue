@@ -27,11 +27,13 @@ const grouped = {
     {
       field: 'Region',
       custom: (r: Row) => `${r.Region} region`,
+      // An emoji per band (any text works) — or an iconify class, like the Team level below.
+      icon: (r: Row) => ({ North: '🧭', South: '🌴', East: '🌅', West: '🏔️' })[r.Region] ?? '',
       variant: 'tonal' as const,
       // Per band, from its first row: a theme token or any CSS colour.
       color: (r: Row) => (r.Region === 'North' ? 'primary' : r.Region === 'South' ? 'success' : r.Region === 'East' ? 'warning' : '#7c3aed'),
     },
-    { field: 'Team', variant: 'text' as const, color: 'neutral' },
+    { field: 'Team', variant: 'text' as const, color: 'neutral', icon: 'i-mdi-account-group' },
   ],
 }
 

@@ -897,6 +897,7 @@ You can also pass `controlMonoTable(data, { grouped })`, set it on `props.th[].g
   - `variant`: `'solid' | 'outline' | 'tonal' | 'text'`, the same four as `mono-button`. Default `'tonal'`.
   - `color`: a theme token (`primary`, `success`, `danger`, …) or any CSS colour. Default `'primary'`.
   - `order`: the nesting position (lower = outer). Use it instead of the array order.
+  - `icon`: an iconify class (`i-mdi-tag`) or an emoji (`🏷️`) in front of the label, or a function of the band's first row. Also settable once for every level; `''` turns it off for a field.
   - `collapsible`, `open` and `stayOpen`: per level.
 
   `variant` and `color` also take a function of the band's first row, so one level can colour each band differently.

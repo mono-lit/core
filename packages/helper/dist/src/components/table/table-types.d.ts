@@ -343,8 +343,9 @@ export interface TableThProps extends TableControlBase {
    * inserted in front of the first row of each run of equal keys (Brand, then Code
    * inside it); every matching row is read in `chunk`-sized requests (the first one
    * carries `$count`) so each band knows its count. Each field entry may be an object
-   * — `{ field, custom(row), count, variant, color, order, collapsible, open, stayOpen }`; top-level
-   * `collapsible` / `open` (start folded with `open: false`) / `stayOpen` (`false` = accordion)
+   * — `{ field, custom(row), count, variant, color, order, collapsible, open, stayOpen, icon }`; top-level
+   * `collapsible` / `open` (start folded with `open: false`) / `stayOpen` (`false` = accordion) /
+   * `icon` (iconify class like `i-mdi-tag`, or an emoji)
    * apply to every level. Declare it
    * on ANY ONE header — table-wide, like `editable-trigger`; `null` turns it off.
    * Not the `group` tree. See {@link MonoGrouped}.

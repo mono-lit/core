@@ -5,6 +5,7 @@ import { A as resolveSearchEntries, C as customRemoteClause, E as hasWildcardSea
 import { _ as monoArraySource, a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, g as storeRows, i as normalizeSortList, l as summaryAliases, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-Cujz8TZ_.js";
 import { n as unwrapReactive } from "./reactive-Dtd-esHO.js";
 import { i as isThemeColorToken, n as colorClassToken, r as customColorStyle } from "./color-CEYYtRX-.js";
+import { t as isIconifyClass } from "./icon-BM9N-jOt.js";
 import { n as dateTimeFormat, r as numberFormat, t as collator } from "./intl-cache-DoVGRXDU.js";
 import { t as arrayToODataString } from "./filter-odata-GsczYKNC.js";
 import { t as createNotifier } from "./notifier-BIrqUzRh.js";
@@ -120,6 +121,7 @@ function normalizeGrouped(cfg) {
 	const collapsible = cfg.collapsible !== false;
 	const open = cfg.open !== false;
 	const stayOpen = cfg.stayOpen !== false;
+	const icon = cfg.icon ?? "";
 	const entries = cfg.fields.map((f, i) => ({
 		f: typeof f === "string" ? { field: f } : f,
 		i
@@ -142,7 +144,8 @@ function normalizeGrouped(cfg) {
 			color: f.color ?? "primary",
 			collapsible: typeof f.collapsible === "boolean" ? f.collapsible : collapsible,
 			open: typeof f.open === "boolean" ? f.open : open,
-			stayOpen: typeof f.stayOpen === "boolean" ? f.stayOpen : stayOpen
+			stayOpen: typeof f.stayOpen === "boolean" ? f.stayOpen : stayOpen,
+			icon: f.icon !== void 0 && f.icon !== null ? f.icon : icon
 		});
 	}
 	return {
@@ -150,7 +153,8 @@ function normalizeGrouped(cfg) {
 		chunk: Math.max(1, Math.floor(Number(cfg.chunk) || 100)),
 		collapsible,
 		open,
-		stayOpen
+		stayOpen,
+		icon
 	};
 }
 /**
@@ -166,6 +170,7 @@ function groupedSignature(cfg) {
 		k: cfg.collapsible ?? null,
 		p: cfg.open ?? null,
 		s: cfg.stayOpen ?? null,
+		i: fn(cfg.icon),
 		f: cfg.fields.map((f) => typeof f === "string" ? f : f && {
 			field: f.field,
 			o: f.order ?? null,
@@ -175,7 +180,8 @@ function groupedSignature(cfg) {
 			x: typeof f.custom === "function",
 			k: f.collapsible ?? null,
 			p: f.open ?? null,
-			s: f.stayOpen ?? null
+			s: f.stayOpen ?? null,
+			i: fn(f.icon)
 		})
 	});
 }
@@ -207,6 +213,15 @@ function resolveVariant(v, row) {
 		out = "tonal";
 	}
 	return VARIANTS.includes(out) ? out : "tonal";
+}
+function resolveIcon(i, row) {
+	if (typeof i !== "function") return i || "";
+	try {
+		const out = i(row);
+		return out == null ? "" : String(out);
+	} catch {
+		return "";
+	}
 }
 function resolveColor(c, row) {
 	if (typeof c !== "function") return c || "primary";
@@ -275,6 +290,7 @@ function buildGrouped(rows, fields, collapsed = /* @__PURE__ */ new Set()) {
 					row,
 					variant: resolveVariant(f.variant, row),
 					color: resolveColor(f.color, row),
+					icon: resolveIcon(f.icon, row),
 					collapsible: f.collapsible,
 					collapsed: isCollapsed,
 					at: visible.length,
@@ -791,11 +807,15 @@ var BandInjector = class {
 			const chevron = document.createElement("span");
 			chevron.setAttribute("mono-grouped-chevron", "");
 			chevron.setAttribute("aria-hidden", "true");
+			const icon = document.createElement("span");
+			icon.setAttribute("mono-grouped-icon", "");
+			icon.setAttribute("aria-hidden", "true");
+			icon.hidden = true;
 			const text = document.createElement("span");
 			text.setAttribute("mono-grouped-text", "");
 			const count = document.createElement("span");
 			count.setAttribute("mono-grouped-count", "");
-			label.append(chevron, text, count);
+			label.append(chevron, icon, text, count);
 			td.appendChild(label);
 			tr.appendChild(td);
 			const toggle = () => {
@@ -833,12 +853,38 @@ var BandInjector = class {
 		const td = tr.firstElementChild;
 		if (td.colSpan !== span) td.colSpan = span;
 		const label = td.firstElementChild;
-		const [, text, count] = Array.from(label.children);
+		const [, icon, text, count] = Array.from(label.children);
+		this.syncIcon(icon, b.icon);
 		if (text.textContent !== b.label) text.textContent = b.label;
 		const c = b.showCount ? `(${b.count})` : "";
 		if (count.textContent !== c) count.textContent = c;
 		if (count.hidden !== !b.showCount) count.hidden = !b.showCount;
 		return tr;
+	}
+	/**
+	* The band's icon, the way every mono icon works: an iconify class
+	* (`i-mdi-tag`) is an empty span carrying the class — UnoCSS's preset-icons
+	* paints it as a mask, and since the band row is light DOM the page's utility
+	* CSS reaches it — anything else (an emoji, a character) is plain text.
+	* Rewritten only when the value changed.
+	*/
+	syncIcon(el, icon) {
+		const value = (icon ?? "").trim();
+		if (el.dataset.icon === value) return;
+		el.dataset.icon = value;
+		el.replaceChildren();
+		el.hidden = !value;
+		if (!value) return;
+		if (isIconifyClass(value)) {
+			const glyph = document.createElement("span");
+			glyph.className = value;
+			glyph.setAttribute("mono-glyph", "");
+			el.removeAttribute("mono-grouped-icon-text");
+			el.appendChild(glyph);
+		} else {
+			el.setAttribute("mono-grouped-icon-text", "");
+			el.textContent = value;
+		}
 	}
 };
 

@@ -38,6 +38,12 @@ export interface MonoGroupedFieldConfig<T = any> {
   open?: boolean;
   /** `false` = an accordion: opening one of this level's bands closes its open siblings (same parent). Default: the table-level `stayOpen` (`true`). */
   stayOpen?: boolean;
+  /**
+   * An icon in front of this level's labels — an iconify class (`'i-mdi-tag'`, drawn as a masked span
+   * like every mono icon) or any text such as an emoji (`'🏷️'`). A function picks one per band from
+   * its first row. Default: the table-level `icon` (none). `''` turns an inherited icon off.
+   */
+  icon?: string | ((row: T) => string);
 }
 export type MonoGroupedField<T = any> = string | MonoGroupedFieldConfig<T>;
 /** The `grouped` config — `<mono-table-th :grouped.prop>` / `monoDataGrid(data, { grouped })`. */
@@ -56,6 +62,8 @@ export interface MonoGrouped<T = any> {
   open?: boolean;
   /** `false` = opening a band closes its open siblings (same level, same parent) — an accordion. Default `true`; a field entry can override it. */
   stayOpen?: boolean;
+  /** An icon for EVERY band — iconify class or emoji (or a function of the first row). A field entry can override it. */
+  icon?: string | ((row: T) => string);
 }
 /** A band level with every default resolved. */
 export interface MonoGroupedLevel<T = any> {
@@ -70,6 +78,8 @@ export interface MonoGroupedLevel<T = any> {
   open: boolean;
   /** `false` = opening a band closes its open siblings. */
   stayOpen: boolean;
+  /** `''` = no icon. */
+  icon: string | ((row: T) => string);
 }
 export interface MonoGroupedResolved<T = any> {
   fields: Array<MonoGroupedLevel<T>>;
@@ -77,6 +87,7 @@ export interface MonoGroupedResolved<T = any> {
   collapsible: boolean;
   open: boolean;
   stayOpen: boolean;
+  icon: string | ((row: T) => string);
 }
 /**
  * A band's fold state for {@link buildGrouped}: a set of COLLAPSED paths (on top of
@@ -100,6 +111,8 @@ export interface MonoGroupedItem<T = any> {
   row: T;
   variant: MonoGroupedVariant;
   color: string;
+  /** Iconify class or text (emoji); `''` = none. */
+  icon: string;
   collapsible: boolean;
   collapsed: boolean;
   /** Row coordinate: drawn in front of `visible[at]` (`at === visible.length` → after the last row). */

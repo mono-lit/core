@@ -3112,6 +3112,21 @@ mono-shadow-table-checkbox {
   opacity: 0.8;
 }
 [mono-grouped-count][hidden] { display: none; }
+/* The icon (`icon`): an iconify class is an empty masked span — preset-icons under
+   presetWind4 emits no `display`, so it is sized here; anything else is text (an emoji). */
+[mono-grouped-icon] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+[mono-grouped-icon][hidden] { display: none; }
+[mono-grouped-icon] > [mono-glyph] {
+  display: inline-block;
+  width: var(--mono-table-grouped-icon-size, 1.1em);
+  height: var(--mono-table-grouped-icon-size, 1.1em);
+}
 /* A CSS chevron (no icon pipeline): down when open, right when folded. */
 [mono-grouped-chevron] {
   display: none;

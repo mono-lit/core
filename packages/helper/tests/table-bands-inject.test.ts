@@ -142,6 +142,37 @@ describe('BandInjector', () => {
     expect(el.hasAttribute('mono-grouped-table')).toBe(false)
   })
 
+  it('draws an iconify icon as a masked span and an emoji as text (table-wide, per field, per band)', () => {
+    const cfg = normalizeGrouped<Row>({
+      icon: 'i-mdi-tag',
+      fields: [{ field: 'Brand', icon: (r) => (r.Brand === 'A' ? '🏷️' : 'i-mdi-history') }],
+    })!
+    const layout = buildGrouped(rows, cfg.fields)
+    const h = host()
+    ;(h as any).groupedWindow = groupedWindow(layout, 0, 3)
+    const el = table(3)
+    const inj = new BandInjector(h, el)
+    inj.flush()
+    const [a, b] = Array.from(el.querySelectorAll('[mono-grouped-icon]')) as HTMLElement[]
+    expect(a!.hidden).toBe(false)
+    expect(a!.textContent).toBe('🏷️')
+    expect(a!.hasAttribute('mono-grouped-icon-text')).toBe(true)
+    expect(b!.querySelector('span[mono-glyph]')!.className).toBe('i-mdi-history')
+    inj.stop()
+
+    // The table-level icon reaches a field without its own; '' turns it off.
+    const both = normalizeGrouped<Row>({ icon: 'i-mdi-tag', fields: ['Brand', { field: 'Id', icon: '' }] })!
+    expect(buildGrouped(rows, both.fields).grouped.map((g) => g.icon).slice(0, 2)).toEqual(['i-mdi-tag', ''])
+  })
+
+  it('has no icon by default', () => {
+    const el = table(3)
+    const inj = new BandInjector(host(), el)
+    inj.flush()
+    expect((el.querySelector('[mono-grouped-icon]') as HTMLElement).hidden).toBe(true)
+    inj.stop()
+  })
+
   it('writes a literal CSS colour inline', () => {
     const cfg = normalizeGrouped<Row>({ fields: [{ field: 'Brand', color: '#7c3aed' }] })!
     const layout = buildGrouped(rows, cfg.fields)

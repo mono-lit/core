@@ -1,7 +1,7 @@
+import { n as mdiGlyph, t as isIconifyClass } from "../../icon-BM9N-jOt.js";
 import { t as customElement } from "../../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../../decorate-BpnJwD08.js";
-import { n as mdiGlyph, t as isIconifyClass } from "../../icon-BM9N-jOt.js";
-import { a as validateFileUploadProps, i as getFileIcon, n as createUploadItem, r as formatFileSize, t as MonoFileUploadCore } from "../../file-upload-core-C5WYGa3i.js";
+import { a as validateFileUploadProps, i as getFileIcon, n as createUploadItem, r as formatFileSize, t as MonoFileUploadCore } from "../../file-upload-core-B2d_GRfL.js";
 import { i as withShadowUtilityStyles, r as toShadowCss, t as flushSsrHydration } from "../../hydration-flush-BXaqxWu2.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 

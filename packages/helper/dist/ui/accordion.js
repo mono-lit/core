@@ -1,7 +1,7 @@
 import { g as monoHostChildNodes } from "../mono-ui-bwtsaC-q.js";
 import { t as customElement } from "../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../decorate-BpnJwD08.js";
-import { t as MonoAccordionCore } from "../accordion-core-vWYybabK.js";
+import { t as MonoAccordionCore } from "../accordion-core-gnRgBqDP.js";
 import { a as parkDetachedNodes, c as unwatchHostChildren, i as guardHostTextContent, l as watchHostChildren, s as placeSlotNode } from "../light-slots-CQuCgSHh.js";
 import { LitElement, html, isServer, nothing } from "lit";
 import { ref } from "lit/directives/ref.js";

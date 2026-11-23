@@ -1,7 +1,7 @@
+import { n as mdiGlyph, t as isIconifyClass } from "../../icon-BM9N-jOt.js";
 import { t as customElement } from "../../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../../decorate-BpnJwD08.js";
-import { n as mdiGlyph, t as isIconifyClass } from "../../icon-BM9N-jOt.js";
-import { t as MonoAlertCore } from "../../alert-core-C0rFD8mN.js";
+import { t as MonoAlertCore } from "../../alert-core-Bk0XBuWY.js";
 import { i as withShadowUtilityStyles, n as adoptIconStyles, r as toShadowCss, t as flushSsrHydration } from "../../hydration-flush-BXaqxWu2.js";
 import { LitElement, html, isServer, nothing, unsafeCSS } from "lit";
 

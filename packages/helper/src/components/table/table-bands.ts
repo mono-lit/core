@@ -21,6 +21,7 @@
 
 import { columnCount } from './table-overlay'
 import { colorClassToken, customColorStyle, isThemeColorToken } from '../../composables/color'
+import { isIconifyClass } from '../../composables/icon'
 import type { MonoGroupedItem, MonoGroupedWindow } from './grouped-bands'
 
 /** What the injector reads off the controller. */
@@ -207,11 +208,15 @@ export class BandInjector {
       const chevron = document.createElement('span')
       chevron.setAttribute('mono-grouped-chevron', '')
       chevron.setAttribute('aria-hidden', 'true')
+      const icon = document.createElement('span')
+      icon.setAttribute('mono-grouped-icon', '')
+      icon.setAttribute('aria-hidden', 'true')
+      icon.hidden = true
       const text = document.createElement('span')
       text.setAttribute('mono-grouped-text', '')
       const count = document.createElement('span')
       count.setAttribute('mono-grouped-count', '')
-      label.append(chevron, text, count)
+      label.append(chevron, icon, text, count)
       td.appendChild(label)
       tr.appendChild(td)
       const toggle = (): void => {
@@ -252,11 +257,38 @@ export class BandInjector {
     const td = tr.firstElementChild as HTMLTableCellElement
     if (td.colSpan !== span) td.colSpan = span
     const label = td.firstElementChild as HTMLElement
-    const [, text, count] = Array.from(label.children) as HTMLElement[]
+    const [, icon, text, count] = Array.from(label.children) as HTMLElement[]
+    this.syncIcon(icon!, b.icon)
     if (text!.textContent !== b.label) text!.textContent = b.label
     const c = b.showCount ? `(${b.count})` : ''
     if (count!.textContent !== c) count!.textContent = c
     if (count!.hidden !== !b.showCount) count!.hidden = !b.showCount
     return tr
+  }
+
+  /**
+   * The band's icon, the way every mono icon works: an iconify class
+   * (`i-mdi-tag`) is an empty span carrying the class — UnoCSS's preset-icons
+   * paints it as a mask, and since the band row is light DOM the page's utility
+   * CSS reaches it — anything else (an emoji, a character) is plain text.
+   * Rewritten only when the value changed.
+   */
+  private syncIcon(el: HTMLElement, icon: string): void {
+    const value = (icon ?? '').trim()
+    if (el.dataset.icon === value) return
+    el.dataset.icon = value
+    el.replaceChildren()
+    el.hidden = !value
+    if (!value) return
+    if (isIconifyClass(value)) {
+      const glyph = document.createElement('span')
+      glyph.className = value
+      glyph.setAttribute('mono-glyph', '')
+      el.removeAttribute('mono-grouped-icon-text')
+      el.appendChild(glyph)
+    } else {
+      el.setAttribute('mono-grouped-icon-text', '')
+      el.textContent = value
+    }
   }
 }

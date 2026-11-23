@@ -35,5 +35,13 @@ export declare class BandInjector {
   flush(): void;
   /** The band's row — created on first use, its attributes / text kept current. */
   private rowFor;
+  /**
+   * The band's icon, the way every mono icon works: an iconify class
+   * (`i-mdi-tag`) is an empty span carrying the class — UnoCSS's preset-icons
+   * paints it as a mask, and since the band row is light DOM the page's utility
+   * CSS reaches it — anything else (an emoji, a character) is plain text.
+   * Rewritten only when the value changed.
+   */
+  private syncIcon;
 }
 //#endregion

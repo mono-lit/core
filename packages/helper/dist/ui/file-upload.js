@@ -2,7 +2,7 @@ import { g as monoHostChildNodes } from "../mono-ui-bwtsaC-q.js";
 import { t as customElement } from "../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../decorate-BpnJwD08.js";
 import { a as parkDetachedNodes, s as placeSlotNode } from "../light-slots-CQuCgSHh.js";
-import { a as validateFileUploadProps, i as getFileIcon, n as createUploadItem, r as formatFileSize, t as MonoFileUploadCore } from "../file-upload-core-C5WYGa3i.js";
+import { a as validateFileUploadProps, i as getFileIcon, n as createUploadItem, r as formatFileSize, t as MonoFileUploadCore } from "../file-upload-core-B2d_GRfL.js";
 import { LitElement } from "lit";
 
 //#region src/components/file-upload/mono-file-upload.ts

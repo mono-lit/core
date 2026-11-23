@@ -1,7 +1,7 @@
 import { a as validateColorProp, i as isThemeColorToken, n as colorClassToken, r as customColorStyle, t as CUSTOM_COLOR_CLASS } from "./color-CEYYtRX-.js";
+import { t as isIconifyClass } from "./icon-BM9N-jOt.js";
 import { i as defineAccessorAliases, n as arrayHasChanged, o as defineHybridPropAliases, r as booleanStringConverter, t as __decorate } from "./decorate-BpnJwD08.js";
 import { t as dispatchMonoEvent } from "./mono-event-CAZf0F_k.js";
-import { t as isIconifyClass } from "./icon-BM9N-jOt.js";
 import { html, isServer, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 

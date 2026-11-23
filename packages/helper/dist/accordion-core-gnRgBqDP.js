@@ -1,6 +1,6 @@
+import { t as isIconifyClass } from "./icon-BM9N-jOt.js";
 import { a as defineHybridPropAlias, i as defineAccessorAliases, o as defineHybridPropAliases, r as booleanStringConverter, t as __decorate } from "./decorate-BpnJwD08.js";
 import { t as dispatchMonoEvent } from "./mono-event-CAZf0F_k.js";
-import { t as isIconifyClass } from "./icon-BM9N-jOt.js";
 import { html, nothing } from "lit";
 import { property, query, state } from "lit/decorators.js";
 

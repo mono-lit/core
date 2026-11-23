@@ -41,6 +41,12 @@ export interface MonoGroupedFieldConfig<T = any> {
   open?: boolean
   /** `false` = an accordion: opening one of this level's bands closes its open siblings (same parent). Default: the table-level `stayOpen` (`true`). */
   stayOpen?: boolean
+  /**
+   * An icon in front of this level's labels — an iconify class (`'i-mdi-tag'`, drawn as a masked span
+   * like every mono icon) or any text such as an emoji (`'🏷️'`). A function picks one per band from
+   * its first row. Default: the table-level `icon` (none). `''` turns an inherited icon off.
+   */
+  icon?: string | ((row: T) => string)
 }
 
 export type MonoGroupedField<T = any> = string | MonoGroupedFieldConfig<T>
@@ -61,6 +67,8 @@ export interface MonoGrouped<T = any> {
   open?: boolean
   /** `false` = opening a band closes its open siblings (same level, same parent) — an accordion. Default `true`; a field entry can override it. */
   stayOpen?: boolean
+  /** An icon for EVERY band — iconify class or emoji (or a function of the first row). A field entry can override it. */
+  icon?: string | ((row: T) => string)
 }
 
 /** A band level with every default resolved. */
@@ -76,6 +84,8 @@ export interface MonoGroupedLevel<T = any> {
   open: boolean
   /** `false` = opening a band closes its open siblings. */
   stayOpen: boolean
+  /** `''` = no icon. */
+  icon: string | ((row: T) => string)
 }
 
 export interface MonoGroupedResolved<T = any> {
@@ -84,6 +94,7 @@ export interface MonoGroupedResolved<T = any> {
   collapsible: boolean
   open: boolean
   stayOpen: boolean
+  icon: string | ((row: T) => string)
 }
 
 /**
@@ -109,6 +120,8 @@ export interface MonoGroupedItem<T = any> {
   row: T
   variant: MonoGroupedVariant
   color: string
+  /** Iconify class or text (emoji); `''` = none. */
+  icon: string
   collapsible: boolean
   collapsed: boolean
   /** Row coordinate: drawn in front of `visible[at]` (`at === visible.length` → after the last row). */
@@ -145,6 +158,7 @@ export function normalizeGrouped<T = any>(cfg: MonoGrouped<T> | null | undefined
   const collapsible = cfg.collapsible !== false
   const open = cfg.open !== false
   const stayOpen = cfg.stayOpen !== false
+  const icon = cfg.icon ?? ''
   const entries = cfg.fields
     .map((f, i) => ({ f: typeof f === 'string' ? ({ field: f } as MonoGroupedFieldConfig<T>) : f, i }))
     .filter((e) => !!e.f && typeof e.f.field === 'string' && e.f.field.length > 0)
@@ -170,10 +184,11 @@ export function normalizeGrouped<T = any>(cfg: MonoGrouped<T> | null | undefined
       collapsible: typeof f.collapsible === 'boolean' ? f.collapsible : collapsible,
       open: typeof f.open === 'boolean' ? f.open : open,
       stayOpen: typeof f.stayOpen === 'boolean' ? f.stayOpen : stayOpen,
+      icon: f.icon !== undefined && f.icon !== null ? f.icon : icon,
     })
   }
   const chunk = Math.max(1, Math.floor(Number(cfg.chunk) || 100))
-  return { fields, chunk, collapsible, open, stayOpen }
+  return { fields, chunk, collapsible, open, stayOpen, icon }
 }
 
 /**
@@ -189,6 +204,7 @@ export function groupedSignature(cfg: MonoGrouped<any> | null | undefined): stri
     k: cfg.collapsible ?? null,
     p: cfg.open ?? null,
     s: cfg.stayOpen ?? null,
+    i: fn(cfg.icon),
     f: cfg.fields.map((f) =>
       typeof f === 'string'
         ? f
@@ -202,6 +218,7 @@ export function groupedSignature(cfg: MonoGrouped<any> | null | undefined): stri
             k: f.collapsible ?? null,
             p: f.open ?? null,
             s: f.stayOpen ?? null,
+            i: fn(f.icon),
           },
     ),
   })
@@ -242,6 +259,16 @@ function resolveVariant<T>(v: MonoGroupedLevel<T>['variant'], row: T): MonoGroup
     }
   }
   return VARIANTS.includes(out as MonoGroupedVariant) ? (out as MonoGroupedVariant) : 'tonal'
+}
+
+function resolveIcon<T>(i: MonoGroupedLevel<T>['icon'], row: T): string {
+  if (typeof i !== 'function') return i || ''
+  try {
+    const out = i(row)
+    return out == null ? '' : String(out)
+  } catch {
+    return ''
+  }
 }
 
 function resolveColor<T>(c: MonoGroupedLevel<T>['color'], row: T): string {
@@ -323,6 +350,7 @@ export function buildGrouped<T = any>(
           row,
           variant: resolveVariant(f.variant, row),
           color: resolveColor(f.color, row),
+          icon: resolveIcon(f.icon, row),
           collapsible: f.collapsible,
           collapsed: isCollapsed,
           at: visible.length,
