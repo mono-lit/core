@@ -1,5 +1,6 @@
 import { Constructor } from "../../composables/hybird-prop.js";
 import { CssSizeValue } from "../../composables/css-size.js";
+import { MonoGrouped } from "./grouped-bands.js";
 import { MonoColumnSort, MonoDateFilter, MonoEditableTrigger, MonoHeaderFilter, SortOrder } from "./mono-data-grid.js";
 import { MonoTableMenuCoreInterface } from "./table-menu-core.js";
 import { LitElement, TemplateResult } from "lit";
@@ -22,6 +23,7 @@ export declare class MonoTableThCoreInterface extends MonoTableMenuCoreInterface
   sort?: boolean | MonoColumnSort;
   editable: boolean;
   editableTrigger?: MonoEditableTrigger;
+  grouped?: MonoGrouped | null;
   required: boolean;
   headerFilter: boolean | MonoHeaderFilter;
   dateFilter: boolean | MonoDateFilter;

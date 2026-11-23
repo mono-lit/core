@@ -113,6 +113,8 @@ function inheritedLoadOptionsOf(source) {
 	for (const k of INHERITED_LOAD_OPTIONS) if (lo[k] !== void 0 && lo[k] !== null) out[k] = lo[k];
 	return out;
 }
+/** Chunks in flight at once on a `countFirst` drain. */
+const COUNT_FIRST_PARALLEL = 4;
 /** Stop runaway loops if a backend keeps returning full chunks forever. */
 const MAX_SKIP = 1e7;
 /** A devextreme DataSource: it both loads and holds a current page. */
@@ -183,6 +185,7 @@ async function readAllRows(source, options = {}) {
 			};
 			return drainStore(store, {
 				chunkSize,
+				countFirst: options.countFirst === true,
 				...select ? { select } : {},
 				...filter ? { filter } : {},
 				...sort ? { sort } : {},
@@ -193,6 +196,7 @@ async function readAllRows(source, options = {}) {
 	}
 	if (isStoreLike(src)) return drainStore(src, {
 		chunkSize,
+		countFirst: options.countFirst === true,
 		select: options.select,
 		sort: options.sort,
 		...options.filter ? { filter: options.filter } : {},
@@ -200,23 +204,70 @@ async function readAllRows(source, options = {}) {
 	});
 	return [];
 }
-/** Loop `store.load` until a short chunk comes back. */
-async function drainStore(store, opts) {
-	const acc = [];
-	for (let skip = 0;; skip += opts.chunkSize) {
-		const rows = rowsOf(await store.load({
-			...opts.loadOptions ?? {},
-			...opts.filter ? { filter: opts.filter } : {},
-			...opts.sort ? { sort: opts.sort } : {},
-			...opts.select ? { select: opts.select } : {},
-			skip,
-			take: opts.chunkSize,
-			requireTotalCount: false
+/**
+* One `store.load`, keeping the total count when the store reports one.
+*
+* devextreme resolves `load()` with the rows only — the count travels as the SECOND
+* argument of its Deferred (`.done((data, extra) => extra.totalCount)`), which a
+* plain `await` drops. A CustomStore may instead resolve `{ data, totalCount }`.
+*/
+function loadWithCount(store, options) {
+	const num = (v) => typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null;
+	const res = store.load(options);
+	if (res && typeof res.done === "function") return new Promise((resolve, reject) => {
+		res.done((data, extra) => resolve({
+			rows: rowsOf(data),
+			total: num(extra?.totalCount ?? data?.totalCount)
 		}));
-		acc.push(...flattenLeaves(rows));
-		if (rows.length < opts.chunkSize) break;
-		if (skip > MAX_SKIP) break;
-	}
+		if (typeof res.fail === "function") res.fail(reject);
+		else if (typeof res.catch === "function") res.catch(reject);
+	});
+	return Promise.resolve(res).then((data) => ({
+		rows: rowsOf(data),
+		total: num(data?.totalCount)
+	}));
+}
+/** Loop `store.load` until a short chunk comes back — or, `countFirst`, up to the counted total. */
+async function drainStore(store, opts) {
+	const request = (skip, requireTotalCount) => ({
+		...opts.loadOptions ?? {},
+		...opts.filter ? { filter: opts.filter } : {},
+		...opts.sort ? { sort: opts.sort } : {},
+		...opts.select ? { select: opts.select } : {},
+		skip,
+		take: opts.chunkSize,
+		requireTotalCount
+	});
+	const append = (acc, rows) => {
+		for (const row of flattenLeaves(rows)) acc.push(row);
+	};
+	const walk = async (from, acc) => {
+		for (let skip = from;; skip += opts.chunkSize) {
+			const rows = rowsOf(await store.load(request(skip, false)));
+			append(acc, rows);
+			if (rows.length < opts.chunkSize) break;
+			if (skip > MAX_SKIP) break;
+		}
+		return acc;
+	};
+	if (!opts.countFirst) return walk(0, []);
+	const first = await loadWithCount(store, request(0, true));
+	const acc = [];
+	append(acc, first.rows);
+	if (first.rows.length < opts.chunkSize) return acc;
+	if (first.total == null) return walk(opts.chunkSize, acc);
+	const skips = [];
+	for (let skip = opts.chunkSize; skip < first.total && skip <= MAX_SKIP; skip += opts.chunkSize) skips.push(skip);
+	const chunks = new Array(skips.length);
+	let next = 0;
+	const worker = async () => {
+		while (next < skips.length) {
+			const i = next++;
+			chunks[i] = rowsOf(await store.load(request(skips[i], false)));
+		}
+	};
+	await Promise.all(Array.from({ length: Math.min(4, skips.length) }, worker));
+	for (const rows of chunks) append(acc, rows ?? []);
 	return acc;
 }
 /**

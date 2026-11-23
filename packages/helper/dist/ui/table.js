@@ -1,13 +1,13 @@
 import { a as parseFieldPath, c as toODataClause, l as toODataSelector, n as isPath, r as mergePatch, s as setFieldValue, t as getFieldValue } from "../field-path-DK2VBWHl.js";
-import { a as buildGroups, c as isGroupNode, o as collectGroupPaths, s as flattenLeaves } from "../data-source-read-uKJpRAzx.js";
+import { a as buildGroups, c as isGroupNode, o as collectGroupPaths, s as flattenLeaves } from "../data-source-read-B49mOn5M.js";
 import { A as resolveSearchEntries, D as isWildcardPattern, O as normalizeSearchExpr, c as resolveErrorMessages, k as plainSearchColumns, l as setErrorMessages, n as describeError, r as errorStatus, s as normalizeError, t as DEFAULT_ERROR_MESSAGES, w as expandWildcard } from "../normalize-error-BEcd1tmS.js";
-import { _ as monoArraySource } from "../data-source-options-DJUNU26C.js";
-import { t as monoDataGrid } from "../mono-data-grid-D26m1y_C.js";
+import { _ as monoArraySource } from "../data-source-options-Cujz8TZ_.js";
+import { _ as buildGrouped, b as rowToSlot, t as monoDataGrid, v as groupedWindow, x as slotToRow, y as normalizeGrouped } from "../mono-data-grid-Crk3ZUsi.js";
 import { _ as monoHostChildren } from "../mono-ui-bwtsaC-q.js";
 import { t as customElement } from "../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../decorate-BpnJwD08.js";
 import { n as bucketHasContent, o as placeLightSlots, r as captureLightSlots, s as placeSlotNode } from "../light-slots-CQuCgSHh.js";
-import { a as MonoTableErrorCore, c as MonoTableSortCore, d as MonoTablePagingGroupCore, f as MonoTablePagingCore, i as MonoTableLoadingCore, l as MonoTableInfoCore, n as MonoTableDetailCore, o as MonoTableEmptyCore, p as MonoTableSearchCore, r as MonoTableSummaryCore, s as MonoTableThCore, t as MonoTableCheckboxCore, u as MonoTablePageSizeCore } from "../mono-table-checkbox-core-DQXz3772.js";
+import { a as MonoTableErrorCore, c as MonoTableSortCore, d as MonoTablePagingGroupCore, f as MonoTablePagingCore, i as MonoTableLoadingCore, l as MonoTableInfoCore, n as MonoTableDetailCore, o as MonoTableEmptyCore, p as MonoTableSearchCore, r as MonoTableSummaryCore, s as MonoTableThCore, t as MonoTableCheckboxCore, u as MonoTablePageSizeCore } from "../mono-table-checkbox-core-B0gekJUL.js";
 import { LitElement, html } from "lit";
 
 //#region src/components/table/mono-table-search.ts
@@ -250,4 +250,4 @@ let MonoTableCheckbox = class MonoTableCheckbox extends MonoTableCheckboxCore(Li
 MonoTableCheckbox = __decorate([customElement("mono-table-checkbox")], MonoTableCheckbox);
 
 //#endregion
-export { DEFAULT_ERROR_MESSAGES, MonoTableCheckbox, MonoTableDetail, MonoTableEmpty, MonoTableError, MonoTableInfo, MonoTableLoading, MonoTablePageSize, MonoTablePaging, MonoTablePagingGroup, MonoTableSearch, MonoTableSort, MonoTableSummary, MonoTableTh, buildGroups, collectGroupPaths, monoDataGrid as controlMonoTable, monoDataGrid, describeError, errorStatus, expandWildcard, flattenLeaves, getFieldValue, isGroupNode, isPath, isWildcardPattern, mergePatch, monoArraySource, normalizeError, normalizeSearchExpr, parseFieldPath, plainSearchColumns, resolveErrorMessages, resolveSearchEntries, setErrorMessages, setFieldValue, toODataClause, toODataSelector };
+export { DEFAULT_ERROR_MESSAGES, MonoTableCheckbox, MonoTableDetail, MonoTableEmpty, MonoTableError, MonoTableInfo, MonoTableLoading, MonoTablePageSize, MonoTablePaging, MonoTablePagingGroup, MonoTableSearch, MonoTableSort, MonoTableSummary, MonoTableTh, buildGrouped, buildGroups, collectGroupPaths, monoDataGrid as controlMonoTable, monoDataGrid, describeError, errorStatus, expandWildcard, flattenLeaves, getFieldValue, groupedWindow, isGroupNode, isPath, isWildcardPattern, mergePatch, monoArraySource, normalizeError, normalizeGrouped, normalizeSearchExpr, parseFieldPath, plainSearchColumns, resolveErrorMessages, resolveSearchEntries, rowToSlot, setErrorMessages, setFieldValue, slotToRow, toODataClause, toODataSelector };

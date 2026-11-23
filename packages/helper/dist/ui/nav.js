@@ -2,7 +2,7 @@ import { g as monoHostChildNodes } from "../mono-ui-bwtsaC-q.js";
 import { t as customElement } from "../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../decorate-BpnJwD08.js";
 import { i as guardHostTextContent, s as placeSlotNode } from "../light-slots-CQuCgSHh.js";
-import { i as validateNavProps, n as generateNavRootClasses, r as getNavHeight, t as MonoNavCore } from "../nav-core-EDZGxWfR.js";
+import { i as validateNavProps, n as generateNavRootClasses, r as getNavHeight, t as MonoNavCore } from "../nav-core-BcsFHKMl.js";
 import { LitElement } from "lit";
 import { state } from "lit/decorators.js";
 

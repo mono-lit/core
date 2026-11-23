@@ -15,6 +15,16 @@ export {
 export type { FieldSegment, ParsedFieldPath, ODataClause } from '../../search/field-path.js'
 export { buildGroups, flattenLeaves, isGroupNode, collectGroupPaths } from './grouping.js'
 export type { MonoGroupNode } from './grouping.js'
+export { buildGrouped, groupedWindow, normalizeGrouped, slotToRow, rowToSlot } from './grouped-bands.js'
+export type {
+  MonoGroupedItem,
+  MonoGroupedLayout,
+  MonoGroupedVariant,
+  MonoGroupedWindow,
+  MonoGrouped,
+  MonoGroupedField,
+  MonoGroupedFieldConfig,
+} from './grouped-bands.js'
 export {
   expandWildcard,
   isWildcardPattern,

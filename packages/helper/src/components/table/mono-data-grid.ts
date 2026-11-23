@@ -10,6 +10,20 @@ import {
 } from './grouping'
 import { storeGroupSource } from './store-group-source'
 import {
+  groupedWindow as computeBandWindow,
+  buildGrouped,
+  collapsiblePaths,
+  groupedSignature,
+  normalizeGrouped,
+  slotToRow,
+  type MonoGroupedItem,
+  type MonoGroupedLayout,
+  type MonoGroupedWindow,
+  type MonoGrouped,
+  type MonoGroupedResolved,
+} from './grouped-bands'
+import { BandInjector } from './table-bands'
+import {
   getFieldValue,
   isPath,
   mergePatch,
@@ -331,6 +345,15 @@ export interface MonoDateFilter {
   dataSourceOptions?: MonoHeaderFilterLoadOptions
 }
 
+export type {
+  MonoGroupedItem,
+  MonoGroupedLayout,
+  MonoGroupedVariant,
+  MonoGroupedWindow,
+  MonoGrouped,
+  MonoGroupedField,
+  MonoGroupedFieldConfig,
+} from './grouped-bands'
 export type { MonoDateLevel, MonoDateRange } from './date-filter-tree'
 export { isDateRange } from './date-filter-tree'
 
@@ -388,6 +411,12 @@ export interface MonoTableColumnProps {
   summary?: Omit<MonoSummarySpec, 'field'>
   editable?: boolean
   editableTrigger?: MonoEditableTrigger
+  /**
+   * Table-wide group bands, declared on any one column entry — the same as
+   * `<mono-table-th :grouped.prop>` / `monoDataGrid(data, { grouped })`. See
+   * {@link MonoGrouped}.
+   */
+  grouped?: MonoGrouped | null
   /**
    * Draw a red `*` after this column's caption, so a user can see which columns
    * want input. Presentation only: `editable` is what opens an editor.
@@ -1141,6 +1170,17 @@ export interface MonoDataGridOptions extends MonoSearchFieldsAliases {
    */
   chunkSize?: number
   /**
+   * Sticky group BANDS over the flat row list — a band row in front of each run
+   * of equal keys (`fields: ['Brand', 'Code']` → Brand bands, Code bands inside).
+   * Not the `group` tree: the rows stay flat, so virtual / infinity scroll,
+   * paging, search and summaries keep working. Every matching row is read (in
+   * `chunk`-sized requests, the first one carrying `$count`) so each band knows
+   * its boundaries and count; mono inserts the band `<tr>`s into the tbody itself.
+   * Also settable from any `<mono-table-th :grouped.prop>` or `table.setGrouped()`.
+   * Ignored (with a warning) while `group` is set.
+   */
+  grouped?: MonoGrouped<any> | null
+  /**
    * Advanced override for server-side grouping. Normally you don't set this:
    * passing a single-field `group` plus a remote devextreme `DataSource` makes
    * the controller drive server group paging automatically from the source's
@@ -1458,8 +1498,8 @@ export interface MonoTableController<T = any> {
   /** Primary sort direction (`sorts[0]`), or null when unsorted. */
   sortOrder: SortOrder
 
-  /** Whether grouping is active (one or more group fields configured). */
-  grouped: boolean
+  /** Whether the `group` TREE is active (one or more group fields configured). Not the `grouped` bands. */
+  groupTree: boolean
 
   // --- Scroll paging (infinity / virtual) — flat tables only -----------------
   /** Active scroll-paging mode. `'off'` = classic numbered paging. */
@@ -1476,6 +1516,34 @@ export interface MonoTableController<T = any> {
   virtualPadTop: number
   /** Virtual bottom spacer height in px (rows below the window). */
   virtualPadBottom: number
+
+  // --- Group bands (`grouped`) -------------------------------------------------
+  /** Every band over the current (searched, sorted) rows, in display order. Empty when `grouped` is off. */
+  grouped: MonoGroupedItem<T>[]
+  /** The bands the current window / page draws — what the tbody injector places. `null` when `grouped` is off. */
+  groupedWindow: MonoGroupedWindow<T> | null
+  /**
+   * Virtual-scroll length in ROW-HEIGHT SLOTS: visible rows + bands. Set while
+   * `grouped` is on (the pager measures the scroll box in it); `undefined` otherwise.
+   */
+  virtualSlotCount?: number
+  /** The pager's row height (px) while `grouped` bands run under virtual scroll — every band is one row tall. */
+  virtualRowHeight?: number
+  /** Turn group bands on (a config) or off (`null`). Idempotent for an equal config. */
+  setGrouped(grouped: MonoGrouped<T> | null | undefined): Promise<void>
+  /** The active `grouped` config, resolved, or `null`. */
+  groupedConfig(): MonoGroupedResolved<T> | null
+  /** Fold / unfold one band (its rows and inner bands) by its `path`. No reload. */
+  toggleGrouped(path: string): void
+  openGrouped(path: string): void
+  closeGrouped(path: string): void
+  isGroupedCollapsed(path: string): boolean
+  /** Open every band (overrides the `open: false` defaults and earlier clicks). No reload. */
+  expandAllGrouped(): void
+  /** Fold every collapsible band. No reload. */
+  collapseAllGrouped(): void
+  /** Hand the controller the `<table>` the band rows go into — called by `mono-table-th`; idempotent. */
+  bindGroupedHost(tableEl: HTMLElement | null): void
 
   /** The bound source (or null). */
   readonly dataSource: MonoGridSource<T> | null
@@ -1505,8 +1573,12 @@ export interface MonoTableController<T = any> {
   setScrollPaging(mode: 'off' | 'infinity' | 'virtual', opts?: { reload?: boolean }): Promise<void>
   /** Load & append the next page onto the scroll accumulator (no-op if `!hasMore`). */
   loadNext(): Promise<void>
-  /** Set the virtual render window (indices into the accumulator) + spacer px. */
-  setVirtualWindow(start: number, end: number, padTop: number, padBottom: number): void
+  /**
+   * Set the virtual render window (indices into the accumulator) + spacer px.
+   * With `grouped` bands on, `start` / `end` are SLOTS (see `virtualSlotCount`)
+   * and the controller works out the rows and the spacers itself from `rowHeight`.
+   */
+  setVirtualWindow(start: number, end: number, padTop: number, padBottom: number, rowHeight?: number): void
   /**
    * Override the page size (rows fetched per page / scroll chunk), winning over
    * the bound source's configured `pageSize`. `null` clears the override.
@@ -2141,7 +2213,36 @@ export function monoDataGrid<T = any>(
   let searchValue: string | null = null // current search (server ctx)
   let groupSeq = 0 // stale-guard for loadGroups results
 
+  // --- Group bands (`grouped`) — flat rows, a band row per run of equal keys ---
+  let bandCfg: MonoGroupedResolved<T> | null = normalizeGrouped<T>(opts.grouped as MonoGrouped<T> | null | undefined)
+  let bandSig = groupedSignature(opts.grouped)
+  let bandRead: T[] | null = null // every matching row, as read (null = not read yet)
+  let bandRows: T[] = [] // `bandRead` in display order (band keys lead)
+  let bandLayout: MonoGroupedLayout<T> | null = null
+  const bandOpen = new Map<string, boolean>() // per-band choices (path → open)
+  let bandAll: 'open' | 'closed' | null = null // the last expand-all / collapse-all
+  let bandPageIndex = 0
+  let bandPageSize = 0
+  let bandRowHeight = 44 // the pager's row-height (one slot); 44 = its default
+  let bandSeq = 0 // stale-guard for loadBanded()
+  let bandReading = false // a loadBanded() read is in flight
+  let bandWarned = false
+  let bandInjector: BandInjector | null = null
+  let bandHostEl: HTMLTableElement | null = null
+
   const isGrouped = (): boolean => groupFields.length > 0
+  /** Bands apply: a config is set and the `group` tree is not in charge. */
+  const bandsActive = (): boolean => {
+    if (!bandCfg) return false
+    if (groupFields.length > 0) {
+      if (!bandWarned) {
+        bandWarned = true
+        console.warn('[monoDataGrid] `grouped` is ignored while `group` is set — they are two different groupings.')
+      }
+      return false
+    }
+    return true
+  }
   /** Server mode requires a single group field + a `serverGroup` provider. */
   const serverMode = (): boolean => !!serverGroup && groupFields.length === 1
 
@@ -2185,7 +2286,7 @@ export function monoDataGrid<T = any>(
     sorts: [],
     sortField: null,
     sortOrder: null,
-    grouped: groupFields.length > 0,
+    groupTree: groupFields.length > 0,
     scrollMode: 'off',
     hasMore: false,
     loadedCount: 0,
@@ -2193,6 +2294,18 @@ export function monoDataGrid<T = any>(
     virtualEnd: 0,
     virtualPadTop: 0,
     virtualPadBottom: 0,
+    grouped: [],
+    groupedWindow: null,
+    virtualSlotCount: undefined,
+    setGrouped,
+    groupedConfig: () => (bandsActive() ? bandCfg : null),
+    toggleGrouped,
+    openGrouped,
+    closeGrouped,
+    isGroupedCollapsed,
+    expandAllGrouped,
+    collapseAllGrouped,
+    bindGroupedHost,
     dataSource: null,
     editingKey: null,
     editableTrigger: opts.editableTrigger ?? 'click',
@@ -4331,19 +4444,25 @@ export function monoDataGrid<T = any>(
     }))
     const entry = (k: { selector: string; desc: boolean }) => ({ selector: k.selector, desc: k.desc })
 
-    if (!groupFields.length) {
+    // The group fields — or the `grouped` band fields — must LEAD so each
+    // fetched/sliced page holds contiguous groups / bands.
+    const lead = groupFields.length
+      ? groupFields
+      : bandsActive()
+        ? (bandCfg?.fields.map((f) => f.field) ?? [])
+        : []
+    if (!lead.length) {
       return keys.length ? keys.map(entry) : null
     }
 
-    // Grouped: the group fields must LEAD so each fetched/sliced page holds
-    // contiguous groups. A group field that is also sorted takes its direction
-    // from the sort list; the remaining keys follow, still in precedence order.
-    const list = groupFields.map((f) => ({
+    // A lead field that is also sorted takes its direction from the sort list;
+    // the remaining keys follow, still in precedence order.
+    const list = lead.map((f) => ({
       selector: f,
       desc: keys.find((k) => k.field === f)?.desc ?? false,
     }))
     for (const k of keys) {
-      if (!groupFields.includes(k.field)) list.push(entry(k))
+      if (!lead.includes(k.field)) list.push(entry(k))
     }
     return list
   }
@@ -4662,7 +4781,7 @@ export function monoDataGrid<T = any>(
     if (groupPageIndex < 0) groupPageIndex = 0
 
     const start = groupPageIndex * size
-    ctrl.grouped = true
+    ctrl.groupTree = true
     ctrl.items = toDisplay(all.slice(start, start + size)) as unknown as T[]
     ctrl.totalCount = total
     ctrl.pageSize = size
@@ -4710,7 +4829,7 @@ export function monoDataGrid<T = any>(
       return node
     })
 
-    ctrl.grouped = true
+    ctrl.groupTree = true
     ctrl.items = nodes as unknown as T[]
     ctrl.totalCount = total
     ctrl.pageSize = size
@@ -4839,6 +4958,12 @@ export function monoDataGrid<T = any>(
       return
     }
 
+    // Group bands: the rows read for the bands, windowed / paged in memory.
+    if (bandsActive()) {
+      syncBands()
+      return
+    }
+
     // Scroll paging (infinity / virtual): map the accumulator (+ window) → ctrl.
     if (scrollMode !== 'off') {
       syncScroll()
@@ -4853,7 +4978,7 @@ export function monoDataGrid<T = any>(
 
     // Ungrouped "all": show every accumulated row on a single page.
     if (pageSizeAll) {
-      ctrl.grouped = false
+      ctrl.groupTree = false
       ctrl.items = allRows
       ctrl.pageIndex = 0
       ctrl.pageSize = allRows.length || 1
@@ -4873,7 +4998,7 @@ export function monoDataGrid<T = any>(
     // devextreme returns -1 from totalCount() when `requireTotalCount` is off.
     const hasTotal = typeof total === 'number' && total >= 0
 
-    ctrl.grouped = false
+    ctrl.groupTree = false
     ctrl.items = rawItems
     ctrl.pageIndex = pageIndex
     ctrl.pageSize = pageSize
@@ -5075,6 +5200,12 @@ export function monoDataGrid<T = any>(
       await loadGroupsServer()
       return
     }
+    // Group bands: every matching row, read once per query (covers search /
+    // filter / column-filter — each funnels through here).
+    if (bandsActive()) {
+      await loadBanded()
+      return
+    }
     // Scroll modes re-seed the accumulator from page 0 (covers every setter that
     // funnels through load(): search / sort / filter / column-filter).
     if (scrollActive()) {
@@ -5103,6 +5234,10 @@ export function monoDataGrid<T = any>(
     if (serverMode()) {
       clearRowCaches()
       await loadGroupsServer()
+      return
+    }
+    if (bandsActive()) {
+      await loadBanded()
       return
     }
     if (scrollActive()) {
@@ -5135,6 +5270,11 @@ export function monoDataGrid<T = any>(
     vStart = vEnd = vPadTop = vPadBottom = 0
     serverGroups = []
     clearRowCaches()
+    if (bandRead) {
+      clearBands()
+      // Still in band mode: an empty, READ set (the next load() refills it).
+      bandRead = []
+    }
 
     ctrl.items = []
     ctrl.loading = false
@@ -5154,6 +5294,12 @@ export function monoDataGrid<T = any>(
       groupPageIndex = Math.max(0, pageIndex)
       sync()
       if (serverMode()) await fetchVisibleRows() // lazily fetch the new groups' rows
+      return
+    }
+    // Bands page the rows they already hold — no request.
+    if (bandsActive()) {
+      bandPageIndex = Math.max(0, pageIndex)
+      sync()
       return
     }
     // Browser sort pages the rows it already holds — no request.
@@ -5178,6 +5324,17 @@ export function monoDataGrid<T = any>(
       groupPageIndex = 0
       sync()
       if (serverMode()) await fetchVisibleRows()
+      return
+    }
+
+    // Bands: re-slice what they hold; the source keeps the size for later.
+    if (bandsActive()) {
+      if (!all) {
+        bandPageSize = Math.max(1, pageSize as number)
+        bound?.pageSize?.(bandPageSize)
+      }
+      bandPageIndex = 0
+      sync()
       return
     }
 
@@ -5377,7 +5534,7 @@ export function monoDataGrid<T = any>(
     const pageCount = Math.max(1, Math.ceil(rows.length / size))
     browserPageIndex = Math.min(Math.max(0, browserPageIndex), pageCount - 1)
     const start = browserPageIndex * size
-    ctrl.grouped = false
+    ctrl.groupTree = false
     ctrl.items = rows.slice(start, start + size)
     ctrl.pageIndex = browserPageIndex
     ctrl.pageSize = size
@@ -5387,10 +5544,322 @@ export function monoDataGrid<T = any>(
     render()
   }
 
+  // --- Group bands (`grouped`) ------------------------------------------------
+  // Every matching row is read once per query (chunked, `$count` first) and held
+  // here; sort, collapse, paging and the virtual window are all in memory from
+  // then on. The rows stay FLAT — `ctrl.items` is a window / page of them — and
+  // the band rows are drawn by the tbody injector (`table-bands.ts`) from
+  // `ctrl.groupedWindow`, so a consumer's row template is unchanged.
+
+  /** The band keys lead (direction from the column sort when sorted), the column sort follows. */
+  function bandSortKeys(): Array<{ selector: string; desc: boolean; aggregate: MonoSortAggregate | null }> {
+    const fields = bandCfg?.fields.map((f) => f.field) ?? []
+    const keys: Array<{ selector: string; desc: boolean; aggregate: MonoSortAggregate | null }> = fields.map((f) => ({
+      selector: f,
+      desc: sortOf(f) === 'desc',
+      aggregate: null,
+    }))
+    for (const s of ctrl.sorts) {
+      if (fields.includes(s.field)) continue
+      keys.push({
+        selector: declaredSortSelector(s.field) ?? s.field,
+        desc: s.order === 'desc',
+        aggregate: isBrowserSortKey(s.field) ? (declaredSortConfig(s.field).aggregate ?? 'sum') : null,
+      })
+    }
+    return keys
+  }
+
+  /**
+   * `bandRead` in display order — a STABLE in-memory sort, so the bands are
+   * contiguous whatever order (or collation) the source returned, and rows the
+   * keys tie on keep the source's order.
+   */
+  function resortBands(): void {
+    const rows = bandRead ?? []
+    const keys = bandSortKeys()
+    const decorated = rows.map((row, i) => ({
+      row,
+      i,
+      v: keys.map((k) => browserSortValue(row, k.selector, k.aggregate)),
+    }))
+    decorated.sort((x, y) => {
+      for (let k = 0; k < keys.length; k++) {
+        const ex = x.v[k] == null || x.v[k] === ''
+        const ey = y.v[k] == null || y.v[k] === ''
+        const c = compareBrowserValues(x.v[k], y.v[k])
+        if (c) return ex || ey ? c : keys[k]!.desc ? -c : c
+      }
+      return x.i - y.i
+    })
+    bandRows = decorated.map((d) => d.row)
+  }
+
+  function relayoutBands(): void {
+    bandLayout = bandCfg ? buildGrouped<T>(bandRows, bandCfg.fields, bandFolded) : null
+  }
+
+  /** Read every matching row for the bands. Superseded reads are dropped. */
+  async function loadBanded(): Promise<void> {
+    const s = bound
+    const seq = ++bandSeq
+    if (!s) {
+      bandRead = []
+      resortBands()
+      relayoutBands()
+      sync()
+      return
+    }
+    // The source carries the band-led sort too, so a chunked read comes back
+    // nearly in order already (the in-memory sort is then cheap and only fixes
+    // collation differences).
+    applySourceSort()
+    ctrl.loading = true
+    bandReading = true
+    notify()
+    let rows: T[] = []
+    let ok = false
+    try {
+      await runLoad(async () => {
+        rows = await readAllFromSource({ chunkSize: bandCfg?.chunk ?? chunkSize, countFirst: true })
+      })
+      ok = true
+    } finally {
+      if (seq === bandSeq) {
+        ctrl.loading = false
+        bandReading = false
+      }
+    }
+    if (seq !== bandSeq) return
+    if (!ok) {
+      notify()
+      return
+    }
+    bandRead = rows
+    bandPageIndex = 0
+    resortBands()
+    relayoutBands()
+    sync()
+    void recomputeSummaries()
+  }
+
+  /** Map the banded rows (window / page / all) onto `ctrl` and render. */
+  function syncBands(): void {
+    const layout = bandLayout ?? { grouped: [], visible: [], slotCount: 0 }
+    const vis = layout.visible
+    ctrl.groupTree = false
+    ctrl.scrollMode = scrollMode
+    ctrl.loadedCount = bandRows.length
+    ctrl.hasMore = false
+    ctrl.totalCount = bandRows.length
+    ctrl.pageSizeAll = pageSizeAll
+    ctrl.grouped = layout.grouped
+    ctrl.virtualSlotCount = layout.slotCount
+
+    let start = 0
+    let end = vis.length
+    if (scrollMode === 'virtual') {
+      const ss = Math.max(0, Math.min(vStart, layout.slotCount))
+      const se = Math.max(ss, Math.min(vEnd, layout.slotCount))
+      start = slotToRow(layout, ss)
+      end = Math.max(start, slotToRow(layout, se))
+      // A window ending on band slots still has to show the row those bands head.
+      if (se > ss && end === start && start < vis.length) end = start + 1
+      ctrl.pageIndex = 0
+      ctrl.pageSize = vis.length || 1
+      ctrl.pageCount = 1
+    } else if (scrollMode === 'infinity' || pageSizeAll) {
+      ctrl.pageIndex = 0
+      ctrl.pageSize = vis.length || 1
+      ctrl.pageCount = 1
+    } else {
+      const size = Math.max(
+        1,
+        bandPageSize || preferredPageSize || bound?.pageSize?.() || opts.pageSize || 20,
+      )
+      const pageCount = Math.max(1, Math.ceil(vis.length / size))
+      bandPageIndex = Math.min(Math.max(0, bandPageIndex), pageCount - 1)
+      start = bandPageIndex * size
+      end = Math.min(vis.length, start + size)
+      ctrl.pageIndex = bandPageIndex
+      ctrl.pageSize = size
+      ctrl.pageCount = pageCount
+    }
+
+    const win = computeBandWindow(layout, start, end)
+    ctrl.items = vis.slice(start, end)
+    ctrl.virtualStart = start
+    ctrl.virtualEnd = end
+    if (scrollMode === 'virtual') {
+      ctrl.virtualPadTop = win.slotsAbove * bandRowHeight
+      ctrl.virtualPadBottom = win.slotsBelow * bandRowHeight
+      ctrl.virtualRowHeight = bandRowHeight
+    } else {
+      ctrl.virtualPadTop = ctrl.virtualPadBottom = 0
+      ctrl.virtualRowHeight = undefined
+    }
+    ctrl.groupedWindow = win
+    ensureBandInjector()
+    render()
+  }
+
+  /** Leave band mode: drop every banded buffer and the published band state. */
+  function clearBands(): void {
+    bandSeq++
+    bandReading = false
+    bandRead = null
+    bandRows = []
+    bandLayout = null
+    bandPageIndex = 0
+    ctrl.grouped = []
+    ctrl.groupedWindow = null
+    ctrl.virtualSlotCount = undefined
+    ctrl.virtualRowHeight = undefined
+  }
+
+  async function setGrouped(next: MonoGrouped<T> | null | undefined): Promise<void> {
+    const sig = groupedSignature(next)
+    const resolved = normalizeGrouped<T>(next)
+    if (sig === bandSig) {
+      // Same shape — a template's fresh object literal. Keep the new closures
+      // (`custom` / function colours read the current scope) without re-banding:
+      // re-rendering here would bounce straight back through the th's update.
+      if (resolved) bandCfg = resolved
+      return
+    }
+    const wasActive = bandsActive()
+    bandSig = sig
+    bandCfg = resolved
+    bandOpen.clear()
+    bandAll = null
+    const nowActive = bandsActive()
+    if (!nowActive) {
+      if (wasActive) {
+        clearBands()
+        stopBandInjector() // removes every band row
+        if (bound) {
+          applySourceSort()
+          await load()
+        } else sync()
+      }
+      return
+    }
+    if (bandRead) {
+      // Already holding every row: a different field list is only a re-sort.
+      resortBands()
+      relayoutBands()
+      sync()
+      applySourceSort()
+      return
+    }
+    // Entering band mode: the scroll accumulator / browser buffer are superseded.
+    accumulated = []
+    browserRows = null
+    await loadBanded()
+  }
+
+  /**
+   * A band's fold state: a per-path choice (a click / `open()` / `close()`) wins,
+   * then the last expand-all / collapse-all, then its level's `open` default.
+   * Paths outlive a re-read (same keys → same path), so a search keeps the folds.
+   */
+  function bandFolded(path: string, field: { open: boolean } | undefined): boolean {
+    const open = bandOpen.get(path)
+    if (open !== undefined) return !open
+    if (bandAll) return bandAll === 'closed'
+    return field ? !field.open : false
+  }
+
+  /** The level config a path belongs to (one encoded segment per level). */
+  function bandFieldOf(path: string) {
+    return bandCfg?.fields[path.split('/').length - 1]
+  }
+
+  function setBandOpen(path: string, open: boolean): void {
+    if (!bandsActive() || !path) return
+    const f = bandFieldOf(path)
+    if (f && !f.collapsible) return
+    if (!bandFolded(path, f) === open) return // already so
+    bandOpen.set(path, open)
+    // `stayOpen: false` — an accordion: opening a band closes its open siblings
+    // (same level, same parent). Walked over EVERY band, folded parents included,
+    // so a sibling hidden under a folded ancestor is closed too.
+    if (open && f && !f.stayOpen && bandCfg) {
+      const cut = path.lastIndexOf('/')
+      const parent = cut < 0 ? '' : path.slice(0, cut + 1)
+      const depth = path.split('/').length
+      for (const p of collapsiblePaths(bandRows, bandCfg.fields)) {
+        if (p === path || p.split('/').length !== depth) continue
+        if (parent ? !p.startsWith(parent) : false) continue
+        if (!bandFolded(p, f)) bandOpen.set(p, false)
+      }
+    }
+    relayoutBands()
+    sync()
+  }
+
+  function toggleGrouped(path: string): void {
+    setBandOpen(path, isGroupedCollapsed(path))
+  }
+
+  function isGroupedCollapsed(path: string): boolean {
+    const f = bandFieldOf(path)
+    return !!f && f.collapsible && bandFolded(path, f)
+  }
+
+  function expandAllGrouped(): void {
+    if (!bandsActive()) return
+    bandOpen.clear()
+    bandAll = 'open'
+    relayoutBands()
+    sync()
+  }
+
+  function collapseAllGrouped(): void {
+    if (!bandsActive()) return
+    bandOpen.clear()
+    bandAll = 'closed'
+    relayoutBands()
+    sync()
+  }
+
+  function openGrouped(path: string): void {
+    setBandOpen(path, true)
+  }
+
+  function closeGrouped(path: string): void {
+    setBandOpen(path, false)
+  }
+
+  /**
+   * Remember the `<table>` the band rows go into. The injector itself only exists
+   * while bands are on (`ensureBandInjector`) — every table has headers calling in
+   * here, and a table without bands must not pay a subscriber + observer for it.
+   */
+  function bindGroupedHost(tableEl: HTMLElement | null): void {
+    if (typeof document === 'undefined') return
+    if (tableEl === bandHostEl) return
+    bandHostEl = tableEl as HTMLTableElement | null
+    bandInjector?.stop()
+    bandInjector = null
+    if (bandsActive()) ensureBandInjector()
+  }
+
+  function ensureBandInjector(): void {
+    if (bandInjector || !bandHostEl || typeof document === 'undefined') return
+    bandInjector = new BandInjector(ctrl, bandHostEl)
+  }
+
+  function stopBandInjector(): void {
+    bandInjector?.stop()
+    bandInjector = null
+  }
+
   // --- Scroll paging (infinity / virtual) ------------------------------------
   /** Scroll modes only apply to a flat (ungrouped, non-server) grid. */
   function scrollActive(): boolean {
-    return scrollMode !== 'off' && !isGrouped() && !serverMode()
+    // Band mode holds every row already — no page-by-page accumulator.
+    return scrollMode !== 'off' && !isGrouped() && !serverMode() && !bandsActive()
   }
 
   /** Map the accumulator (+ virtual window) onto `ctrl` and render. */
@@ -5398,7 +5867,7 @@ export function monoDataGrid<T = any>(
     const s = bound
     const total = s?.totalCount?.()
     const hasTotal = typeof total === 'number' && total >= 0
-    ctrl.grouped = false
+    ctrl.groupTree = false
     ctrl.pageSizeAll = false
     ctrl.scrollMode = scrollMode
     ctrl.loading = s?.isLoading?.() ?? false
@@ -5519,6 +5988,14 @@ export function monoDataGrid<T = any>(
     scrollMode = mode
     ctrl.scrollMode = mode
 
+    // Bands hold every row in any mode — only the windowing changes.
+    if (bandsActive()) {
+      vStart = vEnd = 0
+      if (bandRead) sync()
+      else if (reload && bound && !bandReading) await load() // a read in flight lands in this mode anyway
+      return
+    }
+
     if (mode === 'off') {
       // Teardown (`reload: false`): the caller is going away, so a fetch here is pure waste —
       // nothing will read the result. KEEP the accumulator: the commonest disconnect is not a
@@ -5560,12 +6037,27 @@ export function monoDataGrid<T = any>(
     }
   }
 
-  function setVirtualWindow(start: number, end: number, padTop: number, padBottom: number): void {
+  function setVirtualWindow(start: number, end: number, padTop: number, padBottom: number, rowHeight?: number): void {
     if (scrollMode !== 'virtual') return
     const ns = Math.max(0, Math.floor(start))
     const ne = Math.max(ns, Math.floor(end))
     const nt = Math.max(0, Math.round(padTop))
     const nb = Math.max(0, Math.round(padBottom))
+    if (bandsActive()) {
+      // Slots, not rows: `syncBands` turns them into a row window and works the
+      // spacers out itself (bands outside the window included).
+      let rh = Number(rowHeight)
+      if (!(rh > 0)) {
+        const below = (ctrl.virtualSlotCount ?? 0) - ne
+        rh = ns > 0 && nt > 0 ? nt / ns : below > 0 && nb > 0 ? nb / below : bandRowHeight
+      }
+      if (ns === vStart && ne === vEnd && rh === bandRowHeight) return
+      vStart = ns
+      vEnd = ne
+      bandRowHeight = rh
+      sync()
+      return
+    }
     // Skip when unchanged — the element recomputes on every grid notify, so a
     // no-op setter must NOT re-notify (that would loop: notify→recompute→setter).
     if (ns === vStart && ne === vEnd && nt === vPadTop && nb === vPadBottom) return
@@ -6552,6 +7044,11 @@ export function monoDataGrid<T = any>(
     if (typeof s?.setData !== 'function') return
     bumpSummary('data') // rows replaced
     await runLoad(() => s.setData!(next))
+    // Bands re-read the swapped-in rows (no network for an array source).
+    if (bandsActive()) {
+      await loadBanded()
+      return
+    }
     // Re-seed the scroll accumulator from the swapped-in rows.
     if (scrollActive()) await loadScrollPage(true)
   }
@@ -6709,6 +7206,17 @@ export function monoDataGrid<T = any>(
       return
     }
 
+    // Bands hold every row: re-sort them in memory (band keys still lead, so a
+    // header sorts INSIDE each band) — no reload.
+    if (bandsActive() && bandRead) {
+      applySourceSort()
+      bandPageIndex = 0
+      resortBands()
+      relayoutBands()
+      sync()
+      return
+    }
+
     const s = bound
     if (!s) return
     // effectiveSort() keeps the group fields leading so grouped pages stay
@@ -6720,7 +7228,12 @@ export function monoDataGrid<T = any>(
 
   async function setGroup(group: string | string[] | null): Promise<void> {
     groupFields = toFields(group)
-    ctrl.grouped = groupFields.length > 0
+    ctrl.groupTree = groupFields.length > 0
+    // The tree takes over from any bands (and hands back when it is cleared — `load()` re-reads).
+    if (groupFields.length && bandRead) {
+      clearBands()
+      stopBandInjector()
+    }
     collapsed.clear()
     groupRowPaging.clear() // paths change with the grouping — drop stale row paging
     groupPageIndex = 0
@@ -6866,11 +7379,13 @@ export function monoDataGrid<T = any>(
     // Browser sort holds every matching row in its sorted order already — an export
     // then matches the screen (the source can't produce that order).
     if (browserRows && browserSortActive()) return [...browserRows]
+    // Bands hold every matching row in display order (collapsed bands included).
+    if (bandsActive() && bandRead) return [...bandRows]
     return readAllFromSource()
   }
 
   /** `getData`'s read — every matching row from the source, in its own order. */
-  async function readAllFromSource(): Promise<T[]> {
+  async function readAllFromSource(read: { chunkSize?: number; countFirst?: boolean } = {}): Promise<T[]> {
     const s = bound
     if (!s) return []
     // Same request as the live grid, minus paging: the table's own `expand` /
@@ -6883,7 +7398,8 @@ export function monoDataGrid<T = any>(
     suppressSync = true
     try {
       return await readAllRows<T>(s, {
-        chunkSize,
+        chunkSize: read.chunkSize ?? chunkSize,
+        ...(read.countFirst ? { countFirst: true } : {}),
         select: opts.select ?? toList(resolvedOpts.select),
         // Passed explicitly: in server-group mode the controller never pushes
         // the sort onto the source, so `source.sort()` would be empty and the
@@ -6949,6 +7465,8 @@ export function monoDataGrid<T = any>(
     detach()
     removeOutsideExit()
     unbindRowTrigger()
+    stopBandInjector()
+    bandHostEl = null
     clearRowCaches()
     formOps.length = 0
     formHandle = null

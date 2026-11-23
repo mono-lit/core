@@ -76,6 +76,16 @@ export { monoArraySource } from './array-source.js'
 export type { MonoArraySourceOptions } from './array-source.js'
 export { buildGroups, flattenLeaves, isGroupNode, collectGroupPaths } from './grouping.js'
 export type { MonoGroupNode } from './grouping.js'
+export { buildGrouped, groupedWindow, normalizeGrouped, slotToRow, rowToSlot } from './grouped-bands.js'
+export type {
+  MonoGroupedItem,
+  MonoGroupedLayout,
+  MonoGroupedVariant,
+  MonoGroupedWindow,
+  MonoGrouped,
+  MonoGroupedField,
+  MonoGroupedFieldConfig,
+} from './grouped-bands.js'
 export {
   expandWildcard,
   isWildcardPattern,

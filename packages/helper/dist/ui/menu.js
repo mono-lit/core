@@ -3,7 +3,7 @@ import { t as customElement } from "../mono-element-D1l07Tbd.js";
 import { n as arrayHasChanged, t as __decorate } from "../decorate-BpnJwD08.js";
 import { t as isIconifyClass } from "../icon-BM9N-jOt.js";
 import { a as parkDetachedNodes, s as placeSlotNode } from "../light-slots-CQuCgSHh.js";
-import { _ as isGroup, a as renderMenuGroup, b as validateMenuProps, c as renderMenuItemRow, d as collectDefaultOpenGroups, f as findActivePath, g as isDivider, h as getMenuAlias, i as renderMenuDivider, l as renderMenuList, m as generateMenuRootClasses, n as renderMenuAppend, o as renderMenuGroupsOnly, p as findItem, r as renderMenuBadge, s as renderMenuIcon, t as MonoMenuCore, u as renderMenuSubheader, v as isItem, y as isSubheader } from "../menu-core-P8ZfcHFh.js";
+import { _ as isGroup, a as renderMenuGroup, b as validateMenuProps, c as renderMenuItemRow, d as collectDefaultOpenGroups, f as findActivePath, g as isDivider, h as getMenuAlias, i as renderMenuDivider, l as renderMenuList, m as generateMenuRootClasses, n as renderMenuAppend, o as renderMenuGroupsOnly, p as findItem, r as renderMenuBadge, s as renderMenuIcon, t as MonoMenuCore, u as renderMenuSubheader, v as isItem, y as isSubheader } from "../menu-core-B9WJ-Bn4.js";
 import { LitElement, html } from "lit";
 import { property, state } from "lit/decorators.js";
 

@@ -2,6 +2,7 @@ import { MonoEventProps } from "../../composables/element-props.js";
 import { MonoErrorMessages } from "../../utils/normalize-error.js";
 import { MonoDataSource } from "../../composables/data-source-controller.js";
 import { MonoGroupNode } from "./grouping.js";
+import { MonoGrouped, MonoGroupedField, MonoGroupedFieldConfig, MonoGroupedItem, MonoGroupedLayout, MonoGroupedResolved, MonoGroupedVariant, MonoGroupedWindow } from "./grouped-bands.js";
 import { MonoDateLevel, MonoDateRange, isDateRange } from "./date-filter-tree.js";
 import { MonoExportOptions, MonoExportResult } from "../../export/types.js";
 import { MonoImportOptions, MonoImportResult } from "../../import/types.js";
@@ -303,6 +304,12 @@ export interface MonoTableColumnProps {
   summary?: Omit<MonoSummarySpec, 'field'>;
   editable?: boolean;
   editableTrigger?: MonoEditableTrigger;
+  /**
+   * Table-wide group bands, declared on any one column entry — the same as
+   * `<mono-table-th :grouped.prop>` / `monoDataGrid(data, { grouped })`. See
+   * {@link MonoGrouped}.
+   */
+  grouped?: MonoGrouped | null;
   /**
    * Draw a red `*` after this column's caption, so a user can see which columns
    * want input. Presentation only: `editable` is what opens an editor.
@@ -1021,6 +1028,17 @@ export interface MonoDataGridOptions extends MonoSearchFieldsAliases {
    */
   chunkSize?: number;
   /**
+   * Sticky group BANDS over the flat row list — a band row in front of each run
+   * of equal keys (`fields: ['Brand', 'Code']` → Brand bands, Code bands inside).
+   * Not the `group` tree: the rows stay flat, so virtual / infinity scroll,
+   * paging, search and summaries keep working. Every matching row is read (in
+   * `chunk`-sized requests, the first one carrying `$count`) so each band knows
+   * its boundaries and count; mono inserts the band `<tr>`s into the tbody itself.
+   * Also settable from any `<mono-table-th :grouped.prop>` or `table.setGrouped()`.
+   * Ignored (with a warning) while `group` is set.
+   */
+  grouped?: MonoGrouped<any> | null;
+  /**
    * Advanced override for server-side grouping. Normally you don't set this:
    * passing a single-field `group` plus a remote devextreme `DataSource` makes
    * the controller drive server group paging automatically from the source's
@@ -1326,8 +1344,8 @@ export interface MonoTableController<T = any> {
   sortField: string | null;
   /** Primary sort direction (`sorts[0]`), or null when unsorted. */
   sortOrder: SortOrder;
-  /** Whether grouping is active (one or more group fields configured). */
-  grouped: boolean;
+  /** Whether the `group` TREE is active (one or more group fields configured). Not the `grouped` bands. */
+  groupTree: boolean;
   /** Active scroll-paging mode. `'off'` = classic numbered paging. */
   scrollMode: 'off' | 'infinity' | 'virtual';
   /** Whether more unloaded rows exist beyond `loadedCount` (scroll modes). */
@@ -1342,6 +1360,32 @@ export interface MonoTableController<T = any> {
   virtualPadTop: number;
   /** Virtual bottom spacer height in px (rows below the window). */
   virtualPadBottom: number;
+  /** Every band over the current (searched, sorted) rows, in display order. Empty when `grouped` is off. */
+  grouped: MonoGroupedItem<T>[];
+  /** The bands the current window / page draws — what the tbody injector places. `null` when `grouped` is off. */
+  groupedWindow: MonoGroupedWindow<T> | null;
+  /**
+   * Virtual-scroll length in ROW-HEIGHT SLOTS: visible rows + bands. Set while
+   * `grouped` is on (the pager measures the scroll box in it); `undefined` otherwise.
+   */
+  virtualSlotCount?: number;
+  /** The pager's row height (px) while `grouped` bands run under virtual scroll — every band is one row tall. */
+  virtualRowHeight?: number;
+  /** Turn group bands on (a config) or off (`null`). Idempotent for an equal config. */
+  setGrouped(grouped: MonoGrouped<T> | null | undefined): Promise<void>;
+  /** The active `grouped` config, resolved, or `null`. */
+  groupedConfig(): MonoGroupedResolved<T> | null;
+  /** Fold / unfold one band (its rows and inner bands) by its `path`. No reload. */
+  toggleGrouped(path: string): void;
+  openGrouped(path: string): void;
+  closeGrouped(path: string): void;
+  isGroupedCollapsed(path: string): boolean;
+  /** Open every band (overrides the `open: false` defaults and earlier clicks). No reload. */
+  expandAllGrouped(): void;
+  /** Fold every collapsible band. No reload. */
+  collapseAllGrouped(): void;
+  /** Hand the controller the `<table>` the band rows go into — called by `mono-table-th`; idempotent. */
+  bindGroupedHost(tableEl: HTMLElement | null): void;
   /** The bound source (or null). */
   readonly dataSource: MonoGridSource<T> | null;
   load(): Promise<void>;
@@ -1371,8 +1415,12 @@ export interface MonoTableController<T = any> {
   }): Promise<void>;
   /** Load & append the next page onto the scroll accumulator (no-op if `!hasMore`). */
   loadNext(): Promise<void>;
-  /** Set the virtual render window (indices into the accumulator) + spacer px. */
-  setVirtualWindow(start: number, end: number, padTop: number, padBottom: number): void;
+  /**
+   * Set the virtual render window (indices into the accumulator) + spacer px.
+   * With `grouped` bands on, `start` / `end` are SLOTS (see `virtualSlotCount`)
+   * and the controller works out the rows and the spacers itself from `rowHeight`.
+   */
+  setVirtualWindow(start: number, end: number, padTop: number, padBottom: number, rowHeight?: number): void;
   /**
    * Override the page size (rows fetched per page / scroll chunk), winning over
    * the bound source's configured `pageSize`. `null` clears the override.
@@ -1815,4 +1863,4 @@ export interface MonoTableController<T = any> {
 }
 export declare function monoDataGrid<T = any>(ds?: MonoGridSource<T> | T[] | null, opts?: MonoDataGridOptions): MonoTableController<T>;
 //#endregion
-export { type MonoDataSourceOptions, type MonoDateLevel, type MonoDateRange, type MonoOdataOptions, type MonoSourceSortEntry, monoDataGrid as controlMonoTable, isDateRange };
+export { type MonoDataSourceOptions, type MonoDateLevel, type MonoDateRange, type MonoGrouped, type MonoGroupedField, type MonoGroupedFieldConfig, type MonoGroupedItem, type MonoGroupedLayout, type MonoGroupedVariant, type MonoGroupedWindow, type MonoOdataOptions, type MonoSourceSortEntry, monoDataGrid as controlMonoTable, isDateRange };

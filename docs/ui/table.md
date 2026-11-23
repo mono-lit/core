@@ -875,6 +875,55 @@ Automatic server-side paging over a real DataSource — one `groupby` for the gr
 <DemoSingle name="table" id="grouped-budget" />
 </ClientOnly>
 
+## Group bands (`grouped`)
+
+`grouped` is a different grouping from `group`. The rows stay a **flat list**, and mono inserts a sticky **band row** in front of the first row of each run of equal keys. Because the list is flat, every flat feature keeps working: virtual and infinity scroll, paging, search, summaries and inline editing. You also don't loop over `displayRows`; mono draws the band `<tr>`s into your tbody itself.
+
+Declare it on **any one** `<mono-table-th>`. Like `editable-trigger`, it is table-wide and writes through to the controller.
+
+```html
+<th>
+  <mono-table-th :control-table.prop="table" field="Id"
+    :grouped.prop="{ fields: ['Brand', 'Code'], chunk: 100 }" />
+</th>
+```
+
+You can also pass `controlMonoTable(data, { grouped })`, set it on `props.th[].grouped`, or call `table.setGrouped(cfg | null)` at runtime.
+
+- **`fields`** are the band levels, outermost first. `['Brand', 'Code']` gives Brand bands with Code bands inside each. An entry can be a bare field name or an object:
+  - `field`: the key. Paths such as `Brand/Name` work.
+  - `custom(row)`: the label, built from the band's first row. Default: the field's value.
+  - `count`: show `(n)`. Default `true`.
+  - `variant`: `'solid' | 'outline' | 'tonal' | 'text'`, the same four as `mono-button`. Default `'tonal'`.
+  - `color`: a theme token (`primary`, `success`, `danger`, …) or any CSS colour. Default `'primary'`.
+  - `order`: the nesting position (lower = outer). Use it instead of the array order.
+  - `collapsible`, `open` and `stayOpen`: per level.
+
+  `variant` and `color` also take a function of the band's first row, so one level can colour each band differently.
+- **`chunk`** (default `100`) is the request size. Bands need **every** matching row to know their boundaries and counts, so the table reads them all. The first request carries `$count`, which tells it exactly how many more chunks to fetch (up to 4 in flight at once). A local array needs no requests.
+- **`collapsible`** (default `true`) lets a click, Enter or Space fold a band: its rows and its inner bands hide, and its count stays.
+- **`open`** (default `true`) is whether bands start open. Set `open: false` to start folded, for every level or per field.
+- **`stayOpen`** (default `true`): `false` makes an accordion, where opening a band closes its open siblings (same level, same parent). For every level or per field.
+- From code: `table.grouped` lists every band (`path`, `label`, `count`, `collapsed`, …); `table.collapseAllGrouped()` and `table.expandAllGrouped()` act on all of them; `toggleGrouped(path)`, `openGrouped(path)`, `closeGrouped(path)` and `isGroupedCollapsed(path)` act on one.
+
+The band fields **lead the sort**, so the bands stay contiguous. A header sort orders the rows *inside* each band, in memory and without a reload. Sorting a band field itself flips that band order. Search and filters re-read the rows.
+
+Under **virtual scroll** each band is one `row-height` slot. `virtualPadTop` / `virtualPadBottom` already include the bands outside the window, so the usual two spacer rows stay correct. A band whose first row has scrolled away is re-drawn at the top of the window, so it stays pinned. Keep every body row, band rows included, exactly `row-height` tall.
+
+**How rows are matched.** Every `<tbody>` row that isn't a data row needs one of these marks: `data-mono-stripe-skip`, `aria-hidden="true"` (spacers), `mono-filler`, or a detail row. These are the same marks the zebra stripe already relies on. mono places the bands before the remaining rows, in `table.items` order.
+
+<ClientOnly>
+<DemoSingle name="table" id="grouped-bands" />
+</ClientOnly>
+
+The same bands over a remote DataSource (Northwind `/Orders`), with stayOpen false and open false:
+
+<ClientOnly>
+<DemoSingle name="table" id="grouped-bands-remote" />
+</ClientOnly>
+
+Theme the bands with `--mono-table-grouped-bg`, `--mono-table-grouped-fg`, `--mono-table-grouped-h` and `--mono-table-grouped-indent`. The rows carry `[mono-grouped]`, `[mono-grouped-level]`, `[mono-variant]`, `[mono-color]` and `[mono-grouped-collapsed]`.
+
 ## CSS Variables
 
 <DemoSingle name="table" id="css-vars" />

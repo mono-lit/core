@@ -2998,3 +2998,137 @@ mono-shadow-table-checkbox {
 /* While a `mode="all"` drain is in flight the element emits
    [mono-checkbox][mono-loading] > [mono-box] > [mono-loading-spinner] — checkbox.css owns
    that look (accent-filled box, spinner, "working" cursor); nothing to restate. */
+
+/* ── Group bands (`grouped`) ──────────────────────────────────────────────────
+   `<tr mono-grouped>` rows are inserted by mono (`table-bands.ts`) in front of the
+   first row of each run of equal keys — see `MonoGrouped`. One full-width cell;
+   the label rides a sideways scroll. A band is STICKY: under a frozen header it
+   pins just below it (`--mono-table-grouped-head`, the measured `<thead>` height),
+   each level one band lower than the last, so "Brand › Code" both stay readable
+   while their rows scroll. Opaque on purpose — rows scroll underneath.
+   Above the pinned body cells (1) and the sticky head cells (2), like the error
+   bar; a band below the header never overlaps the pinned header cells (3).
+
+   Public knobs: `--mono-table-grouped-bg` / `-fg` (override the variant's paint),
+   `--mono-table-grouped-h` (row height — under virtual scroll mono sets it to the
+   pager's `row-height`, the scroll maths depends on it), `--mono-table-grouped-indent`
+   (per-level label indent). */
+:is([mono-table],.mono-table) tbody tr[mono-grouped] {
+  --_mono-table-grouped-c: var(--_mono-table-grouped-accent-preset, var(--primary));
+  --_mono-table-grouped-on: var(--_mono-table-grouped-on-accent-preset, var(--primary-foreground));
+  --_mono-table-grouped-level: 0;
+  --_mono-table-grouped-h: var(--mono-table-grouped-h, 2.25rem);
+}
+:is([mono-table],.mono-table) tbody tr[mono-grouped][mono-grouped-level='1'] { --_mono-table-grouped-level: 1; }
+:is([mono-table],.mono-table) tbody tr[mono-grouped][mono-grouped-level='2'] { --_mono-table-grouped-level: 2; }
+:is([mono-table],.mono-table) tbody tr[mono-grouped][mono-grouped-level='3'] { --_mono-table-grouped-level: 3; }
+:is([mono-table],.mono-table) tbody tr[mono-grouped][mono-grouped-level='4'] { --_mono-table-grouped-level: 4; }
+:is([mono-table],.mono-table) tbody tr[mono-grouped][mono-grouped-level='5'] { --_mono-table-grouped-level: 5; }
+
+[mono-grouped][mono-color='primary'] { --_mono-table-grouped-accent-preset: var(--primary); --_mono-table-grouped-on-accent-preset: var(--primary-foreground); }
+[mono-grouped][mono-color='secondary'] { --_mono-table-grouped-accent-preset: var(--secondary-foreground); --_mono-table-grouped-on-accent-preset: var(--secondary); }
+[mono-grouped][mono-color='success'] { --_mono-table-grouped-accent-preset: var(--success); --_mono-table-grouped-on-accent-preset: var(--success-foreground); }
+[mono-grouped][mono-color='danger'] { --_mono-table-grouped-accent-preset: var(--destructive); --_mono-table-grouped-on-accent-preset: var(--destructive-foreground); }
+[mono-grouped][mono-color='warning'] { --_mono-table-grouped-accent-preset: var(--warning); --_mono-table-grouped-on-accent-preset: var(--warning-foreground); }
+[mono-grouped][mono-color='info'] { --_mono-table-grouped-accent-preset: var(--info); --_mono-table-grouped-on-accent-preset: var(--info-foreground); }
+[mono-grouped][mono-color='teal'] { --_mono-table-grouped-accent-preset: var(--teal); --_mono-table-grouped-on-accent-preset: var(--teal-foreground); }
+[mono-grouped][mono-color='purple'] { --_mono-table-grouped-accent-preset: var(--purple); --_mono-table-grouped-on-accent-preset: var(--purple-foreground); }
+[mono-grouped][mono-color='neutral'] { --_mono-table-grouped-accent-preset: var(--neutral); --_mono-table-grouped-on-accent-preset: var(--neutral-foreground); }
+[mono-grouped][mono-color='dark'] { --_mono-table-grouped-accent-preset: var(--dark); --_mono-table-grouped-on-accent-preset: var(--dark-foreground); }
+
+/* Variant paint: tonal (default) — a wash of the colour, coloured text; inner
+   levels a lighter wash. */
+:is([mono-table],.mono-table) tbody tr[mono-grouped] {
+  --_mono-table-grouped-bg: color-mix(in oklab, var(--_mono-table-grouped-c) calc(12% - var(--_mono-table-grouped-level) * 4%), var(--_mono-table-surface));
+  --_mono-table-grouped-fg: var(--_mono-table-grouped-c);
+  --_mono-table-grouped-edge: transparent;
+}
+:is([mono-table],.mono-table) tbody tr[mono-grouped][mono-variant='solid'] {
+  --_mono-table-grouped-bg: var(--_mono-table-grouped-c);
+  --_mono-table-grouped-fg: var(--_mono-table-grouped-on);
+}
+:is([mono-table],.mono-table) tbody tr[mono-grouped][mono-variant='outline'] {
+  --_mono-table-grouped-bg: var(--_mono-table-surface);
+  --_mono-table-grouped-edge: var(--_mono-table-grouped-c);
+}
+:is([mono-table],.mono-table) tbody tr[mono-grouped][mono-variant='text'] {
+  --_mono-table-grouped-bg: var(--_mono-table-surface);
+}
+
+:is([mono-table],.mono-table) tbody tr[mono-grouped] > td {
+  position: sticky;
+  top: calc(var(--_mono-table-grouped-level) * var(--_mono-table-grouped-h));
+  z-index: 3;
+  height: var(--_mono-table-grouped-h);
+  max-height: var(--_mono-table-grouped-h);
+  box-sizing: border-box;
+  padding-top: 0;
+  padding-bottom: 0;
+  vertical-align: middle;
+  white-space: nowrap;
+  /* A clipped cell is a scroll container — the label's sticky `left` would pin
+     inside the cell instead of to the scroller. */
+  overflow: visible;
+  background: var(--mono-table-grouped-bg, var(--_mono-table-grouped-bg));
+  color: var(--mono-table-grouped-fg, var(--_mono-table-grouped-fg));
+  font-weight: var(--mono-font-weight-semibold, 600);
+  box-shadow: inset 0 1px 0 var(--_mono-table-grouped-edge), inset 0 -1px 0 var(--_mono-table-grouped-edge);
+}
+/* Inner bands carry the outer one's weight one notch down. */
+:is([mono-table],.mono-table) tbody tr[mono-grouped]:not([mono-grouped-level='0']) > td {
+  font-weight: var(--mono-font-weight-medium, 500);
+}
+/* Under a frozen header the bands pin BELOW it. */
+:is([mono-table],.mono-table):is([mono-sticky-head],.mono-table-sticky-head) tbody tr[mono-grouped] > td,
+:is([mono-sticky-head],.mono-table-sticky-head) :is([mono-table],.mono-table) tbody tr[mono-grouped] > td {
+  top: calc(var(--mono-table-grouped-head, 0px) + var(--_mono-table-grouped-level) * var(--_mono-table-grouped-h));
+}
+/* A deeper band pins under the outer ones; the outer ones stay on top where they cross. */
+:is([mono-table],.mono-table) tbody tr[mono-grouped][mono-grouped-level='0'] > td { z-index: 4; }
+
+:is([mono-table],.mono-table) tbody tr[mono-grouped][mono-grouped-collapsible] { cursor: pointer; }
+:is([mono-table],.mono-table) tbody tr[mono-grouped]:focus-visible { outline: none; }
+:is([mono-table],.mono-table) tbody tr[mono-grouped]:focus-visible > td {
+  box-shadow: inset 0 0 0 2px var(--_mono-table-grouped-c);
+}
+
+[mono-grouped-label] {
+  position: sticky;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: max-content;
+  max-width: 100%;
+  padding-left: calc(var(--_mono-table-grouped-level, 0) * var(--mono-table-grouped-indent, 1rem));
+  letter-spacing: 0.02em;
+}
+[mono-grouped-text] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+[mono-grouped-count] {
+  font-weight: var(--mono-font-weight-regular, 400);
+  opacity: 0.8;
+}
+[mono-grouped-count][hidden] { display: none; }
+/* A CSS chevron (no icon pipeline): down when open, right when folded. */
+[mono-grouped-chevron] {
+  display: none;
+  flex: none;
+  width: 0.45em;
+  height: 0.45em;
+  margin: 0 0.15em 0.15em 0.1em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+[mono-grouped][mono-grouped-collapsible] [mono-grouped-chevron] { display: inline-block; }
+[mono-grouped][mono-grouped-collapsed] [mono-grouped-chevron] {
+  transform: rotate(-45deg);
+  margin-bottom: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  [mono-grouped-chevron] { transition: none; }
+}

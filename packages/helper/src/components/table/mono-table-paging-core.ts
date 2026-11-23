@@ -378,7 +378,8 @@ export const MonoTablePagingCore = <T extends Constructor<LitElement>>(superClas
       const { top: scrollTop, height: viewH } = this._readMetrics(el)
       const rh = Math.max(1, Number(this.rowHeight) || 44)
       const over = Math.max(0, Math.floor(Number(this.overscan) || 0))
-      const loaded = grid.loadedCount
+      // `grouped` bands: the scroll box is measured in slots (rows + band rows, each `rh` tall).
+      const loaded = grid.virtualSlotCount ?? grid.loadedCount
       // Snapped to blocks of `stride` rows, so the window moves once per block instead of once per
       // row. Every window change is a grid notify — the consumer re-patches its rows, every row's
       // checkbox, the header cells and the host re-render — and the unsnapped window paid all of it
@@ -399,11 +400,13 @@ export const MonoTablePagingCore = <T extends Constructor<LitElement>>(superClas
         // A reset load (new query / search / filter) empties the grid's window — it falls below
         // what was last pushed: fill again from the top. (Compared with the PUSHED end, not
         // `_filled`, which a fill step raises just before pushing it.)
-        if (grid.virtualEnd < this._pushedEnd) this._filled = 0
+        // Not under `grouped` bands: there `virtualEnd` is a ROW index and `_pushedEnd` a slot,
+        // so it would read as a reset on every pass and the fill would never finish.
+        if (grid.virtualSlotCount == null && grid.virtualEnd < this._pushedEnd) this._filled = 0
         // Never less than what the viewport shows right now — the user may scroll mid-fill.
         this._filled = Math.min(loaded, Math.max(this._filled, end))
         this._pushedEnd = this._filled
-        grid.setVirtualWindow(0, this._filled, 0, (loaded - this._filled) * rh)
+        grid.setVirtualWindow(0, this._filled, 0, (loaded - this._filled) * rh, rh)
         if (this._filled < loaded) this._scheduleFill()
         return
       }
@@ -412,7 +415,7 @@ export const MonoTablePagingCore = <T extends Constructor<LitElement>>(superClas
 
       const padTop = start * rh
       const padBottom = Math.max(0, (loaded - end) * rh)
-      grid.setVirtualWindow(start, end, padTop, padBottom)
+      grid.setVirtualWindow(start, end, padTop, padBottom, rh)
     }
 
     /**
@@ -425,7 +428,7 @@ export const MonoTablePagingCore = <T extends Constructor<LitElement>>(superClas
         this._fillRaf = 0
         const grid = this.dataGrid
         if (!grid || !this.isConnected || this.type !== 'virtual-scroll') return
-        const loaded = grid.loadedCount
+        const loaded = grid.virtualSlotCount ?? grid.loadedCount
         const limit = Math.max(0, Math.floor(Number(this.renderAllBelow) || 0))
         if (!limit || loaded > limit || this._filled >= loaded) return
         this._filled = Math.min(loaded, this._filled + Math.max(1, Math.floor(Number(this.fillChunk) || 40)))

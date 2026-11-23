@@ -2,7 +2,7 @@ import { g as monoHostChildNodes } from "../mono-ui-bwtsaC-q.js";
 import { t as customElement } from "../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../decorate-BpnJwD08.js";
 import { s as placeSlotNode } from "../light-slots-CQuCgSHh.js";
-import { n as validateTagInputProps, r as MonoTagInputCore, t as normalizeSuggestions } from "../tag-input-utils-DTo5Aw0O.js";
+import { n as validateTagInputProps, r as MonoTagInputCore, t as normalizeSuggestions } from "../tag-input-utils-BKw3dU9j.js";
 import { LitElement, html } from "lit";
 
 //#region src/components/tag-input/mono-tag-input.ts

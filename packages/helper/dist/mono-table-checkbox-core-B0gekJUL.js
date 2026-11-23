@@ -1,8 +1,8 @@
 import { c as toODataClause, i as odataLiteral, l as toODataSelector, n as isPath } from "./field-path-DK2VBWHl.js";
 import { i as joinFilters, n as andPredicates, r as compileFilterPredicate, t as andFilters } from "./filter-eval-CqeBnMYh.js";
 import { C as customRemoteClause, E as hasWildcardSearch, d as DEFAULT_SEARCH_OPERATION, g as parseSearchValue, h as mergeSearchFields, j as searchEntryFor, x as searchRowPredicate, y as resolveSearchFields } from "./normalize-error-BEcd1tmS.js";
-import { d as createApplyGate, g as storeRows, h as odataStoreVersion, m as odataStoreUrl } from "./data-source-options-DJUNU26C.js";
-import { a as checkState, c as setAllChecked, i as buildDateTree, l as setChecked, n as countTuples, o as minimize, r as groupCountsViaApply, s as seedFromRanges } from "./mono-data-grid-D26m1y_C.js";
+import { d as createApplyGate, g as storeRows, h as odataStoreVersion, m as odataStoreUrl } from "./data-source-options-Cujz8TZ_.js";
+import { a as checkState, c as setAllChecked, d as columnCount, f as ensureRowHost, g as syncRowSpan, h as releaseRowHost, i as buildDateTree, l as setChecked, m as releaseOverlayHost, n as countTuples, o as minimize, p as overlayHost, r as groupCountsViaApply, s as seedFromRanges, u as applyOverlayHost } from "./mono-data-grid-Crk3ZUsi.js";
 import { t as arrayToODataString } from "./filter-odata-GsczYKNC.js";
 import { b as monoPhantomOptions, d as buildSizeStyle, h as monoApplyPhantomOptions, l as ColumnAutoSize, s as startMonoSizeAttributes, u as cssLengthToPx, v as monoPendingActive, y as monoPendingGrace } from "./mono-ui-bwtsaC-q.js";
 import { n as detachEventHandlers, t as applyProps } from "./element-props-xvw0EB7H.js";
@@ -1911,7 +1911,7 @@ const MonoTablePagingCore = (superClass) => {
 			const { top: scrollTop, height: viewH } = this._readMetrics(el);
 			const rh = Math.max(1, Number(this.rowHeight) || 44);
 			const over = Math.max(0, Math.floor(Number(this.overscan) || 0));
-			const loaded = grid.loadedCount;
+			const loaded = grid.virtualSlotCount ?? grid.loadedCount;
 			const first = Math.floor(scrollTop / rh);
 			const last = Math.ceil((scrollTop + viewH) / rh);
 			const stride = Math.max(1, over);
@@ -1921,10 +1921,10 @@ const MonoTablePagingCore = (superClass) => {
 			end = Math.min(loaded, Math.max(start, end));
 			const limit = Math.max(0, Math.floor(Number(this.renderAllBelow) || 0));
 			if (limit > 0 && loaded > 0 && loaded <= limit) {
-				if (grid.virtualEnd < this._pushedEnd) this._filled = 0;
+				if (grid.virtualSlotCount == null && grid.virtualEnd < this._pushedEnd) this._filled = 0;
 				this._filled = Math.min(loaded, Math.max(this._filled, end));
 				this._pushedEnd = this._filled;
-				grid.setVirtualWindow(0, this._filled, 0, (loaded - this._filled) * rh);
+				grid.setVirtualWindow(0, this._filled, 0, (loaded - this._filled) * rh, rh);
 				if (this._filled < loaded) this._scheduleFill();
 				return;
 			}
@@ -1932,7 +1932,7 @@ const MonoTablePagingCore = (superClass) => {
 			this._pushedEnd = 0;
 			const padTop = start * rh;
 			const padBottom = Math.max(0, (loaded - end) * rh);
-			grid.setVirtualWindow(start, end, padTop, padBottom);
+			grid.setVirtualWindow(start, end, padTop, padBottom, rh);
 		}
 		/**
 		* Grow a `render-all-below` fill by one chunk per frame. One frame per chunk, so the browser
@@ -1944,7 +1944,7 @@ const MonoTablePagingCore = (superClass) => {
 				this._fillRaf = 0;
 				const grid = this.dataGrid;
 				if (!grid || !this.isConnected || this.type !== "virtual-scroll") return;
-				const loaded = grid.loadedCount;
+				const loaded = grid.virtualSlotCount ?? grid.loadedCount;
 				const limit = Math.max(0, Math.floor(Number(this.renderAllBelow) || 0));
 				if (!limit || loaded > limit || this._filled >= loaded) return;
 				this._filled = Math.min(loaded, this._filled + Math.max(1, Math.floor(Number(this.fillChunk) || 40)));
@@ -2917,6 +2917,19 @@ const MonoTableThCore = (superClass) => {
 			this._syncContextMenu();
 			this.toggleAttribute("data-filtered", this._filtered);
 			this._syncRowTrigger();
+			this._syncGrouped(changed);
+		}
+		/**
+		* Write `grouped` through to the controller and hand it the `<table>` the band
+		* rows go into. Every header binds the host (idempotent); only one that
+		* declares `grouped` writes the config — and the controller ignores an equal
+		* one, so an inline object literal re-created on every render costs nothing.
+		*/
+		_syncGrouped(changed) {
+			const grid = this.dataGrid;
+			if (!grid?.bindGroupedHost) return;
+			grid.bindGroupedHost(this.closest("table"));
+			if (this.grouped !== void 0 && (changed.has("grouped") || changed.has("dataGrid"))) grid.setGrouped(this.grouped);
 		}
 		/**
 		* Hand the controller the `<table>` that holds this grid's rows so it can
@@ -3535,6 +3548,7 @@ const MonoTableThCore = (superClass) => {
 		converter: booleanStringConverter
 	})], MonoTableThCoreClass.prototype, "editable", void 0);
 	__decorate([property({ attribute: "editable-trigger" })], MonoTableThCoreClass.prototype, "editableTrigger", void 0);
+	__decorate([property({ attribute: false })], MonoTableThCoreClass.prototype, "grouped", void 0);
 	__decorate([property({
 		reflect: true,
 		converter: booleanStringConverter
@@ -3565,258 +3579,6 @@ const MonoTableThCore = (superClass) => {
 	__decorate([state()], MonoTableThCoreClass.prototype, "_fromIcon", void 0);
 	return MonoTableThCoreClass;
 };
-
-//#endregion
-//#region src/components/table/table-overlay.ts
-/**
-* The element an overlay covers: the `<table>` first, the scroll wrapper only as
-* a fallback.
-*
-* The order is the whole point. An absolutely positioned descendant of a SCROLL
-* CONTAINER scrolls with the content, so covering the wrapper pins the overlay to
-* the scroll origin at only the scrollport's size — scroll a wide or long table
-* and the overlay slides away, leaving live rows showing through beside it. The
-* table's box IS the content, so covering that keeps every column and row under
-* the overlay at any scroll offset.
-*/
-function overlayHost(el) {
-	return el.closest("table") ?? el.closest(".mono-table-scroll, [mono-table-scroll]");
-}
-/**
-* The element whose height is reserved while an overlay is up — NEVER the
-* `<table>`.
-*
-* A `<table>` does not treat a height as "reserve this much space": CSS table
-* layout DISTRIBUTES any surplus over the rows. Freeze a table at the height it
-* had when it was full, then let the source clear its rows, and the surplus lands
-* on the only row left — the header — which stretches into a band hundreds of
-* pixels tall with its captions floating in the middle of it. That is the
-* opposite of the collapse this guard exists to prevent.
-*
-* A block box just reserves the space, so the hold goes on the scroll wrapper, or
-* failing that on the table's own parent. If the table has no block ancestor to
-* hold the space the hold is SKIPPED — a grid that briefly goes short is a
-* smaller problem than a deformed one.
-*/
-function overlaySizeHost(el) {
-	const scroll = el.closest(".mono-table-scroll, [mono-table-scroll]");
-	if (scroll) return scroll;
-	const table = el.closest("table");
-	if (!table) return overlayHost(el);
-	const parent = table.parentElement;
-	return parent && parent.tagName !== "TABLE" ? parent : null;
-}
-/**
-* Widest header row, counting `colspan` — the span a generated overlay cell
-* needs.
-*
-* Generated and spacer rows are excluded by `data-mono-stripe-skip` rather than
-* by class name: this has to skip the row the OTHER overlay may have built as
-* well as its own, and both already carry that attribute for the zebra count.
-*
-* THIS table's rows only (`tHead.rows` / `tBodies`). A plain `thead tr` also matches the header
-* of a table NESTED in a row — an open `<mono-table-detail>` panel holding its own
-* grid — and a 20-column inner header then stamped `colspan="20"` on the outer
-* 11-column table's overlay row. Under `table-layout: fixed` those 9 phantom
-* columns have no width, take all the spare width, and the real columns shrink
-* to their declared minimum.
-*/
-function columnCount(table) {
-	const widest = Array.from(table.tHead?.rows ?? []).reduce((max, tr) => {
-		const span = Array.from(tr.children).reduce((sum, c) => sum + (c.colSpan || 1), 0);
-		return Math.max(max, span);
-	}, 0);
-	if (widest) return widest;
-	const first = Array.from(table.tBodies).flatMap((body) => Array.from(body.rows)).find((row) => !row.hasAttribute("data-mono-stripe-skip"));
-	return first ? Array.from(first.children).length : 0;
-}
-/**
-* Give an overlay a spec-valid home inside the table, and make that home carry
-* what the styling keys on.
-*
-* `<table>`'s content model permits only `caption` / `colgroup` / `thead` /
-* `tbody` / `tfoot`, and a row section permits only `<tr>` — so a bare custom
-* element in either is invalid HTML. Vue's compiler warns about it on every
-* consumer build, and the HTML PARSER foster-parents it out of the table: a
-* server-rendered `<mono-shadow-table-error>` written straight into `<tbody>`
-* has left the table before hydration starts, at which point it is not a row and
-* covers nothing.
-*
-* So the form the docs teach is the valid one — `<tr><td colspan>` written by the
-* consumer — and this function has two jobs:
-*
-* 1. **Adopt** a hand-written cell. A row the consumer wrote lacks the three
-*    things the generated one has: the `rowClass` (which is the ONLY thing the
-*    padding/border reset in `table.css` keys on — without it a docs-style
-*    `td { padding }` puts a 14px gutter around the bar), `data-mono-stripe-skip`
-*    (zebra parity), and a `colspan` that `syncRowSpan` keeps in step with the
-*    columns. Asking a consumer to remember all three is a trap, so the element
-*    stamps them on the row it finds itself in. The class is ADDED, never
-*    replaced — a framework does not patch an attribute it did not bind, so what
-*    is written here survives their re-renders, and what they wrote survives us.
-*
-* 2. **Generate** a row when the element is dropped bare into a table or a row
-*    section anyway — the client-only fallback that makes an imperative
-*    `body.appendChild(el)` keep working. Not the taught form, for the reasons
-*    above.
-*
-* A `<caption>` host is left alone: it is valid HTML and its CSS is honoured as
-* written. Anything else (`undefined`) is not a table position at all.
-*/
-function ensureRowHost(el, rowClass) {
-	const rowAttr = rowClass.replace(/^mono-table-/, "mono-");
-	const parent = el.parentElement;
-	if (!parent) return void 0;
-	const tag = parent.tagName;
-	if (tag === "TD" || tag === "TH") {
-		const row = parent.parentElement;
-		if (!row || row.tagName !== "TR") return void 0;
-		row.classList.add(rowClass);
-		row.setAttribute(rowAttr, "");
-		row.setAttribute("data-mono-stripe-skip", "");
-		return {
-			row,
-			generated: false
-		};
-	}
-	if (tag !== "TABLE" && tag !== "TBODY" && tag !== "THEAD" && tag !== "TFOOT") return void 0;
-	const table = el.closest("table");
-	const row = document.createElement("tr");
-	row.className = rowClass;
-	row.setAttribute(rowAttr, "");
-	row.setAttribute("data-mono-stripe-skip", "");
-	const cell = document.createElement("td");
-	const span = table ? columnCount(table) : 0;
-	if (span > 0) cell.colSpan = span;
-	const section = tag === "TABLE" ? table?.tBodies[0] ?? table?.appendChild(document.createElement("tbody")) : parent;
-	cell.appendChild(el);
-	row.appendChild(cell);
-	section?.insertBefore(row, section.firstChild);
-	return {
-		row,
-		generated: true
-	};
-}
-/**
-* Drop a GENERATED row on disconnect. An empty `<tr>` left behind would still
-* draw a border and occupy a slot in the zebra parity count.
-*
-* An adopted row is never touched: it is the consumer's node, still referenced by
-* whatever rendered it, and removing it is exactly the "disrupt future
-* functionality" the Vue warning threatens.
-*/
-function releaseRowHost(el, host) {
-	if (host?.generated && !host.row.contains(el)) host.row.remove();
-}
-/**
-* Re-widen the row's cell after a column change — generated or adopted.
-*
-* `ensureRowHost` sets `colspan` once on a generated cell, from the header as it
-* stood on connect; a hand-written cell has whatever the consumer typed, which
-* may be nothing. A grid whose columns are driven by data — a `v-for` over a
-* props snapshot, a column toggled off — changes that count later, and a stale
-* span leaves the row short of the table or overflowing it.
-* `mono-table-detail-core` recomputes for the same reason.
-*
-* Only writes when the number actually moved, so this is safe to call from every
-* `updated()` — and a consumer's correct `colspan` is never rewritten.
-*/
-function syncRowSpan(el, host) {
-	if (!host) return;
-	const table = el.closest("table");
-	if (!table) return;
-	const cell = el.closest("td, th") ?? host.row.firstElementChild;
-	if (!cell) return;
-	const span = columnCount(table);
-	if (span > 0 && cell.colSpan !== span) cell.colSpan = span;
-}
-/**
-* Prefix for the per-overlay height reservations parked on the size host.
-*
-* Every overlay reserves room by writing ITS OWN variable here, and the host's
-* `min-height` is then the `max()` of whatever variables are present. A single
-* shared inline `min-height` cannot work once two overlays are in the same table
-* — which is the arrangement the docs teach, a spinner and an empty state in one
-* `<caption>`: the spinner's hide would clear the reservation the empty state had
-* just made, the scroll wrapper would collapse to a header, and the message would
-* be clipped out of existence by the wrapper's own `overflow`. Nothing about the
-* DOM would look wrong; the grid would simply be blank.
-*/
-const HOLD_PREFIX = "--mono-table-hold-";
-/** `max()` over every reservation currently parked on `el`, or `''` if none. */
-function holdExpression(el) {
-	const names = [];
-	for (let i = 0; i < el.style.length; i++) {
-		const name = el.style.item(i);
-		if (name.startsWith(HOLD_PREFIX)) names.push(name);
-	}
-	if (!names.length) return "";
-	const terms = names.map((n) => `var(${n}, 0px)`);
-	return terms.length === 1 ? terms[0] : `max(${terms.join(", ")})`;
-}
-/**
-* The hosts an overlay is currently holding.
-*
-* Remembered rather than re-derived, because the one moment they are most needed
-* is the one moment they cannot be found: `disconnectedCallback` runs AFTER the
-* element leaves the tree, so `closest('table')` returns null and an overlay
-* cleaning up on its way out would silently clean up nothing — leaving a
-* permanent reservation on the consumer's own scroll wrapper, i.e. a gap under
-* their header that nothing on the page explains.
-*/
-const applied = /* @__PURE__ */ new WeakMap();
-/**
-* Give back everything an overlay reserved, from the hosts it remembers.
-*
-* Safe to call on an element that never applied anything, and safe to call after
-* it has been removed from the DOM — which is the point.
-*/
-function releaseOverlayHost(el) {
-	const last = applied.get(el);
-	if (!last) return;
-	if (last.sizeHost) {
-		last.sizeHost.style.removeProperty(last.holdVar);
-		last.sizeHost.style.minHeight = holdExpression(last.sizeHost);
-	}
-	el.style.minHeight = "";
-	last.host.style.removeProperty(last.headVar);
-	applied.delete(el);
-}
-/**
-* Make the host a positioning context, publish the header offset, reserve the
-* space and stretch the overlay — or undo all four.
-*
-* **The order is load-bearing, and each step feeds the next.** The header offset
-* goes first because a configured hold may be a function of it. The hold goes
-* next because the stretch measures the scroll region the hold has just resized —
-* do it the other way round and the overlay is stretched to the height the table
-* had before any room was made, which on an empty grid is a header-high strip.
-*/
-function applyOverlayHost(el, on, opts) {
-	const host = overlayHost(el);
-	if (!host) return;
-	const sizeHost = overlaySizeHost(el);
-	if (!on) {
-		releaseOverlayHost(el);
-		return;
-	}
-	if (getComputedStyle(host).position === "static") host.style.position = "relative";
-	applied.set(el, {
-		host,
-		sizeHost,
-		headVar: opts.headVar,
-		holdVar: opts.holdVar
-	});
-	const head = opts.measureHead === "always" || !!host.closest("[mono-sticky-head], .mono-table-sticky-head") ? host.querySelector(":scope > thead")?.offsetHeight ?? 0 : 0;
-	host.style.setProperty(opts.headVar, `${head}px`);
-	if (sizeHost) {
-		if (opts.hold === "measure") {
-			if (!sizeHost.style.getPropertyValue(opts.holdVar)) sizeHost.style.setProperty(opts.holdVar, `${sizeHost.offsetHeight}px`);
-		} else sizeHost.style.setProperty(opts.holdVar, typeof opts.hold === "function" ? opts.hold() : opts.hold);
-		sizeHost.style.minHeight = holdExpression(sizeHost);
-	}
-	if (sizeHost && sizeHost !== host) el.style.minHeight = holdExpression(sizeHost);
-}
 
 //#endregion
 //#region src/components/table/mono-table-empty-core.ts

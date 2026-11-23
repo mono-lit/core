@@ -9,6 +9,7 @@ import type {
   MonoColumnValue,
   MonoDateFilter,
   MonoEditableTrigger,
+  MonoGrouped,
   MonoHeaderFilter,
   MonoHeaderFilterLoadOptions,
   SortOrder,
@@ -57,6 +58,7 @@ export declare class MonoTableThCoreInterface extends MonoTableMenuCoreInterface
   sort?: boolean | MonoColumnSort
   editable: boolean
   editableTrigger?: MonoEditableTrigger
+  grouped?: MonoGrouped | null
   required: boolean
   headerFilter: boolean | MonoHeaderFilter
   dateFilter: boolean | MonoDateFilter
@@ -157,6 +159,17 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
      */
     @property({ attribute: 'editable-trigger' })
     editableTrigger?: MonoEditableTrigger
+
+    /**
+     * Group BANDS for the whole table — a sticky band row in front of each run of
+     * equal keys. Object only: `:grouped.prop="{ fields: ['Brand', 'Code'] }"` (or
+     * `props.th[].grouped`). Declare it on ANY ONE header: like `editable-trigger`
+     * it writes through to the shared controller (`dataGrid.setGrouped`), and the
+     * last header to set it wins. `null` turns the bands off; leaving it unset
+     * leaves `monoDataGrid(data, { grouped })` in charge. See {@link MonoGrouped}.
+     */
+    @property({ attribute: false })
+    grouped?: MonoGrouped | null
 
     /**
      * Marks the column as one that wants input — a red `*` after the caption, the
@@ -379,6 +392,22 @@ export const MonoTableThCore = <T extends Constructor<LitElement>>(superClass: T
       this._syncContextMenu()
       this.toggleAttribute('data-filtered', this._filtered)
       this._syncRowTrigger()
+      this._syncGrouped(changed)
+    }
+
+    /**
+     * Write `grouped` through to the controller and hand it the `<table>` the band
+     * rows go into. Every header binds the host (idempotent); only one that
+     * declares `grouped` writes the config — and the controller ignores an equal
+     * one, so an inline object literal re-created on every render costs nothing.
+     */
+    private _syncGrouped(changed: Map<string, unknown>): void {
+      const grid = this.dataGrid
+      if (!grid?.bindGroupedHost) return
+      grid.bindGroupedHost(this.closest('table') as HTMLElement | null)
+      if (this.grouped !== undefined && (changed.has('grouped') || changed.has('dataGrid'))) {
+        void grid.setGrouped(this.grouped)
+      }
     }
 
     /**

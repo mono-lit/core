@@ -52,7 +52,17 @@ export interface ReadAllRowsOptions {
    * here override them.
    */
   loadOptions?: Record<string, unknown>;
+  /**
+   * Ask for the total count with the FIRST chunk (`requireTotalCount` → OData
+   * `$count=true`), then fetch the remaining chunks — known up front — in parallel
+   * (at most {@link COUNT_FIRST_PARALLEL} in flight), assembled in order. A store
+   * that reports no count falls back to the "stop at the first short chunk" walk.
+   * Store reads only; an array source has nothing to count.
+   */
+  countFirst?: boolean;
 }
+/** Chunks in flight at once on a `countFirst` drain. */
+export declare const COUNT_FIRST_PARALLEL = 4;
 /** A devextreme DataSource: it both loads and holds a current page. */
 export declare function isDataSourceLike(value: unknown): value is ReadableDataSource;
 /** A bare store (ODataStore / CustomStore / ArrayStore) — loads, but has no page. */

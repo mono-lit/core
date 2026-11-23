@@ -1,9 +1,10 @@
 import { a as parseFieldPath, c as toODataClause, l as toODataSelector, n as isPath, o as projectFields, r as mergePatch, s as setFieldValue, t as getFieldValue } from "./field-path-DK2VBWHl.js";
-import { a as buildGroups, c as isGroupNode, i as searchFilterOf, o as collectGroupPaths, r as readAllRows, s as flattenLeaves } from "./data-source-read-uKJpRAzx.js";
+import { a as buildGroups, c as isGroupNode, i as searchFilterOf, o as collectGroupPaths, r as readAllRows, s as flattenLeaves } from "./data-source-read-B49mOn5M.js";
 import { i as joinFilters, n as andPredicates, r as compileFilterPredicate, t as andFilters } from "./filter-eval-CqeBnMYh.js";
 import { A as resolveSearchEntries, C as customRemoteClause, E as hasWildcardSearch, S as customPredicate, T as hasCustomSearch, h as mergeSearchFields, j as searchEntryFor, k as plainSearchColumns, n as describeError, o as isCanceled, u as DEFAULT_SEARCH_FIELDS } from "./normalize-error-BEcd1tmS.js";
-import { _ as monoArraySource, a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, g as storeRows, i as normalizeSortList, l as summaryAliases, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-DJUNU26C.js";
+import { _ as monoArraySource, a as resolveDataSourceOptions, c as composeSummaryApply, d as createApplyGate, f as isRolledUp, g as storeRows, i as normalizeSortList, l as summaryAliases, n as extraLoadOptions, o as toList, p as loadApply, s as buildSummaryApply, t as dataSourceOptionsKey, u as summaryFilterOf } from "./data-source-options-Cujz8TZ_.js";
 import { n as unwrapReactive } from "./reactive-Dtd-esHO.js";
+import { i as isThemeColorToken, n as colorClassToken, r as customColorStyle } from "./color-CEYYtRX-.js";
 import { n as dateTimeFormat, r as numberFormat, t as collator } from "./intl-cache-DoVGRXDU.js";
 import { t as arrayToODataString } from "./filter-odata-GsczYKNC.js";
 import { t as createNotifier } from "./notifier-BIrqUzRh.js";
@@ -87,6 +88,759 @@ function storeGroupSource(source, config) {
 		}
 	};
 }
+
+//#endregion
+//#region src/components/table/grouped-bands.ts
+/**
+* `grouped` — sticky group BANDS over a flat, ordered row list.
+*
+* Unlike `group` (a tree: `displayRows` with group headers, per-group pagers, no
+* virtual scroll) a band is a single header row placed in front of the first row
+* of each run of equal keys. The rows themselves stay a flat list, so every flat
+* feature keeps working — virtual / infinity scroll, paging, search, summaries.
+*
+* Pure and dependency-free: the controller (`mono-data-grid.ts`) owns the rows,
+* the injector (`table-bands.ts`) owns the DOM; this module only does the maths.
+*
+* Coordinates:
+* - **row** — an index into `visible` (the ordered rows minus those under a
+*   collapsed band). `band.at` is the row the band is drawn in front of.
+* - **slot** — one per drawn thing, band or row, in display order. A virtual
+*   scroller measures in slots (each one `rowHeight` tall).
+*/
+const VARIANTS = [
+	"solid",
+	"outline",
+	"tonal",
+	"text"
+];
+/** Resolve a config; `null` when there is nothing to band by. */
+function normalizeGrouped(cfg) {
+	if (!cfg || typeof cfg !== "object" || !Array.isArray(cfg.fields)) return null;
+	const collapsible = cfg.collapsible !== false;
+	const open = cfg.open !== false;
+	const stayOpen = cfg.stayOpen !== false;
+	const entries = cfg.fields.map((f, i) => ({
+		f: typeof f === "string" ? { field: f } : f,
+		i
+	})).filter((e) => !!e.f && typeof e.f.field === "string" && e.f.field.length > 0);
+	if (!entries.length) return null;
+	entries.sort((a, b) => {
+		return (typeof a.f.order === "number" ? a.f.order : a.i) - (typeof b.f.order === "number" ? b.f.order : b.i) || a.i - b.i;
+	});
+	const seen = /* @__PURE__ */ new Set();
+	const fields = [];
+	for (const { f } of entries) {
+		if (seen.has(f.field)) continue;
+		seen.add(f.field);
+		fields.push({
+			field: f.field,
+			level: fields.length,
+			custom: typeof f.custom === "function" ? f.custom : void 0,
+			count: f.count !== false,
+			variant: f.variant ?? "tonal",
+			color: f.color ?? "primary",
+			collapsible: typeof f.collapsible === "boolean" ? f.collapsible : collapsible,
+			open: typeof f.open === "boolean" ? f.open : open,
+			stayOpen: typeof f.stayOpen === "boolean" ? f.stayOpen : stayOpen
+		});
+	}
+	return {
+		fields,
+		chunk: Math.max(1, Math.floor(Number(cfg.chunk) || 100)),
+		collapsible,
+		open,
+		stayOpen
+	};
+}
+/**
+* A config's identity for "did it change?". Functions count by presence only: a
+* template's inline `:grouped.prop="{ … custom: (r) => … }"` is a NEW object with
+* new closures on every render, and must not re-band (or re-render) each time.
+*/
+function groupedSignature(cfg) {
+	if (!cfg || typeof cfg !== "object" || !Array.isArray(cfg.fields)) return "";
+	const fn = (v) => typeof v === "function" ? "ƒ" : v ?? null;
+	return JSON.stringify({
+		c: cfg.chunk ?? null,
+		k: cfg.collapsible ?? null,
+		p: cfg.open ?? null,
+		s: cfg.stayOpen ?? null,
+		f: cfg.fields.map((f) => typeof f === "string" ? f : f && {
+			field: f.field,
+			o: f.order ?? null,
+			n: f.count ?? null,
+			v: fn(f.variant),
+			c: fn(f.color),
+			x: typeof f.custom === "function",
+			k: f.collapsible ?? null,
+			p: f.open ?? null,
+			s: f.stayOpen ?? null
+		})
+	});
+}
+/** A row's raw key at `field` (path-aware, like `grouping.ts`). */
+function bandKeyOf(row, field) {
+	return isPath(field) ? getFieldValue(row, field) : row?.[field];
+}
+/** The string a key compares by — `null` / `undefined` / `''` are one "blank" band. */
+function keyString(key) {
+	if (key == null || key === "") return "";
+	if (key instanceof Date) return `d:${key.getTime()}`;
+	if (typeof key === "object") try {
+		return `j:${JSON.stringify(key)}`;
+	} catch {
+		return String(key);
+	}
+	return `${typeof key === "number" ? "n" : typeof key === "boolean" ? "b" : "s"}:${String(key)}`;
+}
+function defaultLabel(key) {
+	if (key == null || key === "") return "(blank)";
+	if (key instanceof Date) return key.toLocaleDateString();
+	return String(key);
+}
+function resolveVariant(v, row) {
+	let out = v;
+	if (typeof v === "function") try {
+		out = v(row);
+	} catch {
+		out = "tonal";
+	}
+	return VARIANTS.includes(out) ? out : "tonal";
+}
+function resolveColor(c, row) {
+	if (typeof c !== "function") return c || "primary";
+	try {
+		return c(row) || "primary";
+	} catch {
+		return "primary";
+	}
+}
+function resolveLabel(f, row, key) {
+	if (!f.custom) return defaultLabel(key);
+	try {
+		const out = f.custom(row);
+		return out == null ? "" : String(out);
+	} catch (err) {
+		console.warn(`[mono-table] grouped: custom() for "${f.field}" threw —`, err);
+		return defaultLabel(key);
+	}
+}
+/**
+* Walk the ORDERED rows once and cut them into bands.
+*
+* A band opens at level L whenever the key at L — or at any outer level — differs
+* from the previous row's. The caller must keep each band contiguous (the band
+* fields lead the sort); a key that reappears later simply opens a second band.
+*/
+function buildGrouped(rows, fields, collapsed = /* @__PURE__ */ new Set()) {
+	const isFolded = typeof collapsed === "function" ? collapsed : (path, f) => !f.open || collapsed.has(path);
+	const bands = [];
+	const visible = [];
+	const depth = fields.length;
+	if (!depth) return {
+		grouped: bands,
+		visible: [...rows],
+		slotCount: rows.length
+	};
+	/** The band open at each level for the current run. */
+	const open = new Array(depth).fill(null);
+	/** Whether the band at each level is drawn (no collapsed ancestor). */
+	const drawn = new Array(depth).fill(false);
+	/** Level of the outermost collapsed open band, or -1. */
+	let foldedAt = -1;
+	let prev = null;
+	for (const row of rows) {
+		const keys = fields.map((f) => bandKeyOf(row, f.field));
+		const strs = keys.map(keyString);
+		let d = 0;
+		if (prev) while (d < depth && strs[d] === prev[d]) d++;
+		if (d < depth) {
+			if (foldedAt >= d) foldedAt = -1;
+			for (let lvl = d; lvl < depth; lvl++) {
+				const f = fields[lvl];
+				const parent = lvl > 0 ? open[lvl - 1].path : "";
+				const seg = encodeURIComponent(strs[lvl]);
+				const path = parent ? `${parent}/${seg}` : seg;
+				const isDrawn = foldedAt < 0;
+				const isCollapsed = f.collapsible && isFolded(path, f);
+				const band = {
+					path,
+					level: lvl,
+					field: f.field,
+					key: keys[lvl],
+					label: resolveLabel(f, row, keys[lvl]),
+					count: 0,
+					showCount: f.count,
+					row,
+					variant: resolveVariant(f.variant, row),
+					color: resolveColor(f.color, row),
+					collapsible: f.collapsible,
+					collapsed: isCollapsed,
+					at: visible.length,
+					slot: 0
+				};
+				open[lvl] = band;
+				drawn[lvl] = isDrawn;
+				if (isDrawn) {
+					band.slot = visible.length + bands.length;
+					bands.push(band);
+				}
+				if (isDrawn && isCollapsed && foldedAt < 0) foldedAt = lvl;
+			}
+		}
+		for (let lvl = 0; lvl < depth; lvl++) open[lvl].count++;
+		if (foldedAt < 0) visible.push(row);
+		prev = strs;
+	}
+	return {
+		grouped: bands,
+		visible,
+		slotCount: visible.length + bands.length
+	};
+}
+/** Index of the first band whose `key(band) >= value` (bands are ascending in both coordinates). */
+function lowerBound(bands, value, key) {
+	let lo = 0;
+	let hi = bands.length;
+	while (lo < hi) {
+		const mid = lo + hi >>> 1;
+		if (key(bands[mid]) < value) lo = mid + 1;
+		else hi = mid;
+	}
+	return lo;
+}
+/** Number of visible rows in front of `slot` — the row a slot window starts at. */
+function slotToRow(layout, slot) {
+	const s = Math.max(0, Math.min(Math.floor(slot), layout.slotCount));
+	const bandsBefore = lowerBound(layout.grouped, s, (b) => b.slot);
+	return Math.max(0, Math.min(layout.visible.length, s - bandsBefore));
+}
+/** The slot of visible row `row`. */
+function rowToSlot(layout, row) {
+	const r = Math.max(0, Math.min(Math.floor(row), layout.visible.length));
+	return r + lowerBound(layout.grouped, r + 1, (b) => b.at);
+}
+/**
+* The bands a row window draws, and the slots it leaves to the spacers.
+*
+* The heights always add up: `slotsAbove + leads + drawn bands + rows + slotsBelow
+* === slotCount`, so a band entering or leaving the window never makes the content
+* jump.
+*/
+function groupedWindow(layout, rowStart, rowEnd) {
+	const { grouped: bands, visible } = layout;
+	const end = Math.max(0, Math.min(Math.floor(rowEnd), visible.length));
+	const start = Math.max(0, Math.min(Math.floor(rowStart), end));
+	const tail = end === visible.length;
+	const before = /* @__PURE__ */ new Map();
+	const firstIn = lowerBound(bands, start, (b) => b.at);
+	let i = firstIn;
+	for (; i < bands.length; i++) {
+		const b = bands[i];
+		if (b.at > end || b.at === end && !tail) break;
+		const off = b.at - start;
+		const list = before.get(off);
+		if (list) list.push(b);
+		else before.set(off, [b]);
+	}
+	const bandsBelow = bands.length - i;
+	const leads = [];
+	if (start > 0 && end > start) {
+		const chain = [];
+		for (let j = 0; j < firstIn; j++) {
+			const b = bands[j];
+			chain[b.level] = b;
+			chain.length = b.level + 1;
+		}
+		for (const b of chain) if (b && b.at < start) leads.push(b);
+		const atStart = before.get(0);
+		if (atStart?.length) {
+			const minLevel = Math.min(...atStart.map((b) => b.level));
+			while (leads.length && leads[leads.length - 1].level >= minLevel) leads.pop();
+		}
+	}
+	return {
+		before,
+		leads,
+		slotsAbove: start + firstIn - leads.length,
+		slotsBelow: visible.length - end + bandsBelow
+	};
+}
+/** Every collapsible band path — for collapse-all. */
+function collapsiblePaths(rows, fields) {
+	return buildGrouped(rows, fields, () => false).grouped.filter((b) => b.collapsible).map((b) => b.path);
+}
+
+//#endregion
+//#region src/components/table/table-overlay.ts
+/**
+* The element an overlay covers: the `<table>` first, the scroll wrapper only as
+* a fallback.
+*
+* The order is the whole point. An absolutely positioned descendant of a SCROLL
+* CONTAINER scrolls with the content, so covering the wrapper pins the overlay to
+* the scroll origin at only the scrollport's size — scroll a wide or long table
+* and the overlay slides away, leaving live rows showing through beside it. The
+* table's box IS the content, so covering that keeps every column and row under
+* the overlay at any scroll offset.
+*/
+function overlayHost(el) {
+	return el.closest("table") ?? el.closest(".mono-table-scroll, [mono-table-scroll]");
+}
+/**
+* The element whose height is reserved while an overlay is up — NEVER the
+* `<table>`.
+*
+* A `<table>` does not treat a height as "reserve this much space": CSS table
+* layout DISTRIBUTES any surplus over the rows. Freeze a table at the height it
+* had when it was full, then let the source clear its rows, and the surplus lands
+* on the only row left — the header — which stretches into a band hundreds of
+* pixels tall with its captions floating in the middle of it. That is the
+* opposite of the collapse this guard exists to prevent.
+*
+* A block box just reserves the space, so the hold goes on the scroll wrapper, or
+* failing that on the table's own parent. If the table has no block ancestor to
+* hold the space the hold is SKIPPED — a grid that briefly goes short is a
+* smaller problem than a deformed one.
+*/
+function overlaySizeHost(el) {
+	const scroll = el.closest(".mono-table-scroll, [mono-table-scroll]");
+	if (scroll) return scroll;
+	const table = el.closest("table");
+	if (!table) return overlayHost(el);
+	const parent = table.parentElement;
+	return parent && parent.tagName !== "TABLE" ? parent : null;
+}
+/**
+* Widest header row, counting `colspan` — the span a generated overlay cell
+* needs.
+*
+* Generated and spacer rows are excluded by `data-mono-stripe-skip` rather than
+* by class name: this has to skip the row the OTHER overlay may have built as
+* well as its own, and both already carry that attribute for the zebra count.
+*
+* THIS table's rows only (`tHead.rows` / `tBodies`). A plain `thead tr` also matches the header
+* of a table NESTED in a row — an open `<mono-table-detail>` panel holding its own
+* grid — and a 20-column inner header then stamped `colspan="20"` on the outer
+* 11-column table's overlay row. Under `table-layout: fixed` those 9 phantom
+* columns have no width, take all the spare width, and the real columns shrink
+* to their declared minimum.
+*/
+function columnCount(table) {
+	const widest = Array.from(table.tHead?.rows ?? []).reduce((max, tr) => {
+		const span = Array.from(tr.children).reduce((sum, c) => sum + (c.colSpan || 1), 0);
+		return Math.max(max, span);
+	}, 0);
+	if (widest) return widest;
+	const first = Array.from(table.tBodies).flatMap((body) => Array.from(body.rows)).find((row) => !row.hasAttribute("data-mono-stripe-skip"));
+	return first ? Array.from(first.children).length : 0;
+}
+/**
+* Give an overlay a spec-valid home inside the table, and make that home carry
+* what the styling keys on.
+*
+* `<table>`'s content model permits only `caption` / `colgroup` / `thead` /
+* `tbody` / `tfoot`, and a row section permits only `<tr>` — so a bare custom
+* element in either is invalid HTML. Vue's compiler warns about it on every
+* consumer build, and the HTML PARSER foster-parents it out of the table: a
+* server-rendered `<mono-shadow-table-error>` written straight into `<tbody>`
+* has left the table before hydration starts, at which point it is not a row and
+* covers nothing.
+*
+* So the form the docs teach is the valid one — `<tr><td colspan>` written by the
+* consumer — and this function has two jobs:
+*
+* 1. **Adopt** a hand-written cell. A row the consumer wrote lacks the three
+*    things the generated one has: the `rowClass` (which is the ONLY thing the
+*    padding/border reset in `table.css` keys on — without it a docs-style
+*    `td { padding }` puts a 14px gutter around the bar), `data-mono-stripe-skip`
+*    (zebra parity), and a `colspan` that `syncRowSpan` keeps in step with the
+*    columns. Asking a consumer to remember all three is a trap, so the element
+*    stamps them on the row it finds itself in. The class is ADDED, never
+*    replaced — a framework does not patch an attribute it did not bind, so what
+*    is written here survives their re-renders, and what they wrote survives us.
+*
+* 2. **Generate** a row when the element is dropped bare into a table or a row
+*    section anyway — the client-only fallback that makes an imperative
+*    `body.appendChild(el)` keep working. Not the taught form, for the reasons
+*    above.
+*
+* A `<caption>` host is left alone: it is valid HTML and its CSS is honoured as
+* written. Anything else (`undefined`) is not a table position at all.
+*/
+function ensureRowHost(el, rowClass) {
+	const rowAttr = rowClass.replace(/^mono-table-/, "mono-");
+	const parent = el.parentElement;
+	if (!parent) return void 0;
+	const tag = parent.tagName;
+	if (tag === "TD" || tag === "TH") {
+		const row = parent.parentElement;
+		if (!row || row.tagName !== "TR") return void 0;
+		row.classList.add(rowClass);
+		row.setAttribute(rowAttr, "");
+		row.setAttribute("data-mono-stripe-skip", "");
+		return {
+			row,
+			generated: false
+		};
+	}
+	if (tag !== "TABLE" && tag !== "TBODY" && tag !== "THEAD" && tag !== "TFOOT") return void 0;
+	const table = el.closest("table");
+	const row = document.createElement("tr");
+	row.className = rowClass;
+	row.setAttribute(rowAttr, "");
+	row.setAttribute("data-mono-stripe-skip", "");
+	const cell = document.createElement("td");
+	const span = table ? columnCount(table) : 0;
+	if (span > 0) cell.colSpan = span;
+	const section = tag === "TABLE" ? table?.tBodies[0] ?? table?.appendChild(document.createElement("tbody")) : parent;
+	cell.appendChild(el);
+	row.appendChild(cell);
+	section?.insertBefore(row, section.firstChild);
+	return {
+		row,
+		generated: true
+	};
+}
+/**
+* Drop a GENERATED row on disconnect. An empty `<tr>` left behind would still
+* draw a border and occupy a slot in the zebra parity count.
+*
+* An adopted row is never touched: it is the consumer's node, still referenced by
+* whatever rendered it, and removing it is exactly the "disrupt future
+* functionality" the Vue warning threatens.
+*/
+function releaseRowHost(el, host) {
+	if (host?.generated && !host.row.contains(el)) host.row.remove();
+}
+/**
+* Re-widen the row's cell after a column change — generated or adopted.
+*
+* `ensureRowHost` sets `colspan` once on a generated cell, from the header as it
+* stood on connect; a hand-written cell has whatever the consumer typed, which
+* may be nothing. A grid whose columns are driven by data — a `v-for` over a
+* props snapshot, a column toggled off — changes that count later, and a stale
+* span leaves the row short of the table or overflowing it.
+* `mono-table-detail-core` recomputes for the same reason.
+*
+* Only writes when the number actually moved, so this is safe to call from every
+* `updated()` — and a consumer's correct `colspan` is never rewritten.
+*/
+function syncRowSpan(el, host) {
+	if (!host) return;
+	const table = el.closest("table");
+	if (!table) return;
+	const cell = el.closest("td, th") ?? host.row.firstElementChild;
+	if (!cell) return;
+	const span = columnCount(table);
+	if (span > 0 && cell.colSpan !== span) cell.colSpan = span;
+}
+/**
+* Prefix for the per-overlay height reservations parked on the size host.
+*
+* Every overlay reserves room by writing ITS OWN variable here, and the host's
+* `min-height` is then the `max()` of whatever variables are present. A single
+* shared inline `min-height` cannot work once two overlays are in the same table
+* — which is the arrangement the docs teach, a spinner and an empty state in one
+* `<caption>`: the spinner's hide would clear the reservation the empty state had
+* just made, the scroll wrapper would collapse to a header, and the message would
+* be clipped out of existence by the wrapper's own `overflow`. Nothing about the
+* DOM would look wrong; the grid would simply be blank.
+*/
+const HOLD_PREFIX = "--mono-table-hold-";
+/** `max()` over every reservation currently parked on `el`, or `''` if none. */
+function holdExpression(el) {
+	const names = [];
+	for (let i = 0; i < el.style.length; i++) {
+		const name = el.style.item(i);
+		if (name.startsWith(HOLD_PREFIX)) names.push(name);
+	}
+	if (!names.length) return "";
+	const terms = names.map((n) => `var(${n}, 0px)`);
+	return terms.length === 1 ? terms[0] : `max(${terms.join(", ")})`;
+}
+/**
+* The hosts an overlay is currently holding.
+*
+* Remembered rather than re-derived, because the one moment they are most needed
+* is the one moment they cannot be found: `disconnectedCallback` runs AFTER the
+* element leaves the tree, so `closest('table')` returns null and an overlay
+* cleaning up on its way out would silently clean up nothing — leaving a
+* permanent reservation on the consumer's own scroll wrapper, i.e. a gap under
+* their header that nothing on the page explains.
+*/
+const applied = /* @__PURE__ */ new WeakMap();
+/**
+* Give back everything an overlay reserved, from the hosts it remembers.
+*
+* Safe to call on an element that never applied anything, and safe to call after
+* it has been removed from the DOM — which is the point.
+*/
+function releaseOverlayHost(el) {
+	const last = applied.get(el);
+	if (!last) return;
+	if (last.sizeHost) {
+		last.sizeHost.style.removeProperty(last.holdVar);
+		last.sizeHost.style.minHeight = holdExpression(last.sizeHost);
+	}
+	el.style.minHeight = "";
+	last.host.style.removeProperty(last.headVar);
+	applied.delete(el);
+}
+/**
+* Make the host a positioning context, publish the header offset, reserve the
+* space and stretch the overlay — or undo all four.
+*
+* **The order is load-bearing, and each step feeds the next.** The header offset
+* goes first because a configured hold may be a function of it. The hold goes
+* next because the stretch measures the scroll region the hold has just resized —
+* do it the other way round and the overlay is stretched to the height the table
+* had before any room was made, which on an empty grid is a header-high strip.
+*/
+function applyOverlayHost(el, on, opts) {
+	const host = overlayHost(el);
+	if (!host) return;
+	const sizeHost = overlaySizeHost(el);
+	if (!on) {
+		releaseOverlayHost(el);
+		return;
+	}
+	if (getComputedStyle(host).position === "static") host.style.position = "relative";
+	applied.set(el, {
+		host,
+		sizeHost,
+		headVar: opts.headVar,
+		holdVar: opts.holdVar
+	});
+	const head = opts.measureHead === "always" || !!host.closest("[mono-sticky-head], .mono-table-sticky-head") ? host.querySelector(":scope > thead")?.offsetHeight ?? 0 : 0;
+	host.style.setProperty(opts.headVar, `${head}px`);
+	if (sizeHost) {
+		if (opts.hold === "measure") {
+			if (!sizeHost.style.getPropertyValue(opts.holdVar)) sizeHost.style.setProperty(opts.holdVar, `${sizeHost.offsetHeight}px`);
+		} else sizeHost.style.setProperty(opts.holdVar, typeof opts.hold === "function" ? opts.hold() : opts.hold);
+		sizeHost.style.minHeight = holdExpression(sizeHost);
+	}
+	if (sizeHost && sizeHost !== host) el.style.minHeight = holdExpression(sizeHost);
+}
+
+//#endregion
+//#region src/components/table/table-bands.ts
+/**
+* The tbody half of `grouped`: inserts the band `<tr>`s in front of the rows the
+* controller says they head (`ctrl.groupedWindow`).
+*
+* The consumer's framework owns every OTHER row, so the band rows are foreign
+* nodes in a tbody it patches. That is safe as long as mono only ever adds and
+* moves its own rows (a framework never touches a node it did not create), and
+* re-places them whenever the framework's patch shifts the rows around — a
+* `MutationObserver` on the tbody's children does that, in the same microtask
+* checkpoint as the patch, so a misplaced band is never painted. A framework
+* removing a range that happens to include a band (a fragment unmount) simply
+* gets the band re-created on the next pass.
+*
+* Which `<tr>` is "row i": the tbody's rows in DOM order, minus every row that
+* is not a data row — mono's bands, `[data-mono-stripe-skip]` rows (mono's own
+* overlay rows and a consumer's extras), `aria-hidden` spacers, detail / filler /
+* group rows. The same set the zebra stripe skips. If that count does not match
+* `ctrl.items` the framework is mid-patch and the pass is skipped; its own
+* mutations trigger the next one.
+*/
+const NON_DATA_ROW = "[mono-grouped],[data-mono-stripe-skip],[aria-hidden=\"true\"],[mono-detail-row],.mono-table-detail-row,[mono-filler],.mono-table-filler,[mono-group-row],.mono-table-group-row";
+/** The tbody's data rows, in order — see the module comment. */
+function dataRowsOf(body) {
+	const out = [];
+	for (const tr of Array.from(body.rows)) if (!tr.matches(NON_DATA_ROW)) out.push(tr);
+	return out;
+}
+function isDetailRow(el) {
+	return !!el && el.matches("[mono-detail-row],.mono-table-detail-row");
+}
+var BandInjector = class {
+	constructor(ctrl, table) {
+		this.rows = /* @__PURE__ */ new Map();
+		this.body = null;
+		this.unsubscribe = null;
+		this.mo = null;
+		this.ro = null;
+		this.queued = false;
+		this.stopped = false;
+		this.ctrl = ctrl;
+		this.table = table;
+		this.unsubscribe = ctrl.subscribe(() => this.schedule());
+		if (typeof ResizeObserver !== "undefined") {
+			this.ro = new ResizeObserver(() => this.syncHeadHeight());
+			if (table.tHead) this.ro.observe(table.tHead);
+		}
+		this.schedule();
+	}
+	/** Re-run a pass now-ish (after a config change that may not notify). */
+	refresh() {
+		this.schedule();
+	}
+	stop() {
+		this.stopped = true;
+		this.unsubscribe?.();
+		this.unsubscribe = null;
+		this.mo?.disconnect();
+		this.mo = null;
+		this.ro?.disconnect();
+		this.ro = null;
+		this.removeAll();
+	}
+	schedule() {
+		if (this.queued || this.stopped) return;
+		this.queued = true;
+		queueMicrotask(() => {
+			this.queued = false;
+			if (!this.stopped) this.flush();
+		});
+	}
+	/** Watch the CURRENT tbody — a framework may swap it. */
+	watch(body) {
+		if (body === this.body) return;
+		this.mo?.disconnect();
+		this.body = body;
+		if (!body || typeof MutationObserver === "undefined") return;
+		this.mo ??= new MutationObserver(() => this.schedule());
+		this.mo.observe(body, { childList: true });
+	}
+	syncHeadHeight() {
+		const h = this.table.tHead?.getBoundingClientRect().height ?? 0;
+		const v = `${Math.round(h)}px`;
+		if (this.table.style.getPropertyValue("--mono-table-grouped-head") !== v) this.table.style.setProperty("--mono-table-grouped-head", v);
+	}
+	removeAll() {
+		for (const tr of this.rows.values()) tr.remove();
+		this.rows.clear();
+		this.table.removeAttribute("mono-grouped-table");
+		this.table.style.removeProperty("--mono-table-grouped-h");
+	}
+	/** One placement pass. Public for tests; normally driven by notify / mutations. */
+	flush() {
+		const body = this.table.tBodies[0] ?? null;
+		this.watch(body);
+		const win = this.ctrl.groupedWindow;
+		if (!win || !body) {
+			this.removeAll();
+			return;
+		}
+		const data = dataRowsOf(body);
+		if (data.length !== this.ctrl.items.length) return;
+		this.table.setAttribute("mono-grouped-table", "");
+		const rh = this.ctrl.scrollMode === "virtual" ? this.ctrl.virtualRowHeight : void 0;
+		const hv = rh && rh > 0 ? `${rh}px` : "";
+		if (this.table.style.getPropertyValue("--mono-table-grouped-h") !== hv) {
+			if (hv) this.table.style.setProperty("--mono-table-grouped-h", hv);
+			else this.table.style.removeProperty("--mono-table-grouped-h");
+		}
+		if (!this.table.style.getPropertyValue("--mono-table-grouped-head")) this.syncHeadHeight();
+		const span = columnCount(this.table) || 1;
+		const keep = /* @__PURE__ */ new Set();
+		const groups = [];
+		const atZero = win.before.get(0) ?? [];
+		if (win.leads.length || atZero.length) groups.push({
+			bands: [...win.leads, ...atZero],
+			off: 0
+		});
+		const offs = [...win.before.keys()].filter((k) => k !== 0).sort((a, b) => a - b);
+		for (const off of offs) groups.push({
+			bands: win.before.get(off),
+			off
+		});
+		for (const { bands, off } of groups) {
+			const trs = bands.map((b) => {
+				keep.add(b.path);
+				return this.rowFor(b, span);
+			});
+			if (off < data.length) {
+				let ref = data[off];
+				for (let j = trs.length - 1; j >= 0; j--) {
+					const tr = trs[j];
+					if (tr.parentNode !== body || tr.nextElementSibling !== ref) body.insertBefore(tr, ref);
+					ref = tr;
+				}
+			} else {
+				let prev = data.length ? data[data.length - 1] : null;
+				while (prev && isDetailRow(prev.nextElementSibling)) prev = prev.nextElementSibling;
+				const fallback = prev ? null : body.querySelector(":scope > tr[aria-hidden=\"true\"], :scope > tr[mono-filler], :scope > tr.mono-table-filler");
+				for (const tr of trs) {
+					if (!(tr.parentNode === body && (prev ? tr.previousElementSibling === prev : !tr.previousElementSibling || tr.nextElementSibling === fallback))) body.insertBefore(tr, prev ? prev.nextSibling : fallback);
+					prev = tr;
+				}
+			}
+		}
+		for (const [path, tr] of this.rows) if (!keep.has(path)) {
+			tr.remove();
+			this.rows.delete(path);
+		}
+		this.mo?.takeRecords();
+	}
+	/** The band's row — created on first use, its attributes / text kept current. */
+	rowFor(b, span) {
+		let tr = this.rows.get(b.path);
+		if (!tr) {
+			tr = document.createElement("tr");
+			tr.className = "mono-table-grouped";
+			tr.setAttribute("mono-grouped", "");
+			tr.setAttribute("data-mono-stripe-skip", "");
+			const td = document.createElement("td");
+			td.setAttribute("mono-grouped-cell", "");
+			const label = document.createElement("div");
+			label.setAttribute("mono-grouped-label", "");
+			const chevron = document.createElement("span");
+			chevron.setAttribute("mono-grouped-chevron", "");
+			chevron.setAttribute("aria-hidden", "true");
+			const text = document.createElement("span");
+			text.setAttribute("mono-grouped-text", "");
+			const count = document.createElement("span");
+			count.setAttribute("mono-grouped-count", "");
+			label.append(chevron, text, count);
+			td.appendChild(label);
+			tr.appendChild(td);
+			const toggle = () => {
+				const path = tr.dataset.groupedPath;
+				if (path && tr.hasAttribute("mono-grouped-collapsible")) this.ctrl.toggleGrouped(path);
+			};
+			tr.addEventListener("click", toggle);
+			tr.addEventListener("keydown", (e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					toggle();
+				}
+			});
+			this.rows.set(b.path, tr);
+		}
+		const set = (name, value) => {
+			if (value == null) {
+				if (tr.hasAttribute(name)) tr.removeAttribute(name);
+			} else if (tr.getAttribute(name) !== value) tr.setAttribute(name, value);
+		};
+		set("data-grouped-path", b.path);
+		set("mono-grouped-level", String(b.level));
+		set("mono-grouped-field", b.field);
+		set("mono-variant", b.variant);
+		set("mono-color", colorClassToken(b.color) || "primary");
+		const custom = isThemeColorToken(b.color) ? "" : customColorStyle(b.color, "table-grouped");
+		if ((tr.getAttribute("style") ?? "") !== custom) {
+			if (custom) tr.setAttribute("style", custom);
+			else tr.removeAttribute("style");
+		}
+		set("mono-grouped-collapsible", b.collapsible ? "" : null);
+		set("mono-grouped-collapsed", b.collapsed ? "" : null);
+		set("aria-expanded", b.collapsible ? String(!b.collapsed) : null);
+		set("tabindex", b.collapsible ? "0" : null);
+		const td = tr.firstElementChild;
+		if (td.colSpan !== span) td.colSpan = span;
+		const label = td.firstElementChild;
+		const [, text, count] = Array.from(label.children);
+		if (text.textContent !== b.label) text.textContent = b.label;
+		const c = b.showCount ? `(${b.count})` : "";
+		if (count.textContent !== c) count.textContent = c;
+		if (count.hidden !== !b.showCount) count.hidden = !b.showCount;
+		return tr;
+	}
+};
 
 //#endregion
 //#region src/components/table/date-filter-tree.ts
@@ -588,7 +1342,34 @@ function monoDataGrid(ds = null, opts = {}) {
 	const groupRowLoading = /* @__PURE__ */ new Set();
 	let searchValue = null;
 	let groupSeq = 0;
+	let bandCfg = normalizeGrouped(opts.grouped);
+	let bandSig = groupedSignature(opts.grouped);
+	let bandRead = null;
+	let bandRows = [];
+	let bandLayout = null;
+	const bandOpen = /* @__PURE__ */ new Map();
+	let bandAll = null;
+	let bandPageIndex = 0;
+	let bandPageSize = 0;
+	let bandRowHeight = 44;
+	let bandSeq = 0;
+	let bandReading = false;
+	let bandWarned = false;
+	let bandInjector = null;
+	let bandHostEl = null;
 	const isGrouped = () => groupFields.length > 0;
+	/** Bands apply: a config is set and the `group` tree is not in charge. */
+	const bandsActive = () => {
+		if (!bandCfg) return false;
+		if (groupFields.length > 0) {
+			if (!bandWarned) {
+				bandWarned = true;
+				console.warn("[monoDataGrid] `grouped` is ignored while `group` is set — they are two different groupings.");
+			}
+			return false;
+		}
+		return true;
+	};
 	/** Server mode requires a single group field + a `serverGroup` provider. */
 	const serverMode = () => !!serverGroup && groupFields.length === 1;
 	function clearRowCaches() {
@@ -622,7 +1403,7 @@ function monoDataGrid(ds = null, opts = {}) {
 		sorts: [],
 		sortField: null,
 		sortOrder: null,
-		grouped: groupFields.length > 0,
+		groupTree: groupFields.length > 0,
 		scrollMode: "off",
 		hasMore: false,
 		loadedCount: 0,
@@ -630,6 +1411,18 @@ function monoDataGrid(ds = null, opts = {}) {
 		virtualEnd: 0,
 		virtualPadTop: 0,
 		virtualPadBottom: 0,
+		grouped: [],
+		groupedWindow: null,
+		virtualSlotCount: void 0,
+		setGrouped,
+		groupedConfig: () => bandsActive() ? bandCfg : null,
+		toggleGrouped,
+		openGrouped,
+		closeGrouped,
+		isGroupedCollapsed,
+		expandAllGrouped,
+		collapseAllGrouped,
+		bindGroupedHost,
 		dataSource: null,
 		editingKey: null,
 		editableTrigger: opts.editableTrigger ?? "click",
@@ -2272,12 +3065,13 @@ function monoDataGrid(ds = null, opts = {}) {
 			selector: k.selector,
 			desc: k.desc
 		});
-		if (!groupFields.length) return keys.length ? keys.map(entry) : null;
-		const list = groupFields.map((f) => ({
+		const lead = groupFields.length ? groupFields : bandsActive() ? bandCfg?.fields.map((f) => f.field) ?? [] : [];
+		if (!lead.length) return keys.length ? keys.map(entry) : null;
+		const list = lead.map((f) => ({
 			selector: f,
 			desc: keys.find((k) => k.field === f)?.desc ?? false
 		}));
-		for (const k of keys) if (!groupFields.includes(k.field)) list.push(entry(k));
+		for (const k of keys) if (!lead.includes(k.field)) list.push(entry(k));
 		return list;
 	}
 	/**
@@ -2538,7 +3332,7 @@ function monoDataGrid(ds = null, opts = {}) {
 		if (groupPageIndex > pageCount - 1) groupPageIndex = pageCount - 1;
 		if (groupPageIndex < 0) groupPageIndex = 0;
 		const start = groupPageIndex * size;
-		ctrl.grouped = true;
+		ctrl.groupTree = true;
 		ctrl.items = toDisplay(all.slice(start, start + size));
 		ctrl.totalCount = total;
 		ctrl.pageSize = size;
@@ -2577,7 +3371,7 @@ function monoDataGrid(ds = null, opts = {}) {
 			pathIndex.set(path, node);
 			return node;
 		});
-		ctrl.grouped = true;
+		ctrl.groupTree = true;
 		ctrl.items = nodes;
 		ctrl.totalCount = total;
 		ctrl.pageSize = size;
@@ -2688,6 +3482,10 @@ function monoDataGrid(ds = null, opts = {}) {
 			syncGrouped();
 			return;
 		}
+		if (bandsActive()) {
+			syncBands();
+			return;
+		}
 		if (scrollMode !== "off") {
 			syncScroll();
 			return;
@@ -2697,7 +3495,7 @@ function monoDataGrid(ds = null, opts = {}) {
 			return;
 		}
 		if (pageSizeAll) {
-			ctrl.grouped = false;
+			ctrl.groupTree = false;
 			ctrl.items = allRows;
 			ctrl.pageIndex = 0;
 			ctrl.pageSize = allRows.length || 1;
@@ -2713,7 +3511,7 @@ function monoDataGrid(ds = null, opts = {}) {
 		const pageSize = s?.pageSize?.() ?? rawItems.length;
 		const pageIndex = s?.pageIndex?.() ?? 0;
 		const hasTotal = typeof total === "number" && total >= 0;
-		ctrl.grouped = false;
+		ctrl.groupTree = false;
 		ctrl.items = rawItems;
 		ctrl.pageIndex = pageIndex;
 		ctrl.pageSize = pageSize;
@@ -2855,6 +3653,10 @@ function monoDataGrid(ds = null, opts = {}) {
 			await loadGroupsServer();
 			return;
 		}
+		if (bandsActive()) {
+			await loadBanded();
+			return;
+		}
 		if (scrollActive()) {
 			await loadScrollPage(true);
 			return;
@@ -2879,6 +3681,10 @@ function monoDataGrid(ds = null, opts = {}) {
 		if (serverMode()) {
 			clearRowCaches();
 			await loadGroupsServer();
+			return;
+		}
+		if (bandsActive()) {
+			await loadBanded();
 			return;
 		}
 		if (scrollActive()) {
@@ -2908,6 +3714,10 @@ function monoDataGrid(ds = null, opts = {}) {
 		vStart = vEnd = vPadTop = vPadBottom = 0;
 		serverGroups = [];
 		clearRowCaches();
+		if (bandRead) {
+			clearBands();
+			bandRead = [];
+		}
 		ctrl.items = [];
 		ctrl.loading = false;
 		ctrl.totalCount = 0;
@@ -2924,6 +3734,11 @@ function monoDataGrid(ds = null, opts = {}) {
 			groupPageIndex = Math.max(0, pageIndex);
 			sync();
 			if (serverMode()) await fetchVisibleRows();
+			return;
+		}
+		if (bandsActive()) {
+			bandPageIndex = Math.max(0, pageIndex);
+			sync();
 			return;
 		}
 		if (browserRows && browserSortActive()) {
@@ -2944,6 +3759,15 @@ function monoDataGrid(ds = null, opts = {}) {
 			groupPageIndex = 0;
 			sync();
 			if (serverMode()) await fetchVisibleRows();
+			return;
+		}
+		if (bandsActive()) {
+			if (!all) {
+				bandPageSize = Math.max(1, pageSize);
+				bound?.pageSize?.(bandPageSize);
+			}
+			bandPageIndex = 0;
+			sync();
 			return;
 		}
 		const s = bound;
@@ -3115,7 +3939,7 @@ function monoDataGrid(ds = null, opts = {}) {
 		const pageCount = Math.max(1, Math.ceil(rows.length / size));
 		browserPageIndex = Math.min(Math.max(0, browserPageIndex), pageCount - 1);
 		const start = browserPageIndex * size;
-		ctrl.grouped = false;
+		ctrl.groupTree = false;
 		ctrl.items = rows.slice(start, start + size);
 		ctrl.pageIndex = browserPageIndex;
 		ctrl.pageSize = size;
@@ -3124,16 +3948,290 @@ function monoDataGrid(ds = null, opts = {}) {
 		ctrl.pageCount = pageCount;
 		render();
 	}
+	/** The band keys lead (direction from the column sort when sorted), the column sort follows. */
+	function bandSortKeys() {
+		const fields = bandCfg?.fields.map((f) => f.field) ?? [];
+		const keys = fields.map((f) => ({
+			selector: f,
+			desc: sortOf(f) === "desc",
+			aggregate: null
+		}));
+		for (const s of ctrl.sorts) {
+			if (fields.includes(s.field)) continue;
+			keys.push({
+				selector: declaredSortSelector(s.field) ?? s.field,
+				desc: s.order === "desc",
+				aggregate: isBrowserSortKey(s.field) ? declaredSortConfig(s.field).aggregate ?? "sum" : null
+			});
+		}
+		return keys;
+	}
+	/**
+	* `bandRead` in display order — a STABLE in-memory sort, so the bands are
+	* contiguous whatever order (or collation) the source returned, and rows the
+	* keys tie on keep the source's order.
+	*/
+	function resortBands() {
+		const rows = bandRead ?? [];
+		const keys = bandSortKeys();
+		const decorated = rows.map((row, i) => ({
+			row,
+			i,
+			v: keys.map((k) => browserSortValue(row, k.selector, k.aggregate))
+		}));
+		decorated.sort((x, y) => {
+			for (let k = 0; k < keys.length; k++) {
+				const ex = x.v[k] == null || x.v[k] === "";
+				const ey = y.v[k] == null || y.v[k] === "";
+				const c = compareBrowserValues(x.v[k], y.v[k]);
+				if (c) return ex || ey ? c : keys[k].desc ? -c : c;
+			}
+			return x.i - y.i;
+		});
+		bandRows = decorated.map((d) => d.row);
+	}
+	function relayoutBands() {
+		bandLayout = bandCfg ? buildGrouped(bandRows, bandCfg.fields, bandFolded) : null;
+	}
+	/** Read every matching row for the bands. Superseded reads are dropped. */
+	async function loadBanded() {
+		const s = bound;
+		const seq = ++bandSeq;
+		if (!s) {
+			bandRead = [];
+			resortBands();
+			relayoutBands();
+			sync();
+			return;
+		}
+		applySourceSort();
+		ctrl.loading = true;
+		bandReading = true;
+		notify();
+		let rows = [];
+		let ok = false;
+		try {
+			await runLoad(async () => {
+				rows = await readAllFromSource({
+					chunkSize: bandCfg?.chunk ?? chunkSize,
+					countFirst: true
+				});
+			});
+			ok = true;
+		} finally {
+			if (seq === bandSeq) {
+				ctrl.loading = false;
+				bandReading = false;
+			}
+		}
+		if (seq !== bandSeq) return;
+		if (!ok) {
+			notify();
+			return;
+		}
+		bandRead = rows;
+		bandPageIndex = 0;
+		resortBands();
+		relayoutBands();
+		sync();
+		recomputeSummaries();
+	}
+	/** Map the banded rows (window / page / all) onto `ctrl` and render. */
+	function syncBands() {
+		const layout = bandLayout ?? {
+			grouped: [],
+			visible: [],
+			slotCount: 0
+		};
+		const vis = layout.visible;
+		ctrl.groupTree = false;
+		ctrl.scrollMode = scrollMode;
+		ctrl.loadedCount = bandRows.length;
+		ctrl.hasMore = false;
+		ctrl.totalCount = bandRows.length;
+		ctrl.pageSizeAll = pageSizeAll;
+		ctrl.grouped = layout.grouped;
+		ctrl.virtualSlotCount = layout.slotCount;
+		let start = 0;
+		let end = vis.length;
+		if (scrollMode === "virtual") {
+			const ss = Math.max(0, Math.min(vStart, layout.slotCount));
+			const se = Math.max(ss, Math.min(vEnd, layout.slotCount));
+			start = slotToRow(layout, ss);
+			end = Math.max(start, slotToRow(layout, se));
+			if (se > ss && end === start && start < vis.length) end = start + 1;
+			ctrl.pageIndex = 0;
+			ctrl.pageSize = vis.length || 1;
+			ctrl.pageCount = 1;
+		} else if (scrollMode === "infinity" || pageSizeAll) {
+			ctrl.pageIndex = 0;
+			ctrl.pageSize = vis.length || 1;
+			ctrl.pageCount = 1;
+		} else {
+			const size = Math.max(1, bandPageSize || preferredPageSize || bound?.pageSize?.() || opts.pageSize || 20);
+			const pageCount = Math.max(1, Math.ceil(vis.length / size));
+			bandPageIndex = Math.min(Math.max(0, bandPageIndex), pageCount - 1);
+			start = bandPageIndex * size;
+			end = Math.min(vis.length, start + size);
+			ctrl.pageIndex = bandPageIndex;
+			ctrl.pageSize = size;
+			ctrl.pageCount = pageCount;
+		}
+		const win = groupedWindow(layout, start, end);
+		ctrl.items = vis.slice(start, end);
+		ctrl.virtualStart = start;
+		ctrl.virtualEnd = end;
+		if (scrollMode === "virtual") {
+			ctrl.virtualPadTop = win.slotsAbove * bandRowHeight;
+			ctrl.virtualPadBottom = win.slotsBelow * bandRowHeight;
+			ctrl.virtualRowHeight = bandRowHeight;
+		} else {
+			ctrl.virtualPadTop = ctrl.virtualPadBottom = 0;
+			ctrl.virtualRowHeight = void 0;
+		}
+		ctrl.groupedWindow = win;
+		ensureBandInjector();
+		render();
+	}
+	/** Leave band mode: drop every banded buffer and the published band state. */
+	function clearBands() {
+		bandSeq++;
+		bandReading = false;
+		bandRead = null;
+		bandRows = [];
+		bandLayout = null;
+		bandPageIndex = 0;
+		ctrl.grouped = [];
+		ctrl.groupedWindow = null;
+		ctrl.virtualSlotCount = void 0;
+		ctrl.virtualRowHeight = void 0;
+	}
+	async function setGrouped(next) {
+		const sig = groupedSignature(next);
+		const resolved = normalizeGrouped(next);
+		if (sig === bandSig) {
+			if (resolved) bandCfg = resolved;
+			return;
+		}
+		const wasActive = bandsActive();
+		bandSig = sig;
+		bandCfg = resolved;
+		bandOpen.clear();
+		bandAll = null;
+		if (!bandsActive()) {
+			if (wasActive) {
+				clearBands();
+				stopBandInjector();
+				if (bound) {
+					applySourceSort();
+					await load();
+				} else sync();
+			}
+			return;
+		}
+		if (bandRead) {
+			resortBands();
+			relayoutBands();
+			sync();
+			applySourceSort();
+			return;
+		}
+		accumulated = [];
+		browserRows = null;
+		await loadBanded();
+	}
+	/**
+	* A band's fold state: a per-path choice (a click / `open()` / `close()`) wins,
+	* then the last expand-all / collapse-all, then its level's `open` default.
+	* Paths outlive a re-read (same keys → same path), so a search keeps the folds.
+	*/
+	function bandFolded(path, field) {
+		const open = bandOpen.get(path);
+		if (open !== void 0) return !open;
+		if (bandAll) return bandAll === "closed";
+		return field ? !field.open : false;
+	}
+	/** The level config a path belongs to (one encoded segment per level). */
+	function bandFieldOf(path) {
+		return bandCfg?.fields[path.split("/").length - 1];
+	}
+	function setBandOpen(path, open) {
+		if (!bandsActive() || !path) return;
+		const f = bandFieldOf(path);
+		if (f && !f.collapsible) return;
+		if (!bandFolded(path, f) === open) return;
+		bandOpen.set(path, open);
+		if (open && f && !f.stayOpen && bandCfg) {
+			const cut = path.lastIndexOf("/");
+			const parent = cut < 0 ? "" : path.slice(0, cut + 1);
+			const depth = path.split("/").length;
+			for (const p of collapsiblePaths(bandRows, bandCfg.fields)) {
+				if (p === path || p.split("/").length !== depth) continue;
+				if (parent ? !p.startsWith(parent) : false) continue;
+				if (!bandFolded(p, f)) bandOpen.set(p, false);
+			}
+		}
+		relayoutBands();
+		sync();
+	}
+	function toggleGrouped(path) {
+		setBandOpen(path, isGroupedCollapsed(path));
+	}
+	function isGroupedCollapsed(path) {
+		const f = bandFieldOf(path);
+		return !!f && f.collapsible && bandFolded(path, f);
+	}
+	function expandAllGrouped() {
+		if (!bandsActive()) return;
+		bandOpen.clear();
+		bandAll = "open";
+		relayoutBands();
+		sync();
+	}
+	function collapseAllGrouped() {
+		if (!bandsActive()) return;
+		bandOpen.clear();
+		bandAll = "closed";
+		relayoutBands();
+		sync();
+	}
+	function openGrouped(path) {
+		setBandOpen(path, true);
+	}
+	function closeGrouped(path) {
+		setBandOpen(path, false);
+	}
+	/**
+	* Remember the `<table>` the band rows go into. The injector itself only exists
+	* while bands are on (`ensureBandInjector`) — every table has headers calling in
+	* here, and a table without bands must not pay a subscriber + observer for it.
+	*/
+	function bindGroupedHost(tableEl) {
+		if (typeof document === "undefined") return;
+		if (tableEl === bandHostEl) return;
+		bandHostEl = tableEl;
+		bandInjector?.stop();
+		bandInjector = null;
+		if (bandsActive()) ensureBandInjector();
+	}
+	function ensureBandInjector() {
+		if (bandInjector || !bandHostEl || typeof document === "undefined") return;
+		bandInjector = new BandInjector(ctrl, bandHostEl);
+	}
+	function stopBandInjector() {
+		bandInjector?.stop();
+		bandInjector = null;
+	}
 	/** Scroll modes only apply to a flat (ungrouped, non-server) grid. */
 	function scrollActive() {
-		return scrollMode !== "off" && !isGrouped() && !serverMode();
+		return scrollMode !== "off" && !isGrouped() && !serverMode() && !bandsActive();
 	}
 	/** Map the accumulator (+ virtual window) onto `ctrl` and render. */
 	function syncScroll() {
 		const s = bound;
 		const total = s?.totalCount?.();
 		const hasTotal = typeof total === "number" && total >= 0;
-		ctrl.grouped = false;
+		ctrl.groupTree = false;
 		ctrl.pageSizeAll = false;
 		ctrl.scrollMode = scrollMode;
 		ctrl.loading = s?.isLoading?.() ?? false;
@@ -3228,6 +4326,12 @@ function monoDataGrid(ds = null, opts = {}) {
 		if (scrollMode === mode) return;
 		scrollMode = mode;
 		ctrl.scrollMode = mode;
+		if (bandsActive()) {
+			vStart = vEnd = 0;
+			if (bandRead) sync();
+			else if (reload && bound && !bandReading) await load();
+			return;
+		}
 		if (mode === "off") {
 			if (!reload) {
 				syncScroll();
@@ -3256,12 +4360,25 @@ function monoDataGrid(ds = null, opts = {}) {
 			scrollLoading = false;
 		}
 	}
-	function setVirtualWindow(start, end, padTop, padBottom) {
+	function setVirtualWindow(start, end, padTop, padBottom, rowHeight) {
 		if (scrollMode !== "virtual") return;
 		const ns = Math.max(0, Math.floor(start));
 		const ne = Math.max(ns, Math.floor(end));
 		const nt = Math.max(0, Math.round(padTop));
 		const nb = Math.max(0, Math.round(padBottom));
+		if (bandsActive()) {
+			let rh = Number(rowHeight);
+			if (!(rh > 0)) {
+				const below = (ctrl.virtualSlotCount ?? 0) - ne;
+				rh = ns > 0 && nt > 0 ? nt / ns : below > 0 && nb > 0 ? nb / below : bandRowHeight;
+			}
+			if (ns === vStart && ne === vEnd && rh === bandRowHeight) return;
+			vStart = ns;
+			vEnd = ne;
+			bandRowHeight = rh;
+			sync();
+			return;
+		}
 		if (ns === vStart && ne === vEnd && nt === vPadTop && nb === vPadBottom) return;
 		vStart = ns;
 		vEnd = ne;
@@ -3997,6 +5114,10 @@ function monoDataGrid(ds = null, opts = {}) {
 		if (typeof s?.setData !== "function") return;
 		bumpSummary("data");
 		await runLoad(() => s.setData(next));
+		if (bandsActive()) {
+			await loadBanded();
+			return;
+		}
 		if (scrollActive()) await loadScrollPage(true);
 	}
 	/** The combine gesture, remembered — see `MonoSetSortOptions.sticky`. */
@@ -4118,6 +5239,14 @@ function monoDataGrid(ds = null, opts = {}) {
 			await loadGroupsServer();
 			return;
 		}
+		if (bandsActive() && bandRead) {
+			applySourceSort();
+			bandPageIndex = 0;
+			resortBands();
+			relayoutBands();
+			sync();
+			return;
+		}
 		const s = bound;
 		if (!s) return;
 		applySourceSort();
@@ -4126,7 +5255,11 @@ function monoDataGrid(ds = null, opts = {}) {
 	}
 	async function setGroup(group) {
 		groupFields = toFields(group);
-		ctrl.grouped = groupFields.length > 0;
+		ctrl.groupTree = groupFields.length > 0;
+		if (groupFields.length && bandRead) {
+			clearBands();
+			stopBandInjector();
+		}
 		collapsed.clear();
 		groupRowPaging.clear();
 		groupPageIndex = 0;
@@ -4267,10 +5400,11 @@ function monoDataGrid(ds = null, opts = {}) {
 	*/
 	async function getData() {
 		if (browserRows && browserSortActive()) return [...browserRows];
+		if (bandsActive() && bandRead) return [...bandRows];
 		return readAllFromSource();
 	}
 	/** `getData`'s read — every matching row from the source, in its own order. */
-	async function readAllFromSource() {
+	async function readAllFromSource(read = {}) {
 		const s = bound;
 		if (!s) return [];
 		const loadOptions = {};
@@ -4279,7 +5413,8 @@ function monoDataGrid(ds = null, opts = {}) {
 		suppressSync = true;
 		try {
 			return await readAllRows(s, {
-				chunkSize,
+				chunkSize: read.chunkSize ?? chunkSize,
+				...read.countFirst ? { countFirst: true } : {},
 				select: opts.select ?? toList(resolvedOpts.select),
 				sort: mergedSort(),
 				...Object.keys(loadOptions).length ? { loadOptions } : {}
@@ -4326,6 +5461,8 @@ function monoDataGrid(ds = null, opts = {}) {
 		detach();
 		removeOutsideExit();
 		unbindRowTrigger();
+		stopBandInjector();
+		bandHostEl = null;
 		clearRowCaches();
 		formOps.length = 0;
 		formHandle = null;
@@ -4337,4 +5474,4 @@ function monoDataGrid(ds = null, opts = {}) {
 }
 
 //#endregion
-export { checkState as a, setAllChecked as c, buildDateTree as i, setChecked as l, countTuples as n, minimize as o, groupCountsViaApply as r, seedFromRanges as s, monoDataGrid as t };
+export { buildGrouped as _, checkState as a, rowToSlot as b, setAllChecked as c, columnCount as d, ensureRowHost as f, syncRowSpan as g, releaseRowHost as h, buildDateTree as i, setChecked as l, releaseOverlayHost as m, countTuples as n, minimize as o, overlayHost as p, groupCountsViaApply as r, seedFromRanges as s, monoDataGrid as t, applyOverlayHost as u, groupedWindow as v, slotToRow as x, normalizeGrouped as y };

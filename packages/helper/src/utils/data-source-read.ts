@@ -87,7 +87,18 @@ export interface ReadAllRowsOptions {
    * here override them.
    */
   loadOptions?: Record<string, unknown>
+  /**
+   * Ask for the total count with the FIRST chunk (`requireTotalCount` → OData
+   * `$count=true`), then fetch the remaining chunks — known up front — in parallel
+   * (at most {@link COUNT_FIRST_PARALLEL} in flight), assembled in order. A store
+   * that reports no count falls back to the "stop at the first short chunk" walk.
+   * Store reads only; an array source has nothing to count.
+   */
+  countFirst?: boolean
 }
+
+/** Chunks in flight at once on a `countFirst` drain. */
+export const COUNT_FIRST_PARALLEL = 4
 
 /** Stop runaway loops if a backend keeps returning full chunks forever. */
 const MAX_SKIP = 1e7
@@ -212,6 +223,7 @@ export async function readAllRows<T = any>(
       const loadOptions = { ...inheritedLoadOptionsOf(src), ...(options.loadOptions ?? {}) }
       return drainStore<T>(store, {
         chunkSize,
+        countFirst: options.countFirst === true,
         ...(select ? { select: select as string[] } : {}),
         ...(filter ? { filter } : {}),
         ...(sort ? { sort } : {}),
@@ -224,6 +236,7 @@ export async function readAllRows<T = any>(
   if (isStoreLike(src)) {
     return drainStore<T>(src, {
       chunkSize,
+      countFirst: options.countFirst === true,
       select: options.select,
       sort: options.sort,
       ...(options.filter ? { filter: options.filter } : {}),
@@ -234,33 +247,91 @@ export async function readAllRows<T = any>(
   return []
 }
 
-/** Loop `store.load` until a short chunk comes back. */
+/**
+ * One `store.load`, keeping the total count when the store reports one.
+ *
+ * devextreme resolves `load()` with the rows only — the count travels as the SECOND
+ * argument of its Deferred (`.done((data, extra) => extra.totalCount)`), which a
+ * plain `await` drops. A CustomStore may instead resolve `{ data, totalCount }`.
+ */
+function loadWithCount(store: ReadableStore, options: unknown): Promise<{ rows: any[]; total: number | null }> {
+  const num = (v: unknown): number | null =>
+    typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : null
+  const res = store.load(options) as any
+  if (res && typeof res.done === 'function') {
+    return new Promise((resolve, reject) => {
+      res.done((data: unknown, extra?: { totalCount?: unknown }) =>
+        resolve({ rows: rowsOf(data), total: num(extra?.totalCount ?? (data as any)?.totalCount) }),
+      )
+      if (typeof res.fail === 'function') res.fail(reject)
+      else if (typeof res.catch === 'function') res.catch(reject)
+    })
+  }
+  return Promise.resolve(res).then((data: unknown) => ({
+    rows: rowsOf(data),
+    total: num((data as any)?.totalCount),
+  }))
+}
+
+/** Loop `store.load` until a short chunk comes back — or, `countFirst`, up to the counted total. */
 async function drainStore<T>(
   store: ReadableStore,
   opts: {
     chunkSize: number
+    countFirst?: boolean
     select?: string[]
     filter?: unknown
     sort?: unknown
     loadOptions?: Record<string, unknown>
   },
 ): Promise<T[]> {
-  const acc: T[] = []
-  for (let skip = 0; ; skip += opts.chunkSize) {
-    const res = await store.load({
-      ...(opts.loadOptions ?? {}),
-      ...(opts.filter ? { filter: opts.filter } : {}),
-      ...(opts.sort ? { sort: opts.sort } : {}),
-      ...(opts.select ? { select: opts.select } : {}),
-      skip,
-      take: opts.chunkSize,
-      requireTotalCount: false,
-    })
-    const rows = rowsOf(res)
-    acc.push(...flattenLeaves<T>(rows))
-    if (rows.length < opts.chunkSize) break
-    if (skip > MAX_SKIP) break
+  const request = (skip: number, requireTotalCount: boolean) => ({
+    ...(opts.loadOptions ?? {}),
+    ...(opts.filter ? { filter: opts.filter } : {}),
+    ...(opts.sort ? { sort: opts.sort } : {}),
+    ...(opts.select ? { select: opts.select } : {}),
+    skip,
+    take: opts.chunkSize,
+    requireTotalCount,
+  })
+
+  // Rows are pushed one by one: spreading a large chunk into `push` can overflow the stack.
+  const append = (acc: T[], rows: any[]): void => {
+    for (const row of flattenLeaves<T>(rows)) acc.push(row)
   }
+
+  const walk = async (from: number, acc: T[]): Promise<T[]> => {
+    for (let skip = from; ; skip += opts.chunkSize) {
+      const rows = rowsOf(await store.load(request(skip, false)))
+      append(acc, rows)
+      if (rows.length < opts.chunkSize) break
+      if (skip > MAX_SKIP) break
+    }
+    return acc
+  }
+
+  if (!opts.countFirst) return walk(0, [])
+
+  const first = await loadWithCount(store, request(0, true))
+  const acc: T[] = []
+  append(acc, first.rows)
+  if (first.rows.length < opts.chunkSize) return acc
+  // No count reported: carry on the classic way from the second chunk.
+  if (first.total == null) return walk(opts.chunkSize, acc)
+
+  // The rest is known: every remaining skip, a few in flight at once, kept in order.
+  const skips: number[] = []
+  for (let skip = opts.chunkSize; skip < first.total && skip <= MAX_SKIP; skip += opts.chunkSize) skips.push(skip)
+  const chunks: any[][] = new Array(skips.length)
+  let next = 0
+  const worker = async (): Promise<void> => {
+    while (next < skips.length) {
+      const i = next++
+      chunks[i] = rowsOf(await store.load(request(skips[i]!, false)))
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(COUNT_FIRST_PARALLEL, skips.length) }, worker))
+  for (const rows of chunks) append(acc, rows ?? [])
   return acc
 }
 
