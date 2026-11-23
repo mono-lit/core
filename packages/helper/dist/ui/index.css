@@ -20824,7 +20824,16 @@ mono-shadow-table-checkbox {
 [mono-table][mono-sticky-head] tbody tr[mono-grouped] > td,[mono-table].mono-table-sticky-head tbody tr[mono-grouped] > td,.mono-table[mono-sticky-head] tbody tr[mono-grouped] > td,.mono-table.mono-table-sticky-head tbody tr[mono-grouped] > td,[mono-sticky-head] [mono-table] tbody tr[mono-grouped] > td,[mono-sticky-head] .mono-table tbody tr[mono-grouped] > td,.mono-table-sticky-head [mono-table] tbody tr[mono-grouped] > td,.mono-table-sticky-head .mono-table tbody tr[mono-grouped] > td {
   top: calc(var(--mono-table-grouped-head, 0px) + var(--_mono-table-grouped-level) * var(--_mono-table-grouped-h));
 }/* A deeper band pins under the outer ones; the outer ones stay on top where they cross. */
-[mono-table] tbody tr[mono-grouped][mono-grouped-level='0'] > td,.mono-table tbody tr[mono-grouped][mono-grouped-level='0'] > td { z-index: 4; }
+[mono-table] tbody tr[mono-grouped][mono-grouped-level='0'] > td,.mono-table tbody tr[mono-grouped][mono-grouped-level='0'] > td { z-index: 4; }/* Every band folded (`mono-grouped-folded`, set by mono): the body is nothing but
+   full-width bands, so the filler's column lines (see `mono-table-filler`) would
+   start under a band that has none. Blank them — every edge, the pinned ones'
+   `border-image` / shadow included. Weighted past the pinned-cell rules (0,3,2)
+   and a consumer's plain column rules. */
+[mono-table][mono-grouped-table][mono-grouped-folded] tbody tr[mono-filler] > td,[mono-table][mono-grouped-table][mono-grouped-folded] tbody tr.mono-table-filler > td,.mono-table[mono-grouped-table][mono-grouped-folded] tbody tr[mono-filler] > td,.mono-table[mono-grouped-table][mono-grouped-folded] tbody tr.mono-table-filler > td {
+  border-color: transparent;
+  border-image: none;
+  box-shadow: none;
+}
 [mono-table] tbody tr[mono-grouped][mono-grouped-collapsible],.mono-table tbody tr[mono-grouped][mono-grouped-collapsible] { cursor: pointer; }
 [mono-table] tbody tr[mono-grouped]:focus-visible,.mono-table tbody tr[mono-grouped]:focus-visible { outline: none; }
 [mono-table] tbody tr[mono-grouped]:focus-visible > td,.mono-table tbody tr[mono-grouped]:focus-visible > td {

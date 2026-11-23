@@ -3086,6 +3086,17 @@ mono-shadow-table-checkbox {
 /* A deeper band pins under the outer ones; the outer ones stay on top where they cross. */
 :is([mono-table],.mono-table) tbody tr[mono-grouped][mono-grouped-level='0'] > td { z-index: 4; }
 
+/* Every band folded (`mono-grouped-folded`, set by mono): the body is nothing but
+   full-width bands, so the filler's column lines (see `mono-table-filler`) would
+   start under a band that has none. Blank them — every edge, the pinned ones'
+   `border-image` / shadow included. Weighted past the pinned-cell rules (0,3,2)
+   and a consumer's plain column rules. */
+:is([mono-table],.mono-table)[mono-grouped-table][mono-grouped-folded] tbody tr:is([mono-filler],.mono-table-filler) > td {
+  border-color: transparent;
+  border-image: none;
+  box-shadow: none;
+}
+
 :is([mono-table],.mono-table) tbody tr[mono-grouped][mono-grouped-collapsible] { cursor: pointer; }
 :is([mono-table],.mono-table) tbody tr[mono-grouped]:focus-visible { outline: none; }
 :is([mono-table],.mono-table) tbody tr[mono-grouped]:focus-visible > td {

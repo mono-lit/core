@@ -4,6 +4,10 @@ import { MonoGroupedWindow } from "./grouped-bands.js";
 export interface BandHost {
   subscribe(cb: () => void): () => void;
   readonly groupedWindow: MonoGroupedWindow | null;
+  /** Every band drawn (the ones under a folded band are not). */
+  readonly grouped: readonly unknown[];
+  /** Bands + visible rows — equal to `grouped.length` when every band is folded. */
+  readonly virtualSlotCount?: number;
   readonly items: unknown[];
   readonly scrollMode: 'off' | 'infinity' | 'virtual';
   readonly virtualRowHeight?: number;

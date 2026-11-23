@@ -25,6 +25,8 @@ function host(collapsed = new Set<string>()) {
       return () => subs.delete(cb)
     },
     groupedWindow: groupedWindow(layout, 0, layout.visible.length),
+    grouped: layout.grouped,
+    virtualSlotCount: layout.slotCount,
     items: layout.visible,
     scrollMode: 'off',
     toggleGrouped: (p) => void toggled.push(p),
@@ -131,6 +133,23 @@ describe('BandInjector', () => {
     expect(order(el)).toEqual(['spacer', 'band:A(2)', 'row:1', 'row:2', 'band:B(1)', 'mono-table-filler'])
     expect(el.querySelector('tr[mono-grouped-collapsed]')!.getAttribute('aria-expanded')).toBe('false')
     inj.stop()
+  })
+
+  it('marks the table mono-grouped-folded only while every band is folded', () => {
+    const all = buildGrouped(rows, fields)
+    const el = table(3)
+    const open = new BandInjector(host(), el)
+    open.flush()
+    expect(el.hasAttribute('mono-grouped-folded')).toBe(false)
+    open.stop()
+
+    const el2 = table(0)
+    const inj = new BandInjector(host(new Set(all.grouped.map((b) => b.path))), el2)
+    inj.flush()
+    expect(order(el2)).toEqual(['band:A(2)', 'band:B(1)', 'spacer', 'mono-table-filler'])
+    expect(el2.hasAttribute('mono-grouped-folded')).toBe(true)
+    inj.stop()
+    expect(el2.hasAttribute('mono-grouped-folded')).toBe(false)
   })
 
   it('stop() removes every band row', () => {

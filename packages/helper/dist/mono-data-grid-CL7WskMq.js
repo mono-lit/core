@@ -730,6 +730,7 @@ var BandInjector = class {
 		for (const tr of this.rows.values()) tr.remove();
 		this.rows.clear();
 		this.table.removeAttribute("mono-grouped-table");
+		this.table.removeAttribute("mono-grouped-folded");
 		this.table.style.removeProperty("--mono-table-grouped-h");
 	}
 	/** One placement pass. Public for tests; normally driven by notify / mutations. */
@@ -744,6 +745,8 @@ var BandInjector = class {
 		const data = dataRowsOf(body);
 		if (data.length !== this.ctrl.items.length) return;
 		this.table.setAttribute("mono-grouped-table", "");
+		const folded = this.ctrl.grouped.length > 0 && this.ctrl.virtualSlotCount === this.ctrl.grouped.length;
+		if (folded !== this.table.hasAttribute("mono-grouped-folded")) this.table.toggleAttribute("mono-grouped-folded", folded);
 		const rh = this.ctrl.scrollMode === "virtual" ? this.ctrl.virtualRowHeight : void 0;
 		const hv = rh && rh > 0 ? `${rh}px` : "";
 		if (this.table.style.getPropertyValue("--mono-table-grouped-h") !== hv) {

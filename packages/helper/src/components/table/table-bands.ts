@@ -28,6 +28,10 @@ import type { MonoGroupedItem, MonoGroupedWindow } from './grouped-bands'
 export interface BandHost {
   subscribe(cb: () => void): () => void
   readonly groupedWindow: MonoGroupedWindow | null
+  /** Every band drawn (the ones under a folded band are not). */
+  readonly grouped: readonly unknown[]
+  /** Bands + visible rows — equal to `grouped.length` when every band is folded. */
+  readonly virtualSlotCount?: number
   readonly items: unknown[]
   readonly scrollMode: 'off' | 'infinity' | 'virtual'
   readonly virtualRowHeight?: number
@@ -119,6 +123,7 @@ export class BandInjector {
     for (const tr of this.rows.values()) tr.remove()
     this.rows.clear()
     this.table.removeAttribute('mono-grouped-table')
+    this.table.removeAttribute('mono-grouped-folded')
     this.table.style.removeProperty('--mono-table-grouped-h')
   }
 
@@ -135,6 +140,12 @@ export class BandInjector {
     if (data.length !== this.ctrl.items.length) return // mid-patch — the patch's own mutations come back here
 
     this.table.setAttribute('mono-grouped-table', '')
+    // Every band folded — no data row anywhere, only full-width bands. The CSS drops the
+    // filler's column lines then: under nothing but bands they would start from nowhere.
+    const folded = this.ctrl.grouped.length > 0 && this.ctrl.virtualSlotCount === this.ctrl.grouped.length
+    if (folded !== this.table.hasAttribute('mono-grouped-folded')) {
+      this.table.toggleAttribute('mono-grouped-folded', folded)
+    }
     const rh = this.ctrl.scrollMode === 'virtual' ? this.ctrl.virtualRowHeight : undefined
     const hv = rh && rh > 0 ? `${rh}px` : ''
     if (this.table.style.getPropertyValue('--mono-table-grouped-h') !== hv) {
