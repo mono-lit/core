@@ -180,7 +180,7 @@ export type { MonoEventProps } from '../composables/element-props'
 // Types are erased at build; re-export for DX parity with the full root entry.
 export type { MonoArraySourceOptions } from '../components/table/array-source'
 export type { MonoGroupNode } from '../components/table/grouping'
-export type { MonoGroupedItem, MonoGrouped, MonoGroupedField, MonoGroupedFieldConfig, MonoGroupedVariant } from '../components/table/grouped-bands'
+export type { MonoGroupedItem, MonoGrouped, MonoGroupedField, MonoGroupedFieldConfig, MonoGroupedVariant, MonoGroupedSelectable, MonoGroupedSelectableConfig, MonoGroupedCheckboxProps, MonoGroupedCheckState } from '../components/table/grouped-bands'
 export type {
   SortOrder,
   GroupPageInfo,

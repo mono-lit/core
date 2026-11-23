@@ -1,4 +1,4 @@
-import { t as monoDataDropdown } from "../../mono-data-dropdown-iQ3cEgyj.js";
+import { t as monoDataDropdown } from "../../mono-data-dropdown-DMnUW-I_.js";
 import { t as customElement } from "../../mono-element-D1l07Tbd.js";
 import { t as __decorate } from "../../decorate-BpnJwD08.js";
 import { t as MonoDropdownTableCore } from "../../dropdown-table-core-mcb5HJix.js";

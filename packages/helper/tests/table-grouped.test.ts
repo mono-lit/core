@@ -195,3 +195,80 @@ describe('monoDataGrid({ grouped })', () => {
     expect(grid.items).toHaveLength(5)
   })
 })
+
+describe('monoDataGrid({ grouped.selectable }) — band checkboxes', () => {
+  const sel = () =>
+    monoDataGrid<Row>(rows(), {
+      keyExpr: 'Id',
+      grouped: { selectable: { filter: (r: Row) => r.Id !== 3 }, fields: ['Brand'] },
+    })
+  const path = (grid: ReturnType<typeof sel>, brand: string) => grid.grouped.find((b) => b.key === brand)!.path
+
+  it('groupedRows returns every row of a band, folded or not', async () => {
+    const grid = sel()
+    await grid.load()
+    const b = path(grid, 'B')
+    grid.closeGrouped(b)
+    expect(grid.groupedRows(b).map((r) => r.Id).sort()).toEqual([1, 3])
+    expect(grid.groupedRows('nope')).toEqual([])
+  })
+
+  it('ticks only the band rows that pass `filter`, and reports all / some / none', async () => {
+    const grid = sel()
+    await grid.load()
+    const a = path(grid, 'A')
+    const b = path(grid, 'B')
+    expect(grid.groupedCheckState(a)).toBe('none')
+    grid.checkGrouped(a, true)
+    expect(grid.check().getAll().map((r) => r.Id).sort()).toEqual([2, 4, 5])
+    expect(grid.groupedCheckState(a)).toBe('all')
+    // B: row 3 is filtered out — ticking the band takes row 1 only, and that is "all".
+    grid.checkGrouped(b)
+    expect(grid.check().isChecked('1')).toBe(true)
+    expect(grid.check().isChecked('3')).toBe(false)
+    expect(grid.groupedCheckState(b)).toBe('all')
+    // A row box unticked → the band goes mixed.
+    grid.check().toggle(grid.groupedRows(a)[0]!, false)
+    expect(grid.groupedCheckState(a)).toBe('some')
+    grid.checkGrouped(a, false)
+    expect(grid.groupedCheckState(a)).toBe('none')
+    expect(grid.check().count()).toBe(1)
+  })
+
+  it("is 'empty' when no row of the band may be ticked", async () => {
+    const grid = monoDataGrid<Row>(rows(), {
+      keyExpr: 'Id',
+      grouped: { selectable: { filter: (r: Row) => r.Brand === 'A' }, fields: ['Brand'] },
+    })
+    await grid.load()
+    const b = path(grid as any, 'B')
+    expect(grid.groupedCheckState(b)).toBe('empty')
+    grid.checkGrouped(b, true)
+    expect(grid.check().count()).toBe(0)
+  })
+
+  it('rejects a band tick that would pass `max` as a whole', async () => {
+    const grid = sel()
+    await grid.load()
+    grid.check().configure({ max: 2 })
+    const v = grid.check().version
+    grid.checkGrouped(path(grid, 'A'), true) // 3 rows > max 2
+    expect(grid.check().count()).toBe(0)
+    expect(grid.check().version).toBeGreaterThan(v) // still a selection notify — the box repaints back
+  })
+})
+
+describe('select-all under grouped bands', () => {
+  it('judges allChecked / someChecked on every banded row, not the (folded) window', async () => {
+    const grid = monoDataGrid<Row>(rows(), { keyExpr: 'Id', grouped: { open: false, selectable: true, fields: ['Brand'] } })
+    await grid.load()
+    expect(grid.items).toEqual([]) // every band folded
+    expect([grid.check().allChecked, grid.check().someChecked]).toEqual([false, false])
+    grid.checkGrouped(grid.grouped.find((b) => b.key === 'A')!.path, true)
+    expect([grid.check().allChecked, grid.check().someChecked]).toEqual([false, true])
+    await grid.check().selectAll()
+    expect(grid.check().count()).toBe(5)
+    expect([grid.check().allChecked, grid.check().someChecked]).toEqual([true, false])
+    expect(grid.grouped.map((b) => grid.groupedCheckState(b.path))).toEqual(['all', 'all'])
+  })
+})

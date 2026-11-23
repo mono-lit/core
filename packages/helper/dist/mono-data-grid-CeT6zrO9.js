@@ -115,6 +115,30 @@ const VARIANTS = [
 	"tonal",
 	"text"
 ];
+/**
+* Resolve a `selectable` against what it inherits: `undefined` inherits, `false` /
+* `null` is none, `true` takes the inherited options (or the defaults), an object
+* is merged over the inherited options — its `checkbox` props over the inherited
+* `checkbox` props, one key at a time (`undefined` keys inherit).
+*/
+function resolveSelectable(value, inherited) {
+	if (value === void 0) return inherited;
+	if (value === false || value === null) return null;
+	const base = inherited ?? { checkbox: {} };
+	if (value === true || typeof value !== "object") return {
+		...base,
+		checkbox: { ...base.checkbox }
+	};
+	const checkbox = { ...base.checkbox };
+	if (value.checkbox && typeof value.checkbox === "object") {
+		for (const [k, v] of Object.entries(value.checkbox)) if (v !== void 0) checkbox[k] = v;
+	}
+	return {
+		filter: typeof value.filter === "function" ? value.filter : base.filter,
+		field: typeof value.field === "string" && value.field ? value.field : base.field,
+		checkbox
+	};
+}
 /** Resolve a config; `null` when there is nothing to band by. */
 function normalizeGrouped(cfg) {
 	if (!cfg || typeof cfg !== "object" || !Array.isArray(cfg.fields)) return null;
@@ -122,6 +146,7 @@ function normalizeGrouped(cfg) {
 	const open = cfg.open !== false;
 	const stayOpen = cfg.stayOpen !== false;
 	const icon = cfg.icon ?? "";
+	const selectable = resolveSelectable(cfg.selectable, null);
 	const entries = cfg.fields.map((f, i) => ({
 		f: typeof f === "string" ? { field: f } : f,
 		i
@@ -145,7 +170,8 @@ function normalizeGrouped(cfg) {
 			collapsible: typeof f.collapsible === "boolean" ? f.collapsible : collapsible,
 			open: typeof f.open === "boolean" ? f.open : open,
 			stayOpen: typeof f.stayOpen === "boolean" ? f.stayOpen : stayOpen,
-			icon: f.icon !== void 0 && f.icon !== null ? f.icon : icon
+			icon: f.icon !== void 0 && f.icon !== null ? f.icon : icon,
+			selectable: resolveSelectable(f.selectable, selectable)
 		});
 	}
 	return {
@@ -154,7 +180,8 @@ function normalizeGrouped(cfg) {
 		collapsible,
 		open,
 		stayOpen,
-		icon
+		icon,
+		selectable
 	};
 }
 /**
@@ -165,7 +192,12 @@ function normalizeGrouped(cfg) {
 function groupedSignature(cfg) {
 	if (!cfg || typeof cfg !== "object" || !Array.isArray(cfg.fields)) return "";
 	const fn = (v) => typeof v === "function" ? "ƒ" : v ?? null;
+	const sel = (v) => v && typeof v === "object" ? {
+		...v,
+		filter: fn(v.filter)
+	} : v ?? null;
 	return JSON.stringify({
+		sel: sel(cfg.selectable),
 		c: cfg.chunk ?? null,
 		k: cfg.collapsible ?? null,
 		p: cfg.open ?? null,
@@ -181,7 +213,8 @@ function groupedSignature(cfg) {
 			k: f.collapsible ?? null,
 			p: f.open ?? null,
 			s: f.stayOpen ?? null,
-			i: fn(f.icon)
+			i: fn(f.icon),
+			sel: sel(f.selectable)
 		})
 	});
 }
@@ -265,7 +298,8 @@ function buildGrouped(rows, fields, collapsed = /* @__PURE__ */ new Set()) {
 	/** Level of the outermost collapsed open band, or -1. */
 	let foldedAt = -1;
 	let prev = null;
-	for (const row of rows) {
+	for (let ri = 0; ri < rows.length; ri++) {
+		const row = rows[ri];
 		const keys = fields.map((f) => bandKeyOf(row, f.field));
 		const strs = keys.map(keyString);
 		let d = 0;
@@ -291,6 +325,8 @@ function buildGrouped(rows, fields, collapsed = /* @__PURE__ */ new Set()) {
 					variant: resolveVariant(f.variant, row),
 					color: resolveColor(f.color, row),
 					icon: resolveIcon(f.icon, row),
+					selectable: f.selectable,
+					from: ri,
 					collapsible: f.collapsible,
 					collapsed: isCollapsed,
 					at: visible.length,
@@ -661,7 +697,64 @@ function applyOverlayHost(el, on, opts) {
 * group rows. The same set the zebra stripe skips. If that count does not match
 * `ctrl.items` the framework is mid-patch and the pass is skipped; its own
 * mutations trigger the next one.
+*
+* Band checkboxes (`selectable`): a band at a level with `selectable` gets a
+* `<mono-table-checkbox type="grouped">` in the column the ROW checkboxes sit in —
+* found from a data row's `mono-table-checkbox` (else a header one, else the
+* configured `field`'s header cell), remembered for when every band is folded. The
+* band is then cut into: one lead cell per cell in front of that column (mirroring
+* its pinning, so a pinned flag column stays pinned), the checkbox cell, and the
+* label cell spanning the rest. No row checkbox anywhere → no band checkbox.
 */
+/** The row checkbox element tags — light and shadow builds. */
+const ROW_CHECKBOX = "mono-table-checkbox, mono-shadow-table-checkbox";
+const PIN_LEFT = ".mono-table-sticky-left,[mono-sticky-left]";
+const PIN_RIGHT = ".mono-table-sticky-right,[mono-sticky-right]";
+function pinOf(cell) {
+	return cell.matches(PIN_LEFT) ? "left" : cell.matches(PIN_RIGHT) ? "right" : null;
+}
+function pinStyle(cell) {
+	const st = cell.style;
+	const out = [];
+	for (const prop of [
+		"--mono-table-sticky-left",
+		"--mono-table-sticky-right",
+		"left",
+		"right"
+	]) {
+		const v = st.getPropertyValue(prop);
+		if (v) out.push(`${prop}: ${v}`);
+	}
+	return out.join("; ");
+}
+/** The cells of `row` up to and including `target`, as a {@link CheckColumn}. */
+function columnFrom(row, target, box) {
+	const cells = [];
+	let cols = 0;
+	for (const cell of Array.from(row.cells)) {
+		cells.push({
+			span: Math.max(1, cell.colSpan || 1),
+			pin: pinOf(cell),
+			style: pinStyle(cell)
+		});
+		cols += Math.max(1, cell.colSpan || 1);
+		if (cell === target) break;
+	}
+	const cs = getComputedStyle(target);
+	const labelLeft = pinOf(target) === "left" ? (parseFloat(cs.left) || 0) + target.getBoundingClientRect().width : 0;
+	const el = box;
+	return {
+		tag: el?.localName ?? "mono-table-checkbox",
+		size: el?.size || void 0,
+		color: el?.color || void 0,
+		cells,
+		cols,
+		labelLeft: Math.round(labelLeft),
+		align: box ? cs.textAlign : ""
+	};
+}
+/** The band box's `cssClass` when none is configured — one object, so it never reads as a change. */
+const NO_CSS_CLASS = Object.freeze({});
 const NON_DATA_ROW = "[mono-grouped],[data-mono-stripe-skip],[aria-hidden=\"true\"],[mono-detail-row],.mono-table-detail-row,[mono-filler],.mono-table-filler,[mono-group-row],.mono-table-group-row";
 /** The tbody's data rows, in order — see the module comment. */
 function dataRowsOf(body) {
@@ -681,6 +774,7 @@ var BandInjector = class {
 		this.ro = null;
 		this.queued = false;
 		this.stopped = false;
+		this.checkCol = null;
 		this.ctrl = ctrl;
 		this.table = table;
 		this.unsubscribe = ctrl.subscribe(() => this.schedule());
@@ -756,6 +850,7 @@ var BandInjector = class {
 		if (!this.table.style.getPropertyValue("--mono-table-grouped-head")) this.syncHeadHeight();
 		const span = columnCount(this.table) || 1;
 		const keep = /* @__PURE__ */ new Set();
+		const checkCol = this.findCheckColumn(data, win, span);
 		const groups = [];
 		const atZero = win.before.get(0) ?? [];
 		if (win.leads.length || atZero.length) groups.push({
@@ -770,7 +865,7 @@ var BandInjector = class {
 		for (const { bands, off } of groups) {
 			const trs = bands.map((b) => {
 				keep.add(b.path);
-				return this.rowFor(b, span);
+				return this.rowFor(b, span, checkCol);
 			});
 			if (off < data.length) {
 				let ref = data[off];
@@ -795,8 +890,62 @@ var BandInjector = class {
 		}
 		this.mo?.takeRecords();
 	}
+	/**
+	* The column the band checkboxes go in, or `null` (no band asks for one, or the
+	* table has no row checkbox to line up with). See the module comment.
+	*/
+	findCheckColumn(data, win, span) {
+		let field;
+		let wanted = false;
+		for (const b of [...win.leads, ...[...win.before.values()].flat()]) {
+			if (!b.selectable) continue;
+			wanted = true;
+			field ??= b.selectable.field;
+		}
+		if (!wanted) return this.checkCol;
+		let found = null;
+		for (const row of data) {
+			const box = row.querySelector(ROW_CHECKBOX);
+			const cell = box?.closest("td,th");
+			if (box && cell && cell.parentElement === row) {
+				found = columnFrom(row, cell, box);
+				break;
+			}
+		}
+		if (!found && this.table.tHead) for (const row of Array.from(this.table.tHead.rows)) {
+			let cell = null;
+			let box = null;
+			for (const c of Array.from(row.cells)) {
+				box = c.querySelector(ROW_CHECKBOX);
+				if (box) {
+					cell = c;
+					break;
+				}
+				const th = c.querySelector("mono-table-th, mono-shadow-table-th");
+				if (field && (c.getAttribute("data-field") === field || th?.field === field || th?.getAttribute("field") === field)) {
+					cell = c;
+					break;
+				}
+			}
+			if (cell) {
+				found = columnFrom(row, cell, box);
+				if (!box) {
+					found.tag = this.checkCol?.tag ?? "mono-table-checkbox";
+					found.size ??= this.checkCol?.size;
+					found.color ??= this.checkCol?.color;
+					found.align = this.checkCol?.align ?? "";
+				}
+				break;
+			}
+		}
+		if (found && found.cols >= span) found = null;
+		if (found) this.checkCol = found;
+		const col = found ?? this.checkCol;
+		if (col && typeof customElements !== "undefined" && !customElements.get(col.tag)) return null;
+		return col;
+	}
 	/** The band's row — created on first use, its attributes / text kept current. */
-	rowFor(b, span) {
+	rowFor(b, span, checkCol) {
 		let tr = this.rows.get(b.path);
 		if (!tr) {
 			tr = document.createElement("tr");
@@ -821,15 +970,17 @@ var BandInjector = class {
 			label.append(chevron, icon, text, count);
 			td.appendChild(label);
 			tr.appendChild(td);
-			const toggle = () => {
+			const toggle = (e) => {
+				if (e.target?.closest?.("[mono-grouped-check]")) return;
 				const path = tr.dataset.groupedPath;
 				if (path && tr.hasAttribute("mono-grouped-collapsible")) this.ctrl.toggleGrouped(path);
 			};
 			tr.addEventListener("click", toggle);
 			tr.addEventListener("keydown", (e) => {
 				if (e.key === "Enter" || e.key === " ") {
+					if (e.target?.closest?.("[mono-grouped-check]")) return;
 					e.preventDefault();
-					toggle();
+					toggle(e);
 				}
 			});
 			this.rows.set(b.path, tr);
@@ -853,8 +1004,17 @@ var BandInjector = class {
 		set("mono-grouped-collapsed", b.collapsed ? "" : null);
 		set("aria-expanded", b.collapsible ? String(!b.collapsed) : null);
 		set("tabindex", b.collapsible ? "0" : null);
-		const td = tr.firstElementChild;
-		if (td.colSpan !== span) td.colSpan = span;
+		const td = tr.querySelector(":scope > td[mono-grouped-cell]");
+		const withCheck = checkCol && b.selectable ? checkCol : null;
+		this.syncCells(tr, td, b, withCheck);
+		const labelSpan = withCheck ? span - withCheck.cols : span;
+		if (td.colSpan !== labelSpan) td.colSpan = labelSpan;
+		const left = withCheck?.labelLeft ? `${withCheck.labelLeft}px` : "";
+		if (td.style.getPropertyValue("--_mono-table-grouped-label-left") !== left) {
+			if (left) td.style.setProperty("--_mono-table-grouped-label-left", left);
+			else td.style.removeProperty("--_mono-table-grouped-label-left");
+		}
+		set("mono-grouped-selectable", withCheck ? "" : null);
 		const label = td.firstElementChild;
 		const [, icon, text, count] = Array.from(label.children);
 		this.syncIcon(icon, b.icon);
@@ -863,6 +1023,47 @@ var BandInjector = class {
 		if (count.textContent !== c) count.textContent = c;
 		if (count.hidden !== !b.showCount) count.hidden = !b.showCount;
 		return tr;
+	}
+	/**
+	* The cells in front of the label: the lead cells and the checkbox cell, rebuilt only
+	* when the column layout changed; the checkbox's own props kept current.
+	*/
+	syncCells(tr, label, b, col) {
+		const shape = col ? `${col.tag}|${col.align}|${col.cells.map((c) => `${c.span}:${c.pin ?? ""}:${c.style}`).join(",")}` : "";
+		if ((tr.dataset.groupedShape ?? "") !== shape) {
+			tr.dataset.groupedShape = shape;
+			while (tr.firstElementChild && tr.firstElementChild !== label) tr.firstElementChild.remove();
+			if (col) col.cells.forEach((c, i) => {
+				const cell = document.createElement("td");
+				const isCheck = i === col.cells.length - 1;
+				cell.setAttribute(isCheck ? "mono-grouped-check" : "mono-grouped-lead", "");
+				if (c.span > 1) cell.colSpan = c.span;
+				if (c.pin) cell.setAttribute(`mono-sticky-${c.pin}`, "");
+				const style = [c.style, isCheck && col.align ? `text-align: ${col.align}` : ""].filter(Boolean).join("; ");
+				if (style) cell.setAttribute("style", style);
+				if (isCheck) cell.appendChild(document.createElement(col.tag));
+				tr.insertBefore(cell, label);
+			});
+		}
+		if (!col) return;
+		const box = tr.querySelector(":scope > td[mono-grouped-check] > *");
+		if (!box) return;
+		const cb = b.selectable.checkbox;
+		if (box.type !== "grouped") box.type = "grouped";
+		if (box.groupedPath !== b.path) box.groupedPath = b.path;
+		if (box.dataGrid !== this.ctrl) box.dataGrid = this.ctrl;
+		const want = {
+			size: cb.size ?? col.size ?? "md",
+			color: cb.color ?? col.color ?? "primary",
+			disabled: cb.disabled ?? false,
+			label: cb.label ?? "",
+			sublabel: cb.sublabel ?? "",
+			ariaLabelText: cb.ariaLabelText ?? b.label,
+			cssClass: cb.cssClass ?? NO_CSS_CLASS,
+			cssClassName: cb.cssClassName ?? ""
+		};
+		const el = box;
+		for (const [k, v] of Object.entries(want)) if (el[k] !== v) el[k] = v;
 	}
 	/**
 	* The band's icon, the way every mono icon works: an iconify class
@@ -1472,6 +1673,9 @@ function monoDataGrid(ds = null, opts = {}) {
 		expandAllGrouped,
 		collapseAllGrouped,
 		bindGroupedHost,
+		groupedRows,
+		groupedCheckState,
+		checkGrouped,
 		dataSource: null,
 		editingKey: null,
 		editableTrigger: opts.editableTrigger ?? "click",
@@ -2162,10 +2366,12 @@ function monoDataGrid(ds = null, opts = {}) {
 			return checkPending;
 		},
 		get allChecked() {
+			if (bandsActive() && bandRead) return bandSelection() === "all";
 			const rows = ctrl.items;
 			return rows.length > 0 && rows.every((row, i) => checkedRows.has(rowKeyOf(row, i)));
 		},
 		get someChecked() {
+			if (bandsActive() && bandRead) return bandSelection() === "some";
 			const rows = ctrl.items;
 			if (!rows.length || !checkedRows.size) return false;
 			return !rows.every((row, i) => checkedRows.has(rowKeyOf(row, i)));
@@ -4262,6 +4468,88 @@ function monoDataGrid(ds = null, opts = {}) {
 		bandInjector?.stop();
 		bandInjector = null;
 		if (bandsActive()) ensureBandInjector();
+	}
+	let bandByPathFor = null;
+	let bandByPath = /* @__PURE__ */ new Map();
+	let bandStateFor = null;
+	let bandStateVersion = -1;
+	const bandStates = /* @__PURE__ */ new Map();
+	function bandItem(path) {
+		if (!bandLayout) return void 0;
+		if (bandByPathFor !== bandLayout) {
+			bandByPathFor = bandLayout;
+			bandByPath = new Map(bandLayout.grouped.map((b) => [b.path, b]));
+		}
+		return bandByPath.get(path);
+	}
+	function groupedRows(path) {
+		const b = bandItem(path);
+		return b ? bandRows.slice(b.from, b.from + b.count) : [];
+	}
+	/** The rows a band box ticks: the band's rows through its level's `filter`. */
+	function bandTickable(path) {
+		const b = bandItem(path);
+		if (!b) return [];
+		const rows = groupedRows(path);
+		const filter = b.selectable?.filter;
+		if (!filter) return rows;
+		return rows.filter((r) => {
+			try {
+				return !!filter(r);
+			} catch {
+				return false;
+			}
+		});
+	}
+	/** Every banded row against the selection — the select-all's state in band mode (cached like a band's). */
+	let bandAllFor = null;
+	let bandAllVersion = -1;
+	let bandAllState = "empty";
+	function bandSelection() {
+		if (bandAllFor !== bandRows || bandAllVersion !== checkVersion) {
+			bandAllFor = bandRows;
+			bandAllVersion = checkVersion;
+			let n = 0;
+			if (checkedRows.size) {
+				for (const r of bandRows) if (checkedRows.has(rowKey(r))) n++;
+			}
+			bandAllState = !bandRows.length ? "empty" : n === 0 ? "none" : n === bandRows.length ? "all" : "some";
+		}
+		return bandAllState;
+	}
+	function groupedCheckState(path) {
+		if (bandStateFor !== bandLayout || bandStateVersion !== checkVersion) {
+			bandStateFor = bandLayout;
+			bandStateVersion = checkVersion;
+			bandStates.clear();
+		}
+		const hit = bandStates.get(path);
+		if (hit) return hit;
+		const rows = bandTickable(path);
+		let n = 0;
+		for (const r of rows) if (checkedRows.has(rowKey(r))) n++;
+		const state = !rows.length ? "empty" : n === 0 ? "none" : n === rows.length ? "all" : "some";
+		bandStates.set(path, state);
+		return state;
+	}
+	function checkGrouped(path, checked) {
+		const b = bandItem(path);
+		if (!b || !b.selectable || b.selectable.checkbox.disabled || checkPending) {
+			checkChanged();
+			return;
+		}
+		const rows = bandTickable(path);
+		const next = checked === void 0 ? groupedCheckState(path) !== "all" : checked;
+		const keyed = rows.map((r) => [rowKey(r), r]);
+		const { max, min } = checkLimits();
+		if (next) {
+			const add = keyed.filter(([k]) => !checkedRows.has(k));
+			if (!(max !== void 0 && checkedRows.size + add.length > max)) for (const [k, r] of add) checkedRows.set(k, r);
+		} else {
+			const drop = keyed.filter(([k]) => checkedRows.has(k));
+			if (!(min !== void 0 && checkedRows.size - drop.length < min)) for (const [k] of drop) checkedRows.delete(k);
+		}
+		checkChanged();
 	}
 	function ensureBandInjector() {
 		if (bandInjector || !bandHostEl || typeof document === "undefined") return;

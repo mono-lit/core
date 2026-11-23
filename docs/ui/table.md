@@ -898,14 +898,36 @@ You can also pass `controlMonoTable(data, { grouped })`, set it on `props.th[].g
   - `color`: a theme token (`primary`, `success`, `danger`, …) or any CSS colour. Default `'primary'`.
   - `order`: the nesting position (lower = outer). Use it instead of the array order.
   - `icon`: an iconify class (`i-mdi-tag`) or an emoji (`🏷️`) in front of the label, or a function of the band's first row. Also settable once for every level; `''` turns it off for a field.
-  - `collapsible`, `open` and `stayOpen`: per level.
+  - `collapsible`, `open`, `stayOpen` and `selectable`: per level.
 
   `variant` and `color` also take a function of the band's first row, so one level can colour each band differently.
 - **`chunk`** (default `100`) is the request size. Bands need **every** matching row to know their boundaries and counts, so the table reads them all. The first request carries `$count`, which tells it exactly how many more chunks to fetch (up to 4 in flight at once). A local array needs no requests.
 - **`collapsible`** (default `true`) lets a click, Enter or Space fold a band: its rows and its inner bands hide, and its count stays.
 - **`open`** (default `true`) is whether bands start open. Set `open: false` to start folded, for every level or per field.
 - **`stayOpen`** (default `true`): `false` makes an accordion, where opening a band closes its open siblings (same level, same parent). For every level or per field.
+- **`selectable`** (default off) puts a checkbox on each band that selects the band's rows. `true`, or `{ filter, field, checkbox }`; for every level or per field (`false` turns one level off, an object is merged over the table-level one). Details below.
 - From code: `table.grouped` lists every band (`path`, `label`, `count`, `collapsed`, …); `table.collapseAllGrouped()` and `table.expandAllGrouped()` act on all of them; `toggleGrouped(path)`, `openGrouped(path)`, `closeGrouped(path)` and `isGroupedCollapsed(path)` act on one.
+
+### Band checkboxes (`selectable`)
+
+When the rows have `<mono-table-checkbox>`es, `selectable` gives every band one too, in the **same column**, pinned the same way. There is no event code to write: the band box reads and writes the same selection as the row boxes (`table.check()`).
+
+```html
+<mono-table-th :control-table.prop="table" field="Brand"
+  :grouped.prop="{
+    selectable: { filter: (r) => !r.Locked, checkbox: { size: 'lg', color: 'success' } },
+    fields: ['Brand', { field: 'Code', selectable: false }],
+  }" />
+```
+
+- Ticking a band selects every row of the band, folded rows included. Unticking unselects them. The band shows checked, mixed or unchecked from those rows, and follows the row boxes as they change. Clicking the box never folds the band.
+- The options: `filter(row)` (the rows a band box may tick; a band with none is disabled) and `field` (below) are the band's. Everything about the box itself goes under **`checkbox`**: the same props as `<mono-table-checkbox>`, namely `size`, `color`, `disabled`, `label`, `sublabel`, `ariaLabelText`, `cssClass` and `cssClassName`. Unset `size` and `color` follow the row boxes; unset `ariaLabelText` is the band's label. A field's `checkbox` merges over the table-level one, key by key.
+- **Finding the column.** mono looks for a data row's `mono-table-checkbox`, then a header one (`type="all"`). It remembers the column for when every band is folded. If neither exists when the bands first draw (for example everything starts folded and the header has a plain checkbox), name the column with `field`: a header cell holding `<mono-table-th field>` or carrying `data-field`. A table with no row checkbox gets no band checkbox.
+- A tick that would pass the selection's `max` (or drop under `min`) is refused whole.
+- Rows are matched by key across the virtual window, so set `keyExpr`.
+- From code: `table.groupedRows(path)`, `table.groupedCheckState(path)` (`'all' | 'some' | 'none' | 'empty'`) and `table.checkGrouped(path, checked?)`.
+
+The band row is then cut into one cell per column before the checkbox (`[mono-grouped-lead]`, each pinned like its row cell), the checkbox cell (`[mono-grouped-check]`), and the label cell, which spans the rest and slides along past the pinned cells on a sideways scroll.
 
 The band fields **lead the sort**, so the bands stay contiguous. A header sort orders the rows *inside* each band, in memory and without a reload. Sorting a band field itself flips that band order. Search and filters re-read the rows.
 

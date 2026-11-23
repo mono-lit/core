@@ -21,6 +21,7 @@ import {
   type MonoGroupedWindow,
   type MonoGrouped,
   type MonoGroupedResolved,
+  type MonoGroupedCheckState,
 } from './grouped-bands'
 import { BandInjector } from './table-bands'
 import {
@@ -353,6 +354,10 @@ export type {
   MonoGrouped,
   MonoGroupedField,
   MonoGroupedFieldConfig,
+  MonoGroupedSelectable,
+  MonoGroupedSelectableConfig,
+  MonoGroupedCheckboxProps,
+  MonoGroupedCheckState,
 } from './grouped-bands'
 export type { MonoDateLevel, MonoDateRange } from './date-filter-tree'
 export { isDateRange } from './date-filter-tree'
@@ -1544,6 +1549,23 @@ export interface MonoTableController<T = any> {
   collapseAllGrouped(): void
   /** Hand the controller the `<table>` the band rows go into — called by `mono-table-th`; idempotent. */
   bindGroupedHost(tableEl: HTMLElement | null): void
+  /**
+   * Every row of a drawn band (its folded rows included), in display order. Empty for an
+   * unknown path or a band hidden under a folded one.
+   */
+  groupedRows(path: string): T[]
+  /**
+   * The band checkbox's state over the band's rows that pass its `selectable.filter`:
+   * `'all'` / `'some'` / `'none'` selected, or `'empty'` when no row may be ticked.
+   */
+  groupedCheckState(path: string): MonoGroupedCheckState
+  /**
+   * Select (`true`) or unselect (`false`) a band's tickable rows in `check()` — one
+   * update. Omit `checked` to flip it. Respects the selection's `max` / `min`: a tick that
+   * would cross one is rejected whole (the store still notifies, so the box reverts).
+   * Needs a `keyExpr` (rows are matched by key across the virtual window).
+   */
+  checkGrouped(path: string, checked?: boolean): void
 
   /** The bound source (or null). */
   readonly dataSource: MonoGridSource<T> | null
@@ -2306,6 +2328,9 @@ export function monoDataGrid<T = any>(
     expandAllGrouped,
     collapseAllGrouped,
     bindGroupedHost,
+    groupedRows,
+    groupedCheckState,
+    checkGrouped,
     dataSource: null,
     editingKey: null,
     editableTrigger: opts.editableTrigger ?? 'click',
@@ -3149,10 +3174,14 @@ export function monoDataGrid<T = any>(
       return checkPending
     },
     get allChecked(): boolean {
+      // Group bands hold EVERY row; the window (`items`) is empty when they are all folded,
+      // and a band box ticks rows the window does not show — judge the select-all on them all.
+      if (bandsActive() && bandRead) return bandSelection() === 'all'
       const rows = ctrl.items as T[]
       return rows.length > 0 && rows.every((row, i) => checkedRows.has(rowKeyOf(row, i)))
     },
     get someChecked(): boolean {
+      if (bandsActive() && bandRead) return bandSelection() === 'some'
       const rows = ctrl.items as T[]
       if (!rows.length || !checkedRows.size) return false
       return !rows.every((row, i) => checkedRows.has(rowKeyOf(row, i)))
@@ -5843,6 +5872,104 @@ export function monoDataGrid<T = any>(
     bandInjector?.stop()
     bandInjector = null
     if (bandsActive()) ensureBandInjector()
+  }
+
+  // --- Band checkboxes (`selectable`) ----------------------------------------------
+  // The band's rows are a slice of `bandRows` (`[from, from + count)`); its state is
+  // read from the SAME `checkedRows` every `<mono-table-checkbox>` reads, so a band box
+  // and the row boxes can never disagree. Cached per (layout, selection version): every
+  // band box asks on every notify, and a 30k-row band must not be re-walked for a
+  // virtual-scroll window shift.
+  let bandByPathFor: MonoGroupedLayout<T> | null = null
+  let bandByPath = new Map<string, MonoGroupedItem<T>>()
+  let bandStateFor: MonoGroupedLayout<T> | null = null
+  let bandStateVersion = -1
+  const bandStates = new Map<string, MonoGroupedCheckState>()
+
+  function bandItem(path: string): MonoGroupedItem<T> | undefined {
+    if (!bandLayout) return undefined
+    if (bandByPathFor !== bandLayout) {
+      bandByPathFor = bandLayout
+      bandByPath = new Map(bandLayout.grouped.map((b) => [b.path, b]))
+    }
+    return bandByPath.get(path)
+  }
+
+  function groupedRows(path: string): T[] {
+    const b = bandItem(path)
+    return b ? bandRows.slice(b.from, b.from + b.count) : []
+  }
+
+  /** The rows a band box ticks: the band's rows through its level's `filter`. */
+  function bandTickable(path: string): T[] {
+    const b = bandItem(path)
+    if (!b) return []
+    const rows = groupedRows(path)
+    const filter = b.selectable?.filter
+    if (!filter) return rows
+    return rows.filter((r) => {
+      try {
+        return !!filter(r)
+      } catch {
+        return false
+      }
+    })
+  }
+
+  /** Every banded row against the selection — the select-all's state in band mode (cached like a band's). */
+  let bandAllFor: T[] | null = null
+  let bandAllVersion = -1
+  let bandAllState: MonoGroupedCheckState = 'empty'
+  function bandSelection(): MonoGroupedCheckState {
+    if (bandAllFor !== bandRows || bandAllVersion !== checkVersion) {
+      bandAllFor = bandRows
+      bandAllVersion = checkVersion
+      let n = 0
+      if (checkedRows.size) for (const r of bandRows) if (checkedRows.has(rowKey(r))) n++
+      bandAllState = !bandRows.length ? 'empty' : n === 0 ? 'none' : n === bandRows.length ? 'all' : 'some'
+    }
+    return bandAllState
+  }
+
+  function groupedCheckState(path: string): MonoGroupedCheckState {
+    if (bandStateFor !== bandLayout || bandStateVersion !== checkVersion) {
+      bandStateFor = bandLayout
+      bandStateVersion = checkVersion
+      bandStates.clear()
+    }
+    const hit = bandStates.get(path)
+    if (hit) return hit
+    const rows = bandTickable(path)
+    let n = 0
+    for (const r of rows) if (checkedRows.has(rowKey(r))) n++
+    const state: MonoGroupedCheckState = !rows.length ? 'empty' : n === 0 ? 'none' : n === rows.length ? 'all' : 'some'
+    bandStates.set(path, state)
+    return state
+  }
+
+  function checkGrouped(path: string, checked?: boolean): void {
+    const b = bandItem(path)
+    if (!b || !b.selectable || b.selectable.checkbox.disabled || checkPending) {
+      checkChanged() // nothing moves — the box repaints back
+      return
+    }
+    const rows = bandTickable(path)
+    const next = checked === undefined ? groupedCheckState(path) !== 'all' : checked
+    const keyed = rows.map((r) => [rowKey(r), r] as const)
+    const { max, min } = checkLimits()
+    if (next) {
+      const add = keyed.filter(([k]) => !checkedRows.has(k))
+      // All or nothing: half a band ticked by one click reads as a bug, not a cap.
+      if (!(max !== undefined && checkedRows.size + add.length > max)) {
+        for (const [k, r] of add) checkedRows.set(k, r)
+      }
+    } else {
+      const drop = keyed.filter(([k]) => checkedRows.has(k))
+      if (!(min !== undefined && checkedRows.size - drop.length < min)) {
+        for (const [k] of drop) checkedRows.delete(k)
+      }
+    }
+    checkChanged()
   }
 
   function ensureBandInjector(): void {

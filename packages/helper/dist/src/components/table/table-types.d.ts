@@ -1,6 +1,6 @@
 import { MonoGroupNode } from "./grouping.js";
-import { MonoGrouped } from "./grouped-bands.js";
 import { CheckboxColor, CheckboxCssClass, CheckboxSize } from "../checkbox/checkbox-types.js";
+import { MonoGrouped } from "./grouped-bands.js";
 import { InputColor, InputCssClass, InputModelEvent, InputSize, InputValidationState, InputVariant } from "../input/input-types.js";
 import { MonoSearchCustomCtx, MonoSearchCustomResult, MonoSearchExpr, MonoSearchExprCustom, MonoSearchExprEntry } from "../../search/search-expr.js";
 import { MonoSearchFieldsAliases, MonoSearchValue } from "../../search/data-search.js";

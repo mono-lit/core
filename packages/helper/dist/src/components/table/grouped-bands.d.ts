@@ -1,23 +1,60 @@
+import { CheckboxColor, CheckboxCssClass, CheckboxSize } from "../checkbox/checkbox-types.js";
 //#region src/components/table/grouped-bands.d.ts
-/**
- * `grouped` — sticky group BANDS over a flat, ordered row list.
- *
- * Unlike `group` (a tree: `displayRows` with group headers, per-group pagers, no
- * virtual scroll) a band is a single header row placed in front of the first row
- * of each run of equal keys. The rows themselves stay a flat list, so every flat
- * feature keeps working — virtual / infinity scroll, paging, search, summaries.
- *
- * Pure and dependency-free: the controller (`mono-data-grid.ts`) owns the rows,
- * the injector (`table-bands.ts`) owns the DOM; this module only does the maths.
- *
- * Coordinates:
- * - **row** — an index into `visible` (the ordered rows minus those under a
- *   collapsed band). `band.at` is the row the band is drawn in front of.
- * - **slot** — one per drawn thing, band or row, in display order. A virtual
- *   scroller measures in slots (each one `rowHeight` tall).
- */
 /** Band look — the same four variants as `mono-button`. */
 export type MonoGroupedVariant = 'solid' | 'outline' | 'tonal' | 'text';
+/**
+ * A checkbox on each band that selects / unselects the band's rows in the table's
+ * selection (`table.check()` — the one every `<mono-table-checkbox>` reads), and shows
+ * checked / mixed / unchecked from them. Drawn only when the table has row checkboxes:
+ * it sits in their column, pinned like them.
+ */
+export interface MonoGroupedSelectableConfig<T = any> {
+  /** The rows the band box may tick. Default: every row of the band. A band with none is disabled. */
+  filter?: (row: T) => boolean;
+  /**
+   * The checkbox column, when it cannot be found from a row's `mono-table-checkbox` (every
+   * band folded and a header without one): a header cell holding `<mono-table-th field>` or
+   * carrying `data-field` with this value.
+   */
+  field?: string;
+  /**
+   * The box's own props — the same as `<mono-table-checkbox>`'s (`size`, `color`, `disabled`,
+   * `label`, `sublabel`, `ariaLabelText`, `cssClass`, `cssClassName`). Unset `size` / `color`
+   * follow the row checkboxes; unset `ariaLabelText` is the band's label.
+   */
+  checkbox?: MonoGroupedCheckboxProps;
+}
+/**
+ * The `<mono-table-checkbox>` props a band box takes. Not `type` / `item` / `keyValue` /
+ * `mode` / `chunk`: mono drives those (the box is `type="grouped"` on the table's selection).
+ */
+export interface MonoGroupedCheckboxProps {
+  size?: CheckboxSize;
+  color?: CheckboxColor;
+  /** Show the box but never let it be ticked. */
+  disabled?: boolean;
+  /** Text beside the box. */
+  label?: string;
+  /** Secondary line under the label. */
+  sublabel?: string;
+  /** Accessible name. Default: the band's label. */
+  ariaLabelText?: string;
+  /** Per-part classes — the same keys as `mono-checkbox`'s `cssClass`. */
+  cssClass?: CheckboxCssClass;
+  /** A class on the box's root. */
+  cssClassName?: string;
+}
+/** `true` = a band checkbox with every default; `false` = none. */
+export type MonoGroupedSelectable<T = any> = boolean | MonoGroupedSelectableConfig<T>;
+/** A band checkbox's state over its tickable rows; `'empty'` = none may be ticked. */
+export type MonoGroupedCheckState = 'all' | 'some' | 'none' | 'empty';
+/** A level's band checkbox, resolved (`null` = none). */
+export interface MonoGroupedSelectableResolved<T = any> {
+  filter?: (row: T) => boolean;
+  field?: string;
+  /** Always an object (possibly empty). */
+  checkbox: MonoGroupedCheckboxProps;
+}
 /** One band level. A bare string is `{ field }` with every default. */
 export interface MonoGroupedFieldConfig<T = any> {
   /** The key: consecutive rows with an equal value at this field (and every outer one) form one band. Paths (`Brand/Name`) work. */
@@ -44,6 +81,12 @@ export interface MonoGroupedFieldConfig<T = any> {
    * its first row. Default: the table-level `icon` (none). `''` turns an inherited icon off.
    */
   icon?: string | ((row: T) => string);
+  /**
+   * A checkbox on this level's bands (see {@link MonoGroupedSelectableConfig}). Default: the
+   * table-level `selectable`. `false` turns it off for this level; an object is merged over
+   * the table-level one.
+   */
+  selectable?: MonoGroupedSelectable<T>;
 }
 export type MonoGroupedField<T = any> = string | MonoGroupedFieldConfig<T>;
 /** The `grouped` config — `<mono-table-th :grouped.prop>` / `monoDataGrid(data, { grouped })`. */
@@ -64,6 +107,13 @@ export interface MonoGrouped<T = any> {
   stayOpen?: boolean;
   /** An icon for EVERY band — iconify class or emoji (or a function of the first row). A field entry can override it. */
   icon?: string | ((row: T) => string);
+  /**
+   * A checkbox on EVERY band that selects the band's rows — `true`, or
+   * `{ filter, field, checkbox: { size, color, disabled, … } }` (the box's own props under
+   * `checkbox`). Default off. Shown only when the table has row `mono-table-checkbox`es. A
+   * field entry can override it.
+   */
+  selectable?: MonoGroupedSelectable<T>;
 }
 /** A band level with every default resolved. */
 export interface MonoGroupedLevel<T = any> {
@@ -80,6 +130,8 @@ export interface MonoGroupedLevel<T = any> {
   stayOpen: boolean;
   /** `''` = no icon. */
   icon: string | ((row: T) => string);
+  /** The band checkbox, or `null` for none. */
+  selectable: MonoGroupedSelectableResolved<T> | null;
 }
 export interface MonoGroupedResolved<T = any> {
   fields: Array<MonoGroupedLevel<T>>;
@@ -88,6 +140,7 @@ export interface MonoGroupedResolved<T = any> {
   open: boolean;
   stayOpen: boolean;
   icon: string | ((row: T) => string);
+  selectable: MonoGroupedSelectableResolved<T> | null;
 }
 /**
  * A band's fold state for {@link buildGrouped}: a set of COLLAPSED paths (on top of
@@ -113,6 +166,10 @@ export interface MonoGroupedItem<T = any> {
   color: string;
   /** Iconify class or text (emoji); `''` = none. */
   icon: string;
+  /** The band checkbox (`selectable`), or `null`. */
+  selectable: MonoGroupedSelectableResolved<T> | null;
+  /** Index of the band's first row in the ordered rows it was built from — its rows are `[from, from + count)`. */
+  from: number;
   collapsible: boolean;
   collapsed: boolean;
   /** Row coordinate: drawn in front of `visible[at]` (`at === visible.length` → after the last row). */

@@ -85,6 +85,10 @@ export type {
   MonoGrouped,
   MonoGroupedField,
   MonoGroupedFieldConfig,
+  MonoGroupedSelectable,
+  MonoGroupedSelectableConfig,
+  MonoGroupedCheckboxProps,
+  MonoGroupedCheckState,
 } from './grouped-bands.js'
 export {
   expandWildcard,

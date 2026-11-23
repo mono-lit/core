@@ -23,14 +23,16 @@ import {
 import { dispatchMonoEvent } from '../../composables/mono-event'
 
 /** Which job this checkbox does. */
-export type TableCheckboxType = 'all' | 'single'
+export type TableCheckboxType = 'all' | 'single' | 'grouped'
 
 /** `detail` of the `mno-change` event `<mono-table-checkbox>` emits. */
 export interface TableCheckboxChangeEventDetail<T = any> {
   /** The state it moved TO. */
   checked: boolean
-  /** The row, for `type="single"`; `null` for the select-all. */
+  /** The row, for `type="single"`; `null` for the select-all and a band. */
   item: T | null
+  /** The band's `path`, for `type="grouped"` (a `grouped` band's checkbox). */
+  path?: string
   /** How many rows are selected after the change (a drain fills in later). */
   count: number
 }
@@ -50,6 +52,7 @@ export interface TableCheckboxEvents {
 export declare class MonoTableCheckboxCoreInterface extends MonoTableControllerCoreInterface {
   type: TableCheckboxType
   item?: unknown
+  groupedPath?: string
   keyValue?: string | string[]
   mode: MonoCheckMode
   chunk: number
@@ -75,6 +78,8 @@ export declare class MonoTableCheckboxCoreInterface extends MonoTableControllerC
  * Two jobs, chosen with `type`:
  * - **`type="single"`** (default) — one row's checkbox. Give it the row with
  *   `:item.prop="row"`; it reads and writes `table.check()`.
+ * - **`type="grouped"`** — a `grouped` band's box (`grouped-path`): ticks the band's rows.
+ *   mono inserts these into its band rows itself (`grouped.selectable`); not for templates.
  * - **`type="all"`** — the select-all. In `mode="all"` (default) checking it
  *   drains the SOURCE in `chunk`-sized requests and selects every row the active
  *   search/filter matches — including rows never fetched for display, which is the
@@ -106,7 +111,7 @@ export const MonoTableCheckboxCore = <T extends Constructor<LitElement>>(superCl
       // `type`, `item`, `mode`, `chunk`, `size`, `color`, `label`, `sublabel`
       // and `disabled` are already lowercase — aliasing one would define it in
       // terms of itself and recurse forever.
-      defineHybridPropAliases(this, ['keyValue', 'ariaLabelText', 'cssClass'])
+      defineHybridPropAliases(this, ['keyValue', 'ariaLabelText', 'cssClass', 'groupedPath'])
       // `description` is the other name of `sublabel` (one storage), as on
       // mono-checkbox — so `props: { checkbox: { description } }` keeps working.
       defineHybridPropAlias(this, 'description', 'sublabel')
@@ -137,6 +142,10 @@ export const MonoTableCheckboxCore = <T extends Constructor<LitElement>>(superCl
     /** The row this checkbox represents — `type="single"` only. Bind with `.prop`. */
     @property({ attribute: false })
     item?: unknown
+
+    /** The band this box ticks — `type="grouped"` only (`table.grouped[i].path`). */
+    @property({ attribute: 'grouped-path' })
+    groupedPath?: string
 
     /**
      * Field(s) `table.check().getAll()` projects each selected row down to.
@@ -210,6 +219,9 @@ export const MonoTableCheckboxCore = <T extends Constructor<LitElement>>(superCl
      * row checkbox. Undefined values are skipped by `configure`.
      */
     private _syncConfig(): void {
+      // A band box carries no selection config of its own — its defaults must not
+      // overwrite what the row / header boxes declared.
+      if (this.type === 'grouped') return
       this.dataGrid?.check?.().configure({
         keyValue: this._keys,
         mode: this.mode,
@@ -240,21 +252,32 @@ export const MonoTableCheckboxCore = <T extends Constructor<LitElement>>(superCl
      * no longer re-renders every row's checkbox (see the base's `_stateKey`).
      */
     protected override _stateKey(): unknown[] {
+      if (this.type === 'grouped') {
+        return [this.type, this.groupedPath, this._bandState, this._pending, this.disabled]
+      }
       return this.type === 'all'
         ? [this.type, this._checked, this._indeterminate, this._pending]
         : [this.type, this._checked, this._pending, this.item]
+    }
+
+    /** A band box's state (`type="grouped"`), from the controller's cache. */
+    private get _bandState(): string {
+      if (this.type !== 'grouped' || !this.groupedPath) return 'empty'
+      return this.dataGrid?.groupedCheckState?.(this.groupedPath) ?? 'empty'
     }
 
     /** Whether this box is ticked right now. */
     private get _checked(): boolean {
       const check = this.dataGrid?.check?.()
       if (!check) return false
+      if (this.type === 'grouped') return this._bandState === 'all'
       if (this.type === 'all') return check.allChecked
       return this.item == null ? false : check.isChecked(this.item as never)
     }
 
     /** The select-all shows mixed while only some rows are ticked. */
     private get _indeterminate(): boolean {
+      if (this.type === 'grouped') return this._bandState === 'some'
       if (this.type !== 'all') return false
       return this.dataGrid?.check?.().someChecked ?? false
     }
@@ -283,7 +306,7 @@ export const MonoTableCheckboxCore = <T extends Constructor<LitElement>>(superCl
     }
 
     private get _isDisabled(): boolean {
-      return this.disabled || this._pending
+      return this.disabled || this._pending || (this.type === 'grouped' && this._bandState === 'empty')
     }
 
     protected _handleChange(event: Event): void {
@@ -297,7 +320,9 @@ export const MonoTableCheckboxCore = <T extends Constructor<LitElement>>(superCl
         return
       }
 
-      if (this.type === 'all') {
+      if (this.type === 'grouped') {
+        if (this.groupedPath) this.dataGrid?.checkGrouped?.(this.groupedPath, checked)
+      } else if (this.type === 'all') {
         if (!checked) check.clear()
         else if (this.mode === 'per-page') check.selectPage()
         // The drain is async: `pending` renders progress and the controller
@@ -323,7 +348,8 @@ export const MonoTableCheckboxCore = <T extends Constructor<LitElement>>(superCl
         'change',
         {
           checked: actual,
-          item: this.type === 'all' ? null : (this.item ?? null),
+          item: this.type === 'single' ? (this.item ?? null) : null,
+          ...(this.type === 'grouped' ? { path: this.groupedPath } : {}),
           count: check.count(),
         },
         { sourceEvent: event },
@@ -392,7 +418,9 @@ export const MonoTableCheckboxCore = <T extends Constructor<LitElement>>(superCl
         .filter(Boolean)
         .join(' ')
       const ariaLabel =
-        this.ariaLabelText || this.label || (this.type === 'all' ? 'Select all rows' : 'Select row')
+        this.ariaLabelText ||
+        this.label ||
+        (this.type === 'all' ? 'Select all rows' : this.type === 'grouped' ? 'Select group rows' : 'Select row')
 
       return html`
         <label

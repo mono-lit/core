@@ -22,6 +22,8 @@ const table = controlMonoTable<Row>(data, { keyExpr: 'Id', searchValue: ['Name',
 
 // Declared on ONE header — it is table-wide. Region bands, Team bands inside each.
 const grouped = {
+  // A checkbox on every band, in the row checkboxes' column: ticks the band's rows.
+  selectable: true,
   chunk: 100, // rows per request when the source is remote (the first one carries $count)
   fields: [
     {
@@ -42,12 +44,14 @@ const padTop = ref(0)
 const padBottom = ref(0)
 const total = ref(0)
 const bands = ref(0)
+const selected = ref(0)
 const off = table.subscribe(() => {
   rows.value = [...table.items]
   padTop.value = table.virtualPadTop
   padBottom.value = table.virtualPadBottom
   total.value = table.totalCount
   bands.value = table.grouped.length
+  selected.value = table.check().count()
 })
 
 onBeforeUnmount(() => {
@@ -66,7 +70,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
     <p class="example-count">
-      <strong>{{ rows.length }}</strong> rows in DOM · {{ total }} total · {{ bands }} bands — click a band to fold it
+      <strong>{{ rows.length }}</strong> rows in DOM · {{ total }} total · {{ bands }} bands · {{ selected }} selected — click a band to fold it
     </p>
 
     <!-- The band <tr>s are inserted by mono itself; this template only draws data rows
@@ -75,6 +79,7 @@ onBeforeUnmount(() => {
       <table mono-table class="example-table">
         <thead>
           <tr>
+            <th mono-sticky-left class="example-select"><mono-table-checkbox type="all" :control-table.prop="table" /></th>
             <th><mono-table-th :control-table.prop="table" field="Id" caption="Id" :sort.prop="true" :grouped.prop="grouped" /></th>
             <th><mono-table-th :control-table.prop="table" field="Name" caption="Name" :sort.prop="true" /></th>
             <th><mono-table-th :control-table.prop="table" field="Team" caption="Team" :sort.prop="true" /></th>
@@ -83,15 +88,16 @@ onBeforeUnmount(() => {
           </tr>
         </thead>
         <tbody>
-          <tr v-if="padTop" :style="{ height: padTop + 'px' }" aria-hidden="true"><td colspan="5"></td></tr>
+          <tr v-if="padTop" :style="{ height: padTop + 'px' }" aria-hidden="true"><td colspan="6"></td></tr>
           <tr v-for="row in rows" :key="row.Id">
+            <td mono-sticky-left class="example-select"><mono-table-checkbox :control-table.prop="table" :item.prop="row" /></td>
             <td>{{ row.Id }}</td>
             <td>{{ row.Name }}</td>
             <td>{{ row.Team }}</td>
             <td>{{ row.Region }}</td>
             <td>{{ row.Score }}</td>
           </tr>
-          <tr v-if="padBottom" :style="{ height: padBottom + 'px' }" aria-hidden="true"><td colspan="5"></td></tr>
+          <tr v-if="padBottom" :style="{ height: padBottom + 'px' }" aria-hidden="true"><td colspan="6"></td></tr>
         </tbody>
       </table>
 
@@ -119,10 +125,17 @@ onBeforeUnmount(() => {
   font-family: 'DM Mono', ui-monospace, monospace;
 }
 .example-scroll {
-  overflow-y: auto !important;
+  overflow: auto !important;
   max-height: 420px;
   border: 1px solid var(--border);
   border-radius: 10px;
+}
+.example-table {
+  min-width: 860px; /* wide enough to scroll sideways: the checkbox column stays pinned */
+}
+.example-select {
+  width: 44px;
+  text-align: center;
 }
 /* Every body row — data and band — is exactly ROW_HEIGHT: the virtual window is
    computed from scrollTop / row-height and never measures. */

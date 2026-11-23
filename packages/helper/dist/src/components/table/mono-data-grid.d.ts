@@ -2,7 +2,7 @@ import { MonoEventProps } from "../../composables/element-props.js";
 import { MonoErrorMessages } from "../../utils/normalize-error.js";
 import { MonoDataSource } from "../../composables/data-source-controller.js";
 import { MonoGroupNode } from "./grouping.js";
-import { MonoGrouped, MonoGroupedField, MonoGroupedFieldConfig, MonoGroupedItem, MonoGroupedLayout, MonoGroupedResolved, MonoGroupedVariant, MonoGroupedWindow } from "./grouped-bands.js";
+import { MonoGrouped, MonoGroupedCheckState, MonoGroupedCheckboxProps, MonoGroupedField, MonoGroupedFieldConfig, MonoGroupedItem, MonoGroupedLayout, MonoGroupedResolved, MonoGroupedSelectable, MonoGroupedSelectableConfig, MonoGroupedVariant, MonoGroupedWindow } from "./grouped-bands.js";
 import { MonoDateLevel, MonoDateRange, isDateRange } from "./date-filter-tree.js";
 import { MonoExportOptions, MonoExportResult } from "../../export/types.js";
 import { MonoImportOptions, MonoImportResult } from "../../import/types.js";
@@ -1386,6 +1386,23 @@ export interface MonoTableController<T = any> {
   collapseAllGrouped(): void;
   /** Hand the controller the `<table>` the band rows go into — called by `mono-table-th`; idempotent. */
   bindGroupedHost(tableEl: HTMLElement | null): void;
+  /**
+   * Every row of a drawn band (its folded rows included), in display order. Empty for an
+   * unknown path or a band hidden under a folded one.
+   */
+  groupedRows(path: string): T[];
+  /**
+   * The band checkbox's state over the band's rows that pass its `selectable.filter`:
+   * `'all'` / `'some'` / `'none'` selected, or `'empty'` when no row may be ticked.
+   */
+  groupedCheckState(path: string): MonoGroupedCheckState;
+  /**
+   * Select (`true`) or unselect (`false`) a band's tickable rows in `check()` — one
+   * update. Omit `checked` to flip it. Respects the selection's `max` / `min`: a tick that
+   * would cross one is rejected whole (the store still notifies, so the box reverts).
+   * Needs a `keyExpr` (rows are matched by key across the virtual window).
+   */
+  checkGrouped(path: string, checked?: boolean): void;
   /** The bound source (or null). */
   readonly dataSource: MonoGridSource<T> | null;
   load(): Promise<void>;
@@ -1863,4 +1880,4 @@ export interface MonoTableController<T = any> {
 }
 export declare function monoDataGrid<T = any>(ds?: MonoGridSource<T> | T[] | null, opts?: MonoDataGridOptions): MonoTableController<T>;
 //#endregion
-export { type MonoDataSourceOptions, type MonoDateLevel, type MonoDateRange, type MonoGrouped, type MonoGroupedField, type MonoGroupedFieldConfig, type MonoGroupedItem, type MonoGroupedLayout, type MonoGroupedVariant, type MonoGroupedWindow, type MonoOdataOptions, type MonoSourceSortEntry, monoDataGrid as controlMonoTable, isDateRange };
+export { type MonoDataSourceOptions, type MonoDateLevel, type MonoDateRange, type MonoGrouped, type MonoGroupedCheckState, type MonoGroupedCheckboxProps, type MonoGroupedField, type MonoGroupedFieldConfig, type MonoGroupedItem, type MonoGroupedLayout, type MonoGroupedSelectable, type MonoGroupedSelectableConfig, type MonoGroupedVariant, type MonoGroupedWindow, type MonoOdataOptions, type MonoSourceSortEntry, monoDataGrid as controlMonoTable, isDateRange };

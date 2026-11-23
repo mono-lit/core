@@ -1,17 +1,19 @@
 import { Constructor } from "../../composables/hybird-prop.js";
-import { MonoTableControllerCoreInterface } from "./table-controller-core.js";
 import { CheckboxColor, CheckboxCssClass, CheckboxSize } from "../checkbox/checkbox-types.js";
+import { MonoTableControllerCoreInterface } from "./table-controller-core.js";
 import { MonoCheckMode } from "./mono-data-grid.js";
 import { LitElement, TemplateResult } from "lit";
 //#region src/components/table/mono-table-checkbox-core.d.ts
 /** Which job this checkbox does. */
-export type TableCheckboxType = 'all' | 'single';
+export type TableCheckboxType = 'all' | 'single' | 'grouped';
 /** `detail` of the `mno-change` event `<mono-table-checkbox>` emits. */
 export interface TableCheckboxChangeEventDetail<T = any> {
   /** The state it moved TO. */
   checked: boolean;
-  /** The row, for `type="single"`; `null` for the select-all. */
+  /** The row, for `type="single"`; `null` for the select-all and a band. */
   item: T | null;
+  /** The band's `path`, for `type="grouped"` (a `grouped` band's checkbox). */
+  path?: string;
   /** How many rows are selected after the change (a drain fills in later). */
   count: number;
 }
@@ -26,6 +28,7 @@ export interface TableCheckboxEvents {
 export declare class MonoTableCheckboxCoreInterface extends MonoTableControllerCoreInterface {
   type: TableCheckboxType;
   item?: unknown;
+  groupedPath?: string;
   keyValue?: string | string[];
   mode: MonoCheckMode;
   chunk: number;
@@ -50,6 +53,8 @@ export declare class MonoTableCheckboxCoreInterface extends MonoTableControllerC
  * Two jobs, chosen with `type`:
  * - **`type="single"`** (default) — one row's checkbox. Give it the row with
  *   `:item.prop="row"`; it reads and writes `table.check()`.
+ * - **`type="grouped"`** — a `grouped` band's box (`grouped-path`): ticks the band's rows.
+ *   mono inserts these into its band rows itself (`grouped.selectable`); not for templates.
  * - **`type="all"`** — the select-all. In `mode="all"` (default) checking it
  *   drains the SOURCE in `chunk`-sized requests and selects every row the active
  *   search/filter matches — including rows never fetched for display, which is the

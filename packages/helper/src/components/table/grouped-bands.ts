@@ -17,9 +17,68 @@
  */
 
 import { getFieldValue, isPath } from '../../search/field-path'
+import type { CheckboxColor, CheckboxCssClass, CheckboxSize } from '../checkbox/checkbox-types'
 
 /** Band look — the same four variants as `mono-button`. */
 export type MonoGroupedVariant = 'solid' | 'outline' | 'tonal' | 'text'
+
+/**
+ * A checkbox on each band that selects / unselects the band's rows in the table's
+ * selection (`table.check()` — the one every `<mono-table-checkbox>` reads), and shows
+ * checked / mixed / unchecked from them. Drawn only when the table has row checkboxes:
+ * it sits in their column, pinned like them.
+ */
+export interface MonoGroupedSelectableConfig<T = any> {
+  /** The rows the band box may tick. Default: every row of the band. A band with none is disabled. */
+  filter?: (row: T) => boolean
+  /**
+   * The checkbox column, when it cannot be found from a row's `mono-table-checkbox` (every
+   * band folded and a header without one): a header cell holding `<mono-table-th field>` or
+   * carrying `data-field` with this value.
+   */
+  field?: string
+  /**
+   * The box's own props — the same as `<mono-table-checkbox>`'s (`size`, `color`, `disabled`,
+   * `label`, `sublabel`, `ariaLabelText`, `cssClass`, `cssClassName`). Unset `size` / `color`
+   * follow the row checkboxes; unset `ariaLabelText` is the band's label.
+   */
+  checkbox?: MonoGroupedCheckboxProps
+}
+
+/**
+ * The `<mono-table-checkbox>` props a band box takes. Not `type` / `item` / `keyValue` /
+ * `mode` / `chunk`: mono drives those (the box is `type="grouped"` on the table's selection).
+ */
+export interface MonoGroupedCheckboxProps {
+  size?: CheckboxSize
+  color?: CheckboxColor
+  /** Show the box but never let it be ticked. */
+  disabled?: boolean
+  /** Text beside the box. */
+  label?: string
+  /** Secondary line under the label. */
+  sublabel?: string
+  /** Accessible name. Default: the band's label. */
+  ariaLabelText?: string
+  /** Per-part classes — the same keys as `mono-checkbox`'s `cssClass`. */
+  cssClass?: CheckboxCssClass
+  /** A class on the box's root. */
+  cssClassName?: string
+}
+
+/** `true` = a band checkbox with every default; `false` = none. */
+export type MonoGroupedSelectable<T = any> = boolean | MonoGroupedSelectableConfig<T>
+
+/** A band checkbox's state over its tickable rows; `'empty'` = none may be ticked. */
+export type MonoGroupedCheckState = 'all' | 'some' | 'none' | 'empty'
+
+/** A level's band checkbox, resolved (`null` = none). */
+export interface MonoGroupedSelectableResolved<T = any> {
+  filter?: (row: T) => boolean
+  field?: string
+  /** Always an object (possibly empty). */
+  checkbox: MonoGroupedCheckboxProps
+}
 
 /** One band level. A bare string is `{ field }` with every default. */
 export interface MonoGroupedFieldConfig<T = any> {
@@ -47,6 +106,12 @@ export interface MonoGroupedFieldConfig<T = any> {
    * its first row. Default: the table-level `icon` (none). `''` turns an inherited icon off.
    */
   icon?: string | ((row: T) => string)
+  /**
+   * A checkbox on this level's bands (see {@link MonoGroupedSelectableConfig}). Default: the
+   * table-level `selectable`. `false` turns it off for this level; an object is merged over
+   * the table-level one.
+   */
+  selectable?: MonoGroupedSelectable<T>
 }
 
 export type MonoGroupedField<T = any> = string | MonoGroupedFieldConfig<T>
@@ -69,6 +134,13 @@ export interface MonoGrouped<T = any> {
   stayOpen?: boolean
   /** An icon for EVERY band — iconify class or emoji (or a function of the first row). A field entry can override it. */
   icon?: string | ((row: T) => string)
+  /**
+   * A checkbox on EVERY band that selects the band's rows — `true`, or
+   * `{ filter, field, checkbox: { size, color, disabled, … } }` (the box's own props under
+   * `checkbox`). Default off. Shown only when the table has row `mono-table-checkbox`es. A
+   * field entry can override it.
+   */
+  selectable?: MonoGroupedSelectable<T>
 }
 
 /** A band level with every default resolved. */
@@ -86,6 +158,8 @@ export interface MonoGroupedLevel<T = any> {
   stayOpen: boolean
   /** `''` = no icon. */
   icon: string | ((row: T) => string)
+  /** The band checkbox, or `null` for none. */
+  selectable: MonoGroupedSelectableResolved<T> | null
 }
 
 export interface MonoGroupedResolved<T = any> {
@@ -95,6 +169,7 @@ export interface MonoGroupedResolved<T = any> {
   open: boolean
   stayOpen: boolean
   icon: string | ((row: T) => string)
+  selectable: MonoGroupedSelectableResolved<T> | null
 }
 
 /**
@@ -122,6 +197,10 @@ export interface MonoGroupedItem<T = any> {
   color: string
   /** Iconify class or text (emoji); `''` = none. */
   icon: string
+  /** The band checkbox (`selectable`), or `null`. */
+  selectable: MonoGroupedSelectableResolved<T> | null
+  /** Index of the band's first row in the ordered rows it was built from — its rows are `[from, from + count)`. */
+  from: number
   collapsible: boolean
   collapsed: boolean
   /** Row coordinate: drawn in front of `visible[at]` (`at === visible.length` → after the last row). */
@@ -152,6 +231,33 @@ export interface MonoGroupedWindow<T = any> {
 
 const VARIANTS: readonly MonoGroupedVariant[] = ['solid', 'outline', 'tonal', 'text']
 
+/**
+ * Resolve a `selectable` against what it inherits: `undefined` inherits, `false` /
+ * `null` is none, `true` takes the inherited options (or the defaults), an object
+ * is merged over the inherited options — its `checkbox` props over the inherited
+ * `checkbox` props, one key at a time (`undefined` keys inherit).
+ */
+function resolveSelectable<T>(
+  value: MonoGroupedSelectable<T> | null | undefined,
+  inherited: MonoGroupedSelectableResolved<T> | null,
+): MonoGroupedSelectableResolved<T> | null {
+  if (value === undefined) return inherited
+  if (value === false || value === null) return null
+  const base: MonoGroupedSelectableResolved<T> = inherited ?? { checkbox: {} }
+  if (value === true || typeof value !== 'object') return { ...base, checkbox: { ...base.checkbox } }
+  const checkbox: MonoGroupedCheckboxProps = { ...base.checkbox }
+  if (value.checkbox && typeof value.checkbox === 'object') {
+    for (const [k, v] of Object.entries(value.checkbox)) {
+      if (v !== undefined) (checkbox as Record<string, unknown>)[k] = v
+    }
+  }
+  return {
+    filter: typeof value.filter === 'function' ? value.filter : base.filter,
+    field: typeof value.field === 'string' && value.field ? value.field : base.field,
+    checkbox,
+  }
+}
+
 /** Resolve a config; `null` when there is nothing to band by. */
 export function normalizeGrouped<T = any>(cfg: MonoGrouped<T> | null | undefined): MonoGroupedResolved<T> | null {
   if (!cfg || typeof cfg !== 'object' || !Array.isArray(cfg.fields)) return null
@@ -159,6 +265,7 @@ export function normalizeGrouped<T = any>(cfg: MonoGrouped<T> | null | undefined
   const open = cfg.open !== false
   const stayOpen = cfg.stayOpen !== false
   const icon = cfg.icon ?? ''
+  const selectable = resolveSelectable<T>(cfg.selectable, null)
   const entries = cfg.fields
     .map((f, i) => ({ f: typeof f === 'string' ? ({ field: f } as MonoGroupedFieldConfig<T>) : f, i }))
     .filter((e) => !!e.f && typeof e.f.field === 'string' && e.f.field.length > 0)
@@ -185,10 +292,11 @@ export function normalizeGrouped<T = any>(cfg: MonoGrouped<T> | null | undefined
       open: typeof f.open === 'boolean' ? f.open : open,
       stayOpen: typeof f.stayOpen === 'boolean' ? f.stayOpen : stayOpen,
       icon: f.icon !== undefined && f.icon !== null ? f.icon : icon,
+      selectable: resolveSelectable<T>(f.selectable, selectable),
     })
   }
   const chunk = Math.max(1, Math.floor(Number(cfg.chunk) || 100))
-  return { fields, chunk, collapsible, open, stayOpen, icon }
+  return { fields, chunk, collapsible, open, stayOpen, icon, selectable }
 }
 
 /**
@@ -199,7 +307,12 @@ export function normalizeGrouped<T = any>(cfg: MonoGrouped<T> | null | undefined
 export function groupedSignature(cfg: MonoGrouped<any> | null | undefined): string {
   if (!cfg || typeof cfg !== 'object' || !Array.isArray(cfg.fields)) return ''
   const fn = (v: unknown) => (typeof v === 'function' ? 'ƒ' : (v ?? null))
+  const sel = (v: unknown) =>
+    v && typeof v === 'object'
+      ? { ...(v as Record<string, unknown>), filter: fn((v as Record<string, unknown>).filter) }
+      : (v ?? null)
   return JSON.stringify({
+    sel: sel(cfg.selectable),
     c: cfg.chunk ?? null,
     k: cfg.collapsible ?? null,
     p: cfg.open ?? null,
@@ -219,6 +332,7 @@ export function groupedSignature(cfg: MonoGrouped<any> | null | undefined): stri
             p: f.open ?? null,
             s: f.stayOpen ?? null,
             i: fn(f.icon),
+            sel: sel(f.selectable),
           },
     ),
   })
@@ -321,7 +435,8 @@ export function buildGrouped<T = any>(
   let foldedAt = -1
   let prev: string[] | null = null
 
-  for (const row of rows) {
+  for (let ri = 0; ri < rows.length; ri++) {
+    const row = rows[ri]!
     const keys = fields.map((f) => bandKeyOf(row, f.field))
     const strs = keys.map(keyString)
     let d = 0
@@ -351,6 +466,8 @@ export function buildGrouped<T = any>(
           variant: resolveVariant(f.variant, row),
           color: resolveColor(f.color, row),
           icon: resolveIcon(f.icon, row),
+          selectable: f.selectable,
+          from: ri,
           collapsible: f.collapsible,
           collapsed: isCollapsed,
           at: visible.length,

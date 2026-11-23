@@ -2,7 +2,7 @@ import { c as toODataClause, i as odataLiteral, l as toODataSelector, n as isPat
 import { i as joinFilters, n as andPredicates, r as compileFilterPredicate, t as andFilters } from "./filter-eval-CqeBnMYh.js";
 import { C as customRemoteClause, E as hasWildcardSearch, d as DEFAULT_SEARCH_OPERATION, g as parseSearchValue, h as mergeSearchFields, j as searchEntryFor, x as searchRowPredicate, y as resolveSearchFields } from "./normalize-error-BEcd1tmS.js";
 import { d as createApplyGate, g as storeRows, h as odataStoreVersion, m as odataStoreUrl } from "./data-source-options-Cujz8TZ_.js";
-import { a as checkState, c as setAllChecked, d as columnCount, f as ensureRowHost, g as syncRowSpan, h as releaseRowHost, i as buildDateTree, l as setChecked, m as releaseOverlayHost, n as countTuples, o as minimize, p as overlayHost, r as groupCountsViaApply, s as seedFromRanges, u as applyOverlayHost } from "./mono-data-grid-CL7WskMq.js";
+import { a as checkState, c as setAllChecked, d as columnCount, f as ensureRowHost, g as syncRowSpan, h as releaseRowHost, i as buildDateTree, l as setChecked, m as releaseOverlayHost, n as countTuples, o as minimize, p as overlayHost, r as groupCountsViaApply, s as seedFromRanges, u as applyOverlayHost } from "./mono-data-grid-CeT6zrO9.js";
 import { t as isIconifyClass } from "./icon-BM9N-jOt.js";
 import { t as arrayToODataString } from "./filter-odata-GsczYKNC.js";
 import { b as monoPhantomOptions, d as buildSizeStyle, h as monoApplyPhantomOptions, l as ColumnAutoSize, s as startMonoSizeAttributes, u as cssLengthToPx, v as monoPendingActive, y as monoPendingGrace } from "./mono-ui-bwtsaC-q.js";
@@ -4868,6 +4868,8 @@ const MonoTableDetailCore = (superClass) => {
 * Two jobs, chosen with `type`:
 * - **`type="single"`** (default) — one row's checkbox. Give it the row with
 *   `:item.prop="row"`; it reads and writes `table.check()`.
+* - **`type="grouped"`** — a `grouped` band's box (`grouped-path`): ticks the band's rows.
+*   mono inserts these into its band rows itself (`grouped.selectable`); not for templates.
 * - **`type="all"`** — the select-all. In `mode="all"` (default) checking it
 *   drains the SOURCE in `chunk`-sized requests and selects every row the active
 *   search/filter matches — including rows never fetched for display, which is the
@@ -4910,7 +4912,8 @@ const MonoTableCheckboxCore = (superClass) => {
 			defineHybridPropAliases(this, [
 				"keyValue",
 				"ariaLabelText",
-				"cssClass"
+				"cssClass",
+				"groupedPath"
 			]);
 			defineHybridPropAlias(this, "description", "sublabel");
 		}
@@ -4939,6 +4942,7 @@ const MonoTableCheckboxCore = (superClass) => {
 		* row checkbox. Undefined values are skipped by `configure`.
 		*/
 		_syncConfig() {
+			if (this.type === "grouped") return;
 			this.dataGrid?.check?.().configure({
 				keyValue: this._keys,
 				mode: this.mode,
@@ -4963,6 +4967,13 @@ const MonoTableCheckboxCore = (superClass) => {
 		* no longer re-renders every row's checkbox (see the base's `_stateKey`).
 		*/
 		_stateKey() {
+			if (this.type === "grouped") return [
+				this.type,
+				this.groupedPath,
+				this._bandState,
+				this._pending,
+				this.disabled
+			];
 			return this.type === "all" ? [
 				this.type,
 				this._checked,
@@ -4975,15 +4986,22 @@ const MonoTableCheckboxCore = (superClass) => {
 				this.item
 			];
 		}
+		/** A band box's state (`type="grouped"`), from the controller's cache. */
+		get _bandState() {
+			if (this.type !== "grouped" || !this.groupedPath) return "empty";
+			return this.dataGrid?.groupedCheckState?.(this.groupedPath) ?? "empty";
+		}
 		/** Whether this box is ticked right now. */
 		get _checked() {
 			const check = this.dataGrid?.check?.();
 			if (!check) return false;
+			if (this.type === "grouped") return this._bandState === "all";
 			if (this.type === "all") return check.allChecked;
 			return this.item == null ? false : check.isChecked(this.item);
 		}
 		/** The select-all shows mixed while only some rows are ticked. */
 		get _indeterminate() {
+			if (this.type === "grouped") return this._bandState === "some";
 			if (this.type !== "all") return false;
 			return this.dataGrid?.check?.().someChecked ?? false;
 		}
@@ -5009,7 +5027,7 @@ const MonoTableCheckboxCore = (superClass) => {
 			return this.type === "all" && this._pending;
 		}
 		get _isDisabled() {
-			return this.disabled || this._pending;
+			return this.disabled || this._pending || this.type === "grouped" && this._bandState === "empty";
 		}
 		_handleChange(event) {
 			const input = event.target;
@@ -5019,7 +5037,9 @@ const MonoTableCheckboxCore = (superClass) => {
 				input.checked = false;
 				return;
 			}
-			if (this.type === "all") {
+			if (this.type === "grouped") {
+				if (this.groupedPath) this.dataGrid?.checkGrouped?.(this.groupedPath, checked);
+			} else if (this.type === "all") {
 				if (!checked) check.clear();
 				else if (this.mode === "per-page") check.selectPage();
 				else check.selectAll();
@@ -5028,7 +5048,8 @@ const MonoTableCheckboxCore = (superClass) => {
 			if (input.checked !== actual) input.checked = actual;
 			dispatchMonoEvent(this, "change", {
 				checked: actual,
-				item: this.type === "all" ? null : this.item ?? null,
+				item: this.type === "single" ? this.item ?? null : null,
+				...this.type === "grouped" ? { path: this.groupedPath } : {},
 				count: check.count()
 			}, { sourceEvent: event });
 			this.requestUpdate();
@@ -5076,7 +5097,7 @@ const MonoTableCheckboxCore = (superClass) => {
 				this.size,
 				loading ? "has-custom-icon has-custom-indeterminate-icon" : ""
 			].filter(Boolean).join(" ");
-			const ariaLabel = this.ariaLabelText || this.label || (this.type === "all" ? "Select all rows" : "Select row");
+			const ariaLabel = this.ariaLabelText || this.label || (this.type === "all" ? "Select all rows" : this.type === "grouped" ? "Select group rows" : "Select row");
 			return html`
         <label
           class=${this._wrapperClasses}
@@ -5118,6 +5139,7 @@ const MonoTableCheckboxCore = (superClass) => {
 	}
 	__decorate([property({ type: String })], MonoTableCheckboxCoreClass.prototype, "type", void 0);
 	__decorate([property({ attribute: false })], MonoTableCheckboxCoreClass.prototype, "item", void 0);
+	__decorate([property({ attribute: "grouped-path" })], MonoTableCheckboxCoreClass.prototype, "groupedPath", void 0);
 	__decorate([property({ attribute: "key-value" })], MonoTableCheckboxCoreClass.prototype, "keyValue", void 0);
 	__decorate([property({ type: String })], MonoTableCheckboxCoreClass.prototype, "mode", void 0);
 	__decorate([property({ type: Number })], MonoTableCheckboxCoreClass.prototype, "chunk", void 0);

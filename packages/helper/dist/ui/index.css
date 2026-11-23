@@ -20243,9 +20243,22 @@ mono-table-th[data-filtered] [mono-th-filter-ind],mono-table-th[data-filtered] .
    A pinned cell paints over the row, so it cannot simply inherit the colour —
    but it CAN read the same variable the row set, which means zebra, hover,
    selected, editing and group rows are all covered by this one rule. Adding a
-   new row state needs nothing here. */
+   new row state needs nothing here.
+
+   The top pixel stays clear. A pinned cell is positioned and painted after the
+   row above; with fractional row heights (rem-sized rows: 43.75px) its snapped
+   top lands on that row's LAST pixel — where the row's rule is — and an opaque
+   background there painted the rule away, every row or every other row. Clear,
+   that pixel shows what is under it: the rule, or the row's own background
+   (the same colour), so whole-pixel rows look exactly as before. */
 [mono-table] tbody td[mono-sticky-left],[mono-table] tbody td.mono-table-sticky-left,.mono-table tbody td[mono-sticky-left],.mono-table tbody td.mono-table-sticky-left,[mono-table] tbody td[mono-sticky-right],[mono-table] tbody td.mono-table-sticky-right,.mono-table tbody td[mono-sticky-right],.mono-table tbody td.mono-table-sticky-right {
-  background: var(--_mono-table-row-bg, var(--_mono-table-surface));
+  background: linear-gradient(transparent 1px, var(--_mono-table-row-bg, var(--_mono-table-surface)) 1px);
+}/* A selected / editing row's 3px accent rail is an inset shadow on the `<tr>` — UNDER the
+   first cell. A pinned first cell is opaque, so the rail never showed there; only through
+   that cell's clear top pixel, or a sub-pixel seam between two pinned rows, as a 3×1px
+   dash on every selected row. With a pinned left column the rail is dropped. */
+[mono-table]:has(:is([mono-sticky-left],.mono-table-sticky-left)) tbody tr[mono-selected],[mono-table]:has(:is([mono-sticky-left],.mono-table-sticky-left)) tbody tr.mono-table-row-selected,[mono-table]:has(:is([mono-sticky-left],.mono-table-sticky-left)) tbody tr.mono-dd-row-selected,[mono-table]:has(:is([mono-sticky-left],.mono-table-sticky-left)) tbody tr[mono-editing],[mono-table]:has(:is([mono-sticky-left],.mono-table-sticky-left)) tbody tr.mono-table-row-editing,.mono-table:has(:is([mono-sticky-left],.mono-table-sticky-left)) tbody tr[mono-selected],.mono-table:has(:is([mono-sticky-left],.mono-table-sticky-left)) tbody tr.mono-table-row-selected,.mono-table:has(:is([mono-sticky-left],.mono-table-sticky-left)) tbody tr.mono-dd-row-selected,.mono-table:has(:is([mono-sticky-left],.mono-table-sticky-left)) tbody tr[mono-editing],.mono-table:has(:is([mono-sticky-left],.mono-table-sticky-left)) tbody tr.mono-table-row-editing,[mono-table]:has(:is([mono-sticky-left],.mono-table-sticky-left)) tbody tr[mono-editing]:hover,[mono-table]:has(:is([mono-sticky-left],.mono-table-sticky-left)) tbody tr.mono-table-row-editing:hover,.mono-table:has(:is([mono-sticky-left],.mono-table-sticky-left)) tbody tr[mono-editing]:hover,.mono-table:has(:is([mono-sticky-left],.mono-table-sticky-left)) tbody tr.mono-table-row-editing:hover {
+  box-shadow: none;
 }/* A pinned SUMMARY cell is sticky on both axes at once — bottom (sticky-foot) and
    left/right (sticky column). Lift it above the scrolling body's pinned column
    AND the rest of the footer row so the bottom corner stays put through both
@@ -20824,7 +20837,34 @@ mono-shadow-table-checkbox {
 [mono-table][mono-sticky-head] tbody tr[mono-grouped] > td,[mono-table].mono-table-sticky-head tbody tr[mono-grouped] > td,.mono-table[mono-sticky-head] tbody tr[mono-grouped] > td,.mono-table.mono-table-sticky-head tbody tr[mono-grouped] > td,[mono-sticky-head] [mono-table] tbody tr[mono-grouped] > td,[mono-sticky-head] .mono-table tbody tr[mono-grouped] > td,.mono-table-sticky-head [mono-table] tbody tr[mono-grouped] > td,.mono-table-sticky-head .mono-table tbody tr[mono-grouped] > td {
   top: calc(var(--mono-table-grouped-head, 0px) + var(--_mono-table-grouped-level) * var(--_mono-table-grouped-h));
 }/* A deeper band pins under the outer ones; the outer ones stay on top where they cross. */
-[mono-table] tbody tr[mono-grouped][mono-grouped-level='0'] > td,.mono-table tbody tr[mono-grouped][mono-grouped-level='0'] > td { z-index: 4; }/* Every band folded (`mono-grouped-folded`, set by mono): the body is nothing but
+[mono-table] tbody tr[mono-grouped][mono-grouped-level='0'] > td,.mono-table tbody tr[mono-grouped][mono-grouped-level='0'] > td { z-index: 5; }/* A band with a checkbox (`selectable`) is cut into lead cells, the checkbox cell
+   and the label cell; the lead / checkbox cells copy the row cells' pinning. A
+   pinned band cell sits one layer above its own band's label cell — which slides
+   under it on a sideways scroll — and still under an outer band (5 / 6). No
+   pinned-edge tail (`border-image`): under the last band it would draw the column
+   down the empty box. The row rule's inset shadow gives way to the band's own edge. */
+[mono-table] tbody tr[mono-grouped] > td[mono-sticky-left],[mono-table] tbody tr[mono-grouped] > td.mono-table-sticky-left,.mono-table tbody tr[mono-grouped] > td[mono-sticky-left],.mono-table tbody tr[mono-grouped] > td.mono-table-sticky-left {
+  border-image: linear-gradient(var(--_mono-table-border), var(--_mono-table-border)) 0 1 0 0 / 0 1px 0 0 / 0;
+}
+[mono-table] tbody tr[mono-grouped] > td[mono-sticky-right],[mono-table] tbody tr[mono-grouped] > td.mono-table-sticky-right,.mono-table tbody tr[mono-grouped] > td[mono-sticky-right],.mono-table tbody tr[mono-grouped] > td.mono-table-sticky-right {
+  border-image: linear-gradient(var(--_mono-table-border), var(--_mono-table-border)) 0 0 0 1 / 0 0 0 1px / 0;
+}/* (The pinned edge is a border-IMAGE like the data rows' — a page resetting cell borders,
+   e.g. a docs/prose `td { border: none }`, must not take it off the bands only — but
+   with no outset: no tail down the box under the last band.) */
+[mono-table] tbody tr[mono-grouped] > td[mono-sticky-left],[mono-table] tbody tr[mono-grouped] > td.mono-table-sticky-left,[mono-table] tbody tr[mono-grouped] > td[mono-sticky-right],[mono-table] tbody tr[mono-grouped] > td.mono-table-sticky-right,.mono-table tbody tr[mono-grouped] > td[mono-sticky-left],.mono-table tbody tr[mono-grouped] > td.mono-table-sticky-left,.mono-table tbody tr[mono-grouped] > td[mono-sticky-right],.mono-table tbody tr[mono-grouped] > td.mono-table-sticky-right {
+  z-index: 4;
+  /* The band's edges (outline variant), then the row rule its label cell has as a border. */
+  box-shadow:
+    inset 0 1px 0 var(--_mono-table-grouped-edge),
+    inset 0 -1px 0 var(--_mono-table-grouped-edge),
+    inset 0 -1px 0 var(--_mono-table-border-lite);
+}
+[mono-table] tbody tr[mono-grouped][mono-grouped-level='0'] > td[mono-sticky-left],[mono-table] tbody tr[mono-grouped][mono-grouped-level='0'] > td.mono-table-sticky-left,[mono-table] tbody tr[mono-grouped][mono-grouped-level='0'] > td[mono-sticky-right],[mono-table] tbody tr[mono-grouped][mono-grouped-level='0'] > td.mono-table-sticky-right,.mono-table tbody tr[mono-grouped][mono-grouped-level='0'] > td[mono-sticky-left],.mono-table tbody tr[mono-grouped][mono-grouped-level='0'] > td.mono-table-sticky-left,.mono-table tbody tr[mono-grouped][mono-grouped-level='0'] > td[mono-sticky-right],.mono-table tbody tr[mono-grouped][mono-grouped-level='0'] > td.mono-table-sticky-right {
+  z-index: 6;
+}/* The checkbox cell takes the row checkbox cell's alignment (inline, set by mono). */
+[mono-table] tbody tr[mono-grouped] > td[mono-grouped-check],.mono-table tbody tr[mono-grouped] > td[mono-grouped-check] {
+  cursor: default;
+}/* Every band folded (`mono-grouped-folded`, set by mono): the body is nothing but
    full-width bands, so the filler's column lines (see `mono-table-filler`) would
    start under a band that has none. Blank them — every edge, the pinned ones'
    `border-image` / shadow included. Weighted past the pinned-cell rules (0,3,2)
@@ -20836,12 +20876,13 @@ mono-shadow-table-checkbox {
 }
 [mono-table] tbody tr[mono-grouped][mono-grouped-collapsible],.mono-table tbody tr[mono-grouped][mono-grouped-collapsible] { cursor: pointer; }
 [mono-table] tbody tr[mono-grouped]:focus-visible,.mono-table tbody tr[mono-grouped]:focus-visible { outline: none; }
-[mono-table] tbody tr[mono-grouped]:focus-visible > td,.mono-table tbody tr[mono-grouped]:focus-visible > td {
+[mono-table] tbody tr[mono-grouped]:focus-visible > td,.mono-table tbody tr[mono-grouped]:focus-visible > td,[mono-table] tbody tr[mono-grouped]:focus-visible > td[mono-sticky-left],[mono-table] tbody tr[mono-grouped]:focus-visible > td.mono-table-sticky-left,[mono-table] tbody tr[mono-grouped]:focus-visible > td[mono-sticky-right],[mono-table] tbody tr[mono-grouped]:focus-visible > td.mono-table-sticky-right,.mono-table tbody tr[mono-grouped]:focus-visible > td[mono-sticky-left],.mono-table tbody tr[mono-grouped]:focus-visible > td.mono-table-sticky-left,.mono-table tbody tr[mono-grouped]:focus-visible > td[mono-sticky-right],.mono-table tbody tr[mono-grouped]:focus-visible > td.mono-table-sticky-right {
   box-shadow: inset 0 0 0 2px var(--_mono-table-grouped-c);
 }
 [mono-grouped-label] {
   position: sticky;
-  left: 0;
+  /* Past the pinned checkbox cell(s) in front of it — set by mono when there are any. */
+  left: var(--_mono-table-grouped-label-left, 0px);
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;

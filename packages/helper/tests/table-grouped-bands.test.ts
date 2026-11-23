@@ -45,6 +45,28 @@ describe('normalizeGrouped', () => {
     expect(cfg.chunk).toBe(250)
   })
 
+  it('resolves `selectable`: off by default, inherited, per-field off / merged', () => {
+    expect(normalizeGrouped({ fields: ['A'] })!.fields[0]!.selectable).toBeNull()
+    const filter = (r: any) => !!r.ok
+    const cfg = normalizeGrouped({
+      selectable: { filter, checkbox: { size: 'sm' } },
+      fields: [
+        'A',
+        { field: 'B', selectable: false },
+        { field: 'C', selectable: { checkbox: { color: 'danger' } } },
+        { field: 'D', selectable: true },
+      ],
+    })!
+    const [a, b, c, d] = cfg.fields
+    expect(a!.selectable).toEqual({ filter, field: undefined, checkbox: { size: 'sm' } })
+    expect(b!.selectable).toBeNull()
+    // A field's `checkbox` props merge over the table-level ones, key by key.
+    expect(c!.selectable).toEqual({ filter, field: undefined, checkbox: { size: 'sm', color: 'danger' } })
+    expect(d!.selectable).toEqual({ filter, field: undefined, checkbox: { size: 'sm' } })
+    // `true` alone, at the table level.
+    expect(normalizeGrouped({ selectable: true, fields: ['A'] })!.fields[0]!.selectable).toEqual({ checkbox: {} })
+  })
+
   it('is null without fields', () => {
     expect(normalizeGrouped(null)).toBeNull()
     expect(normalizeGrouped({ fields: [] })).toBeNull()
@@ -58,6 +80,27 @@ describe('groupedSignature', () => {
     const b = groupedSignature({ fields: [{ field: 'A', custom: (r: any) => `${r.A}!`, color: () => 'blue' }] })
     expect(a).toBe(b)
     expect(groupedSignature({ fields: [{ field: 'A', color: 'red' }] })).not.toBe(groupedSignature({ fields: [{ field: 'A', color: 'blue' }] }))
+  })
+
+  it('sees `selectable` (its filter by presence only)', () => {
+    const base = groupedSignature({ fields: ['A'] })
+    expect(groupedSignature({ selectable: true, fields: ['A'] })).not.toBe(base)
+    expect(groupedSignature({ fields: [{ field: 'A', selectable: { filter: () => true } }] })).toBe(
+      groupedSignature({ fields: [{ field: 'A', selectable: { filter: () => false } }] }),
+    )
+    expect(groupedSignature({ selectable: { checkbox: { size: 'sm' } }, fields: ['A'] })).not.toBe(
+      groupedSignature({ selectable: { checkbox: { size: 'lg' } }, fields: ['A'] }),
+    )
+  })
+})
+
+describe('buildGrouped — band row ranges', () => {
+  it('gives every band `from` + `count` over the ordered rows, folded ones included', () => {
+    const { grouped } = buildGrouped(rows, fields, new Set([encodeURIComponent('s:A')]))
+    const a = grouped.find((b) => b.level === 0 && b.key === 'A')!
+    expect([a.from, a.count]).toEqual([0, 3])
+    const bY = grouped.find((b) => b.path === `${encodeURIComponent('s:B')}/${encodeURIComponent('s:y')}`)!
+    expect(rows.slice(bY.from, bY.from + bY.count).map((r) => r.Id)).toEqual([4, 5])
   })
 })
 

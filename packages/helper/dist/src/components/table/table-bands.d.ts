@@ -26,6 +26,8 @@ export declare class BandInjector {
   private ro;
   private queued;
   private stopped;
+  /** The last checkbox column found — kept for passes with no row to read it from. */
+  private checkCol;
   constructor(ctrl: BandHost, table: HTMLTableElement);
   /** Re-run a pass now-ish (after a config change that may not notify). */
   refresh(): void;
@@ -37,8 +39,18 @@ export declare class BandInjector {
   private removeAll;
   /** One placement pass. Public for tests; normally driven by notify / mutations. */
   flush(): void;
+  /**
+   * The column the band checkboxes go in, or `null` (no band asks for one, or the
+   * table has no row checkbox to line up with). See the module comment.
+   */
+  private findCheckColumn;
   /** The band's row — created on first use, its attributes / text kept current. */
   private rowFor;
+  /**
+   * The cells in front of the label: the lead cells and the checkbox cell, rebuilt only
+   * when the column layout changed; the checkbox's own props kept current.
+   */
+  private syncCells;
   /**
    * The band's icon, the way every mono icon works: an iconify class
    * (`i-mdi-tag`) is an empty span carrying the class — UnoCSS's preset-icons
