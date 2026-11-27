@@ -1,4 +1,4 @@
-import { a as flattenInline, i as toExcelStyle, n as combineStyles, r as mergeStyles } from "./styles-D-ergrfR.js";
+import { a as toSheetDate, i as toExcelStyle, n as combineStyles, r as mergeStyles, s as flattenInline } from "./styles-DBt-SoOW.js";
 
 //#region src/export/sheet-name.ts
 /**
@@ -245,7 +245,7 @@ var WorksheetWriter = class {
 			if (value.d) {
 				const date = new Date(value.d);
 				if (!Number.isNaN(date.getTime())) return {
-					value: date,
+					value: toSheetDate(date, this.ctx.timeZone),
 					style: excelStyle,
 					numFmt: value.f,
 					width,
@@ -254,7 +254,7 @@ var WorksheetWriter = class {
 			}
 		}
 		return {
-			value: coerceValue(inline.text),
+			value: coerceValue(inline.text, this.ctx.timeZone),
 			style: excelStyle,
 			width,
 			...link
@@ -348,7 +348,7 @@ function mergeExcelStyle(base, over) {
 * numeric (`"00123"`, `"1,234"`) is left alone — coercing it would silently
 * mangle invoice numbers and phone numbers.
 */
-function coerceValue(text) {
+function coerceValue(text, timeZone) {
 	const trimmed = text.trim();
 	if (!trimmed) return null;
 	if (NUMERIC_RE.test(trimmed) && !/^0\d/.test(trimmed)) {
@@ -357,7 +357,7 @@ function coerceValue(text) {
 	}
 	if (ISO_DATE_RE.test(trimmed)) {
 		const date = new Date(trimmed);
-		if (!Number.isNaN(date.getTime())) return date;
+		if (!Number.isNaN(date.getTime())) return toSheetDate(date, timeZone);
 	}
 	return text;
 }
@@ -432,9 +432,11 @@ function arrayBufferToBase64(buffer) {
 /** Build the ExcelJS workbook for a parsed report. */
 async function renderExcel(ast, options = {}) {
 	const styles = mergeStyles(options.styles);
+	const timeZone = options.formatting?.timeZone;
 	const plan = new WorksheetWriter({
 		styles,
-		columns: options.columns
+		columns: options.columns,
+		timeZone
 	}).write(ast);
 	const workbook = new (await (loadExcelJs())).Workbook();
 	workbook.created = /* @__PURE__ */ new Date();
@@ -456,7 +458,8 @@ async function renderExcel(ast, options = {}) {
 		targets.set(spec.key, name);
 		const detailPlan = new WorksheetWriter({
 			styles,
-			columns: options.columns
+			columns: options.columns,
+			timeZone
 		}).write(spec.ast);
 		const detailSheet = workbook.addWorksheet(name);
 		if (options.back !== false) {

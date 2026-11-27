@@ -61,6 +61,13 @@ export interface MonoExportFormatOptions {
   numberFormat?: string;
   /** Excel number format for `{{date}}` (default `'yyyy-mm-dd'`). */
   dateFormat?: string;
+  /**
+   * IANA time zone the dates are written in, e.g. `'Asia/Jakarta'`. A sheet cell has no time
+   * zone, so every date is stored as its wall-clock time IN this zone, the same whichever
+   * browser runs the export. Omit it to use the browser's own zone. An unknown zone warns once
+   * and falls back to the browser's.
+   */
+  timeZone?: string;
   /** Excel number format for `{{percent}}` (default `'0.00%'`). */
   percentFormat?: string;
 }

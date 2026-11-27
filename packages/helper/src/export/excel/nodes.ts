@@ -23,6 +23,9 @@ import {
   type ExcelCellStyle,
 } from '../styles'
 import type { MonoExportColumn, MonoExportStyle, MonoExportStyles } from '../types'
+import { toSheetDate } from '../time-zone'
+
+export { toSheetDate }
 
 /** An ISO date string (`2026-07-21`, optionally with a time part). */
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/
@@ -47,6 +50,8 @@ interface PendingSpan {
 export interface WriterContext {
   styles: MonoExportStyles
   columns?: MonoExportColumn[]
+  /** `formatting.timeZone` — the zone every date cell is written in (see `toSheetDate`). */
+  timeZone?: string
 }
 
 /** Everything the walk produces, handed back to the ExcelJS driver. */
@@ -311,12 +316,12 @@ export class WorksheetWriter {
       if (value.d) {
         const date = new Date(value.d)
         if (!Number.isNaN(date.getTime())) {
-          return { value: date, style: excelStyle, numFmt: value.f, width, ...link }
+          return { value: toSheetDate(date, this.ctx.timeZone), style: excelStyle, numFmt: value.f, width, ...link }
         }
       }
     }
 
-    return { value: coerceValue(inline.text), style: excelStyle, width, ...link }
+    return { value: coerceValue(inline.text, this.ctx.timeZone), style: excelStyle, width, ...link }
   }
 
   /**
@@ -406,7 +411,7 @@ function mergeExcelStyle(base: ExcelCellStyle, over: ExcelCellStyle): ExcelCellS
  * numeric (`"00123"`, `"1,234"`) is left alone — coercing it would silently
  * mangle invoice numbers and phone numbers.
  */
-export function coerceValue(text: string): string | number | Date | null {
+export function coerceValue(text: string, timeZone?: string): string | number | Date | null {
   const trimmed = text.trim()
   if (!trimmed) return null
   if (NUMERIC_RE.test(trimmed) && !/^0\d/.test(trimmed)) {
@@ -415,7 +420,7 @@ export function coerceValue(text: string): string | number | Date | null {
   }
   if (ISO_DATE_RE.test(trimmed)) {
     const date = new Date(trimmed)
-    if (!Number.isNaN(date.getTime())) return date
+    if (!Number.isNaN(date.getTime())) return toSheetDate(date, timeZone)
   }
   return text
 }

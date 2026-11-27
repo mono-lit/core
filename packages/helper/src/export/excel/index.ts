@@ -104,7 +104,7 @@ export interface RenderExcelSheet {
  * the driver, and nothing fails to compile.
  */
 export interface RenderExcelOptions
-  extends Pick<MonoExportOptions, 'styles' | 'columns' | 'sheetName' | 'freezeRows'> {
+  extends Pick<MonoExportOptions, 'styles' | 'columns' | 'sheetName' | 'freezeRows' | 'formatting'> {
   /** Extra sheets, rendered after the master and linked from it. */
   sheets?: RenderExcelSheet[]
   /** Add a `← Back` link to `A1` of every extra sheet. */
@@ -114,7 +114,8 @@ export interface RenderExcelOptions
 /** Build the ExcelJS workbook for a parsed report. */
 export async function renderExcel(ast: Root, options: RenderExcelOptions = {}): Promise<any> {
   const styles = mergeStyles(options.styles)
-  const plan = new WorksheetWriter({ styles, columns: options.columns }).write(ast)
+  const timeZone = options.formatting?.timeZone
+  const plan = new WorksheetWriter({ styles, columns: options.columns, timeZone }).write(ast)
 
   const ExcelJS = await loadExcelJs()
   const workbook = new ExcelJS.Workbook()
@@ -148,7 +149,7 @@ export async function renderExcel(ast: Root, options: RenderExcelOptions = {}): 
     const name = names.take(spec.name || spec.key, 'Detail')
     targets.set(spec.key, name)
 
-    const detailPlan = new WorksheetWriter({ styles, columns: options.columns }).write(spec.ast)
+    const detailPlan = new WorksheetWriter({ styles, columns: options.columns, timeZone }).write(spec.ast)
     const detailSheet = workbook.addWorksheet(name)
 
     if (options.back !== false) {

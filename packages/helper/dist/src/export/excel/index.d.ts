@@ -18,7 +18,7 @@ export interface RenderExcelSheet {
  * an option added to `MonoExportOptions` and not here silently never reaches
  * the driver, and nothing fails to compile.
  */
-export interface RenderExcelOptions extends Pick<MonoExportOptions, 'styles' | 'columns' | 'sheetName' | 'freezeRows'> {
+export interface RenderExcelOptions extends Pick<MonoExportOptions, 'styles' | 'columns' | 'sheetName' | 'freezeRows' | 'formatting'> {
   /** Extra sheets, rendered after the master and linked from it. */
   sheets?: RenderExcelSheet[];
   /** Add a `← Back` link to `A1` of every extra sheet. */

@@ -1,5 +1,6 @@
 import { MonoExportColumn, MonoExportStyles } from "../types.js";
 import { ExcelCellStyle } from "../styles.js";
+import { toSheetDate } from "../time-zone.js";
 import { Root } from "mdast";
 //#region src/export/excel/nodes.d.ts
 /** A pending image to place once the sheet is written. */
@@ -18,6 +19,8 @@ interface PendingSpan {
 export interface WriterContext {
   styles: MonoExportStyles;
   columns?: MonoExportColumn[];
+  /** `formatting.timeZone` — the zone every date cell is written in (see `toSheetDate`). */
+  timeZone?: string;
 }
 /** Everything the walk produces, handed back to the ExcelJS driver. */
 export interface WorksheetPlan {
@@ -118,8 +121,8 @@ export declare class WorksheetWriter {
  * numeric (`"00123"`, `"1,234"`) is left alone — coercing it would silently
  * mangle invoice numbers and phone numbers.
  */
-export declare function coerceValue(text: string): string | number | Date | null;
+export declare function coerceValue(text: string, timeZone?: string): string | number | Date | null;
 /** 1-based column index → spreadsheet letter (1 → A, 27 → AA). */
 export declare function columnLetter(index: number): string;
 //#endregion
-export {};
+export { toSheetDate };

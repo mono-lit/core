@@ -1,4 +1,4 @@
-import { c as escapeCellText, d as __toESM, l as stripDirectives, o as parseMarkdown, s as encodeDirective, t as DEFAULT_STYLES, u as __commonJSMin } from "./styles-D-ergrfR.js";
+import { c as parseMarkdown, d as stripDirectives, f as __commonJSMin, l as encodeDirective, o as validTimeZone, p as __toESM, t as DEFAULT_STYLES, u as escapeCellText } from "./styles-DBt-SoOW.js";
 import { n as isReadableSource, r as readAllRows } from "./data-source-read-B49mOn5M.js";
 import { n as unwrapReactive } from "./reactive-Dtd-esHO.js";
 import { n as dateTimeFormat, r as numberFormat } from "./intl-cache-DoVGRXDU.js";
@@ -2088,7 +2088,8 @@ function createHelpers(formatting = {}) {
 			return formatted(dateTimeFormat(locale, {
 				year: "numeric",
 				month: "2-digit",
-				day: "2-digit"
+				day: "2-digit",
+				...validTimeZone(formatting.timeZone) ? { timeZone: formatting.timeZone } : {}
 			}).format(d), {
 				d: d.toISOString(),
 				f: hash.fmt ?? dateFormat
@@ -2342,7 +2343,7 @@ async function exportTable(options) {
 	}
 	let workbookPromise = null;
 	const workbook = () => {
-		workbookPromise ??= import("./excel-DtRpxmxs.js").then(({ renderExcel }) => renderExcel(parseMarkdown(rendered), {
+		workbookPromise ??= import("./excel-2xMhEFe6.js").then(({ renderExcel }) => renderExcel(parseMarkdown(rendered), {
 			...options,
 			back: options.detail?.back,
 			sheets: detailSheets.map((s) => ({

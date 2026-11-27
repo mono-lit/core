@@ -17,6 +17,7 @@ import { encodeDirective } from './sentinel'
 import { escapeForCell } from './expression'
 import type { MonoExportFormatOptions, MonoExportHelper } from './types'
 import { dateTimeFormat, numberFormat } from '../utils/intl-cache'
+import { validTimeZone } from './time-zone'
 
 /** The trailing object Handlebars appends to every helper call. */
 interface HelperOptions {
@@ -148,10 +149,13 @@ export function createHelpers(
       const { args, hash } = splitArgs(raw)
       const d = toDate(args[0])
       if (!d) return ''
+      // The display date in the SAME zone the sheet writes, so the Markdown output and the
+      // Excel cell agree on the day across midnight.
       const display = dateTimeFormat(locale, {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
+        ...(validTimeZone(formatting.timeZone) ? { timeZone: formatting.timeZone } : {}),
       }).format(d)
       return formatted(display, { d: d.toISOString(), f: (hash.fmt as string) ?? dateFormat })
     },
